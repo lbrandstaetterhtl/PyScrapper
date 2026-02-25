@@ -18,6 +18,7 @@ else {
 }
 
 Write-Host "----------------------------------"
+Write-Host "Current Directory: $(Get-Location)"
 Write-Host "Installing requirements..."
 pip install -r .\LocalServer\requirements.txt
 

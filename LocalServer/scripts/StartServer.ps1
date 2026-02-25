@@ -27,7 +27,7 @@ if (-not $NoVenv) {
     . (Join-Path $venvDir "Scripts\Activate.ps1")
 
     # Optional: requirements installieren, wenn vorhanden
-    $req = Join-Path $PSScriptRoot "requirements.txt"
+    $req = Join-Path $ServerRoot "requirements.txt"
     if (Test-Path $req) {
         Write-Host "Installing requirements..."
         python -m pip install --upgrade pip
