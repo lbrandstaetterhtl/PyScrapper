@@ -40,6 +40,7 @@ if (-not $NoVenv) {
 
     Write-Log "Activating venv..."
     . (Join-Path $venvDir "Scripts\Activate.ps1")
+    Write-Log "Virtual environment activated: $pythonExe"
 
     # Optional: requirements installieren, wenn vorhanden
     $req = Join-Path $ServerRoot "requirements.txt"
@@ -47,6 +48,7 @@ if (-not $NoVenv) {
         Write-Log "Installing requirements..."
         python -m pip install --upgrade pip 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
         pip install -r $req 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
+        Write-Log "Requirements installation completed."
     } else {
         Write-Log "No requirements.txt found. Skipping pip install."
     }
@@ -54,6 +56,6 @@ if (-not $NoVenv) {
     Write-Log "NoVenv enabled: using system python."
 }
 
-Write-Log "Current Directory: $(Get-Location)"
 Write-Log "Starting uvicorn: server:app on $HostAddr`:$Port"
+Write-Log "Server started. Logs will be written to $LogFile"
 python -m uvicorn LocalServer.server:app --host $HostAddr --port $Port 2>&1

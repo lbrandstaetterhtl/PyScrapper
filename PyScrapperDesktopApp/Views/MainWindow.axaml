@@ -14,12 +14,15 @@
     </Design.DataContext>
 
     <Grid>
-        <Grid.RowDefinitions>*</Grid.RowDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
         
         <Grid.ColumnDefinitions>*</Grid.ColumnDefinitions>
         
-        <Menu>
-            <MenuItem x:Name="Suno" Header="Scrap from suno" />
+        <Menu Grid.Row="0">
+            <MenuItem Header="Scrap from suno" Command="{Binding OpenSunoScrapWindow}"/>
         </Menu>
     </Grid>
 
