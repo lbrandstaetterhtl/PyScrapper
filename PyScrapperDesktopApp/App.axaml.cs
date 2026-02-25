@@ -64,10 +64,10 @@ public partial class App : Application
         var psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = @$"-File {repoRoot}\LocalServer\scripts" + scriptFile,
+            Arguments = @$"-File {repoRoot}\LocalServer\scripts\" + scriptFile,
             WorkingDirectory =  repoRoot,
             UseShellExecute = false,
-            CreateNoWindow = false,
+            CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
