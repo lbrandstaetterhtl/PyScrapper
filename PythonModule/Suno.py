@@ -11,6 +11,10 @@ class SunoInvalidType(SunoError): ...
 
 class SunoNotFound(SunoError): ...
 
+
+
+
+
 def get_html(
         session = None,
         url: str = None,
@@ -80,6 +84,14 @@ def search_media(
         song_url.replace(".mp3", ".wav")
     return song_url
 
+
+
+
+def search_creator(
+        creator_name: str,
+        ):
+    pass
+
 def download_to_file(
         url: str,
         out_file: str,
@@ -117,6 +129,9 @@ def download_to_file(
     except urllib.error.URLError as e:
         raise urllib.error.URLError(f"URL ERROR {e}")
     
+
+
+
 
 def download (
         url: str,
