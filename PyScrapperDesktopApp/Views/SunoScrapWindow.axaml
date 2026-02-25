@@ -25,8 +25,8 @@
                 <ComboBox Margin="5" Grid.Row="1" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
                 
                 <StackPanel Margin="5" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Scrap" Command="{Binding ScrapCommand}"/>
-                        <Button Content="Cancel" Command="{Binding CancelCommand}"/>
+                        <Button Classes="primary" Content="Scrap" Command="{Binding ScrapCommand}"/>
+                        <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
         </Grid>
         
