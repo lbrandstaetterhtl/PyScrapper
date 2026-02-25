@@ -89,8 +89,38 @@ def search_media(
 
 def search_creator(
         creator_name: str,
+        session = None
         ):
-    pass
+    if not creator_name:
+        raise SunoNotEnoughArguments("No creator name was given")
+    if not creator_name.startswith("@"):
+        creator_name = "@" + creator_name
+    if not session:
+        raise SunoNotEnoughArguments("No session was given")
+
+
+    url = f"https://suno.com/{creator_name}"
+
+    request = urllib.request.Request(
+        url,
+        method="GET",
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        )
+    
+    try:
+        with session.open(request) as response:
+            html = response.read(1024 * 512).decode("utf-8")
+            return html
+        
+
+    except urllib.error.HTTPError as e:
+        raise urllib.error.HTTPError(f"HTTP Error {e}")
+    
+    except urllib.error.URLError as e:
+        raise urllib.error.URLError(f"URL ERROR {e}")
+    
 
 def download_to_file(
         url: str,
@@ -158,3 +188,9 @@ def download (
     out_file = os.path.join(out_path, f"{identifier}{mediatype}")
 
     download_to_file(url=file, out_file=out_file, session=session)
+
+    dictionary = {
+        "Status": "Download complete",
+        "File": out_file
+    }
+    return dictionary

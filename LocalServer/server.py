@@ -4,11 +4,17 @@ from pydantic import BaseModel
 import os, signal
 import asyncio
 
+#Module imports
+import Session, Suno
+
 class CommandRequest(BaseModel):
     command: str
 class DownloadRequest(BaseModel):
+    provider: str
     url: str
+    mediatype: str = ".mp3"  # Default to .mp3, can be overridden by client
 
+ses = Session.Session()
 app = FastAPI()
 #Queues
 command_queue = asyncio.Queue()
@@ -83,10 +89,11 @@ async def process_commands(line: str):
 
 
 
-async def process_downloads(url: str):
+async def process_downloads(url: str, provider: str):
     global last_download
-    result = {"url": url, "status": "Download processed"}
-    last_download = result
+    if provider.lower() in ("suno", "suno.com"):
+        
+        last_download = Suno.download(session=ses, url=url, mediatype=".mp3")
     return last_download
           
 
@@ -127,7 +134,7 @@ async def receive_command(data: CommandRequest):
 
 @app.post("/download")
 async def receive_download(data: DownloadRequest):
-    await download_queue.put(data.url)
+    await download_queue.put(data.url, data.provider, data.mediatype)
     return {"message": "Download request received!"}
 
 
