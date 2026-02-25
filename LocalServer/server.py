@@ -1,5 +1,5 @@
-from fastapi import FastAPI
-from pydantic import BaseModel  
+﻿from fastapi import FastAPI
+from pydantic import BaseModel
 
 import os, signal
 import asyncio
@@ -54,7 +54,7 @@ async def server_run(quit_event: asyncio.Event, command_queue: asyncio.Queue, do
     while not quit_event.is_set():
         get_cmd = asyncio.create_task(command_queue.get())
         get_download = asyncio.create_task(download_queue.get())
-    
+
         try:
             done, pending = await asyncio.wait(
                 {get_cmd, get_download},
@@ -96,7 +96,7 @@ async def process_commands(line: str):
             if os.name == "nt":
                 os._exit(0)
 
-                
+
                 try:
                     os.kill(os.getppid(), signal.SIGTERM)
                 except Exception:
@@ -112,13 +112,13 @@ async def process_downloads(download_request: str):
     global last_download, out_path, ses, identifier
     try:
         if download_request.provider in ("suno", "suno.com"):
-            
+
             last_download, identifier = Suno.download(session=ses, url=download_request.url, out_path=out_path,  mediatype=download_request.mediatype)
         return last_download, identifier
     except Exception as e:
         print(f"Error processing download: {e}")
         return None, None
-          
+
 
 
 
@@ -129,7 +129,7 @@ async def root():
         "message": "Server startup successful!",
         "last_download": last_download,
         "identifier": identifier
-        }
+    }
 
 
 
@@ -138,10 +138,10 @@ async def root():
 @app.on_event("startup")
 async def startup_event():
     #Task
-    
+
     asyncio.create_task(server_run(quit_event, command_queue, download_queue))
-    
-    
+
+
 
 
 
