@@ -57,5 +57,4 @@ if (-not $NoVenv) {
 }
 
 Write-Log "Starting uvicorn: server:app on $HostAddr`:$Port"
-Write-Log "Server started. Logs will be written to $LogFile"
 python -m uvicorn LocalServer.server:app --host $HostAddr --port $Port 2>&1

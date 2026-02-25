@@ -5,11 +5,14 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Xml;
 using CommunityToolkit.Mvvm.Input;
+using PyScrapperDesktopApp.Models;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
 public class SunoScrapWindowViewModel : INotifyPropertyChanged
 {
+    private readonly AppLogger _logger = new();
+    
     private string _sunoUrl;
     
     private readonly List<string> _availableMediaType = [".mp3", ".mp4"];
@@ -52,24 +55,29 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
     
     private async void Scrap()
     {
-        HttpClient client = new();
-        const string serverUrl = "127.0.0.1:8765";
-        
-        if (SelectedMediaType != ".mp3" && SelectedMediaType != ".mp4")
+        try
         {
-            throw new InvalidOperationException("Invalid media type selected.");
+            ApiClient client = new();
+        
+            string serverUrl = "127.0.0.1:8765"; // Replace with your actual server URL
+        
+            var requestData = new RequestData
+            {
+                Provider = "suno",
+                Url = SunoUrl,
+                MediaType = SelectedMediaType
+            };
+        
+            await client.SendScrapRequest(requestData, serverUrl);
+        
+            RequestClose?.Invoke();
         }
-
-        var requestData = new
+        catch (Exception e)
         {
-            provider = "suno",
-            url = SunoUrl,
-            mediatype = SelectedMediaType,
-        };
-        
-        await client.PostAsJsonAsync($"http://{serverUrl}/download", requestData);
-        
-        RequestClose?.Invoke();
+            var massage = new Massage($"Error during scraping: {e.Message}", DateTime.Now, "ERROR");
+            
+            _logger.LogNewMassage(massage);
+        }
     }
 
     public SunoScrapWindowViewModel()
