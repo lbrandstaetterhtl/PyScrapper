@@ -10,6 +10,6 @@ if (!(Test-Path ".venv")) {
 }
 
 Write-Host "Activating virtual environment..."
-. .\.venv\Scripts\Activate.ps1
+C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\scripts\.venv\Scripts\Activate.ps1
 
 Write-Host "Virtual environment activated."

@@ -2,7 +2,7 @@
 
 Write-Host "== Start Server =="
 
-$activateScript = Join-Path $PSScriptRoot "ActivateVirtualEnvironment.ps1"  
+$activateScript = "C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\scripts\ActivateVirtualEnvironment.ps1"  
 
 if (!(Test-Path $activateScript)) {
     throw "Activate script not found: $activateScript"
@@ -10,10 +10,10 @@ if (!(Test-Path $activateScript)) {
 
 . $activateScript
 
-$installScript = Join-Path $PSScriptRoot "InstallRequirements.ps1"
+$installScript = "C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\scripts\InstallRequirements.ps1"
 
 if (!(Test-Path $activateScript)) {
-    throw "Install script not found: $activateScript"
+    throw "Install script not found: $installScript"
 }
 
 . $installScript

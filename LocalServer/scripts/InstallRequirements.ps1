@@ -15,7 +15,7 @@ else {
 
 Write-Host "----------------------------------"
 Write-Host "Installing requirements..."
-pip install -r .\LocalServer\requirements.txt
+pip install -r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error installing requirements. Please check the output above for details."
