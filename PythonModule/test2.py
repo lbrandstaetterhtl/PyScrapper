@@ -21,5 +21,5 @@ import Session
 # Suno.download_to_file(session=ses, url=mp3, out_file=out_file_mp3)
 
 ses = Session.Session()
-url = "https://suno.com/song/69b1e7c1-5f6f-4aab-a30a-ed5a6cb61a9a"
+url = "https://suno.com/song/52d38334-5459-409f-b935-e3f35d99e112"
 Suno.download(session=ses, mediatype=".mp3", url=url)
