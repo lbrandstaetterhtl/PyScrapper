@@ -13,6 +13,14 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    
+    <Grid>
+        <Grid.RowDefinitions>*</Grid.RowDefinitions>
+        
+        <Grid.ColumnDefinitions>*</Grid.ColumnDefinitions>
+        
+        <Menu>
+            <MenuItem Header="Scrap from suno" />
+        </Menu>
+    </Grid>
 
 </Window>
