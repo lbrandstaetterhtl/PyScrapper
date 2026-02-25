@@ -59,7 +59,7 @@ public partial class App : Application
             Arguments = @"-File C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\scripts\" + scriptFile,
             WorkingDirectory = @"C:\Users\p50232\RiderProjects\PyScrapper",
             UseShellExecute = false,
-            CreateNoWindow = false,
+            CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
