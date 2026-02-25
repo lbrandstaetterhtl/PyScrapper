@@ -7,11 +7,26 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "== Start Server =="
-
-# In Script-Ordner wechseln (damit server.py sicher gefunden wird)
+# Pfad-Setup für Logging
 $ServerRoot = Split-Path -Parent $PSScriptRoot
 $AllRoot = Split-Path -Parent $ServerRoot
+$LogDir = Join-Path $ServerRoot "logs"
+if (-not (Test-Path $LogDir)) {
+    New-Item -ItemType Directory -Path $LogDir | Out-Null
+}
+$LogFile = Join-Path $LogDir "StartServer.log"
+
+function Write-Log {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$timestamp] $Message"
+    Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
+    Write-Output $logEntry 
+}
+
+Write-Log "== Start Server =="
+
+# In Script-Ordner wechseln (damit server.py sicher gefunden wird)
 Set-Location -Path $AllRoot
 
 if (-not $NoVenv) {
@@ -19,26 +34,26 @@ if (-not $NoVenv) {
     $pythonExe = Join-Path $venvDir "Scripts\python.exe"
 
     if (-not (Test-Path $pythonExe)) {
-        Write-Host "No venv found. Creating .venv..."
+        Write-Log "No venv found. Creating .venv..."
         python -m venv $venvDir
     }
 
-    Write-Host "Activating venv..."
+    Write-Log "Activating venv..."
     . (Join-Path $venvDir "Scripts\Activate.ps1")
 
     # Optional: requirements installieren, wenn vorhanden
     $req = Join-Path $ServerRoot "requirements.txt"
     if (Test-Path $req) {
-        Write-Host "Installing requirements..."
-        python -m pip install --upgrade pip
-        pip install -r $req
+        Write-Log "Installing requirements..."
+        python -m pip install --upgrade pip 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
+        pip install -r $req 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
     } else {
-        Write-Host "No requirements.txt found. Skipping pip install."
+        Write-Log "No requirements.txt found. Skipping pip install."
     }
 } else {
-    Write-Host "NoVenv enabled: using system python."
+    Write-Log "NoVenv enabled: using system python."
 }
 
-Write-Host "Current Directory: $(Get-Location)"
-Write-Host "Starting uvicorn: server:app on $HostAddr`:$Port"
-python -m uvicorn LocalServer.server:app --host $HostAddr --port $Port
+Write-Log "Current Directory: $(Get-Location)"
+Write-Log "Starting uvicorn: server:app on $HostAddr`:$Port"
+python -m uvicorn LocalServer.server:app --host $HostAddr --port $Port 2>&1

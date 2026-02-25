@@ -5,7 +5,23 @@
 
 $ErrorActionPreference = "SilentlyContinue"
 
-Write-Host "== Stop Server =="
+# Logging setup
+$ServerRoot = Split-Path -Parent $PSScriptRoot
+$LogDir = Join-Path $ServerRoot "logs"
+if (-not (Test-Path $LogDir)) {
+    New-Item -ItemType Directory -Path $LogDir | Out-Null
+}
+$LogFile = Join-Path $LogDir "StopServer.log"
+
+function Write-Log {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$timestamp] $Message"
+    Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
+    Write-Output $logEntry
+}
+
+Write-Log "== Stop Server =="
 
 $baseUrl = "http://$HostAddr`:$Port"
 
@@ -13,7 +29,7 @@ $baseUrl = "http://$HostAddr`:$Port"
 try {
     $health = Invoke-RestMethod -Method GET -Uri "$baseUrl/health" -TimeoutSec 2
     if ($health.ok -eq $true) {
-        Write-Host "Server reachable. Sending quit command..."
+        Write-Log "Server reachable. Sending quit command..."
         Invoke-RestMethod -Method POST -Uri "$baseUrl/command" `
             -ContentType "application/json" `
             -Body '{"command":"quit"}' `
@@ -22,7 +38,7 @@ try {
         Start-Sleep -Milliseconds 800
     }
 } catch {
-    Write-Host "Server not reachable via API (or already down). Falling back to port-kill..."
+    Write-Log "Server not reachable via API (or already down). Falling back to port-kill..."
 }
 
 # 2) Fallback: Prozess auf dem Port finden und killen
@@ -30,12 +46,12 @@ $connection = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinu
 if ($connection) {
     $pidNum = $connection.OwningProcess
     if ($pidNum) {
-        Write-Host "Killing process on port $Port (PID $pidNum)..."
+        Write-Log "Killing process on port $Port (PID $pidNum)..."
         Stop-Process -Id $pidNum -Force -ErrorAction SilentlyContinue
-        Write-Host "Process stopped."
+        Write-Log "Process stopped."
     } else {
-        Write-Host "Found connection but no PID."
+        Write-Log "Found connection but no PID."
     }
 } else {
-    Write-Host "No process found listening on port $Port."
+    Write-Log "No process found listening on port $Port."
 }

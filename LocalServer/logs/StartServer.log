@@ -1,0 +1,52 @@
+﻿[2026-02-25 14:39:39] == Start Server ==
+[2026-02-25 14:39:39] Activating venv...
+[2026-02-25 14:39:40] Installing requirements...
+Requirement already satisfied: pip in .\LocalServer\scripts\.venv\Lib\site-packages (26.0.1)
+Requirement already satisfied: fastapi in .\LocalServer\scripts\.venv\Lib\site-packages (from -r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (0.133.0)
+Requirement already satisfied: certifi in .\LocalServer\scripts\.venv\Lib\site-packages (from -r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 3)) (2026.2.25)
+Requirement already satisfied: uvicorn[standard] in .\LocalServer\scripts\.venv\Lib\site-packages (from -r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (0.41.0)
+Requirement already satisfied: starlette>=0.40.0 in .\LocalServer\scripts\.venv\Lib\site-packages (from fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (0.52.1)
+Requirement already satisfied: pydantic>=2.7.0 in .\LocalServer\scripts\.venv\Lib\site-packages (from fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (2.12.5)
+Requirement already satisfied: typing-extensions>=4.8.0 in .\LocalServer\scripts\.venv\Lib\site-packages (from fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (4.15.0)
+Requirement already satisfied: typing-inspection>=0.4.2 in .\LocalServer\scripts\.venv\Lib\site-packages (from fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (0.4.2)
+Requirement already satisfied: annotated-doc>=0.0.2 in .\LocalServer\scripts\.venv\Lib\site-packages (from fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (0.0.4)
+Requirement already satisfied: click>=7.0 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (8.3.1)
+Requirement already satisfied: h11>=0.8 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (0.16.0)
+Requirement already satisfied: colorama>=0.4 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (0.4.6)
+Requirement already satisfied: httptools>=0.6.3 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (0.7.1)
+Requirement already satisfied: python-dotenv>=0.13 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (1.2.1)
+Requirement already satisfied: pyyaml>=5.1 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (6.0.3)
+Requirement already satisfied: watchfiles>=0.20 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (1.1.1)
+Requirement already satisfied: websockets>=10.4 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (16.0)
+Requirement already satisfied: annotated-types>=0.6.0 in .\LocalServer\scripts\.venv\Lib\site-packages (from pydantic>=2.7.0->fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (0.7.0)
+Requirement already satisfied: pydantic-core==2.41.5 in .\LocalServer\scripts\.venv\Lib\site-packages (from pydantic>=2.7.0->fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (2.41.5)
+Requirement already satisfied: anyio<5,>=3.6.2 in .\LocalServer\scripts\.venv\Lib\site-packages (from starlette>=0.40.0->fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (4.12.1)
+Requirement already satisfied: idna>=2.8 in .\LocalServer\scripts\.venv\Lib\site-packages (from anyio<5,>=3.6.2->starlette>=0.40.0->fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (3.11)
+[2026-02-25 14:39:44] Current Directory: C:\Users\p50232\RiderProjects\PyScrapper
+[2026-02-25 14:39:44] Starting uvicorn: server:app on 127.0.0.1:8765
+[2026-02-25 14:40:51] == Start Server ==
+[2026-02-25 14:40:51] Activating venv...
+[2026-02-25 14:40:51] Installing requirements...
+Requirement already satisfied: pip in .\LocalServer\scripts\.venv\Lib\site-packages (26.0.1)
+Requirement already satisfied: fastapi in .\LocalServer\scripts\.venv\Lib\site-packages (from -r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (0.133.0)
+Requirement already satisfied: certifi in .\LocalServer\scripts\.venv\Lib\site-packages (from -r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 3)) (2026.2.25)
+Requirement already satisfied: uvicorn[standard] in .\LocalServer\scripts\.venv\Lib\site-packages (from -r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (0.41.0)
+Requirement already satisfied: starlette>=0.40.0 in .\LocalServer\scripts\.venv\Lib\site-packages (from fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (0.52.1)
+Requirement already satisfied: pydantic>=2.7.0 in .\LocalServer\scripts\.venv\Lib\site-packages (from fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (2.12.5)
+Requirement already satisfied: typing-extensions>=4.8.0 in .\LocalServer\scripts\.venv\Lib\site-packages (from fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (4.15.0)
+Requirement already satisfied: typing-inspection>=0.4.2 in .\LocalServer\scripts\.venv\Lib\site-packages (from fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (0.4.2)
+Requirement already satisfied: annotated-doc>=0.0.2 in .\LocalServer\scripts\.venv\Lib\site-packages (from fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (0.0.4)
+Requirement already satisfied: click>=7.0 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (8.3.1)
+Requirement already satisfied: h11>=0.8 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (0.16.0)
+Requirement already satisfied: colorama>=0.4 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (0.4.6)
+Requirement already satisfied: httptools>=0.6.3 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (0.7.1)
+Requirement already satisfied: python-dotenv>=0.13 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (1.2.1)
+Requirement already satisfied: pyyaml>=5.1 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (6.0.3)
+Requirement already satisfied: watchfiles>=0.20 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (1.1.1)
+Requirement already satisfied: websockets>=10.4 in .\LocalServer\scripts\.venv\Lib\site-packages (from uvicorn[standard]->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 2)) (16.0)
+Requirement already satisfied: annotated-types>=0.6.0 in .\LocalServer\scripts\.venv\Lib\site-packages (from pydantic>=2.7.0->fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (0.7.0)
+Requirement already satisfied: pydantic-core==2.41.5 in .\LocalServer\scripts\.venv\Lib\site-packages (from pydantic>=2.7.0->fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (2.41.5)
+Requirement already satisfied: anyio<5,>=3.6.2 in .\LocalServer\scripts\.venv\Lib\site-packages (from starlette>=0.40.0->fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (4.12.1)
+Requirement already satisfied: idna>=2.8 in .\LocalServer\scripts\.venv\Lib\site-packages (from anyio<5,>=3.6.2->starlette>=0.40.0->fastapi->-r C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\requirements.txt (line 1)) (3.11)
+[2026-02-25 14:40:54] Current Directory: C:\Users\p50232\RiderProjects\PyScrapper
+[2026-02-25 14:40:54] Starting uvicorn: server:app on 127.0.0.1:8765
