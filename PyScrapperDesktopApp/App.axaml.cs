@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
@@ -53,13 +54,13 @@ public partial class App : Application
     
     private void RunPsScript(string scriptFile)
     {
+
         var psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = @"-File C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\scripts\" + scriptFile,
-            WorkingDirectory = @"C:\Users\p50232\RiderProjects\PyScrapper",
+            Arguments = @"-File " + scriptFile,
             UseShellExecute = false,
-            CreateNoWindow = true,
+            CreateNoWindow = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
