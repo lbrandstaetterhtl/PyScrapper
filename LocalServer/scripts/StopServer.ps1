@@ -1,38 +1,41 @@
-﻿Write-Host "== Stop Server (Port Search) =="
+﻿param(
+    [string]$HostAddr = "127.0.0.1",
+    [int]$Port = 8765
+)
 
-$port = 8765
-Write-Host "Looking for process listening on port $port..."
+$ErrorActionPreference = "SilentlyContinue"
 
-# Finde die Verbindung auf dem Port
-$connection = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
+Write-Host "== Stop Server =="
 
-if ($connection) {
-    # Hol die Prozess-ID (PID)
-    $pidNum = $connection.OwningProcess
+$baseUrl = "http://$HostAddr`:$Port"
 
-    Write-Host "Found process ID: $pidNum"
+# 1) Graceful shutdown via API (wenn erreichbar)
+try {
+    $health = Invoke-RestMethod -Method GET -Uri "$baseUrl/health" -TimeoutSec 2
+    if ($health.ok -eq $true) {
+        Write-Host "Server reachable. Sending quit command..."
+        Invoke-RestMethod -Method POST -Uri "$baseUrl/command" `
+            -ContentType "application/json" `
+            -Body '{"command":"quit"}' `
+            -TimeoutSec 2 | Out-Null
 
-    # Prozess beenden
-    $proc = Get-Process -Id $pidNum -ErrorAction SilentlyContinue
-
-    if ($proc) {
-        Stop-Process -Id $pidNum -Force
-        Write-Host "Process on port $port stopped successfully."
-    } else {
-        Write-Host "Process detected but could not be accessed."
+        Start-Sleep -Milliseconds 800
     }
-} else {
-    Write-Host "No process found listening on port $port."
+} catch {
+    Write-Host "Server not reachable via API (or already down). Falling back to port-kill..."
 }
 
-# Zur Sicherheit: Suche nach verwaisten Python-Prozessen mit passenden Argumenten
-# (Falls der Port belegt ist, aber der Prozess hängt)
-$wmiQuery = "SELECT * FROM Win32_Process WHERE Name LIKE 'python%' AND CommandLine LIKE '%uvicorn server:app%'"
-$orphans = Get-CimInstance -Query $wmiQuery -ErrorAction SilentlyContinue
-
-if ($orphans) {
-    foreach ($orphan in $orphans) {
-        Write-Host "Killing orphaned python process: $($orphan.ProcessId)"
-        Stop-Process -Id $orphan.ProcessId -Force -ErrorAction SilentlyContinue
+# 2) Fallback: Prozess auf dem Port finden und killen
+$connection = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
+if ($connection) {
+    $pidNum = $connection.OwningProcess
+    if ($pidNum) {
+        Write-Host "Killing process on port $Port (PID $pidNum)..."
+        Stop-Process -Id $pidNum -Force -ErrorAction SilentlyContinue
+        Write-Host "Process stopped."
+    } else {
+        Write-Host "Found connection but no PID."
     }
+} else {
+    Write-Host "No process found listening on port $Port."
 }
