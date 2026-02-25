@@ -1,4 +1,7 @@
-﻿from fastapi import FastAPI
+﻿import sys
+import time
+
+from fastapi import FastAPI
 from pydantic import BaseModel
 
 import os, signal
@@ -165,7 +168,22 @@ async def receive_download(data: DownloadRequest):
 
 
 
+start_time = time.time()
+
 @app.get("/health")
 def health():
-    return {"ok": True, "version": app.version}
- 
+    uptime_seconds = time.time() - start_time
+    return {
+        "ok": True,
+        "version": app.version,
+        "uptime_seconds": round(uptime_seconds, 2),
+        "uptime_human": f"{int(uptime_seconds // 3600)}h {int((uptime_seconds % 3600) // 60)}m {int(uptime_seconds % 60)}s",
+        "queue_sizes": {
+            "command_queue": command_queue.qsize(),
+            "download_queue": download_queue.qsize()
+        },
+        "last_download": last_download,
+        "last_identifier": identifier,
+        "server_shutting_down": quit_event.is_set(),
+        "python_version": sys.version,
+    }
