@@ -193,4 +193,4 @@ def download (
         "Status": "Download complete",
         "File": out_file
     }
-    return dictionary
+    return dictionary, identifier

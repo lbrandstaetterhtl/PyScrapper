@@ -4,8 +4,9 @@ from pydantic import BaseModel
 import os, signal
 import asyncio
 
-#Module imports
-import Session, Suno
+#Module imports for scrapping
+from PythonModule import Session, Suno
+
 
 class CommandRequest(BaseModel):
     command: str
@@ -14,13 +15,32 @@ class DownloadRequest(BaseModel):
     url: str
     mediatype: str = ".mp3"  # Default to .mp3, can be overridden by client
 
+#Global Variables
+#Downlaod path
+current_path = os.path.dirname(os.path.abspath(__file__))
+
+localserver_dir = os.path.dirname(current_path)
+
+project_root = os.path.dirname(localserver_dir)
+
+out_path = os.path.join(project_root, "Downloads")
+
+#Make sure it exists and if it doesn't it will create it
+os.makedirs(out_path, exist_ok=True)
+
+#Session for cookies and stuff which will be used to request ressources
 ses = Session.Session()
+
+#The app
 app = FastAPI()
+
+
 #Queues
 command_queue = asyncio.Queue()
 download_queue = asyncio.Queue()
 
 last_download = None
+identifier = None
 
 
 #Events
@@ -90,11 +110,11 @@ async def process_commands(line: str):
 
 
 async def process_downloads(url: str, provider: str):
-    global last_download
+    global last_download, out_path, ses, identifier
     if provider.lower() in ("suno", "suno.com"):
         
-        last_download = Suno.download(session=ses, url=url, mediatype=".mp3")
-    return last_download
+        last_download, identifier = Suno.download(session=ses, url=url, out_path=out_path,  mediatype=".mp3")
+    return last_download, identifier
           
 
 
@@ -104,7 +124,8 @@ async def process_downloads(url: str, provider: str):
 async def root():
     return {
         "message": "Server startup successful!",
-        "last_download": last_download
+        "last_download": last_download,
+        "identifier": identifier
         }
 
 
