@@ -19,4 +19,4 @@ if (!(Test-Path $activateScript)) {
 . $installScript
 
 Write-Host "Starting server..."
-uvicorn app:app --host 127.0.0.1 --port 5000
+python -m uvicorn LocalServer.server:app --host 127.0.0.1 --port 8765
