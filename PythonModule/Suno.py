@@ -37,7 +37,7 @@ def get_html(
 
     try:
         with session.open(request) as response:
-            Bytes = response.read(1024 * 512)
+            Bytes = response.read()
             html = Bytes.decode(decode)
             return html
 

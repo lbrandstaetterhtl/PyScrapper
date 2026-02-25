@@ -18,12 +18,11 @@ class DownloadRequest(BaseModel):
 #Global Variables
 #Downlaod path
 current_path = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_path)
 
-localserver_dir = os.path.dirname(current_path)
-
-project_root = os.path.dirname(localserver_dir)
 
 out_path = os.path.join(project_root, "Downloads")
+
 
 #Make sure it exists and if it doesn't it will create it
 os.makedirs(out_path, exist_ok=True)
@@ -109,12 +108,16 @@ async def process_commands(line: str):
 
 
 
-async def process_downloads(url: str, provider: str):
+async def process_downloads(download_request: str):
     global last_download, out_path, ses, identifier
-    if provider.lower() in ("suno", "suno.com"):
-        
-        last_download, identifier = Suno.download(session=ses, url=url, out_path=out_path,  mediatype=".mp3")
-    return last_download, identifier
+    try:
+        if download_request.provider in ("suno", "suno.com"):
+            
+            last_download, identifier = Suno.download(session=ses, url=download_request.url, out_path=out_path,  mediatype=download_request.mediatype)
+        return last_download, identifier
+    except Exception as e:
+        print(f"Error processing download: {e}")
+        return None, None
           
 
 
@@ -155,7 +158,7 @@ async def receive_command(data: CommandRequest):
 
 @app.post("/download")
 async def receive_download(data: DownloadRequest):
-    await download_queue.put(data.url, data.provider, data.mediatype)
+    await download_queue.put(data)
     return {"message": "Download request received!"}
 
 
