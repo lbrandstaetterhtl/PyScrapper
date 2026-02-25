@@ -19,7 +19,7 @@
         <Grid.ColumnDefinitions>*</Grid.ColumnDefinitions>
         
         <Menu>
-            <MenuItem Header="Scrap from suno" />
+            <MenuItem x:Name="Suno" Header="Scrap from suno" />
         </Menu>
     </Grid>
 
