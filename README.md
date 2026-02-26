@@ -85,12 +85,15 @@ Empfehlung:
 ### 1. Virtuelle Umgebung
 
 Windows (PowerShell):
+```
 cd LocalServer
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+```
 
 Linux / macOS:
 
+```
 cd LocalServer
 python3 -m venv .venv
 source .venv/bin/activate
@@ -103,30 +106,41 @@ pip install fastapi uvicorn pydantic
 
 Zusätzliche Dependencies ergeben sich aus PythonModule.
 ModuleNotFoundError = fehlendes Paket.
+```
 
 3. Server starten
 
 Direkt:
 
+```
 uvicorn LocalServer.server:app --host 127.0.0.1 --port 8765
+```
 
 Oder über Script:
 
+```
 .\scripts\StartServer.ps1
+```
 
 4. Wichtige URLs
 
 Swagger UI:
+```
 http://127.0.0.1:8765/docs
+```
 
 Health Endpoint:
+```
 http://127.0.0.1:8765/health
+```
 
 Desktop App – Development
 
+```
 cd PyScrapperDesktopApp
 dotnet restore
 dotnet build
 dotnet run
+```
 
 Oder über Rider / Visual Studio.
