@@ -108,7 +108,7 @@ Zusätzliche Dependencies ergeben sich aus PythonModule.
 ModuleNotFoundError = fehlendes Paket.
 ```
 
-###2. Server starten
+### 2. Server starten
 
 Direkt:
 
@@ -122,7 +122,7 @@ Oder über Script:
 .\scripts\StartServer.ps1
 ```
 
-###3. Wichtige URLs
+## #3. Wichtige URLs
 
 Swagger UI:
 ```
@@ -134,7 +134,7 @@ Health Endpoint:
 http://127.0.0.1:8765/health
 ```
 
-##Desktop App – Development
+## Desktop App – Development
 
 ```
 cd PyScrapperDesktopApp
