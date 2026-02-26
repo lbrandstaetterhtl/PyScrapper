@@ -1,8 +1,12 @@
 ﻿import sys
 import time
+import re
 
 from fastapi import FastAPI
 from pydantic import BaseModel
+
+import platform
+import subprocess
 
 import os, signal
 import asyncio
@@ -173,17 +177,47 @@ start_time = time.time()
 @app.get("/health")
 def health():
     uptime_seconds = time.time() - start_time
+    try:
+        mem = self_memory_mb()
+    except Exception as e:
+        mem = None
+
     return {
         "ok": True,
-        "version": app.version,
         "uptime_seconds": round(uptime_seconds, 2),
-        "uptime_human": f"{int(uptime_seconds // 3600)}h {int((uptime_seconds % 3600) // 60)}m {int(uptime_seconds % 60)}s",
-        "queue_sizes": {
-            "command_queue": command_queue.qsize(),
-            "download_queue": download_queue.qsize()
-        },
-        "last_download": last_download,
-        "last_identifier": identifier,
-        "server_shutting_down": quit_event.is_set(),
-        "python_version": sys.version,
+        "memory_mb": mem,
+        "pid": os.getpid(),
+        "processes": list_pids(8),
     }
+
+def self_memory_mb():
+    pid = os.getpid()
+    out = subprocess.check_output(
+        ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV"],
+        text=True,
+        errors="replace"
+    )
+    line = out.splitlines()[1]
+    mem = line.split(",")[-1]
+    digits = re.sub(r"\D", "", mem) 
+    if not digits:
+        return None
+    kb = int(digits)
+    return round(kb / 1024, 2)
+
+def list_pids(limit=10):
+    system = platform.system()
+    procs = []
+
+    if system == "Windows":
+        out = subprocess.check_output(["tasklist", "/FO", "CSV"], text=True)
+        for line in out.splitlines()[1:limit+1]:
+            cols = [c.strip('"') for c in line.split('","')]
+            procs.append({"pid": int(cols[1]), "name": cols[0]})
+    else:
+        out = subprocess.check_output(["ps", "-eo", "pid,comm"], text=True)
+        for line in out.splitlines()[1:limit+1]:
+            pid, name = line.strip().split(None, 1)
+            procs.append({"pid": int(pid), "name": name})
+
+    return procs
