@@ -122,6 +122,7 @@ Health Endpoint:
 http://127.0.0.1:8765/health
 
 Desktop App – Development
+
 cd PyScrapperDesktopApp
 dotnet restore
 dotnet build
