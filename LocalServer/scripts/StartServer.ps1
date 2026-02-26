@@ -57,4 +57,4 @@ if (-not $NoVenv) {
 }
 
 Write-Log "Starting uvicorn: server:app on $HostAddr`:$Port"
-python -m uvicorn LocalServer.server:app --host $HostAddr --port $Port 2>&1
+Start-Process -FilePath "python" -ArgumentList "-m uvicorn LocalServer.server:app --host $HostAddr --port $Port" -NoNewWindow -Wait

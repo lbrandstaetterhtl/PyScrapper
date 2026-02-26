@@ -7,6 +7,7 @@
         x:Class="PyScrapperDesktopApp.Views.SunoScrapWindow"
         x:DataType="vm:SunoScrapWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
+        WindowStartupLocation="CenterOwner"
         SizeToContent="WidthAndHeight"
         Title="PyScrapperDesktopApp">
         
@@ -17,14 +18,17 @@
                         <RowDefinition Height="*"></RowDefinition>
                 </Grid.RowDefinitions>
                 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
-                        <TextBlock Text="Enter URL: " Margin="5"/>
-                        <TextBox Text="{Binding SunoUrl}" Margin="5" Width="200"/>
+                <StackPanel Grid.Row="0" Classes="UICell">
+                        <TextBlock Text="Enter URL: " Classes="UI"/>
+                        <TextBox Text="{Binding SunoUrl}" Classes="UI"/>
                 </StackPanel>
                 
-                <ComboBox Margin="5" Grid.Row="1" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
+                <StackPanel Grid.Row="1" Classes="UICell">
+                        <TextBlock Text="Select Mediatype: " Margin="5"/>
+                        <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
+                </StackPanel>
                 
-                <StackPanel Margin="5" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <StackPanel Margin="5" Grid.Row="2" Classes="UICell">
                         <Button Classes="primary" Content="Scrap" Command="{Binding ScrapCommand}"/>
                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>

@@ -30,6 +30,10 @@ public class ApiClient
             
             var log = new Massage(successResponse?.Message ?? "Scraping successful", DateTime.Now, "INFO");
             
+            var downloadedMedia = new DownloadedMedia(requestData.Url, requestData.MediaType, DateTime.Now, "N/A", false);
+            
+            AppData.AddDownloadedMedia(downloadedMedia);
+            
             _logger.LogNewMassage(log);
         }
         else
