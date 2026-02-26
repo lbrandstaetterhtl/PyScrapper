@@ -112,6 +112,7 @@ uvicorn LocalServer.server:app --host 127.0.0.1 --port 8765
 Oder über Script:
 
 .\scripts\StartServer.ps1
+
 4. Wichtige URLs
 
 Swagger UI:
