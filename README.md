@@ -7,7 +7,7 @@ Sie beschreibt Architektur, Setup, typische Workflows und bekannte Stolperfallen
 
 ## Projektstruktur (High Level)
 
-
+```
 PyScrapper/
 ├── LocalServer/ # FastAPI Backend (Python)
 │ ├── server.py # Einstiegspunkt (uvicorn app)
@@ -24,6 +24,7 @@ PyScrapper/
 │ └── ...
 │
 └── README.md
+```
 
 
 ---
