@@ -32,6 +32,8 @@ public class ApiClient
             
             var downloadedMedia = new DownloadedMedia(requestData.Url, requestData.MediaType, DateTime.Now, "N/A", false);
             
+            downloadedMedia.SetHighestId(AppData.DownloadedMedias);
+            
             AppData.AddDownloadedMedia(downloadedMedia);
             
             _logger.LogNewMassage(log);
