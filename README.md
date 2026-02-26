@@ -122,7 +122,7 @@ Oder über Script:
 .\scripts\StartServer.ps1
 ```
 
-## #3. Wichtige URLs
+### 3. Wichtige URLs
 
 Swagger UI:
 ```
