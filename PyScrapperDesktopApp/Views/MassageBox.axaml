@@ -1,0 +1,29 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="PyScrapperDesktopApp.Views.MassageBox"
+        Icon="/Assets/avalonia-logo.ico"
+        SizeToContent="WidthAndHeight"
+        CanMaximize="False"
+        CanResize="False"
+        CanMinimize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="PyScrapperDesktopApp">
+        
+        <Grid>
+                <Grid.RowDefinitions>
+                        <RowDefinition Height="*"></RowDefinition>
+                        <RowDefinition Height="Auto"></RowDefinition>
+                </Grid.RowDefinitions>
+                
+                <TextBlock x:Name="Massage" Grid.Row="0" Margin="10" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                
+                <StackPanel Grid.Row="1" Classes="UICell">
+                        <Button x:Name="OkButton" Classes="primary" Content="OK"/>
+                </StackPanel>
+        </Grid>
+        
+</Window>

@@ -10,11 +10,6 @@ public class AppData
     public static ObservableCollection<DownloadedMedia> DownloadedMedias = new();
     public static ObservableCollection<DownloadedMedia> PlayableMedias = new();
     
-    public AppData()
-    {
-        
-    }
-    
     public static void AddDownloadedMedia(DownloadedMedia media)
     {
         DownloadedMedias.Add(media);

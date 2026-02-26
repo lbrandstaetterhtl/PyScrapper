@@ -12,9 +12,12 @@ using PyScrapperDesktopApp.Models;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
+
 public partial class MainWindowViewModel : INotifyPropertyChanged
 {
     private ObservableCollection<DownloadedMedia> _downloadedMediaList;
+    
+    private string _healthCheckResult;
 
     public ObservableCollection<DownloadedMedia> DownloadedMediaList
     {
@@ -23,6 +26,16 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
         {
             _downloadedMediaList = value;
             OnPropertyChanged(nameof(DownloadedMediaList));
+        }
+    }
+
+    public string HealthCheckResult
+    {
+        get => _healthCheckResult;
+        set
+        {
+            _healthCheckResult = value;
+            OnPropertyChanged(nameof(HealthCheckResult));
         }
     }
 
@@ -44,7 +57,23 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
         if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
         
-        var SunoScrapWindow = new Views.SunoScrapWindow();
-        await SunoScrapWindow.ShowDialog(desktop.MainWindow);
+        var sunoScrapWindow = new Views.SunoScrapWindow();
+        await sunoScrapWindow.ShowDialog(desktop.MainWindow);
+    }
+    
+    [RelayCommand]
+    public async Task GetHealth()
+    {
+        ApiClient client = new();
+        
+        var serverUrl = "127.0.0.1:8765";
+        
+        var health = await client.GetHealth(serverUrl);
+        
+        var processString = health?.Processes != null
+            ? "-----" + string.Join("\n -----", health.Processes.Select(p => $"{p.Name} (PID: {p.Pid})"))
+            : "No processes information available";
+        
+        HealthCheckResult = $"Server health check successful: \n --Uptime {health?.UptimeSeconds} seconds, \n --Memory {health?.MemoryMb} MB, \n --PID {health?.Pid}, \n --Processes \n {processString}";
     }
 }

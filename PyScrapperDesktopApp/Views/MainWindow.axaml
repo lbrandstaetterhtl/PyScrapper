@@ -6,6 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
+        WindowState="Maximized"
         Icon="/Assets/avalonia-logo.ico"
         Title="PyScrapperDesktopApp">
 
@@ -23,18 +24,21 @@
         
         <Menu Grid.Row="0">
             <MenuItem Header="Scrap from suno" Command="{Binding OpenSunoScrapWindow}"/>
+            <MenuItem Header="Server">
+                <MenuItem Header="Get Health" x:Name="GetHealthItem"/>
+            </MenuItem>
         </Menu>
         
         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding DownloadedMediaList}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel Classes="UICell">
+                        <StackPanel Classes="UICell" HorizontalAlignment="Left" Spacing="10">
                             <TextBlock Text="{Binding Id}" Margin="5"/>
                             <TextBlock Text="{Binding Url}" Margin="5"/>
                             <TextBlock Text="{Binding MediaType}" Margin="5"/>
                             <TextBlock Text="{Binding DownloadPath}" Margin="5"/>
-                            <TextBlock Text="{Binding DownloadedAt}"/>
+                            <TextBlock Text="{Binding DownloadedAt}" Margin="5" VerticalAlignment="Center"/>
                             <CheckBox IsEnabled="False" Content="Is Playable" IsChecked="{Binding IsPlayable}" Margin="5"/>
                         </StackPanel>
                     </DataTemplate>
