@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -25,9 +26,17 @@ public class ApiClient
         if (response.IsSuccessStatusCode)
         {
             var successResponse = JsonSerializer.Deserialize<SuccessResponse>(responseData, JsonOptions);
-
+            
+            var repoRoot = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.Parent!.FullName;
+            var downloadsDir = Path.Combine(repoRoot, "Downloads");
+            string identifier = requestData.Url.Split('/')[^1];
+            string fileName = identifier + requestData.Mediatype;
+            string downloadPath = Path.Combine(downloadsDir, fileName);
+            
+            if (!File.Exists(downloadPath)) downloadPath = "N/A";
+            
             var downloadedMedia =
-                new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now, "N/A", false);
+                new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now, downloadPath, false);
             downloadedMedia.SetHighestId(AppData.DownloadedMedias);
             AppData.AddDownloadedMedia(downloadedMedia);
 

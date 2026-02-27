@@ -1,0 +1,42 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="PyScrapperDesktopApp.Views.MediaPlayerWindow"
+        x:DataType="vm:MediaPlayerWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        SizeToContent="WidthAndHeight"
+        CanMaximize="False"
+        CanResize="False"
+        CanMinimize="False"
+        WindowStartupLocation="CenterOwner"
+        MaxHeight="400"
+        Title="PyScrapperDesktopApp">
+        
+        <StackPanel Margin="16" Spacing="10">
+                <TextBlock Text="{Binding NowPlayingTitle}" FontSize="16" FontWeight="Bold"/>
+                
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                     <Button Classes="primary" Content="Play" Command="{Binding PlayCommand}"/>
+                     <Button Classes="primary" Content="Pause" Command="{Binding PauseCommand}"/>
+                     <Button Classes="primary" Content="Go Back" Command="{Binding StopCommand}"/>
+                </StackPanel>
+                
+                <TextBlock Text="Volume" FontSize="14" FontWeight="SemiBold"/>
+                <Slider Minimum="0" Maximum="100" Value="{Binding Volume, Mode=TwoWay}" TickFrequency="0.1" IsSnapToTickEnabled="True"/>
+                
+                <Grid ColumnDefinitions="Auto, *, Auto" RowDefinitions="Auto, Auto, Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding NowPlayingTitle}"/>
+                    
+                    <Slider Grid.Column="0" Name="SeekSlider" Grid.Row="2" Grid.ColumnSpan="3"
+                            Minimum="0" MaxHeight="{Binding DurationSeconds}" 
+                            Value="{Binding PositionSeconds, Mode=TwoWay}"/>
+                    
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding CurrentlyText}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DurationText}" HorizontalAlignment="Center"/>
+                </Grid>
+                
+        </StackPanel>
+</Window>

@@ -24,6 +24,7 @@
         
         <Menu Grid.Row="0">
             <MenuItem Header="Scrap from suno" Command="{Binding OpenSunoScrapWindow}"/>
+            <MenuItem Header="Open Media Player" Command="{Binding OpenMediaPlayerWindow}"/>
             <MenuItem Header="Server">
                 <MenuItem Header="Get Health" x:Name="GetHealthItem"/>
             </MenuItem>

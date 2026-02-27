@@ -206,10 +206,6 @@ def self_memory_mb():
     kb = int(digits)
     return round(kb / 1024, 2)
 
-import json
-import platform
-import subprocess
-
 def list_python_processes():
     if platform.system() != "Windows":
         out = subprocess.check_output(["ps", "-eo", "pid,comm"], text=True)
