@@ -16,8 +16,6 @@
         Title="PyScrapperDesktopApp">
         
         <StackPanel Margin="16" Spacing="10">
-                <TextBlock Text="{Binding NowPlayingTitle}" FontSize="16" FontWeight="Bold"/>
-                
                 <StackPanel Orientation="Horizontal" Spacing="8">
                      <Button Classes="primary" Content="Play" Command="{Binding PlayCommand}"/>
                      <Button Classes="primary" Content="Pause" Command="{Binding PauseCommand}"/>
@@ -31,8 +29,8 @@
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding NowPlayingTitle}"/>
                     
                     <Slider Grid.Column="0" Name="SeekSlider" Grid.Row="2" Grid.ColumnSpan="3"
-                            Minimum="0" MaxHeight="{Binding DurationSeconds}" 
-                            Value="{Binding PositionSeconds, Mode=TwoWay}"/>
+                            Minimum="0" Maximum="{Binding DurationSeconds}" 
+                            Value="{Binding PositionSeconds, Mode=OneWay}"/>
                     
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding CurrentlyText}"/>
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DurationText}" HorizontalAlignment="Center"/>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// C#
+using System;
 using System.IO;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -8,87 +9,191 @@ using PyScrapperDesktopApp.Models;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
-public partial class MediaPlayerWindowViewModel : ObservableObject
+public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 {
-    private readonly AudioPlayer _audioPlayer;
+    private readonly AppLogger _logger = new();
+    public readonly AudioPlayer _audioPlayer;
     private readonly DispatcherTimer _timer;
-    
+    private DateTime _suppressPlayerUpdateUntil = DateTime.MinValue;
+    private double? _lastRequestedPositionSeconds = null;
+
     [ObservableProperty]
     private bool isScrubbing;
-    
+
     [ObservableProperty]
     private string nowPlayingTitle = "No media loaded";
-    
+
     [ObservableProperty]
     private double positionSeconds;
-    
+
     [ObservableProperty]
     private double durationSeconds;
-    
+
     [ObservableProperty]
     private int volume = 70;
-    
+
     [ObservableProperty]
     private string currentlyText = "0:00";
-    
+
     [ObservableProperty]
     private string durationText = "0:00";
 
     public MediaPlayerWindowViewModel(AudioPlayer audioPlayer, string path)
     {
         _audioPlayer = audioPlayer;
-        
+
         _audioPlayer.Volume = volume;
-        
-        _timer = new DispatcherTimer {Interval = TimeSpan.FromMilliseconds(200)};
+
+        // langsameres Polling, glättet UI-Updates weiter
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _timer.Tick += (s, e) => RefreshFromPlayer();
         _timer.Start();
-        
-        _audioPlayer.Open(path);
-        _audioPlayer.Play();
-    }
-    [RelayCommand] public void Play() => _audioPlayer.Play();
-    [RelayCommand] public void Pause() => _audioPlayer.Pause();
-    [RelayCommand] public void Stop() => _audioPlayer.Stop();
-    
-    public void SeekToSeconds(long seconds)
-    {
-        _audioPlayer.TimeMS = seconds * 1000;
-    }
-    
-    private void  RefreshFromPlayer()
-    {
-        var lenMS = _audioPlayer.LengthMS;
-        var durSec = lenMS > 0 ? lenMS / 1000.0 : 0;
-        
-        if (Math.Abs(durationSeconds - durSec) > 0.5)
-        {
-            durationSeconds = durSec;
-        }
-        
-        var cursec = _audioPlayer.TimeMS / 1000.0;
-        
-        if (!isScrubbing)
-        {
-            positionSeconds = cursec;
-        }
-        
-        var displaySec = isScrubbing ? positionSeconds : cursec;
-        
-        currentlyText = FormatTime((long)Math.Round(displaySec));
 
-        if (durationSeconds > 0)
+        _audioPlayer.Open(path);
+
+        var massage = new Massage("audio player opened " + Path.GetFileName(path), DateTime.Now, "INFO");
+        _logger.LogNewMassage(massage);
+
+        _audioPlayer.Play();
+
+        massage = new Massage("audio player started playing", DateTime.Now, "INFO");
+        _logger.LogNewMassage(massage);
+    }
+
+    [RelayCommand] public void Play()
+    {
+        _audioPlayer.Play();
+        var massage = new Massage("audio player started playing", DateTime.Now, "INFO");
+        _logger.LogNewMassage(massage);
+    }
+
+    [RelayCommand] public void Pause()
+    {
+        _audioPlayer.Pause();
+        var massage = new Massage("audio player paused", DateTime.Now, "INFO");
+        _logger.LogNewMassage(massage);
+    }
+
+    [RelayCommand] public void Stop()
+    {
+        _audioPlayer.Stop();
+        var massage = new Massage("audio player stopped", DateTime.Now, "INFO");
+        _logger.LogNewMassage(massage);
+    }
+
+    [RelayCommand]
+    public void BeginScrub()
+    {
+        IsScrubbing = true;
+    }
+
+    [RelayCommand]
+    public void ScrubTo(double seconds)
+    {
+        _audioPlayer.Pause();
+        PositionSeconds = Math.Max(0, seconds);
+
+        CurrentlyText = FormatTime((long)Math.Round(PositionSeconds));
+        if (DurationSeconds > 0)
         {
-            var remaining = Math.Max(0, durationSeconds - displaySec);
-            
-            durationText = "-" + FormatTime((long)Math.Round(remaining));
+            var remaining = Math.Max(0, DurationSeconds - PositionSeconds);
+            DurationText = "-" + FormatTime((long)Math.Round(remaining));
         }
         else
         {
-            durationText = "-0:00";
+            DurationText = "-0:00";
         }
     }
-    
+
+    [RelayCommand]
+    public void EndScrub()
+    {
+        SeekToSeconds(PositionSeconds);
+        IsScrubbing = false;
+        _audioPlayer.Play();
+    }
+
+    // Seek ohne Pause/Play; setze kurzzeitige Unterdrückung der Timer-Updates
+    public void SeekToSeconds(double seconds)
+    {
+        _audioPlayer.Pause();
+        var ms = (long)(Math.Max(0, seconds) * 1000.0);
+        _audioPlayer.TimeMS = ms;
+
+        // Merke die angeforderte Position und unterdrücke Timer-Übernahme länger
+        _lastRequestedPositionSeconds = seconds;
+        _suppressPlayerUpdateUntil = DateTime.UtcNow.AddMilliseconds(900);
+    }
+
+    private void RefreshFromPlayer()
+    {
+        // sichere Meta-Abfrage
+        var meta = _audioPlayer?.Player?.Media?.Meta(MetadataType.Title);
+        string mediaTitle = !string.IsNullOrEmpty(meta) ? meta.Split('.')[0] : "Unknown Title";
+        NowPlayingTitle = mediaTitle;
+
+        var lenMS = _audioPlayer.LengthMS;
+        var durSec = lenMS > 0 ? lenMS / 1000.0 : 0;
+
+        if (Math.Abs(DurationSeconds - durSec) > 0.5)
+        {
+            DurationSeconds = durSec;
+        }
+
+        var cursec = _audioPlayer.TimeMS / 1000.0;
+
+        // Wenn gescrubbt: nichts vom Player übernehmen
+        if (IsScrubbing)
+        {
+            CurrentlyText = FormatTime((long)Math.Round(PositionSeconds));
+            if (DurationSeconds > 0)
+            {
+                var remaining = Math.Max(0, DurationSeconds - PositionSeconds);
+                DurationText = "-" + FormatTime((long)Math.Round(remaining));
+            }
+            else
+            {
+                DurationText = "-0:00";
+            }
+            return;
+        }
+
+        // Während Suppression: nur übernehmen, wenn Player nahe an der angeforderten Position ist
+        if (DateTime.UtcNow < _suppressPlayerUpdateUntil && _lastRequestedPositionSeconds.HasValue)
+        {
+            if (Math.Abs(cursec - _lastRequestedPositionSeconds.Value) <= 0.6)
+            {
+                // Player hat sich stabilisiert — übernehmen und Abbruch der Unterdrückung
+                PositionSeconds = cursec;
+                _lastRequestedPositionSeconds = null;
+                _suppressPlayerUpdateUntil = DateTime.MinValue;
+            }
+            else
+            {
+                // noch nicht stabil: lasse UI bei der zuletzt angeforderten Position
+                PositionSeconds = _lastRequestedPositionSeconds.Value;
+            }
+        }
+        else
+        {
+            // normale Übernahme vom Player
+            PositionSeconds = cursec;
+            _lastRequestedPositionSeconds = null;
+        }
+
+        CurrentlyText = FormatTime((long)Math.Round(PositionSeconds));
+
+        if (DurationSeconds > 0)
+        {
+            var remaining = Math.Max(0, DurationSeconds - PositionSeconds);
+            DurationText = "-" + FormatTime((long)Math.Round(remaining));
+        }
+        else
+        {
+            DurationText = "-0:00";
+        }
+    }
+
     private static string FormatTime(long totalSeconds)
     {
         totalSeconds = Math.Max(0, totalSeconds);
@@ -98,10 +203,13 @@ public partial class MediaPlayerWindowViewModel : ObservableObject
             ? $"{(int)ts.TotalHours}:{ts.Minutes:00}:{ts.Seconds:00}"
             : $"{ts.Minutes}:{ts.Seconds:00}";
     }
-    
+
     public void Dispose()
     {
         _timer.Stop();
         _audioPlayer.Dispose();
+
+        var massage = new Massage("audio player disposed", DateTime.Now, "INFO");
+        _logger.LogNewMassage(massage);
     }
 }
