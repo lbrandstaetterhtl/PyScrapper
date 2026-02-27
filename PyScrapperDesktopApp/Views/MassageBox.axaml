@@ -11,8 +11,9 @@
         CanResize="False"
         CanMinimize="False"
         WindowStartupLocation="CenterOwner"
+        MaxHeight="400"
         Title="PyScrapperDesktopApp">
-        
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
         <Grid>
                 <Grid.RowDefinitions>
                         <RowDefinition Height="*"></RowDefinition>
@@ -25,5 +26,5 @@
                         <Button x:Name="OkButton" Classes="primary" Content="OK"/>
                 </StackPanel>
         </Grid>
-        
+        </ScrollViewer>
 </Window>

@@ -27,7 +27,7 @@ public class ApiClient
             var successResponse = JsonSerializer.Deserialize<SuccessResponse>(responseData, JsonOptions);
 
             var downloadedMedia =
-                new DownloadedMedia(requestData.Url, requestData.MediaType, DateTime.Now, "N/A", false);
+                new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now, "N/A", false);
             downloadedMedia.SetHighestId(AppData.DownloadedMedias);
             AppData.AddDownloadedMedia(downloadedMedia);
 
@@ -79,7 +79,7 @@ public class ApiClient
     {
         public string Provider { get; set; }
         public string Url { get; set; }
-        public string MediaType { get; set; }
+        public string Mediatype { get; set; }
     }
 
     public class ErrorResponse

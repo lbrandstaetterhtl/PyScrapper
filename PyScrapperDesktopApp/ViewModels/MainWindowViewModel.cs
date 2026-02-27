@@ -74,6 +74,6 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
             ? "-----" + string.Join("\n -----", health.Processes.Select(p => $"{p.Name} (PID: {p.Pid})"))
             : "No processes information available";
         
-        HealthCheckResult = $"Server health check successful: \n --Uptime {health?.UptimeSeconds} seconds, \n --Memory {health?.MemoryMb} MB, \n --PID {health?.Pid}, \n --Processes \n {processString}";
+        HealthCheckResult = $"Server health check successful: \n \n --Uptime: {health?.UptimeSeconds} seconds \n \n --Memory: {health?.MemoryMb} MB \n \n --PID: {health?.Pid} \n \n --Processes {health?.Processes.Count}: \n {processString}";
     }
 }

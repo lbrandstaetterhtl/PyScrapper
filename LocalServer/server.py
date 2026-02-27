@@ -1,6 +1,7 @@
 ﻿import sys
 import time
 import re
+import json
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -187,7 +188,7 @@ def health():
         "uptime_seconds": round(uptime_seconds, 2),
         "memory_mb": mem,
         "pid": os.getpid(),
-        "processes": list_pids(8),
+        "processes": list_python_processes()
     }
 
 def self_memory_mb():
@@ -205,19 +206,38 @@ def self_memory_mb():
     kb = int(digits)
     return round(kb / 1024, 2)
 
-def list_pids(limit=10):
-    system = platform.system()
-    procs = []
+import json
+import platform
+import subprocess
 
-    if system == "Windows":
-        out = subprocess.check_output(["tasklist", "/FO", "CSV"], text=True)
-        for line in out.splitlines()[1:limit+1]:
-            cols = [c.strip('"') for c in line.split('","')]
-            procs.append({"pid": int(cols[1]), "name": cols[0]})
-    else:
+def list_python_processes():
+    if platform.system() != "Windows":
         out = subprocess.check_output(["ps", "-eo", "pid,comm"], text=True)
-        for line in out.splitlines()[1:limit+1]:
+        procs = []
+        for line in out.splitlines()[1:]:
             pid, name = line.strip().split(None, 1)
-            procs.append({"pid": int(pid), "name": name})
+            if name.lower().startswith("python"):
+                procs.append({"pid": int(pid), "name": name})
+        return procs
 
-    return procs
+    ps = r"""
+Get-CimInstance Win32_Process -Filter "Name LIKE 'python%'" |
+Select-Object ProcessId, Name |
+ConvertTo-Json
+""".strip()
+
+    out = subprocess.check_output(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+        text=True,
+        encoding="utf-8",
+        errors="replace"
+    ).strip()
+
+    if not out:
+        return []
+
+    data = json.loads(out)
+    if isinstance(data, dict):
+        data = [data]
+
+    return [{"pid": int(p["ProcessId"]), "name": p["Name"]} for p in data]

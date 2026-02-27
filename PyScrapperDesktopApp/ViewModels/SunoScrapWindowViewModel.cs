@@ -65,7 +65,7 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
             {
                 Provider = "suno",
                 Url = SunoUrl,
-                MediaType = SelectedMediaType
+                Mediatype = SelectedMediaType
             };
         
             await client.SendScrapRequest(requestData, serverUrl);
