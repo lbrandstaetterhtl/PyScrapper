@@ -190,7 +190,7 @@ def download (
     download_to_file(url=file, out_file=out_file, session=session)
 
     dictionary = {
-        "Status": "Download complete",
-        "File": out_file
+        "status": "Download complete",
+        "file": out_file
     }
     return dictionary, identifier
