@@ -1,7 +1,5 @@
-﻿import sys
-import time
-import re
-import json
+﻿import sys, time, re, json, uuid
+from datetime import datetime
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -13,27 +11,25 @@ import os, signal
 import asyncio
 
 #Module imports for scrapping
-from PythonModule import Session, Suno
+from PythonModule import Session, Suno 
 
 
-class CommandRequest(BaseModel):
-    command: str
-class DownloadRequest(BaseModel):
-    provider: str
-    url: str
-    mediatype: str = ".mp3"  # Default to .mp3, can be overridden by client
+
 
 #Global Variables
 #Downlaod path
 current_path = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_path)
 
+#Runtime Logs will be saved under this path
+log_dir = os.path.join(project_root, "LocalServer", "logs")
+os.makedirs(log_dir, exist_ok=True)
 
-out_path = os.path.join(project_root, "Downloads")
+
 
 
 #Make sure it exists and if it doesn't it will create it
-os.makedirs(out_path, exist_ok=True)
+
 
 #Session for cookies and stuff which will be used to request ressources
 ses = Session.Session()
@@ -43,11 +39,7 @@ app = FastAPI()
 
 
 #Queues
-command_queue = asyncio.Queue()
-download_queue = asyncio.Queue()
-
-last_download = None
-identifier = None
+log_queue = asyncio.Queue(maxsize=5000)
 
 
 #Events
@@ -57,86 +49,149 @@ quit_event = asyncio.Event()
 
 
 
-async def server_run(quit_event: asyncio.Event, command_queue: asyncio.Queue, download_queue: asyncio.Queue):
-    tasks = set()
+class CommandRequest(BaseModel):
+    command: str
+
+
+class DownloadRequest(BaseModel):
+    provider: str
+    url: str
+    mediatype: str = ".mp3"
+    download_path: str = os.path.join(project_root, "downloads")
+
+class JobResponse(BaseModel):
+    id: str
+    jobtype: str
+    status: str 
+    message: dict
+
+
+
+
+
+async def logger(
+        quit_event: asyncio.Event,
+        log_queue: asyncio.Queue
+        ):
+#Setting up files where logs will be written to
+    global log_dir
+    log_file = os.path.join(log_dir, "server_runtime.log")
+
+
     while not quit_event.is_set():
-        get_cmd = asyncio.create_task(command_queue.get())
-        get_download = asyncio.create_task(download_queue.get())
-
         try:
-            done, pending = await asyncio.wait(
-                {get_cmd, get_download},
-                return_when=asyncio.FIRST_COMPLETED
-            )
+#Waits till something gets put into the queue
+            message = await log_queue.get()
 
-            for t in pending:
-                t.cancel()
+            if not isinstance(message, str):
+                message = json.dumps(message, ensure_ascii=False)
 
-            for t in done:
-                if t is get_cmd:
-                    line = t.result()
-                    task = asyncio.create_task(process_commands(line))
-                    tasks.add(task)
-                    task.add_done_callback(tasks.discard)
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-                elif t is get_download:
-                    download_request = t.result()
-                    task = asyncio.create_task(process_downloads(download_request))
-                    tasks.add(task)
-                    task.add_done_callback(tasks.discard)
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(f"[{str(timestamp)}] " + message + "\n")
 
         except asyncio.CancelledError:
-            print("Server run task cancelled.")
             break
-
+#Just in case something will break the logger it will be output in terminal and not crash the server
         except Exception as e:
-            print(f"Error processing command: {e}")
+            print(e)
+    
 
 
 
 
-
-async def process_commands(line: str):
+#Processes the commands from a user
+async def process_commands(line: str, job_id:str):
     global quit_event
-    match line:
+    match line.lower():
         case "quit":
             quit_event.set()
             if os.name == "nt":
                 os._exit(0)
+        case _:
+            response = JobResponse(
+                id= job_id,
+                jobtype= "command",
+                status= "error",
+                message= {
+                    "error": "unknown command", "command": line
+                }
+            )
+            try:
+                log_queue.put_nowait(response.model_dump_json())
+            except asyncio.QueueFull:
+                pass
+            return response
 
 
-                try:
-                    os.kill(os.getppid(), signal.SIGTERM)
-                except Exception:
-                    os.kill(os.getpid(), signal.SIGTERM)
-
-                return {"Status": "Server shutting down"}
+                
 
 
+#Limits the parralel downloads to 50 at a time, change value for more or less downlaods
+download_limiter = asyncio.Semaphore(50)
+#Starts download from a user
+async def process_downloads(download_request: DownloadRequest, job_id:str):
+    global ses
+    
+    os.makedirs(download_request.download_path, exist_ok=True)
 
-
-
-async def process_downloads(download_request: str):
-    global last_download, out_path, ses, identifier
     try:
-        if download_request.provider in ("suno", "suno.com"):
+        if download_request.provider.lower() in ("suno", "suno.com"):
+            async with download_limiter:
+                last_download, identifier = await asyncio.to_thread(Suno.download, session=ses, url=download_request.url, out_path=download_request.download_path,  mediatype=download_request.mediatype)
+                response = JobResponse(
+                            id=job_id,
+                            jobtype="download",
+                            status="done",
+                            message={
+                                "provider": download_request.provider,
+                                "identifier": identifier,
+                                "file": last_download.get('file'),
+                                "raw_status": last_download.get('status')
+                            } 
+                )
+            
 
-            last_download, identifier = Suno.download(session=ses, url=download_request.url, out_path=out_path,  mediatype=download_request.mediatype)
-        return last_download, identifier
+        else:
+           response = JobResponse(
+             id=job_id,
+                jobtype="download",
+                status="error",
+                message={"error": f"Unknown provider {download_request.provider}"}  
+           )
+        
+                
+        try:  
+            log_queue.put_nowait(response.model_dump_json())
+        except asyncio.QueueFull:
+            pass
+        return response
+
+              
+            
+
     except Exception as e:
-        print(f"Error processing download: {e}")
-        return None, None
-
-
-
-
+        response = JobResponse(
+            id=job_id,
+            jobtype="download",
+            status= "error",
+            message={"error": str(e), "url": download_request.url}
+        )
+        try:
+            log_queue.put_nowait(response.model_dump_json())
+        except asyncio.QueueFull:
+            pass
+        return response
+       
+        
+        
+        
 
 @app.get("/")
 async def root():
     return {
         "message": "Server startup successful!",
-        "last_download": last_download,
-        "identifier": identifier
     }
 
 
@@ -145,9 +200,11 @@ async def root():
 
 @app.on_event("startup")
 async def startup_event():
-    #Task
-
-    asyncio.create_task(server_run(quit_event, command_queue, download_queue))
+    global quit_event, log_queue
+   
+    asyncio.create_task(logger(quit_event, log_queue))
+    
+    
 
 
 
@@ -157,8 +214,9 @@ async def startup_event():
 
 @app.post("/command")
 async def receive_command(data: CommandRequest):
-    await command_queue.put(data.command)
-    return {"message": f"Command received! {data.command}"}
+    task_id = str(uuid.uuid4())
+    response = await process_commands(data.command, task_id)
+    return response
 
 
 
@@ -166,8 +224,18 @@ async def receive_command(data: CommandRequest):
 
 @app.post("/download")
 async def receive_download(data: DownloadRequest):
-    await download_queue.put(data)
-    return {"message": "Download request received!"}
+    try:
+        task_id = str(uuid.uuid4())
+        response = await process_downloads(data, task_id)
+        return response
+        
+    
+    except (ValueError, TypeError) as e:
+        return {"ERROR": f"Invalid type for {str(e)}"}
+
+    except Exception as e:
+        return {"ERROR": str(e)}
+
 
 
 
