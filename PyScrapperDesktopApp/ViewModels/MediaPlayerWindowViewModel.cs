@@ -113,21 +113,18 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _audioPlayer.Play();
     }
 
-    // Seek ohne Pause/Play; setze kurzzeitige Unterdrückung der Timer-Updates
     public void SeekToSeconds(double seconds)
     {
         _audioPlayer.Pause();
         var ms = (long)(Math.Max(0, seconds) * 1000.0);
         _audioPlayer.TimeMS = ms;
 
-        // Merke die angeforderte Position und unterdrücke Timer-Übernahme länger
         _lastRequestedPositionSeconds = seconds;
         _suppressPlayerUpdateUntil = DateTime.UtcNow.AddMilliseconds(900);
     }
 
     private void RefreshFromPlayer()
     {
-        // sichere Meta-Abfrage
         var meta = _audioPlayer?.Player?.Media?.Meta(MetadataType.Title);
         string mediaTitle = !string.IsNullOrEmpty(meta) ? meta.Split('.')[0] : "Unknown Title";
         NowPlayingTitle = mediaTitle;
@@ -142,7 +139,6 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 
         var cursec = _audioPlayer.TimeMS / 1000.0;
 
-        // Wenn gescrubbt: nichts vom Player übernehmen
         if (IsScrubbing)
         {
             CurrentlyText = FormatTime((long)Math.Round(PositionSeconds));
@@ -158,25 +154,21 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // Während Suppression: nur übernehmen, wenn Player nahe an der angeforderten Position ist
         if (DateTime.UtcNow < _suppressPlayerUpdateUntil && _lastRequestedPositionSeconds.HasValue)
         {
             if (Math.Abs(cursec - _lastRequestedPositionSeconds.Value) <= 0.6)
             {
-                // Player hat sich stabilisiert — übernehmen und Abbruch der Unterdrückung
                 PositionSeconds = cursec;
                 _lastRequestedPositionSeconds = null;
                 _suppressPlayerUpdateUntil = DateTime.MinValue;
             }
             else
             {
-                // noch nicht stabil: lasse UI bei der zuletzt angeforderten Position
                 PositionSeconds = _lastRequestedPositionSeconds.Value;
             }
         }
         else
         {
-            // normale Übernahme vom Player
             PositionSeconds = cursec;
             _lastRequestedPositionSeconds = null;
         }
@@ -202,6 +194,32 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         return ts.TotalHours >= 1
             ? $"{(int)ts.TotalHours}:{ts.Minutes:00}:{ts.Seconds:00}"
             : $"{ts.Minutes}:{ts.Seconds:00}";
+    }
+    
+    [RelayCommand]
+    private void IncreaseVolume()
+    {
+        Volume = Math.Min(100, Volume + 5);
+        _audioPlayer.Volume = Volume;
+    }
+
+    [RelayCommand]
+    private void DecreaseVolume()
+    {
+        Volume = Math.Max(0, Volume - 5);
+        _audioPlayer.Volume = Volume;
+    }
+    
+    [RelayCommand]
+    private void MoveForward()
+    {
+        SeekToSeconds(PositionSeconds + 1);
+    }
+    
+    [RelayCommand]
+    private void MoveBackward()
+    {
+        SeekToSeconds(PositionSeconds - 1);
     }
 
     public void Dispose()

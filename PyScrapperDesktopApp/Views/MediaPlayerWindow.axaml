@@ -16,14 +16,15 @@
         Title="PyScrapperDesktopApp">
         
         <StackPanel Margin="16" Spacing="10">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                     <Button Classes="primary" Content="Play" Command="{Binding PlayCommand}"/>
-                     <Button Classes="primary" Content="Pause" Command="{Binding PauseCommand}"/>
-                     <Button Classes="primary" Content="Go Back" Command="{Binding StopCommand}"/>
-                </StackPanel>
                 
                 <TextBlock Text="Volume" FontSize="14" FontWeight="SemiBold"/>
-                <Slider Minimum="0" Maximum="100" Value="{Binding Volume, Mode=TwoWay}" TickFrequency="0.1" IsSnapToTickEnabled="True"/>
+                <Slider Name="VolumeSlider" IsEnabled="False" Minimum="3" Maximum="100" Value="{Binding Volume, Mode=TwoWay}" TickFrequency="0.0000001" IsSnapToTickEnabled="True"/>
+                
+                <Grid ColumnDefinitions="Auto, *, Auto" RowDefinitions="Auto">
+                        <Button Grid.Column="0" Content="-" Command="{Binding DecreaseVolumeCommand}"/>
+                        <Button Grid.Column="2" Content="+" Command="{Binding IncreaseVolumeCommand}"/>
+                </Grid>
+                
                 
                 <Grid ColumnDefinitions="Auto, *, Auto" RowDefinitions="Auto, Auto, Auto">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding NowPlayingTitle}"/>
@@ -36,5 +37,14 @@
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DurationText}" HorizontalAlignment="Center"/>
                 </Grid>
                 
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Classes="primary" Content="Play" Command="{Binding PlayCommand}"/>
+                        <Button Classes="primary" Content="Pause" Command="{Binding PauseCommand}"/>
+                        <Button Name="ForwardButton" Classes="primary" Content="Move forward" Command="{Binding MoveForwardCommand}"/>
+                        <Button Name="BackwardButton" Classes="primary" Content="Move backward" Command="{Binding MoveBackwardCommand}"/>
+                        <Button Classes="primary" Content="Rewind to beginning" Command="{Binding StopCommand}"/>
+                </StackPanel>
+                
+                <Button Name="CloseButton" Classes="primary" Content="Close"/>
         </StackPanel>
 </Window>

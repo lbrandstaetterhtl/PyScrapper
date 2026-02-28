@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using LibVLCSharp.Shared;
 
 namespace PyScrapperDesktopApp.Models;
 
 public class AudioPlayer : IDisposable
 {
-    private readonly LibVLC _vlc;
+    private LibVLC _vlc;
+    private bool _disposed;
+    private readonly object _disposeLock = new();
     
     public MediaPlayer Player { get; }
     
@@ -53,7 +57,35 @@ public class AudioPlayer : IDisposable
     
     public void Dispose()
     {
-        Player.Dispose();
-        _vlc.Dispose();
+        // idempotent und thread-sicher
+        bool doDispose = false;
+        lock (_disposeLock)
+        {
+            if (!_disposed)
+            {
+                _disposed = true;
+                doDispose = true;
+            }
+        }
+
+        if (!doDispose)
+            return;
+
+        if (_vlc != null)
+        {
+            // Dispose des nativen LibVLC im Hintergrund, Fehler abfangen
+            Task.Run(() =>
+            {
+                try
+                {
+                   _vlc.Dispose();
+                   Player.Dispose();
+                }
+                catch
+                {
+                    // swallow native dispose errors to avoid crash during App shutdown
+                }
+            });
+        }
     }
 }
