@@ -23,29 +23,34 @@ public class ApiClient
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"http://{serverUrl}/download", content);
         var responseData = await response.Content.ReadAsStringAsync();
-
-        if (response.IsSuccessStatusCode)
+        
+        try
         {
-            var successResponse = JsonSerializer.Deserialize<DownloadResponse>(responseData, JsonOptions);
+            var deserializedResponse = JsonSerializer.Deserialize<DownloadSuccessResponse>(responseData, JsonOptions);
 
-            bool isPlayable = File.Exists(successResponse.Message.File);
+            if (deserializedResponse.Status == "error")
+            {
+                throw new Exception("Download request failed with error status");
+            }
+
+            bool isPlayable = File.Exists(deserializedResponse.Message.File);
 
             var downloadedMedia =
-                new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now, successResponse.Message.File, isPlayable);
+            new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now, deserializedResponse.Message.File, isPlayable);
             downloadedMedia.SetHighestId(AppData.DownloadedMedias);
             AppData.AddDownloadedMedia(downloadedMedia);
 
-            var log = new Massage($"Scraping successful: {successResponse?.Message.Raw_status}, saved to {downloadedMedia.DownloadPath}", DateTime.Now,
-                successResponse?.Message.Raw_status.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "WARNING");
+            var log = new Massage($"{deserializedResponse?.Message.Raw_status}, saved to {downloadedMedia.DownloadPath}", DateTime.Now,
+            deserializedResponse?.Message.Raw_status.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "WARNING");
             _logger.LogNewMassage(log);
             return true;
+        
         }
-        else
+        catch (Exception e)
         {
-            var errorResponse = JsonSerializer.Deserialize<DownloadResponse>(responseData, JsonOptions);
-
-            var log = new Massage(errorResponse?.Message.Raw_status ?? "Scraping failed", DateTime.Now,
-                errorResponse?.Message.Raw_status.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "ERROR");
+            var deserializedError = JsonSerializer.Deserialize<DonwloadErrorResponse>(responseData, JsonOptions);
+            var log = new Massage(deserializedError?.Message.Error ?? "Download request failed", DateTime.Now,
+                deserializedError?.Message.Error.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "ERROR");
             _logger.LogNewMassage(log);
             
             return false;
@@ -101,7 +106,7 @@ public class ApiClient
     }
     
 
-    public class DownloadResponse
+    public class DownloadSuccessResponse
     {
         [JsonPropertyName("id")]
         public string Id { get; set; }
@@ -113,17 +118,36 @@ public class ApiClient
         public string Status { get; set; }
         
         [JsonPropertyName("message")]
-        public DownloadMessage Message { get; set; }
+        public DownloadSuccessMessage Message { get; set; }
+    }
+    
+    public class DonwloadErrorResponse
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
         
+        [JsonPropertyName("jobtype")]
+        public string JobType { get; set; }
         
+        [JsonPropertyName("status")]
+        public string Status { get; set; }
+        
+        [JsonPropertyName("message")]
+        public DonwloadErrorMessage Message { get; set; }
     }
 
-    public class DownloadMessage
+    public class DownloadSuccessMessage
     {
         public string Provider { get; set; }
         public string identifier { get; set; }
         public string File { get; set; }
         public string Raw_status { get; set; }
+    }
+    
+    public class DonwloadErrorMessage
+    {
+        public string Error { get; set; }
+        public string Url { get; set; }
     }
 
     public class ServerProcess
