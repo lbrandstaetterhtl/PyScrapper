@@ -76,7 +76,7 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
         
             if (!result)
             {
-                var massageBox = new MassageBox($"Failed to start scraping. Please check the server logs for more details.");
+                var massageBox = new MassageBox($"Failed to start scraping. Please check the server/app logs for more details.");
                 await massageBox.ShowDialog(_ScrapWindow);
                 return;
             }
