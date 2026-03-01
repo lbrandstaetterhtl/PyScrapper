@@ -8,10 +8,7 @@ public class AppLogger
 {
     public void LogNewMassage(Massage massage)
     {
-        var exeDir = AppContext.BaseDirectory;
-        var repoRoot = Directory.GetParent(exeDir)!.Parent!.Parent!.Parent!.FullName;
-        
-        var logFilePath = Path.Combine(repoRoot, @"logs\app.log");
+        var logFilePath = Path.Combine(AppData.LogsPath, @"app.log");
         
         if (Directory.Exists(Path.GetDirectoryName(logFilePath)))
         {

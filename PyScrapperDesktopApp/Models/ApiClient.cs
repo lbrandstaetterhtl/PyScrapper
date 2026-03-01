@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.Models;
 
@@ -14,7 +15,7 @@ public class ApiClient
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public async Task SendScrapRequest(RequestData requestData, string serverUrl)
+    public async Task<bool> SendScrapRequest(RequestData requestData, string serverUrl)
     {
         HttpClient client = new();
 
@@ -25,31 +26,29 @@ public class ApiClient
 
         if (response.IsSuccessStatusCode)
         {
-            var successResponse = JsonSerializer.Deserialize<SuccessResponse>(responseData, JsonOptions);
-            
-            var repoRoot = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.Parent!.FullName;
-            var downloadsDir = Path.Combine(repoRoot, "Downloads");
-            string identifier = requestData.Url.Split('/')[^1];
-            string fileName = identifier + requestData.Mediatype;
-            string downloadPath = Path.Combine(downloadsDir, fileName);
-            
-            if (!File.Exists(downloadPath)) downloadPath = "N/A";
-            
+            var successResponse = JsonSerializer.Deserialize<DownloadResponse>(responseData, JsonOptions);
+
+            bool isPlayable = File.Exists(successResponse.Message.File);
+
             var downloadedMedia =
-                new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now, downloadPath, false);
+                new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now, successResponse.Message.File, isPlayable);
             downloadedMedia.SetHighestId(AppData.DownloadedMedias);
             AppData.AddDownloadedMedia(downloadedMedia);
 
-            var log = new Massage(successResponse?.Message ?? "Scraping successful", DateTime.Now, "INFO");
+            var log = new Massage($"Scraping successful: {successResponse?.Message.Raw_status}, saved to {downloadedMedia.DownloadPath}", DateTime.Now,
+                successResponse?.Message.Raw_status.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "WARNING");
             _logger.LogNewMassage(log);
+            return true;
         }
         else
         {
-            var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(responseData, JsonOptions);
+            var errorResponse = JsonSerializer.Deserialize<DownloadResponse>(responseData, JsonOptions);
 
-            var log = new Massage(errorResponse?.msg ?? "Scraping failed", DateTime.Now,
-                errorResponse?.type ?? "ERROR");
+            var log = new Massage(errorResponse?.Message.Raw_status ?? "Scraping failed", DateTime.Now,
+                errorResponse?.Message.Raw_status.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "ERROR");
             _logger.LogNewMassage(log);
+            
+            return false;
         }
     }
 
@@ -84,23 +83,47 @@ public class ApiClient
         return null;
     }
 
+    public class ErrorResponse
+    {
+        [JsonPropertyName("msg")]
+        public string msg { get; set; }
+        
+        [JsonPropertyName("type")]
+        public string type { get; set; }
+    }
+
     public class RequestData
     {
         public string Provider { get; set; }
         public string Url { get; set; }
         public string Mediatype { get; set; }
+        public string Download_path { get; set; }
+    }
+    
+
+    public class DownloadResponse
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+        
+        [JsonPropertyName("jobtype")]
+        public string JobType { get; set; }
+        
+        [JsonPropertyName("status")]
+        public string Status { get; set; }
+        
+        [JsonPropertyName("message")]
+        public DownloadMessage Message { get; set; }
+        
+        
     }
 
-    public class ErrorResponse
+    public class DownloadMessage
     {
-        [JsonPropertyName("msg")] public string msg { get; set; }
-
-        [JsonPropertyName("type")] public string type { get; set; }
-    }
-
-    public class SuccessResponse
-    {
-        public string Message { get; set; }
+        public string Provider { get; set; }
+        public string identifier { get; set; }
+        public string File { get; set; }
+        public string Raw_status { get; set; }
     }
 
     public class ServerProcess

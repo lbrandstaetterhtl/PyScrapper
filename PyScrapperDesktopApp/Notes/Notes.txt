@@ -1,0 +1,1 @@
+﻿When error from server during scraping then HTTP response gives success

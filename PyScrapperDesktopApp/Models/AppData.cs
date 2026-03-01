@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 
 namespace PyScrapperDesktopApp.Models;
@@ -9,6 +10,9 @@ public class AppData
 {
     public static ObservableCollection<DownloadedMedia> DownloadedMedias = new();
     public static ObservableCollection<DownloadedMedia> PlayableMedias = new();
+    public static string PyScrapperPath { get; set; } = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
+    public static string DownloadPath { get; set; } = Path.Combine(PyScrapperPath, "Downloads");
+    public static string LogsPath { get; set; } = Path.Combine(PyScrapperPath + @"\PyScrapperDesktopApp", "logs");
     
     public static void AddDownloadedMedia(DownloadedMedia media)
     {

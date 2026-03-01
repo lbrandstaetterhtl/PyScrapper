@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Threading.Tasks;
 using System.Xml;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
+using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
@@ -18,6 +21,8 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
     private readonly List<string> _availableMediaType = [".mp3", ".mp4"];
 
     private string _selectedMediaTypes;
+    
+    private readonly Window _ScrapWindow;
 
     public string SunoUrl
     {
@@ -55,33 +60,34 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
     
     private async void Scrap()
     {
-        try
-        {
             ApiClient client = new();
         
-            string serverUrl = "127.0.0.1:8765"; // Replace with your actual server URL
+            string serverUrl = "127.0.0.1:8765";
         
             var requestData = new ApiClient.RequestData
             {
                 Provider = "suno",
                 Url = SunoUrl,
-                Mediatype = SelectedMediaType
+                Mediatype = SelectedMediaType,
+                Download_path = AppData.DownloadPath
             };
         
-            await client.SendScrapRequest(requestData, serverUrl);
+            var result = await client.SendScrapRequest(requestData, serverUrl);
         
-            RequestClose?.Invoke();
-        }
-        catch (Exception e)
-        {
-            var massage = new Massage($"Error during scraping: {e.Message}", DateTime.Now, "ERROR");
+            if (!result)
+            {
+                var massageBox = new MassageBox($"Failed to start scraping. Please check the server logs for more details.");
+                await massageBox.ShowDialog(_ScrapWindow);
+                return;
+            }
             
-            _logger.LogNewMassage(massage);
-        }
+            RequestClose?.Invoke();
     }
 
-    public SunoScrapWindowViewModel()
+    public SunoScrapWindowViewModel(Window scrapWindow)
     {
+        _ScrapWindow = scrapWindow;
+    
         ScrapCommand = new RelayCommand(Scrap);
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke());
     }

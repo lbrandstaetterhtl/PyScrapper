@@ -9,7 +9,7 @@ public partial class SunoScrapWindow : Window
     {
         InitializeComponent();
         
-        var vm = new SunoScrapWindowViewModel();
+        var vm = new SunoScrapWindowViewModel(this);
         
         DataContext = vm;
         
