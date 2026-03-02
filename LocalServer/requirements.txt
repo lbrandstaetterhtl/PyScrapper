@@ -2,3 +2,4 @@
 uvicorn[standard]
 pydantic
 certifi
+yt-dlp

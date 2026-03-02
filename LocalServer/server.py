@@ -11,7 +11,7 @@ import os, signal
 import asyncio
 
 #Module imports for scrapping
-from PythonModule import Session, Suno 
+import Session, Suno, Youtube 
 
 
 
@@ -23,12 +23,13 @@ project_root = os.path.dirname(current_path)
 
 #Runtime Logs will be saved under this path
 log_dir = os.path.join(project_root, "LocalServer", "logs")
+#Make sure it exists and if it doesn't it will create it
 os.makedirs(log_dir, exist_ok=True)
 
 
+supported_providers = ["suno", "suno.com", "youtube", "youtube.com"]
 
 
-#Make sure it exists and if it doesn't it will create it
 
 
 #Session for cookies and stuff which will be used to request ressources
@@ -132,15 +133,33 @@ async def process_commands(line: str, job_id:str):
 download_limiter = asyncio.Semaphore(50)
 #Starts download from a user
 async def process_downloads(download_request: DownloadRequest, job_id:str):
-    global ses
+    global ses, supported_providers
     
     os.makedirs(download_request.download_path, exist_ok=True)
 
     try:
+        if download_request.provider.lower() not in supported_providers:
+            response = JobResponse(
+             id=job_id,
+                jobtype="download",
+                status="error",
+                message={"error": f"Unknown provider {download_request.provider}"}  
+           )
+
+
         if download_request.provider.lower() in ("suno", "suno.com"):
             async with download_limiter:
                 last_download, identifier = await asyncio.to_thread(Suno.download, session=ses, url=download_request.url, out_path=download_request.download_path,  mediatype=download_request.mediatype)
-                response = JobResponse(
+                
+
+        elif download_request.provider.lower() in ("youtube", "youtube.com"):
+            async with download_limiter:
+                if download_request.mediatype.lower() == ".mp4":
+                    last_download, identifier = await asyncio.to_thread(Youtube.download, url=download_request.url, out_path=download_request.download_path)
+                else:
+                    last_download, identifier = await asyncio.to_thread(Youtube.download_audio_only, url=download_request.url, out_path=download_request.download_path)
+
+        response = JobResponse(
                             id=job_id,
                             jobtype="download",
                             status="done",
@@ -148,20 +167,11 @@ async def process_downloads(download_request: DownloadRequest, job_id:str):
                                 "provider": download_request.provider,
                                 "identifier": identifier,
                                 "file": last_download.get('file'),
-                                "raw_status": last_download.get('status')
+                                "raw status": last_download.get('status')
+        
                             } 
                 )
-            
-
-        else:
-           response = JobResponse(
-             id=job_id,
-                jobtype="download",
-                status="error",
-                message={"error": f"Unknown provider {download_request.provider}"}  
-           )
         
-                
         try:  
             log_queue.put_nowait(response.model_dump_json())
         except asyncio.QueueFull:
