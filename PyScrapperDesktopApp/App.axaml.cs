@@ -7,6 +7,7 @@ using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using Avalonia.Markup.Xaml;
+using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 using PyScrapperDesktopApp.Views;
 
@@ -23,18 +24,33 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
-            // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
             
-            RunPsScript("StartServer.ps1"); // Start the local server when the application starts.
+            RunPsScript("StartServer.ps1");
             
-            desktop.Exit += OnExit; // Ensure the server is stopped when the application exits.
+            desktop.Exit += OnExit;
             
             desktop.MainWindow = new MainWindow
             {
                 DataContext = new MainWindowViewModel(),
             };
+            
+            var medias = DownloadedMedia.GetMediasFromJson(Path.Combine(AppData.DataPath, "downloadedMedias.json"));
+
+            foreach (var media in medias)
+            {
+                if (File.Exists(media.DownloadPath))
+                {
+                    media.IsPlayable = true;
+                }
+                else
+                {
+                    media.IsPlayable = false;
+                    media.DownloadPath = "Does not exist";
+                }
+                
+                AppData.AddDownloadedMedia(media);
+            }
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -42,11 +58,9 @@ public partial class App : Application
 
     private void DisableAvaloniaDataAnnotationValidation()
     {
-        // Get an array of plugins to remove
         var dataValidationPluginsToRemove =
             BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
 
-        // remove each entry found
         foreach (var plugin in dataValidationPluginsToRemove)
         {
             BindingPlugins.DataValidators.Remove(plugin);
@@ -57,8 +71,6 @@ public partial class App : Application
     {
         var exeDir = AppContext.BaseDirectory;
 
-        // Hoch zum Repo-Root: net9.0 -> Debug -> bin -> PyScrapperDesktopApp -> (repo root)
-        // Je nach Output-Struktur kann das 4–5 Parents sein. Stabiler: Script ins Output kopieren (siehe Fix B).
         var repoRoot = Directory.GetParent(exeDir)!.Parent!.Parent!.Parent!.Parent!.FullName;
 
         var psi = new ProcessStartInfo

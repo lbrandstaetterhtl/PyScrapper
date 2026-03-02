@@ -34,6 +34,7 @@
             <ItemsControl ItemsSource="{Binding DownloadedMediaList}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
+                        <Border DoubleTapped="MediaDoubleClick" Background="Gray" BorderBrush="Gray" BorderThickness="1" Margin="5" Padding="5">
                         <StackPanel Classes="UICell" HorizontalAlignment="Left" Spacing="10">
                             <TextBlock Text="{Binding Id}" Margin="5"/>
                             <TextBlock Text="{Binding Url}" Margin="5"/>
@@ -42,6 +43,7 @@
                             <TextBlock Text="{Binding DownloadedAt}" Margin="5" VerticalAlignment="Center"/>
                             <CheckBox IsEnabled="False" Content="Is Playable" IsChecked="{Binding IsPlayable}" Margin="5"/>
                         </StackPanel>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

@@ -36,20 +36,20 @@ public class ApiClient
             bool isPlayable = File.Exists(deserializedResponse.Message.File);
 
             var downloadedMedia =
-            new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now, deserializedResponse.Message.File, isPlayable);
+                new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now, deserializedResponse.Message.File, isPlayable, deserializedResponse.Message.identifier);
             downloadedMedia.SetHighestId(AppData.DownloadedMedias);
             AppData.AddDownloadedMedia(downloadedMedia);
 
             var log = new Massage($"{deserializedResponse?.Message.Raw_status}, saved to {downloadedMedia.DownloadPath}", DateTime.Now,
-            deserializedResponse?.Message.Raw_status.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "WARNING");
+                deserializedResponse?.Message.Raw_status.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "WARNING");
             _logger.LogNewMassage(log);
+            
             return true;
-        
         }
         catch (Exception e)
         {
-            var deserializedError = JsonSerializer.Deserialize<DonwloadErrorResponse>(responseData, JsonOptions);
-            var log = new Massage(deserializedError?.Message.Error ?? "Download request failed", DateTime.Now,
+            var deserializedError = JsonSerializer.Deserialize<DownloadErrorResponse>(responseData, JsonOptions);
+            var log = new Massage("Scraping failed, server gave error: " + deserializedError?.Message.Error, DateTime.Now,
                 deserializedError?.Message.Error.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "ERROR");
             _logger.LogNewMassage(log);
             
@@ -121,7 +121,7 @@ public class ApiClient
         public DownloadSuccessMessage Message { get; set; }
     }
     
-    public class DonwloadErrorResponse
+    public class DownloadErrorResponse
     {
         [JsonPropertyName("id")]
         public string Id { get; set; }
