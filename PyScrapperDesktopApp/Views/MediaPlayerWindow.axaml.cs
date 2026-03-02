@@ -21,8 +21,20 @@ public partial class MediaPlayerWindow : Window
     public MediaPlayerWindow(string path)
     {
         InitializeComponent();
+        
+        //path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase)
+        
+        bool enableVideo = false;
 
-        _vm = new MediaPlayerWindowViewModel(new AudioPlayer(), path);
+        _vm = new MediaPlayerWindowViewModel(new AudioPlayer(enableVideo), path);
+        
+        if (enableVideo)
+        {
+            VideoView.MaxHeight = 300;
+            VideoView.MaxWidth = 300;
+            VideoView.MediaPlayer = _vm._audioPlayer.Player;
+        }
+        
         DataContext = _vm;
 
         SeekSlider.PointerPressed += (_, _) =>

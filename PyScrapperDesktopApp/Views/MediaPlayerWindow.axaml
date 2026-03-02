@@ -3,6 +3,7 @@
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:avalonia="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.MediaPlayerWindow"
         x:DataType="vm:MediaPlayerWindowViewModel"
@@ -24,6 +25,8 @@
                         <Button Grid.Column="0" Content="-" Command="{Binding DecreaseVolumeCommand}"/>
                         <Button Grid.Column="2" Content="+" Command="{Binding IncreaseVolumeCommand}"/>
                 </Grid>
+                
+                <avalonia:VideoView Name="VideoView" />
                 
                 
                 <Grid ColumnDefinitions="Auto, *, Auto" RowDefinitions="Auto, Auto, Auto">

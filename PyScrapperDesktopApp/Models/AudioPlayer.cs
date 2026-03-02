@@ -7,16 +7,28 @@ namespace PyScrapperDesktopApp.Models;
 
 public class AudioPlayer : IDisposable
 {
-    private LibVLC _vlc;
+    private readonly LibVLC _vlc;
     private bool _disposed;
     private readonly object _disposeLock = new();
     
     public MediaPlayer Player { get; }
     
-    public AudioPlayer()
+    public AudioPlayer(bool enableVideo = false)
     {
         Core.Initialize();
-        _vlc = new LibVLC();
+
+        if (!enableVideo)
+        {
+            _vlc = new LibVLC("--avcodec-hw=none");    
+        }
+        else
+        {
+            _vlc = new LibVLC(
+                "--avcodec-hw=none",
+                "--vout=none"
+            );
+        }
+
         Player = new MediaPlayer(_vlc);
     }
     public void Open(string path)

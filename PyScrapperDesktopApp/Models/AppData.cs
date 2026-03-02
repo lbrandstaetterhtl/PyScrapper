@@ -102,7 +102,12 @@ public class DownloadedMedia(string url, string mediaType, DateTime downloadedAt
             log = new Massage("Downloaded medias saved successfully", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            var jsonData = System.Text.Json.JsonSerializer.Serialize(medias);
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+            
+            var jsonData = System.Text.Json.JsonSerializer.Serialize(medias, options);
             File.WriteAllText(jsonFilePath, jsonData);
 
         }
