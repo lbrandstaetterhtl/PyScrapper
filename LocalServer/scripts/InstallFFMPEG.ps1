@@ -23,7 +23,6 @@ function Find-FFmpegExe {
 
 Write-Host "[InstallFFMPEG] Checking for ffmpeg..."
 
-
 $ffmpegExe = Find-FFmpegExe
 if (-not $ffmpegExe) {
     Write-Host "[InstallFFMPEG] ffmpeg not found -> installing via winget (yt-dlp.FFmpeg)..."
@@ -37,9 +36,12 @@ if (-not $ffmpegExe) {
 
 $ffbin = Split-Path $ffmpegExe -Parent
 
-# Für aktuelle Session sofort nutzbar
+# Für aktuelle Session (und alle Kind-Prozesse) sofort nutzbar
 if ($env:Path -notmatch [regex]::Escape($ffbin)) {
-    $env:Path += ";$ffbin"
+    $env:Path = "$ffbin;$env:Path"
+    Write-Host "[InstallFFMPEG] Added to session PATH: $ffbin"
+} else {
+    Write-Host "[InstallFFMPEG] Session PATH already contains: $ffbin"
 }
 
 Write-Host "[InstallFFMPEG] ffmpeg found at: $ffmpegExe"

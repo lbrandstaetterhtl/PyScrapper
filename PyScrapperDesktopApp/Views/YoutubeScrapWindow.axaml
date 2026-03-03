@@ -10,28 +10,66 @@
         WindowStartupLocation="CenterOwner"
         SizeToContent="WidthAndHeight"
         Title="PyScrapperDesktopApp">
+        
+        <StackPanel>
     
-        <Grid>
+        <Grid Name="SearchGrid">
                 <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"></RowDefinition>
                         <RowDefinition Height="Auto"></RowDefinition>
                         <RowDefinition Height="Auto"></RowDefinition>
                         <RowDefinition Height="*"></RowDefinition>
                 </Grid.RowDefinitions>
                 
                 <StackPanel Grid.Row="0" Classes="UICell">
-                        <TextBlock Text="Enter URL: " Classes="UI"/>
-                        <TextBox Text="{Binding YoutubeUrl}" Classes="UI"/>
+                        <TextBlock Text="Enter Query: " Classes="UI"/>
+                        <TextBox Classes="UI" Text="{Binding SearchQuery}"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Row="1" Classes="UICell">
+                        <TextBlock Text="Search results: " Classes="UI"/>
+                        <NumericUpDown Minimum="1" Maximum="25" Text="{Binding SearchResultsCount}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Row="2" Classes="UICell">
                         <TextBlock Text="Select Mediatype: " Margin="5"/>
                         <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
                 </StackPanel>
                 
-                <StackPanel Margin="5" Grid.Row="2" Classes="UICell">
-                        <Button Classes="primary" Content="Scrap" Command="{Binding ScrapCommand}"/>
+                <StackPanel Margin="5" Grid.Row="3" Classes="UICell">
+                        <Button Classes="primary" x:Name="EnterButton" Content="Search"/>
                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
         </Grid>
         
+        <Grid Name="ResultsGrid" IsVisible="False">
+                <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"></RowDefinition>
+                        <RowDefinition Height="*"></RowDefinition>
+                        <RowDefinition Height="Auto"></RowDefinition>
+                </Grid.RowDefinitions>
+                
+                <StackPanel Grid.Row="0" Classes="UICell">
+                        <TextBlock Text="Select videos to scrap: " Classes="UI"/>
+                        <Button Content="Done" Command="{Binding Scrap}"/>
+                </StackPanel>
+                
+                <ListBox Grid.Row="1" SelectionMode="Multiple, Toggle" ItemsSource="{Binding YoutubeVideoItems}" SelectedItems="{Binding SelectedYoutubeVideoItems}">
+                        <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <Image Source="{Binding thumbnail}"/>
+                                                <TextBlock Text="{Binding title}"/>
+                                                <TextBlock Text="{Binding url}"/>
+                                        </StackPanel>
+                                </DataTemplate>
+                        </ListBox.ItemTemplate>
+                </ListBox>
+                
+                <StackPanel Margin="5" Grid.Row="2" Classes="UICell">
+                        <Button Classes="primary" Name="BackToSearch" Content="Back"/>
+                </StackPanel>
+        </Grid>
+                
+        </StackPanel>
 </Window>

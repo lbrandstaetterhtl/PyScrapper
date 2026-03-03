@@ -62,7 +62,7 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
         
             string serverUrl = "127.0.0.1:8765";
         
-            var requestData = new ApiClient.RequestData
+            var requestData = new ApiClient.DownloadRequestData()
             {
                 Provider = "suno",
                 Url = SunoUrl,
