@@ -230,9 +230,14 @@ def download(
 
     ydl_opts = {
 #bv = best video, ba = best audio
-        "format": "bv*+ba/b",
+        "format": "bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[ext=mp4]",
         "outtmpl": out_file,
         "merge_output_format": "mp4",
+        "postprocessors": [{
+            "key": "FFmpegVideoConvertor",
+            "preferedformat": "mp4",
+        }],
+
 
     }
 

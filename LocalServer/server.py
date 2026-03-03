@@ -11,7 +11,7 @@ import os, signal
 import asyncio
 
 #Module imports for scrapping
-import Session, Suno, Youtube 
+from PythonModule import Session, Suno, Youtube 
 
 
 
