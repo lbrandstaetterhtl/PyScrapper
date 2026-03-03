@@ -41,6 +41,22 @@ if (-not $NoVenv) {
   Write-Log "Activating venv..."
   . (Join-Path $venvDir "Scripts\Activate.ps1")
   Write-Log "Virtual environment activated: $pythonExe"
+  
+  $ffCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
+  if (-not $ffCmd) {
+    Write-Log "ffmpeg not found. Running InstallFFMPEG.ps1..."
+    $installScript = Join-Path $PSScriptRoot "InstallFFMPEG.ps1"
+    if (-not (Test-Path $installScript)) { throw "Missing script: $installScript" }
+
+    # -PersistUserPath optional: nimmt dir das PATH-Thema in neuen Terminals ab
+    & $installScript -PersistUserPath 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
+  } else {
+    Write-Log "ffmpeg already available: $($ffCmd.Source)"
+  }
+
+  # Optional: nochmal testen und loggen
+  Write-Log "Testing ffmpeg..."
+  ffmpeg -version 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
 
   # Optional: requirements installieren, wenn vorhanden
   $req = Join-Path $ServerRoot "requirements.txt"
