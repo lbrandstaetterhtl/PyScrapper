@@ -172,7 +172,7 @@ async def process_downloads(download_request: DownloadRequest, job_id:str):
                                 "provider": download_request.provider,
                                 "identifier": identifier,
                                 "file": last_download.get('file'),
-                                "raw status": last_download.get('status')
+                                "raw_status": last_download.get('status', "test")
         
                             } 
                 )

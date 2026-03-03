@@ -191,7 +191,7 @@ def download_audio_only(
     if not out_path:
         raise YoutubeArgumentError("No download path was given")
 
-    identifier = url.strip("https://www.youtube.com/watch?v=")
+    identifier = url.replace("https://www.youtube.com/watch?v=", "")
     out_file = os.path.join(out_path, f"{identifier}")
 
     ydl_opts = {
@@ -224,13 +224,13 @@ def download(
     if not out_path:
         raise YoutubeArgumentError("No path to download to was given")
 
-    
-    identifier = url.strip("https://www.youtube.com/watch?v=")
+ 
+    identifier = url.replace("https://www.youtube.com/watch?v=", "")
     out_file = os.path.join(out_path, f"{identifier}.mp4")
 
     ydl_opts = {
 #bv = best video, ba = best audio
-        "format": "bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[ext=mp4]",
+        "format": "best[ext=mp4]",
         "outtmpl": out_file,
         "merge_output_format": "mp4",
         "postprocessors": [{
