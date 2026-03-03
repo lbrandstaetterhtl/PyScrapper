@@ -60,6 +60,11 @@ class DownloadRequest(BaseModel):
     mediatype: str = ".mp3"
     download_path: str = os.path.join(project_root, "downloads")
 
+class SearchRequest(BaseModel):
+    provider: str
+    search: str
+    top: int = 5
+
 class JobResponse(BaseModel):
     id: str
     jobtype: str
@@ -198,6 +203,62 @@ async def process_downloads(download_request: DownloadRequest, job_id:str):
         
         
 
+async def process_search(search_request: SearchRequest, search_id:str):
+    global ses, supported_providers
+
+    try:
+        if search_request.provider.lower() not in supported_providers:
+            response = JobResponse(
+                id=search_id,
+                    jobtype="search",
+                    status="error",
+                    message={"error": f"Unknown provider {search_request.provider}"}  
+            )
+
+            try:
+                log_queue.put_nowait(response.model_dump_json())
+            except asyncio.QueueFull:
+                pass
+            return response
+
+
+
+        if search_request.provider.lower() in ("youtube", "youtube.com"):
+            results = await asyncio.to_thread(Youtube.search, session=ses, search=search_request.search, top=search_request.top)
+
+        response = JobResponse(
+                            id=search_id,
+                            jobtype="search",
+                            status="done",
+                            message={
+                                "provider": search_request.provider,
+                                "query": search_request.search,
+                                "results": results
+                            }
+                )
+
+        try:  
+            log_queue.put_nowait(response.model_dump_json())
+        except asyncio.QueueFull:
+            pass
+        return response
+
+    except Exception as e:
+        response = JobResponse(
+            id=search_id,
+            jobtype="search",
+            status= "error",
+            message={"error": str(e), "query": search_request.query}
+        )
+        try:
+            log_queue.put_nowait(response.model_dump_json())
+        except asyncio.QueueFull:
+            pass
+        return response
+
+
+
+
 @app.get("/")
 async def root():
     return {
@@ -246,6 +307,18 @@ async def receive_download(data: DownloadRequest):
     except Exception as e:
         return {"ERROR": str(e)}
 
+
+
+
+
+@app.post("/search")
+async def receive_search(data: SearchRequest):
+    try:
+        search_id = str(uuid.uuid4())
+        response = await process_search(data, search_id)
+        return response
+    except Exception as e:
+        return {"ERROR": str(e)}
 
 
 
