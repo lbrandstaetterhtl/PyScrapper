@@ -6,6 +6,8 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Avalonia.Markup.Xaml;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
@@ -22,8 +24,10 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
-    public override void OnFrameworkInitializationCompleted()
+    public override async void OnFrameworkInitializationCompleted()
     {
+        base.OnFrameworkInitializationCompleted();
+        
         var log = new Massage("Application initializing...", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
         
@@ -35,6 +39,40 @@ public partial class App : Application
             _logger.LogNewMassage(log);
             
             RunPsScript("StartServer.ps1");
+
+            
+            int maxTries = 30;
+            int tries = 0;
+            bool serverStarted = false;
+            
+            do
+            {
+                try
+                {
+                    await Task.Delay(1000);
+                    var healthResponse = await new ApiClient().GetHealth("127.0.0.1:8765");
+
+                    if (healthResponse.Ok)
+                    {
+                        serverStarted = true;
+                    }
+                
+                }
+                catch (Exception e)
+                {
+                    log = new Massage("Waiting for local server to start...", DateTime.Now, "INFO");
+                    _logger.LogNewMassage(log);
+                }
+                tries ++;
+            } while (!serverStarted && tries < maxTries);
+            
+            if (!serverStarted)
+            {
+                log = new Massage("Failed to start local server after multiple attempts", DateTime.Now, "ERROR");
+                _logger.LogNewMassage(log);
+                desktop.Shutdown(1);
+                return;
+            }
             
             log = new Massage("Local server started", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
@@ -56,7 +94,7 @@ public partial class App : Application
                 {
                     medias.Remove(mediaToRemove);
                     
-                     log = new Massage($"Media with id {mediaToRemove.Id} removed from the list because it does not exist at the specified path: {mediaToRemove.DownloadPath}", DateTime.Now, "WARNING");
+                     log = new Massage($"Media with id {mediaToRemove.Id} removed from the list because it does not exist", DateTime.Now, "WARNING");
                     _logger.LogNewMassage(log);
                 }
             }
@@ -78,9 +116,9 @@ public partial class App : Application
 
             log = new Massage($"Application started with {AppData.DownloadedMedias.Count} listed medias and {AppData.PlayableMedias.Count} playable medias | deleted {mediasToRemove.Count} medias", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
+            
+            desktop.MainWindow.Show();
         }
-
-        base.OnFrameworkInitializationCompleted();
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

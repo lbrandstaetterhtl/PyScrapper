@@ -18,6 +18,8 @@ public class ApiClient
     public async Task<bool> SendScrapRequest(RequestData requestData, string serverUrl)
     {
         HttpClient client = new();
+        
+        client.Timeout = TimeSpan.FromMinutes(30);
 
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
@@ -99,9 +101,16 @@ public class ApiClient
 
     public class RequestData
     {
+        [JsonPropertyName("provider")]
         public string Provider { get; set; }
+        
+        [JsonPropertyName("url")]
         public string Url { get; set; }
+        
+        [JsonPropertyName("mediatype")]
         public string Mediatype { get; set; }
+        
+        [JsonPropertyName("download_path")]
         public string Download_path { get; set; }
     }
     

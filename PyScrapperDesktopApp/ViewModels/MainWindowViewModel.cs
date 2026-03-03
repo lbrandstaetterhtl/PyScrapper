@@ -102,4 +102,14 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
         var mediaPlayerWindow = new MediaPlayerWindow(path);
         await mediaPlayerWindow.ShowDialog(desktop.MainWindow);
     }
+
+    [RelayCommand]
+    public async Task OpenYoutubeScrapWindow()
+    {
+        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            return;
+        
+        var youtubeScrapWindow = new Views.YoutubeScrapWindow();
+        await youtubeScrapWindow.ShowDialog(desktop.MainWindow);
+    }
 }

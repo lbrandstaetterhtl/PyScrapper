@@ -14,8 +14,6 @@ namespace PyScrapperDesktopApp.ViewModels;
 
 public class SunoScrapWindowViewModel : INotifyPropertyChanged
 {
-    private readonly AppLogger _logger = new();
-    
     private string _sunoUrl;
     
     private readonly List<string> _availableMediaType = [".mp3", ".mp4"];

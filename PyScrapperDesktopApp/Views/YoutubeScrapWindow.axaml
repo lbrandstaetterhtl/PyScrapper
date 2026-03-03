@@ -1,0 +1,37 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="PyScrapperDesktopApp.Views.YoutubeScrapWindow"
+        x:DataType="vm:YoutubeScrapWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        WindowStartupLocation="CenterOwner"
+        SizeToContent="WidthAndHeight"
+        Title="PyScrapperDesktopApp">
+    
+        <Grid>
+                <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"></RowDefinition>
+                        <RowDefinition Height="Auto"></RowDefinition>
+                        <RowDefinition Height="*"></RowDefinition>
+                </Grid.RowDefinitions>
+                
+                <StackPanel Grid.Row="0" Classes="UICell">
+                        <TextBlock Text="Enter URL: " Classes="UI"/>
+                        <TextBox Text="{Binding YoutubeUrl}" Classes="UI"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Row="1" Classes="UICell">
+                        <TextBlock Text="Select Mediatype: " Margin="5"/>
+                        <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
+                </StackPanel>
+                
+                <StackPanel Margin="5" Grid.Row="2" Classes="UICell">
+                        <Button Classes="primary" Content="Scrap" Command="{Binding ScrapCommand}"/>
+                        <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
+                </StackPanel>
+        </Grid>
+        
+</Window>

@@ -210,7 +210,7 @@ def download_audio_only(
 
     dictionary = {
         "status": "Download complete",
-        "file": out_file
+        "file": out_file + ".mp3"
     }
     return dictionary, identifier
 
