@@ -7,16 +7,16 @@ $LogDir = Join-Path $ServerRoot "logs"
 if (-not (Test-Path $LogDir)) {
   New-Item -ItemType Directory -Path $LogDir | Out-Null
 }
-$LogFile = Join-Path $LogDir "RequirementsInstallation.log"
+$LogFile = Join-Path $LogDir "RequirementsBackendInstallation.log"
 
 function Write-Log {
   param([string]$Message)
-  $logEntry = "[RequirementsInstallation] $Message"
+  $logEntry = "[RequirementsBackendInstallation] $Message"
   Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
   Write-Host $logEntry
 }
 
-Write-Log "== Install Requirements =="
+Write-Log "== Install Backend Requirements =="
 
 $ServerRoot = Split-Path -Parent $PSScriptRoot
 $AllRoot = Split-Path -Parent $ServerRoot

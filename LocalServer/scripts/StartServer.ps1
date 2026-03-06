@@ -52,7 +52,7 @@ if (-not $NoVenv) {
   }
 
   # Optional: requirements installieren, wenn vorhanden
-  . (Join-Path $PSScriptRoot "InstallRequirements.ps1") 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
+  . (Join-Path $PSScriptRoot "InstallRequirementsBackend.ps1") 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
 } else {
   Write-Log "NoVenv enabled: using system python."
 }
