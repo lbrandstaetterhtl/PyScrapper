@@ -35,11 +35,19 @@ public partial class App : Application
         {
             DisableAvaloniaDataAnnotationValidation();
             
-            log = new Massage("Local server starting...", DateTime.Now, "INFO");
+            log = new Massage("Installing frontend requirements", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            
+            RunPsScript("InstallRequirementsFrontend.ps1");
+            
+            log = new Massage("Frontend requirements installation completed", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            
+            log = new Massage("Starting local server and installing requirements for backend", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             
             RunPsScript("StartServer.ps1");
-
+            
             
             int maxTries = 30;
             int tries = 0;
@@ -74,7 +82,7 @@ public partial class App : Application
                 return;
             }
             
-            log = new Massage("Local server started", DateTime.Now, "INFO");
+            log = new Massage("Local server started and backend requirements installation complete", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             
             desktop.Exit += OnExit;
@@ -141,7 +149,7 @@ public partial class App : Application
         var psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = @$"-File {repoRoot}\LocalServer\scripts\" + scriptFile,
+            Arguments = $"-ExecutionPolicy Bypass -File \"{repoRoot}\\LocalServer\\scripts\\{scriptFile}\"",
             WorkingDirectory =  repoRoot,
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -151,6 +159,11 @@ public partial class App : Application
 
         var p = new Process { StartInfo = psi };
         p.Start();
+        
+        // Drain stdout/stderr asynchronously so the child process never
+        // blocks on a full pipe buffer (classic deadlock cause).
+        p.BeginOutputReadLine();
+        p.BeginErrorReadLine();
     }
 
     private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
