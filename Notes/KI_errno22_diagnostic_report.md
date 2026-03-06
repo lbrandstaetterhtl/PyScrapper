@@ -186,10 +186,10 @@ Missing `return` after setting error response for unknown providers.
 
 ## Summary
 
-| # | Severity | Fix | Why |
-|---|---|---|---|
+| # | Severity | Fix | Why | Done|
+|---|---|---|---|---|
 | 1 | 🔴 Critical | Pass `ffmpeg_location` to yt-dlp | Eliminates PATH dependency entirely |
-| 2 | 🟠 High | Dot-source [InstallFFMPEG.ps1](file:///c:/Users/brand/RiderProjects/PyScrapper/LocalServer/scripts/InstallFFMPEG.ps1) | Fixes PATH propagation to server |
+| 2 | 🟠 High | Dot-source [InstallFFMPEG.ps1](file:///c:/Users/brand/RiderProjects/PyScrapper/LocalServer/scripts/InstallFFMPEG.ps1) | Fixes PATH propagation to server |  X |
 | 3 | 🟡 Medium | Add traceback to error response | Essential for future debugging |
 | 4 | 🟡 Medium | Add `restrictfilenames`/`nopart` | Defensive, prevents secondary issues |
 | 5-7 | 🟡 Medium | Bug fixes | Prevents crashes in edge cases |
