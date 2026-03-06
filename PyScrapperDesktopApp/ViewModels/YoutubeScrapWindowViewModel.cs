@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
+using System.Net.Http;
 using Avalonia.Controls;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.Views;
@@ -162,6 +165,14 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
             var massageBox = new MassageBox($"No results found for query: {SearchQuery}. Please try a different query.");
             await massageBox.ShowDialog(_ScrapWindow);
             return;
+        }
+        
+        foreach (var item in results)
+        {
+            using var httpClient = new HttpClient();
+            var bytes = await httpClient.GetByteArrayAsync(item.thumbnail);
+            using var stream = new MemoryStream(bytes);
+            item.ThumbnailBitmap = new Bitmap(stream);
         }
         
         YoutubeVideoItems = results;

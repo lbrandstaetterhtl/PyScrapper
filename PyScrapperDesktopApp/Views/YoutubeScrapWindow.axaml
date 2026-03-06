@@ -7,7 +7,7 @@
         x:Class="PyScrapperDesktopApp.Views.YoutubeScrapWindow"
         x:DataType="vm:YoutubeScrapWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         SizeToContent="WidthAndHeight"
         Title="PyScrapperDesktopApp">
         
@@ -28,7 +28,7 @@
                 
                 <StackPanel Grid.Row="1" Classes="UICell">
                         <TextBlock Text="Search results: " Classes="UI"/>
-                        <NumericUpDown Minimum="1" Maximum="25" Text="{Binding SearchResultsCount}"/>
+                        <NumericUpDown Minimum="1" Value="1" Maximum="25" AllowSpin="True" FormatString="0" Text="{Binding SearchResultsCount}"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Row="2" Classes="UICell">
@@ -58,7 +58,7 @@
                         <ListBox.ItemTemplate>
                                 <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Spacing="10">
-                                                <Image Source="{Binding thumbnail}"/>
+                                                <Image Stretch="Uniform" MaxHeight="70" MaxWidth="150" Source="{Binding ThumbnailBitmap}"/>
                                                 <TextBlock Text="{Binding title}"/>
                                                 <TextBlock Text="{Binding url}"/>
                                         </StackPanel>

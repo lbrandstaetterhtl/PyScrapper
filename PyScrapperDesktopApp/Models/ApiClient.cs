@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Avalonia.Media.Imaging;
 using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.Models;
@@ -23,13 +24,9 @@ public class ApiClient
 
         
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
-        _logger.LogNewMassage(new Massage($"[DEBUG] Sending JSON: {jsonContent}", DateTime.Now, "DEBUG"));
-        _logger.LogNewMassage(new Massage($"[DEBUG] Server URL: http://{serverUrl}/download", DateTime.Now, "DEBUG"));
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"http://{serverUrl}/download", content);
         var responseData = await response.Content.ReadAsStringAsync();
-        _logger.LogNewMassage(new Massage($"[DEBUG] Response status: {response.StatusCode}", DateTime.Now, "DEBUG"));
-        _logger.LogNewMassage(new Massage($"[DEBUG] Response body: {responseData}", DateTime.Now, "DEBUG"));
         
         
         try
@@ -109,7 +106,7 @@ public class ApiClient
         {
             var deserializedResponse = JsonSerializer.Deserialize<SearchSuccessResponse>(responseData, JsonOptions);
 
-            var log = new Massage($"Search successful for query: {deserializedResponse?.Message.query}, found {deserializedResponse?.Message.results.Count} results", DateTime.Now, "INFO");
+            var log = new Massage($"Search successful for query: \"{deserializedResponse?.Message.query}\", found {deserializedResponse?.Message.results.Count} results", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
             return deserializedResponse?.Message.results ?? new List<YoutubeVideoItem>();
@@ -117,7 +114,7 @@ public class ApiClient
         else
         {
             var deserializedError = JsonSerializer.Deserialize<SearchErrorResponse>(responseData, JsonOptions);
-            var log = new Massage("Search failed for query: " + deserializedError?.Message.Query + ", error: " + deserializedError?.Message.Error, DateTime.Now,
+            var log = new Massage($"Search failed for query: \"{deserializedError?.Message.Query}\", error: " + deserializedError?.Message.Error, DateTime.Now,
                 "ERROR");
             _logger.LogNewMassage(log);
             
@@ -257,6 +254,7 @@ public class ApiClient
         public string videoId { get; set; }
         public string url { get; set; }
         public string thumbnail { get; set; }
+        public Bitmap ThumbnailBitmap { get; set; }
         public string title { get; set; }
     }
     
