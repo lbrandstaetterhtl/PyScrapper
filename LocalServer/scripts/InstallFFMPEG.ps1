@@ -4,6 +4,20 @@
 
 $ErrorActionPreference = "Stop"
 
+$ServerRoot = Split-Path -Parent $PSScriptRoot
+$LogDir = Join-Path $ServerRoot "logs"
+if (-not (Test-Path $LogDir)) {
+    New-Item -ItemType Directory -Path $LogDir | Out-Null
+}
+$LogFile = Join-Path $LogDir "FFMPEGInstallation.log"
+
+function Write-Log {
+    param([string]$Message)
+    $logEntry = "[InstallFFMPEG] $Message"
+    Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
+    Write-Host $logEntry
+}
+
 function Find-FFmpegExe {
     # 1) schon im PATH?
     $cmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
@@ -21,11 +35,11 @@ function Find-FFmpegExe {
     return $null
 }
 
-Write-Host "[InstallFFMPEG] Checking for ffmpeg..."
+Write-Log "Checking for ffmpeg..."
 
 $ffmpegExe = Find-FFmpegExe
 if (-not $ffmpegExe) {
-    Write-Host "[InstallFFMPEG] ffmpeg not found -> installing via winget (yt-dlp.FFmpeg)..."
+    Write-Log "ffmpeg not found. Installing via WinGet..."
     winget install --id=yt-dlp.FFmpeg -e --source=winget
     $ffmpegExe = Find-FFmpegExe
 }
@@ -39,22 +53,22 @@ $ffbin = Split-Path $ffmpegExe -Parent
 # Für aktuelle Session (und alle Kind-Prozesse) sofort nutzbar
 if ($env:Path -notmatch [regex]::Escape($ffbin)) {
     $env:Path = "$ffbin;$env:Path"
-    Write-Host "[InstallFFMPEG] Added to session PATH: $ffbin"
+    Write-Log "Added to Session PATH: $ffbin"
 } else {
-    Write-Host "[InstallFFMPEG] Session PATH already contains: $ffbin"
+    Write-Log "Session PATH already contains: $ffbin"
 }
 
-Write-Host "[InstallFFMPEG] ffmpeg found at: $ffmpegExe"
-Write-Host "[InstallFFMPEG] Testing: ffmpeg -version"
-& $ffmpegExe -version | Select-Object -First 1 | Write-Host
+Write-Log "ffmpeg installed at: $ffmpegExe"
+Write-Log "Testing ffmpeg version..."
+& $ffmpegExe -version | Select-Object -First 1 | Write-Log
 
 # Optional dauerhaft im User-PATH
 if ($PersistUserPath) {
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     if ($userPath -notmatch [regex]::Escape($ffbin)) {
         [Environment]::SetEnvironmentVariable("Path", ($userPath + ";" + $ffbin), "User")
-        Write-Host "[InstallFFMPEG] Added to User PATH: $ffbin (effective in NEW terminals)"
+        Write-Log "Added to User PATH: $ffbin (will take effect in new terminals)"
     } else {
-        Write-Host "[InstallFFMPEG] User PATH already contains: $ffbin"
+        Write-Log "User PATH already contains: $ffbin"
     }
 }

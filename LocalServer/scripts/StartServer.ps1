@@ -21,7 +21,7 @@ function Write-Log {
   $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
   $logEntry = "[$timestamp] $Message"
   Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
-  Write-Output $logEntry
+  Write-Host $logEntry
 }
 
 Write-Log "== Start Server =="
@@ -37,10 +37,7 @@ if (-not $NoVenv) {
     Write-Log "No venv found. Creating .venv..."
     python -m venv $venvDir
   }
-
-  Write-Log "Activating venv..."
   . (Join-Path $venvDir "Scripts\Activate.ps1")
-  Write-Log "Virtual environment activated: $pythonExe"
   
   $ffCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
   if (-not $ffCmd) {
@@ -49,25 +46,13 @@ if (-not $NoVenv) {
     if (-not (Test-Path $installScript)) { throw "Missing script: $installScript" }
 
     # -PersistUserPath optional: nimmt dir das PATH-Thema in neuen Terminals ab
-    & $installScript -PersistUserPath 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
+    . $installScript -PersistUserPath 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
   } else {
     Write-Log "ffmpeg already available: $($ffCmd.Source)"
   }
 
-  # Optional: nochmal testen und loggen
-  Write-Log "Testing ffmpeg..."
-  ffmpeg -version 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
-
   # Optional: requirements installieren, wenn vorhanden
-  $req = Join-Path $ServerRoot "requirements.txt"
-  if (Test-Path $req) {
-    Write-Log "Installing requirements..."
-    python -m pip install --upgrade pip 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
-    pip install -r $req 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
-    Write-Log "Requirements installation completed."
-  } else {
-    Write-Log "No requirements.txt found. Skipping pip install."
-  }
+  . (Join-Path $PSScriptRoot "InstallRequirements.ps1") 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
 } else {
   Write-Log "NoVenv enabled: using system python."
 }

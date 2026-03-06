@@ -2,18 +2,18 @@
 
 # Logging setup
 $ServerRoot = Split-Path -Parent $PSScriptRoot
+$AllRoot = Split-Path -Parent $ServerRoot
 $LogDir = Join-Path $ServerRoot "logs"
 if (-not (Test-Path $LogDir)) {
   New-Item -ItemType Directory -Path $LogDir | Out-Null
 }
-$LogFile = Join-Path $LogDir "InstallRequirements.log"
+$LogFile = Join-Path $LogDir "RequirementsInstallation.log"
 
 function Write-Log {
   param([string]$Message)
-  $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-  $logEntry = "[$timestamp] $Message"
+  $logEntry = "[RequirementsInstallation] $Message"
   Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
-  Write-Output $logEntry
+  Write-Host $logEntry
 }
 
 Write-Log "== Install Requirements =="
@@ -33,8 +33,6 @@ else {
   Write-Log "Pip upgraded successfully."
 }
 
-Write-Log "----------------------------------"
-Write-Log "Current Directory: $(Get-Location)"
 Write-Log "Installing requirements..."
 pip install -r .\LocalServer\requirements.txt 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
 

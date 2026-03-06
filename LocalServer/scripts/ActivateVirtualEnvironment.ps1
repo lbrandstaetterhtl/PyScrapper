@@ -1,19 +1,19 @@
-﻿﻿Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+﻿Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 # Logging setup
 $ServerRoot = Split-Path -Parent $PSScriptRoot
+$AllRoot = Split-Path -Parent $ServerRoot
 $LogDir = Join-Path $ServerRoot "logs"
 if (-not (Test-Path $LogDir)) {
   New-Item -ItemType Directory -Path $LogDir | Out-Null
 }
-$LogFile = Join-Path $LogDir "ActivateVirtualEnvironment.log"
+$LogFile = Join-Path $LogDir "VirtualEnvironmentActivation.log"
 
 function Write-Log {
   param([string]$Message)
-  $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-  $logEntry = "[$timestamp] $Message"
+  $logEntry = "[VirtualEnvironmentActivation] $Message"
   Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
-  Write-Output $logEntry
+  Write-Host $logEntry
 }
 
 Write-Log "== Activate Virtual Enviroment =="

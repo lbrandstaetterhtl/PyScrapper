@@ -18,7 +18,7 @@ function Write-Log {
   $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
   $logEntry = "[$timestamp] $Message"
   Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
-  Write-Output $logEntry
+  Write-Host $logEntry
 }
 
 Write-Log "== Stop Server =="
