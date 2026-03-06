@@ -9,23 +9,34 @@ Sie beschreibt Architektur, Setup, typische Workflows und bekannte Stolperfallen
 
 ```
 PyScrapper/
-├── LocalServer/ # FastAPI Backend (Python)
-│ ├── server.py # Einstiegspunkt (uvicorn app)
-│ ├── scripts/ # Start-/Helper-Skripte (z.B. StartServer.ps1)
-│ └── .venv/ # Virtuelle Umgebung (lokal)
+├── LocalServer/                  # FastAPI Backend (Python)
+│   ├── server.py                 # Einstiegspunkt (uvicorn app)
+│   ├── requirements.txt          # Python-Abhängigkeiten
+│   ├── scripts/                  # PowerShell-Skripte (Start, Stop, Install, ...)
+│   │   ├── StartServer.ps1
+│   │   ├── StopServer.ps1
+│   │   ├── InstallRequirementsBackend.ps1
+│   │   ├── InstallRequirementsFrontend.ps1
+│   │   ├── InstallFFMPEG.ps1
+│   │   └── ActivateVirtualEnvironment.ps1
+│   ├── logs/                     # Runtime-Logs des Servers
+│   └── .venv/                    # Virtuelle Umgebung (lokal, nicht eingecheckt)
 │
-├── PythonModule/ # Core-Logik (Sessions, Scraping, Downloads)
-│ ├── Session/
-│ ├── Suno/
-│ └── ...
+├── PythonModule/                 # Core-Logik (Sessions, Scraping, Downloads)
+│   ├── Session.py
+│   ├── Suno.py
+│   └── Youtube.py
 │
-├── PyScrapperDesktopApp/ # Desktop Client (.NET / C#)
-│ ├── *.sln
-│ └── ...
+├── PyScrapperDesktopApp/         # Desktop Client (C# / Avalonia / .NET 9)
+│   ├── *.sln / *.csproj
+│   ├── Models/                   # ApiClient, AppData, AppLogger, AudioPlayer
+│   ├── ViewModels/               # MVVM ViewModels (Main, Suno, Youtube, MediaPlayer, ...)
+│   ├── Views/                    # Avalonia AXAML Windows
+│   └── data/                     # Persistente App-Daten (downloadedMedias.json)
 │
-└── README.md
+├── Downloads/                    # Standard-Downloadordner für Medien
+└── Notes/                        # Projektnotizen & Statistiken
 ```
-
 
 ---
 
@@ -34,12 +45,22 @@ PyScrapper/
 ### LocalServer (Python / FastAPI)
 
 - Läuft lokal via **uvicorn**
-- Stellt HTTP-Endpunkte bereit:
-  - `/command` → Queue-basierte Commands
-  - `/download` → Download-Jobs
-  - `/health` → Status / Monitoring
+- Stellt folgende HTTP-Endpunkte bereit:
+
+| Methode | Pfad        | Beschreibung                                      |
+|---------|-------------|---------------------------------------------------|
+| GET     | `/`         | Root – Startbestätigung                           |
+| GET     | `/health`   | Uptime, RAM-Verbrauch, PID, laufende Python-Prozesse |
+| POST    | `/command`  | Queue-basierte Kommandos (z.B. `quit`)            |
+| POST    | `/download` | Download-Job für einen URL (Suno oder YouTube)    |
+| POST    | `/search`   | YouTube-Suche mit konfigurierbarer Trefferanzahl  |
+
 - Nutzt **asyncio Queues**, um Requests von der Verarbeitung zu entkoppeln
+- Parallele Downloads durch `asyncio.Semaphore(50)` begrenzt
+- Runtime-Logs werden in `LocalServer/logs/server_runtime.log` geschrieben
 - Importiert Logik aus `PythonModule`
+
+**Unterstützte Provider:** `suno`, `suno.com`, `youtube`, `youtube.com`
 
 **Wichtig:**  
 Der Server ist nicht gehärtet und **nicht für öffentliches Deployment gedacht**.
@@ -49,8 +70,11 @@ Der Server ist nicht gehärtet und **nicht für öffentliches Deployment gedacht
 ### PythonModule
 
 - Enthält die eigentliche Business-Logik
-- Kein Web-Code
-- Wird direkt vom LocalServer importiert
+- Kein Web-Code – wird direkt vom LocalServer importiert
+- Module:
+  - `Session.py` – gemeinsame HTTP-Session (Cookies etc.)
+  - `Suno.py` – Download von suno.com
+  - `Youtube.py` – Download (Audio/Video) und Suche via `yt-dlp`
 - Kann unabhängig getestet/erweitert werden
 
 Empfehlung:
@@ -60,12 +84,34 @@ Empfehlung:
 
 ---
 
-### Desktop App (C# / .NET)
+### Desktop App (C# / Avalonia / .NET 9)
 
-- Client für den LocalServer
-- Kommuniziert über HTTP
-- Erwartet einen laufenden Server auf `127.0.0.1:8765`
-- Kann separat gebaut und gestartet werden
+- Cross-platform Desktop-Client, gebaut mit **Avalonia UI** und **MVVM**-Pattern
+- Kommuniziert über HTTP mit dem LocalServer (`127.0.0.1:8765`)
+- **Windows-Fenster / Views:**
+  - `MainWindow` – Übersicht, Health-Check, Liste heruntergeladener Medien
+  - `SunoScrapWindow` – Suno-Download per URL
+  - `YoutubeScrapWindow` – YouTube-Suche & Download (mp3/mp4)
+  - `MediaPlayerWindow` – integrierter Medienplayer
+  - `InputWindow` – generisches Eingabedialog-Fenster
+  - `MassageBox` – benutzerdefinierte Message-Box
+- **Medien-Wiedergabe** via **LibVLCSharp** (Audio & Video)
+- Heruntergeladene Medien werden in `data/downloadedMedias.json` persistiert
+
+**NuGet-Pakete:**
+
+| Paket                        | Version |
+|------------------------------|---------|
+| Avalonia                     | 11.3.8  |
+| Avalonia.Desktop             | 11.3.8  |
+| Avalonia.Themes.Fluent       | 11.3.8  |
+| Avalonia.Fonts.Inter         | 11.3.8  |
+| Avalonia.Diagnostics         | 11.3.8  |
+| CommunityToolkit.Mvvm        | 8.4.0   |
+| FluentAvaloniaUI             | 2.0.5   |
+| LibVLCSharp                  | 3.9.6   |
+| LibVLCSharp.Avalonia         | 3.9.6   |
+| VideoLAN.LibVLC.Windows      | 3.0.23  |
 
 ---
 
@@ -75,72 +121,111 @@ Empfehlung:
 
 - Python **3.10+**
 - Git
-- .NET SDK **6 oder neuer**
-- (Windows empfohlen für aktuelle Scripts)
+- .NET SDK **9.0**
+- FFmpeg (wird automatisch via `InstallFFMPEG.ps1` installiert, falls nicht vorhanden)
+- Windows (PowerShell-Skripte sind Windows-only)
 
 ---
 
 ## LocalServer – Setup
 
-### 1. Virtuelle Umgebung
+### 1. Virtuelle Umgebung & Abhängigkeiten
 
-Windows (PowerShell):
+Am einfachsten über das Start-Skript – es legt die `.venv` automatisch an,
+aktiviert sie und installiert fehlende Pakete:
+
+```powershell
+.\LocalServer\scripts\StartServer.ps1
 ```
+
+Oder manuell (PowerShell):
+
+```powershell
 cd LocalServer
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-Linux / macOS:
-
-```
-cd LocalServer
-python3 -m venv .venv
-source .venv/bin/activate
-2. Dependencies installieren
 pip install -r requirements.txt
+```
 
-Falls keine requirements.txt vorhanden ist:
+**Python-Abhängigkeiten (`requirements.txt`):**
 
-pip install fastapi uvicorn pydantic
-
-Zusätzliche Dependencies ergeben sich aus PythonModule.
-ModuleNotFoundError = fehlendes Paket.
+```
+fastapi
+uvicorn[standard]
+pydantic
+certifi
+yt-dlp
 ```
 
 ### 2. Server starten
 
-Direkt:
+Über Script (empfohlen – verwaltet venv, ffmpeg und Logging automatisch):
+
+```powershell
+.\LocalServer\scripts\StartServer.ps1
+```
+
+Direkt (wenn venv bereits aktiv):
 
 ```
 uvicorn LocalServer.server:app --host 127.0.0.1 --port 8765
 ```
 
-Oder über Script:
+### 3. Server stoppen
 
-```
-.\scripts\StartServer.ps1
-```
-
-### 3. Wichtige URLs
-
-Swagger UI:
-```
-http://127.0.0.1:8765/docs
+```powershell
+.\LocalServer\scripts\StopServer.ps1
 ```
 
-Health Endpoint:
-```
-http://127.0.0.1:8765/health
-```
+### 4. Wichtige URLs
+
+| URL                              | Beschreibung          |
+|----------------------------------|-----------------------|
+| `http://127.0.0.1:8765/`        | Root                  |
+| `http://127.0.0.1:8765/docs`    | Swagger UI            |
+| `http://127.0.0.1:8765/health`  | Health / Monitoring   |
+
+---
 
 ## Desktop App – Development
 
-```
+```powershell
 cd PyScrapperDesktopApp
 dotnet restore
 dotnet build
 dotnet run
 ```
 
-Oder über Rider / Visual Studio.
+Oder direkt über **JetBrains Rider** oder **Visual Studio**.
+
+### NuGet-Pakete installieren (Skript)
+
+```powershell
+.\LocalServer\scripts\InstallRequirementsFrontend.ps1
+```
+
+Das Skript prüft, welche Pakete bereits vorhanden sind, und installiert nur fehlende.
+
+### Build-Ausgabe (kompilierte `.exe`)
+
+```
+PyScrapperDesktopApp\bin\Debug\net9.0\PyScrapperDesktopApp.exe      # Debug
+PyScrapperDesktopApp\bin\Release\net9.0\PyScrapperDesktopApp.exe    # Release
+```
+
+Release-Build:
+
+```powershell
+dotnet publish -c Release
+```
+
+---
+
+## Bekannte Stolperfallen
+
+- Die Desktop-App **startet den LocalServer automatisch** beim App-Start. Ein manueller Server-Start ist nicht notwendig.
+- **FFmpeg** wird für YouTube-Downloads benötigt und muss im PATH liegen. `StartServer.ps1` installiert es automatisch.
+- **LibVLC / VideoLAN.LibVLC.Windows** muss für den integrierten Medienplayer vorhanden sein – wird über NuGet bereitgestellt.
+- `Avalonia.Diagnostics` ist nur im **Debug**-Build aktiv (bewusst so konfiguriert im `.csproj`).
+- Downloads landen standardmäßig im Ordner `PyScrapper/Downloads/` (konfigurierbar per Request-Parameter `download_path`).
+- Die Desktop-App persistiert heruntergeladene Medien in `data/downloadedMedias.json` – diese Datei nicht manuell löschen ohne Datenverlust.
