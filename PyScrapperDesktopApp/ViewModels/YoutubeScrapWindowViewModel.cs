@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
@@ -105,15 +106,15 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
     
     public event Action? RequestClose;
     
-    public YoutubeScrapWindowViewModel(Window ScrapWindow)
+    public YoutubeScrapWindowViewModel(Window scrapWindow)
     {
-        _ScrapWindow = ScrapWindow;
+        _ScrapWindow = scrapWindow;
         
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke());
     }
     
     [RelayCommand]
-    public async void Scrap()
+    public async Task Scrap()
     {
         var client = new ApiClient();
         
@@ -145,7 +146,7 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
     }
 
     [RelayCommand]
-    public async void Search()
+    public async Task Search()
     {
         var client = new ApiClient();
 

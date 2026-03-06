@@ -38,7 +38,7 @@ public partial class App : Application
             log = new Massage("Installing frontend requirements", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             
-            RunPsScript("InstallRequirementsFrontend.ps1");
+            RunPsScript("InstallRequirementsFrontend.ps1", wait: true);
             
             log = new Massage("Frontend requirements installation completed", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
@@ -140,17 +140,35 @@ public partial class App : Application
         }
     }
     
-    private void RunPsScript(string scriptFile)
+    /// <summary>
+    /// Finds the repo root by walking up from the exe directory until a folder
+    /// containing "LocalServer" is found. Works from any build output location
+    /// or if the exe is copied elsewhere — as long as it stays inside the repo.
+    /// </summary>
+    private static string FindRepoRoot()
     {
-        var exeDir = AppContext.BaseDirectory;
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            if (Directory.Exists(Path.Combine(dir.FullName, "LocalServer")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+        throw new DirectoryNotFoundException(
+            "Could not locate repo root (no 'LocalServer' folder found in any parent directory).");
+    }
 
-        var repoRoot = Directory.GetParent(exeDir)!.Parent!.Parent!.Parent!.Parent!.FullName;
+    /// <param name="scriptFile">Script filename only (e.g. "StartServer.ps1")</param>
+    /// <param name="wait">If true, blocks until the script finishes.</param>
+    private void RunPsScript(string scriptFile, bool wait = false)
+    {
+        var repoRoot = FindRepoRoot();
 
         var psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
             Arguments = $"-ExecutionPolicy Bypass -File \"{repoRoot}\\LocalServer\\scripts\\{scriptFile}\"",
-            WorkingDirectory =  repoRoot,
+            WorkingDirectory = repoRoot,
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
@@ -159,11 +177,14 @@ public partial class App : Application
 
         var p = new Process { StartInfo = psi };
         p.Start();
-        
+
         // Drain stdout/stderr asynchronously so the child process never
         // blocks on a full pipe buffer (classic deadlock cause).
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
+
+        if (wait)
+            p.WaitForExit();
     }
 
     private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
