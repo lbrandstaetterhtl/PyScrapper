@@ -29,33 +29,38 @@ Write-Log "== Start Server =="
 # In Script-Ordner wechseln (damit server.py sicher gefunden wird)
 Set-Location -Path $AllRoot
 
-if (-not $NoVenv) {
-  $venvDir = Join-Path $PSScriptRoot ".venv"
-  $pythonExe = Join-Path $venvDir "Scripts\python.exe"
+# ─── Virtual Environment (must be dot-sourced so PATH changes apply here) ───
+$venvDir = Join-Path $PSScriptRoot ".venv"
+$pythonExe = Join-Path $venvDir "Scripts\python.exe"
+$activateScript = Join-Path $venvDir "Scripts\Activate.ps1"
 
-  if (-not (Test-Path $pythonExe)) {
-    Write-Log "No venv found. Creating .venv..."
-    python -m venv $venvDir
-  }
-  . (Join-Path $venvDir "Scripts\Activate.ps1")
-  
-  $ffCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
-  if (-not $ffCmd) {
-    Write-Log "ffmpeg not found. Running InstallFFMPEG.ps1..."
-    $installScript = Join-Path $PSScriptRoot "InstallFFMPEG.ps1"
-    if (-not (Test-Path $installScript)) { throw "Missing script: $installScript" }
-
-    # -PersistUserPath optional: nimmt dir das PATH-Thema in neuen Terminals ab
-    . $installScript -PersistUserPath 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
-  } else {
-    Write-Log "ffmpeg already available: $($ffCmd.Source)"
-  }
-
-  # Optional: requirements installieren, wenn vorhanden
-  . (Join-Path $PSScriptRoot "InstallRequirementsBackend.ps1") 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
-} else {
-  Write-Log "NoVenv enabled: using system python."
+if (-not (Test-Path $pythonExe)) {
+  Write-Log "No venv found. Creating .venv..."
+  python -m venv $venvDir
 }
+
+if (Test-Path $activateScript) {
+  Write-Log "Activating virtual environment..."
+  . $activateScript
+  Write-Log "Virtual environment activated"
+} else {
+  Write-Log "WARNING: Activate.ps1 not found at $activateScript"
+}
+
+# ─── ffmpeg (call operator — own scope) ──────────────────────────────────────
+$ffCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
+if (-not $ffCmd) {
+  Write-Log "ffmpeg not found. Running InstallFFMPEG.ps1..."
+  $installScript = Join-Path $PSScriptRoot "InstallFFMPEG.ps1"
+  if (-not (Test-Path $installScript)) { throw "Missing script: $installScript" }
+  & $installScript -PersistUserPath 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
+} else {
+  Write-Log "ffmpeg already available: $($ffCmd.Source)"
+}
+
+# ─── Backend requirements (call operator — own scope) ────────────────────────
+& (Join-Path $PSScriptRoot "InstallRequirementsBackend.ps1") 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
+
 
 Write-Log "Starting uvicorn: server:app on $HostAddr`:$Port"
 Start-Process -FilePath "python" -ArgumentList "-m uvicorn LocalServer.server:app --host $HostAddr --port $Port" -NoNewWindow -Wait
