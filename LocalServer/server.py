@@ -7,6 +7,7 @@ from pydantic import BaseModel
 import platform
 import subprocess
 
+
 import os, signal
 import asyncio
 
@@ -23,6 +24,7 @@ project_root = os.path.dirname(current_path)
 
 #Runtime Logs will be saved under this path
 log_dir = os.path.join(project_root, "LocalServer", "logs")
+log_file = os.path.join(log_dir, "server_runtime.log")
 #Make sure it exists and if it doesn't it will create it
 os.makedirs(log_dir, exist_ok=True)
 
@@ -46,7 +48,10 @@ log_queue = asyncio.Queue(maxsize=5000)
 #Events
 quit_event = asyncio.Event()
 
-
+#Sets
+download_jobs = set()
+search_jobs = set()
+download_progress = {}
 
 
 
@@ -65,14 +70,9 @@ class SearchRequest(BaseModel):
     search: str
     top: int = 5
 
-class JobResponse(BaseModel):
-    id: str
-    jobtype: str
-    status: str 
-    message: dict
-
-
-
+class SearchError(Exception): ...
+class CommandError(Exception): ...
+class DownloadError(Exception): ...
 
 
 async def logger(
@@ -80,8 +80,7 @@ async def logger(
         log_queue: asyncio.Queue
         ):
 #Setting up files where logs will be written to
-    global log_dir
-    log_file = os.path.join(log_dir, "server_runtime.log")
+    global log_file
 
 
     while not quit_event.is_set():
@@ -109,26 +108,20 @@ async def logger(
 
 #Processes the commands from a user
 async def process_commands(line: str, job_id:str):
-    global quit_event
+    global quit_event, log_queue, log_file
     match line.lower():
         case "quit":
+            
+            with open(log_file, "a", encoding="utf-8") as f:
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                f.write(f"[{str(timestamp)}] " + "[INFO] Server shutting down..." + "\n")
+
             quit_event.set()
             if os.name == "nt":
                 os._exit(0)
         case _:
-            response = JobResponse(
-                id= job_id,
-                jobtype= "command",
-                status= "error",
-                message= {
-                    "error": "unknown command", "command": line
-                }
-            )
-            try:
-                log_queue.put_nowait(response.model_dump_json())
-            except asyncio.QueueFull:
-                pass
-            return response
+            raise CommandError("PROCESS_COMMANDS: UNKNOWN COMMAND")
+            
 
 
                 
@@ -137,67 +130,41 @@ async def process_commands(line: str, job_id:str):
 #Limits the parralel downloads to 50 at a time, change value for more or less downlaods
 download_limiter = asyncio.Semaphore(50)
 #Starts download from a user
-async def process_downloads(download_request: DownloadRequest, job_id:str):
-    global ses, supported_providers
+async def process_downloads(
+        download_request: DownloadRequest,
+        progress_dict: dict
+          ):
+    global ses, supported_providers, log_queue
     
     os.makedirs(download_request.download_path, exist_ok=True)
 
     try:
         if download_request.provider.lower() not in supported_providers:
-            response = JobResponse(
-             id=job_id,
-                jobtype="download",
-                status="error",
-                message={"error": f"Unknown provider {download_request.provider}"}  
-           )
+            raise DownloadError(f"Unknown provider {download_request.provider}")
 
 
         if download_request.provider.lower() in ("suno", "suno.com"):
             async with download_limiter:
-                last_download, identifier = await asyncio.to_thread(Suno.download, session=ses, url=download_request.url, out_path=download_request.download_path,  mediatype=download_request.mediatype)
+                await asyncio.to_thread(Suno.download, session=ses, url=download_request.url, out_path=download_request.download_path,  mediatype=download_request.mediatype, progress_dict=progress_dict)
                 
 
         elif download_request.provider.lower() in ("youtube", "youtube.com"):
             async with download_limiter:
                 if download_request.mediatype.lower() == ".mp4":
-                    last_download, identifier = await asyncio.to_thread(Youtube.download, url=download_request.url, out_path=download_request.download_path)
+                    await asyncio.to_thread(Youtube.download, url=download_request.url, out_path=download_request.download_path, progress_dict=progress_dict)
                 else:
-                    last_download, identifier = await asyncio.to_thread(Youtube.download_audio_only, url=download_request.url, out_path=download_request.download_path)
+                    await asyncio.to_thread(Youtube.download_audio_only, url=download_request.url, out_path=download_request.download_path, progress_dict=progress_dict)
 
-        response = JobResponse(
-                            id=job_id,
-                            jobtype="download",
-                            status="done",
-                            message={
-                                "provider": download_request.provider,
-                                "identifier": identifier,
-                                "file": last_download.get('file'),
-                                "raw_status": last_download.get('status', "test")
+        log_queue.put_nowait(f"[INFO] Successfully completed downloadjob {progress_dict.get('id')}")
         
-                            } 
-                )
-        
-        try:  
-            log_queue.put_nowait(response.model_dump_json())
-        except asyncio.QueueFull:
-            pass
-        return response
 
               
             
 
     except Exception as e:
-        response = JobResponse(
-            id=job_id,
-            jobtype="download",
-            status= "error",
-            message={"error": str(e), "url": download_request.url}
-        )
-        try:
-            log_queue.put_nowait(response.model_dump_json())
-        except asyncio.QueueFull:
-            pass
-        return response
+        log_queue.put_nowait(f"[ERROR] Failed download for job {progress_dict.get('id')}.\nError Message: {str(e)}")
+        progress_dict["status"] = "error"
+        progress_dict["errorMessage"] = str(e)
        
         
         
@@ -208,53 +175,26 @@ async def process_search(search_request: SearchRequest, search_id:str):
 
     try:
         if search_request.provider.lower() not in supported_providers:
-            response = JobResponse(
-                id=search_id,
-                    jobtype="search",
-                    status="error",
-                    message={"error": f"Unknown provider {search_request.provider}"}  
-            )
+            raise SearchError("PROCESS_SEARCH: No supported provider was given")
 
-            try:
-                log_queue.put_nowait(response.model_dump_json())
-            except asyncio.QueueFull:
-                pass
-            return response
 
 
 
         if search_request.provider.lower() in ("youtube", "youtube.com"):
             results = await asyncio.to_thread(Youtube.search, session=ses, search=search_request.search, top=search_request.top)
 
-        response = JobResponse(
-                            id=search_id,
-                            jobtype="search",
-                            status="done",
-                            message={
-                                "provider": search_request.provider,
-                                "query": search_request.search,
-                                "results": results
-                            }
-                )
-
-        try:  
-            log_queue.put_nowait(response.model_dump_json())
-        except asyncio.QueueFull:
-            pass
+        response = {
+                    "provider": search_request.provider,
+                    "query": search_request.search,
+                    "results": results
+                }
         return response
+    
+
+        
 
     except Exception as e:
-        response = JobResponse(
-            id=search_id,
-            jobtype="search",
-            status= "error",
-            message={"error": str(e), "query": search_request.query}
-        )
-        try:
-            log_queue.put_nowait(response.model_dump_json())
-        except asyncio.QueueFull:
-            pass
-        return response
+        raise SearchError(f"SEARCH_ERROR: {str(e)}")
 
 
 
@@ -274,6 +214,8 @@ async def startup_event():
     global quit_event, log_queue
    
     asyncio.create_task(logger(quit_event, log_queue))
+
+    log_queue.put_nowait("[INFO] Server started successfully")
     
     
 
@@ -285,9 +227,12 @@ async def startup_event():
 
 @app.post("/command")
 async def receive_command(data: CommandRequest):
-    task_id = str(uuid.uuid4())
-    response = await process_commands(data.command, task_id)
-    return response
+    try:
+        task_id = str(uuid.uuid4())
+        response = await process_commands(data.command, task_id)
+        return response
+    except Exception as e:
+        log_queue.put([f"[ERROR] Error handling command {data.command}.\nError Message: {str(e)}"])
 
 
 
@@ -295,17 +240,45 @@ async def receive_command(data: CommandRequest):
 
 @app.post("/download")
 async def receive_download(data: DownloadRequest):
+    global log_queue
     try:
         task_id = str(uuid.uuid4())
-        response = await process_downloads(data, task_id)
-        return response
+
+        download_progress[task_id] = {
+            "id": task_id,
+            "status": "queued",
+            "downloadProgress": "0%",
+            "errorMessage": ""
+        }
+
+        task = asyncio.create_task(process_downloads(data, download_progress[task_id]), name=task_id)
+        task.add_done_callback(lambda t: download_jobs.discard(t))
+        download_jobs.add(task)
+        log_queue.put_nowait(f"[INFO] Created download task with id {task_id} for provider {data.provider} with url {data.url}")
+
+        return {"id": task_id, "message": f"Request received for download, you can view progress under /download/progress/{task_id}"}, 200
         
     
     except (ValueError, TypeError) as e:
-        return {"ERROR": f"Invalid type for {str(e)}"}
+        log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.url}, filepath {data.download_path}.\nError Message: Invalid type for {str(e)}")
+        return {"error": f"Invalid type for {str(e)}"}, 400
 
     except Exception as e:
-        return {"ERROR": str(e)}
+        log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.url}, filepath {data.download_path}.\nError Message: {str(e)}")
+        return {"error": str(e)}, 400
+
+
+
+
+@app.get("/download/progress/{task_id}")
+async def get_download_progress(task_id: str):
+    progress = download_progress.get(task_id)
+    if not progress:
+        log_queue(f"[ERROR] Tried to access resource /download/progress/{task_id} which doesn't exist")
+        return {"error": "No such task"}, 404
+    return progress, 200
+
+
 
 
 
@@ -316,9 +289,11 @@ async def receive_search(data: SearchRequest):
     try:
         search_id = str(uuid.uuid4())
         response = await process_search(data, search_id)
+        log_queue.put_nowait(f"[INFO] Search succesfull for job {search_id} with query {data.search} and provider {data.provider}")
         return response
     except Exception as e:
-        return {"ERROR": str(e)}
+        log_queue.put_nowait(f"[ERROR] Failed search task with given arguments: id {search_id} provider {data.provider} and searchinput {data.search}.\n Error Message:{str(e)}")
+        return {"error": str(e)}, 400
 
 
 
@@ -340,7 +315,7 @@ def health():
         "memory_mb": mem,
         "pid": os.getpid(),
         "processes": list_python_processes()
-    }
+    }, 200
 
 def self_memory_mb():
     pid = os.getpid()

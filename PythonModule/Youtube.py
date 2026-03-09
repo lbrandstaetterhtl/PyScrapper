@@ -16,6 +16,9 @@ class SessionError(Exception): ...
 
 class YoutubeArgumentError(Exception): ...
 
+class YoutubeDownloadError(Exception): ...
+
+
 
 def search(
         search:str,
@@ -25,18 +28,18 @@ def search(
         ) -> list[dict]:
     
     if not search:
-        raise NoSearchError("No search was given")
+        raise NoSearchError("YOUTUBE_SEARCH: No search was given")
     if not session:
-        raise SessionError("No session was given")
+        raise SessionError("YOUTUBE_SEARCH: No session was given")
 
 
     try:
         top = int(top)
     except (TypeError, ValueError) as e:
-         raise ValueError(f"Top variable must be an integer {e}") from e
+         raise ValueError(f"YOUTBE_SEARCH: Top variable must be an integer {e}") from e
     
     if top <= 0:
-        raise ValueError("'Top' variable must be greater than 0")
+        raise ValueError("YOUTUBE_SEARCH: 'Top' variable must be greater than 0")
     
 
 
@@ -107,7 +110,7 @@ def get_html(
         
         ) -> str:
     if not session:
-        raise SessionError("No session was given")
+        raise SessionError("GET_HTML: No session was given")
 
     try:
         with session.open(request) as response:
@@ -124,14 +127,14 @@ def get_html(
         raise urllib.error.HTTPError(e.url, e.code, f"Failed to get request - {e.reason}", e.headers, e.fp) from e
 
     except urllib.error.URLError as e:
-        raise urllib.error.URLError(f"Failed to get request - {e}") from e
+        raise urllib.error.URLError(f"GET_HTML: Failed to get request - {e}") from e
 
     except UnicodeDecodeError as e:
-        raise UnicodeError(f"Failed to decode the HTML - {e}") from e
+        raise UnicodeError(f"GET_HTML: Failed to decode the HTML - {e}") from e
    
 
     if not html:
-        raise urllib.error.URLError("Failed to get request - HTML")
+        raise urllib.error.URLError("GET_HTML: Failed to get request - HTML")
 
 
     return html
@@ -149,13 +152,13 @@ def search_json(
     found = re.search(keyword + r"({.*?});", html, re.DOTALL)
 
     if not found:
-        raise NoSearchError("Failed to find the json data")
+        raise NoSearchError("SEARCH_JSON: Failed to find the json data")
     
     try:    
         jsondata = json.loads(found.group(1))
 
     except json.JSONDecodeError:
-        raise NoSearchError("Failed to decode the JSON data")
+        raise NoSearchError("SEARCH_JSON: Failed to decode the JSON data")
 
 
     return jsondata
@@ -183,13 +186,14 @@ def iter_value_from_json(
 
 def download_audio_only(
         url: str,
-        out_path: str, 
+        out_path: str,
+        progress_dict: dict 
 
         ):
     if not url:
-        raise YoutubeArgumentError("No URL was given for download")
+        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No URL was given for download")
     if not out_path:
-        raise YoutubeArgumentError("No download path was given")
+        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No download path was given")
 
     identifier = url.replace("https://www.youtube.com/watch?v=", "")
     out_file = os.path.join(out_path, f"{identifier}")
@@ -197,6 +201,7 @@ def download_audio_only(
     ydl_opts = {
         "format": "bestaudio/best",
         "outtmpl": out_file,
+        "progress_hooks": [build_progress_hook(progress_dict)],
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
@@ -204,25 +209,26 @@ def download_audio_only(
         }],
     }
 
+    progress_dict['status'] = "downloading..."
+    
     with YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
-
-    dictionary = {
-        "status": "Download complete",
-        "file": out_file + ".mp3"
-    }
-    return dictionary, identifier
+    progress_dict['status'] = "complete"
+    progress_dict['filename'] = out_file
 
 
 def download(
         url: str,
         out_path: str,
+        progress_dict: dict
 ):
     if not url:
-        raise YoutubeArgumentError("No URL was given for download")
+        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No URL was given for download")
     if not out_path:
-        raise YoutubeArgumentError("No path to download to was given")
+        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No path to download to was given")
+    if not progress_dict:
+        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No progress dict was given")
 
  
     identifier = url.replace("https://www.youtube.com/watch?v=", "")
@@ -234,6 +240,7 @@ def download(
         "outtmpl": out_file,
         "restrictfilenames": True,
         "merge_output_format": "mp4",
+        "progress_hooks": [build_progress_hook(progress_dict)],
         "postprocessors": [{
             "key": "FFmpegVideoConvertor",
             "preferedformat": "mp4",
@@ -241,13 +248,46 @@ def download(
 
 
     }
-
+    progress_dict['status'] = "downloading..."
+    progress_dict['filename'] = out_file
     with YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
-    dictionary = {
-        "status": "Download complete",
-        "file": out_file
-    }    
-    return dictionary, identifier
-        
+    progress_dict['status'] = "complete"    
+    
+
+
+
+
+def build_progress_hook(progress_dict: dict):
+    def progress_hook(d: dict):
+        status = d.get("status")
+
+        if status == "downloading":
+            downloaded = d.get("downloaded_bytes", 0)
+            total = d.get("total_bytes") or d.get("total_bytes_estimate")
+            speed = d.get("speed")
+
+            progress_dict["status"] = "downloading"
+            progress_dict["downloadedBytes"] = downloaded
+            progress_dict["totalBytes"] = total
+
+            if total:
+                progress_dict["downloadProgress"] = int(downloaded / total * 100)
+            else:
+                progress_dict["downloadProgress"] = 0
+
+            if speed:
+                progress_dict["speed"] = round(speed / 1024 / 1024, 2)
+            else:
+                progress_dict["speed"] = None
+
+        elif status == "finished":
+            progress_dict["status"] = "processing"
+            progress_dict["downloadProgress"] = 100
+
+        elif status == "error":
+            raise YoutubeDownloadError("YOUTUBE_DOWNLOAD: an error occured while downloading")
+    
+
+    return progress_hook

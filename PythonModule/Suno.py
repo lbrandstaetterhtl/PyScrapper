@@ -1,5 +1,6 @@
 import urllib.request, urllib.error, urllib.parse
 import re, os
+import time
 
 
 
@@ -127,6 +128,7 @@ def download_to_file(
         out_file: str,
         session = None,
         chunk_size: int = 1024 * 512,
+        progress_dict: dict = None
 
         
 ):
@@ -136,6 +138,8 @@ def download_to_file(
         raise SunoNotEnoughArguments("Not enough arguments were given")
     if not session:
         raise SunoNotEnoughArguments("No session was given")
+    if not progress_dict:
+        raise SunoNotEnoughArguments("No progress dict was given")
 
     request = urllib.request.Request(
         url,
@@ -147,11 +151,38 @@ def download_to_file(
 
     try:
         with session.open(request) as response, open(out_file, "wb") as f:
+            progress_dict['status'] = "downloading..."
+            total_size = response.headers.get("Content-Length")
+            downloaded: int = 0
+            start_time = time.time()
+
+            progress_dict['totalBytes'] = int(total_size)
+
+            if total_size is not None:
+                total_size = int(total_size)
+            
             while True:
                 chunk = response.read(chunk_size)
                 if not chunk:
                     break
+
                 f.write(chunk)
+
+                downloaded += len(chunk)
+                percent = 100 / total_size * downloaded
+                elapsed_time = time.time() - start_time
+                
+
+
+                progress_dict['downloadProgress'] = percent
+                progress_dict['downloadedBytes'] = downloaded
+                
+                speed = downloaded / elapsed_time if elapsed_time > 0 else 0
+                if speed:
+                    progress_dict["speed"] = round(speed / 1024 / 1024, 2)
+                
+
+        progress_dict['status'] = "complete"
 
     except urllib.error.HTTPError as e:
         raise urllib.error.HTTPError(f"HTTP Error {e}")
@@ -168,6 +199,7 @@ def download (
         session,
         out_path: str = os.path.join("downloads"),
         mediatype = ".mp3",
+        progress_dict: dict = None
         
 ):
     if mediatype not in (".mp3", ".mp4", ".wav"):
@@ -176,6 +208,8 @@ def download (
         raise SunoNotEnoughArguments("No url was given!")
     if not session:
         raise SunoNotEnoughArguments("No session was given")
+    if not progress_dict:
+        raise SunoNotEnoughArguments("No progress dict was given")
     
     os.makedirs(out_path, exist_ok=True)
 
@@ -187,10 +221,7 @@ def download (
     file = search_media(html=html, identifier=identifier, mediatype=mediatype)
     out_file = os.path.join(out_path, f"{identifier}{mediatype}")
 
-    download_to_file(url=file, out_file=out_file, session=session)
+    
+    download_to_file(url=file, out_file=out_file, session=session, progress_dict=progress_dict)
+    progress_dict['filename'] = out_file
 
-    dictionary = {
-        "status": "Download complete",
-        "file": out_file
-    }
-    return dictionary, identifier
