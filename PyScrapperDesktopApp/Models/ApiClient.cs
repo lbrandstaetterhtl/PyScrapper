@@ -39,8 +39,8 @@ public class ApiClient
         }
         else
         {
-            var deserializedError = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);
-            var log = new Massage($"Download failed for URL: \"{requestData.Url}\", error: " + deserializedError?.Message, DateTime.Now, "ERROR");
+            var deserializedError = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
+            var log = new Massage($"Download failed for URL: \"{requestData.Url}\", error: " + deserializedError?.Detail, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             
             return "-1";
@@ -98,8 +98,8 @@ public class ApiClient
         }
         else
         {
-            var deserializedError = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);
-            var log = new Massage($"Search failed for query: \"{requestData.Search}\", error: " + deserializedError?.Message, DateTime.Now,
+            var deserializedError = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
+            var log = new Massage($"Search failed for query: \"{requestData.Search}\", error: " + deserializedError?.Detail, DateTime.Now,
                 "ERROR");
             _logger.LogNewMassage(log);
             
@@ -258,4 +258,11 @@ public class ApiClient
         [JsonPropertyName("results")]
         public List<YoutubeVideoItem> Results { get; set; }
     }
+
+    public class HttpErrorResponse
+    {
+        [JsonPropertyName("detail")] 
+        public string Detail { get; set; }
+    }
+
 }

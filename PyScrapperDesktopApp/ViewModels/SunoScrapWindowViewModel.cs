@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ namespace PyScrapperDesktopApp.ViewModels;
 public class SunoScrapWindowViewModel : INotifyPropertyChanged
 {
     private string _sunoUrl;
+    private readonly AppLogger _logger = new();
     
     private readonly List<string> _availableMediaType = [".mp3", ".mp4"];
 
@@ -76,6 +78,16 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
             {
                 var progressWindow = new ProgressBarWindow(result);
                 progressWindow.Show();
+                
+                var log = new Massage($"Scrap request sent for URL: \"{SunoUrl}\" with media type: \"{SelectedMediaType}\"", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+                
+                var identifier = SunoUrl.Split('/')[^1];
+                
+                var media = new DownloadedMedia(SunoUrl, SelectedMediaType, DateTime.Now, Path.Combine(AppData.DownloadPath, $"{identifier}{SelectedMediaType}"), true, identifier);
+                media.SetHighestId(AppData.DownloadedMedias);
+                
+                AppData.AddDownloadedMedia(media);
             }
             
             RequestClose?.Invoke();

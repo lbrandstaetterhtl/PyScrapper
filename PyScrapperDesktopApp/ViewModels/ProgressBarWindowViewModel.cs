@@ -36,10 +36,13 @@ public partial class ProgressBarWindowViewModel : ObservableObject
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
         
-        Thread progressThread = new Thread( async () =>
+        Task.Run( async () =>
         {
             while (_progress < 100)
             {
+                if (token.IsCancellationRequested)
+                    break;
+                
                 try
                 {
                     var progressResponse = _apiClient.GetDownloadProgress(id, "127.0.0.1:8765");
@@ -58,6 +61,10 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                         }
                     });
                 }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
                 catch (Exception e)
                 {
                     Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -66,19 +73,29 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                     });
                 }
                 
-                await Task.Delay(500, token);
+                try
+                {
+                    await Task.Delay(1000, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
-        });
-        
-        progressThread.IsBackground = true;
-        progressThread.Start();
+        }, token);
     }
 
     public void StopProgress()
     {
         _cts?.Cancel();
-        CloseRequested?.Invoke();
     }
+
+    [RelayCommand]
+    public void Close()
+    {
+        CloseRequested.Invoke();
+    }
+    
     
     public event Action? CloseRequested;
 }

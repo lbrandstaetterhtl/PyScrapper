@@ -7,7 +7,8 @@
         x:Class="PyScrapperDesktopApp.Views.ProgressBarWindow"
         x:DataType="vm:ProgressBarWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
+        Topmost="True"
         SizeToContent="WidthAndHeight"
         Title="PyScrapperDesktopApp">
         
@@ -22,6 +23,8 @@
 
                 <TextBlock Text="{Binding Progress, StringFormat={}{0}%}"
                            HorizontalAlignment="Center"/>
+                
+                <Button Content="Close" Command="{Binding CloseCommand}"/>
         </StackPanel>
         
 </Window>
