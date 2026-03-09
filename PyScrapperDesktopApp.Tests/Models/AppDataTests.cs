@@ -1,5 +1,7 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using PyScrapperDesktopApp.Models;
+using Xunit;
 
 namespace PyScrapperDesktopApp.Tests.Models;
 

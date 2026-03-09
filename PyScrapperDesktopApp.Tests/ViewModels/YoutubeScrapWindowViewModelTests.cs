@@ -1,5 +1,8 @@
-﻿using Avalonia.Controls;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Avalonia.Controls;
 using PyScrapperDesktopApp.ViewModels;
+using Xunit;
 using static PyScrapperDesktopApp.Models.ApiClient;
 
 namespace PyScrapperDesktopApp.Tests.ViewModels;

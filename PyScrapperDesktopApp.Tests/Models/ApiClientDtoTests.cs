@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using PyScrapperDesktopApp.Models;
+using Xunit;
 using static PyScrapperDesktopApp.Models.ApiClient;
 
 namespace PyScrapperDesktopApp.Tests.Models;
@@ -53,65 +54,72 @@ public class ApiClientDtoTests
 
     #endregion
 
-    #region DownloadSuccessResponse Tests
+    #region NormalResponse Tests
 
     [Fact]
-    public void DownloadSuccessResponse_Deserialization_WorksCorrectly()
+    public void NormalResponse_Deserialization_WorksCorrectly()
     {
         var json = """
         {
             "id": "job-1",
-            "jobtype": "download",
-            "status": "complete",
-            "message": {
-                "Provider": "youtube",
-                "identifier": "XPwUIDYKHX4",
-                "File": "C:\\Downloads\\test.mp3",
-                "Raw_status": "Download complete"
-            }
+            "message": "Download started successfully"
         }
         """;
 
-        var response = JsonSerializer.Deserialize<DownloadSuccessResponse>(json, JsonOptions);
+        var response = JsonSerializer.Deserialize<NormalResponse>(json, JsonOptions);
 
         Assert.NotNull(response);
         Assert.Equal("job-1", response.Id);
-        Assert.Equal("download", response.JobType);
-        Assert.Equal("complete", response.Status);
-        Assert.NotNull(response.Message);
-        Assert.Equal("youtube", response.Message.Provider);
-        Assert.Equal("XPwUIDYKHX4", response.Message.identifier);
-        Assert.Equal("C:\\Downloads\\test.mp3", response.Message.File);
-        Assert.Equal("Download complete", response.Message.Raw_status);
+        Assert.Equal("Download started successfully", response.Message);
     }
 
-    #endregion
-
-    #region DownloadErrorResponse Tests
-
     [Fact]
-    public void DownloadErrorResponse_Deserialization_WorksCorrectly()
+    public void NormalResponse_ErrorDeserialization_WorksCorrectly()
     {
         var json = """
         {
-            "id": "job-2",
-            "jobtype": "download",
-            "status": "error",
-            "message": {
-                "Error": "Video not found",
-                "Url": "https://youtube.com/invalid"
-            }
+            "id": "-1",
+            "message": "Video not found"
         }
         """;
 
-        var response = JsonSerializer.Deserialize<DownloadErrorResponse>(json, JsonOptions);
+        var response = JsonSerializer.Deserialize<NormalResponse>(json, JsonOptions);
 
         Assert.NotNull(response);
-        Assert.Equal("job-2", response.Id);
-        Assert.Equal("error", response.Status);
-        Assert.NotNull(response.Message);
-        Assert.Equal("Video not found", response.Message.Error);
-        Assert.Equal("https://youtube.com/invalid", response.Message.Url);
+        Assert.Equal("-1", response.Id);
+        Assert.Equal("Video not found", response.Message);
+    }
+
+    [Fact]
+    public void NormalResponse_Serialization_UsesJsonPropertyNames()
+    {
+        var response = new NormalResponse
+        {
+            Id = "test-id",
+            Message = "test message"
+        };
+
+        var json = JsonSerializer.Serialize(response, JsonOptions);
+
+        Assert.Contains("\"id\"", json);
+        Assert.Contains("\"message\"", json);
+    }
+
+    [Fact]
+    public void NormalResponse_RoundTrip_PreservesData()
+    {
+        var original = new NormalResponse
+        {
+            Id = "round-trip-id",
+            Message = "round trip message"
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<NormalResponse>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(original.Id, deserialized.Id);
+        Assert.Equal(original.Message, deserialized.Message);
     }
 
     #endregion
@@ -238,65 +246,215 @@ public class ApiClientDtoTests
     {
         var json = """
         {
-            "id": "search-1",
-            "jobtype": "search",
-            "status": "ok",
-            "message": {
-                "provider": "youtube",
-                "query": "test query",
-                "results": [
-                    {
-                        "videoId": "abc123",
-                        "url": "https://youtube.com/watch?v=abc123",
-                        "thumbnail": "https://img.youtube.com/vi/abc123/0.jpg",
-                        "title": "Test Video"
-                    }
-                ]
-            }
+            "provider": "youtube",
+            "query": "test query",
+            "results": [
+                {
+                    "videoId": "abc123",
+                    "url": "https://youtube.com/watch?v=abc123",
+                    "thumbnail": "https://img.youtube.com/vi/abc123/0.jpg",
+                    "title": "Test Video"
+                }
+            ]
         }
         """;
 
         var response = JsonSerializer.Deserialize<SearchSuccessResponse>(json, JsonOptions);
 
         Assert.NotNull(response);
-        Assert.Equal("search-1", response.VideoId);
-        Assert.Equal("search", response.Jobtype);
-        Assert.Equal("ok", response.Status);
-        Assert.NotNull(response.Message);
-        Assert.Equal("youtube", response.Message.provider);
-        Assert.Equal("test query", response.Message.query);
-        Assert.Single(response.Message.results);
-        Assert.Equal("abc123", response.Message.results[0].videoId);
-        Assert.Equal("Test Video", response.Message.results[0].title);
+        Assert.Equal("youtube", response.Provider);
+        Assert.Equal("test query", response.Query);
+        Assert.NotNull(response.Results);
+        Assert.Single(response.Results);
+        Assert.Equal("abc123", response.Results[0].videoId);
+        Assert.Equal("Test Video", response.Results[0].title);
+    }
+
+    [Fact]
+    public void SearchSuccessResponse_EmptyResults_DeserializesCorrectly()
+    {
+        var json = """
+        {
+            "provider": "youtube",
+            "query": "no results query",
+            "results": []
+        }
+        """;
+
+        var response = JsonSerializer.Deserialize<SearchSuccessResponse>(json, JsonOptions);
+
+        Assert.NotNull(response);
+        Assert.Equal("no results query", response.Query);
+        Assert.NotNull(response.Results);
+        Assert.Empty(response.Results);
+    }
+
+    [Fact]
+    public void SearchSuccessResponse_MultipleResults_DeserializesCorrectly()
+    {
+        var json = """
+        {
+            "provider": "youtube",
+            "query": "music",
+            "results": [
+                {
+                    "videoId": "id1",
+                    "url": "https://youtube.com/watch?v=id1",
+                    "thumbnail": "https://img.youtube.com/vi/id1/0.jpg",
+                    "title": "Song 1"
+                },
+                {
+                    "videoId": "id2",
+                    "url": "https://youtube.com/watch?v=id2",
+                    "thumbnail": "https://img.youtube.com/vi/id2/0.jpg",
+                    "title": "Song 2"
+                }
+            ]
+        }
+        """;
+
+        var response = JsonSerializer.Deserialize<SearchSuccessResponse>(json, JsonOptions);
+
+        Assert.NotNull(response);
+        Assert.Equal(2, response.Results.Count);
+        Assert.Equal("id1", response.Results[0].videoId);
+        Assert.Equal("id2", response.Results[1].videoId);
     }
 
     #endregion
 
-    #region SearchErrorResponse Tests
+    #region ProgressSuccessResponse Tests
 
     [Fact]
-    public void SearchErrorResponse_Deserialization_WorksCorrectly()
+    public void ProgressSuccessResponse_Deserialization_WorksCorrectly()
     {
         var json = """
         {
-            "id": "search-err-1",
-            "jobtype": "search",
-            "status": "error",
-            "message": {
-                "Error": "Search failed",
-                "Query": "broken query"
-            }
+            "id": "dl-123",
+            "status": "downloading",
+            "downloadProgress": 45.5,
+            "errorMessage": null,
+            "totalBytes": 10485760,
+            "downloadedBytes": 4770816,
+            "speed": 1024.5,
+            "fileName": "video.mp4"
         }
         """;
 
-        var response = JsonSerializer.Deserialize<SearchErrorResponse>(json, JsonOptions);
+        var response = JsonSerializer.Deserialize<ProgressSuccessResponse>(json, JsonOptions);
 
         Assert.NotNull(response);
-        Assert.Equal("search-err-1", response.Id);
+        Assert.Equal("dl-123", response.Id);
+        Assert.Equal("downloading", response.Status);
+        Assert.Equal(45.5f, response.DownloadProgress);
+        Assert.Null(response.ErrorMessage);
+        Assert.Equal(10485760L, response.TotalBytes);
+        Assert.Equal(4770816L, response.DownloadedBytes);
+        Assert.Equal(1024.5f, response.Speed);
+        Assert.Equal("video.mp4", response.FileName);
+    }
+
+    [Fact]
+    public void ProgressSuccessResponse_CompletedDownload_DeserializesCorrectly()
+    {
+        var json = """
+        {
+            "id": "dl-456",
+            "status": "complete",
+            "downloadProgress": 100.0,
+            "errorMessage": null,
+            "totalBytes": 5242880,
+            "downloadedBytes": 5242880,
+            "speed": 0.0,
+            "fileName": "audio.mp3"
+        }
+        """;
+
+        var response = JsonSerializer.Deserialize<ProgressSuccessResponse>(json, JsonOptions);
+
+        Assert.NotNull(response);
+        Assert.Equal("complete", response.Status);
+        Assert.Equal(100.0f, response.DownloadProgress);
+        Assert.Equal(response.TotalBytes, response.DownloadedBytes);
+    }
+
+    [Fact]
+    public void ProgressSuccessResponse_WithError_DeserializesCorrectly()
+    {
+        var json = """
+        {
+            "id": "dl-789",
+            "status": "error",
+            "downloadProgress": 0.0,
+            "errorMessage": "Connection timeout",
+            "totalBytes": 0,
+            "downloadedBytes": 0,
+            "speed": 0.0,
+            "fileName": ""
+        }
+        """;
+
+        var response = JsonSerializer.Deserialize<ProgressSuccessResponse>(json, JsonOptions);
+
+        Assert.NotNull(response);
         Assert.Equal("error", response.Status);
-        Assert.NotNull(response.Message);
-        Assert.Equal("Search failed", response.Message.Error);
-        Assert.Equal("broken query", response.Message.Query);
+        Assert.Equal("Connection timeout", response.ErrorMessage);
+        Assert.Equal(0f, response.DownloadProgress);
+    }
+
+    [Fact]
+    public void ProgressSuccessResponse_Properties_CanBeSetAndRead()
+    {
+        var response = new ProgressSuccessResponse
+        {
+            Id = "test-id",
+            Status = "downloading",
+            DownloadProgress = 75.3f,
+            ErrorMessage = null,
+            TotalBytes = 20000000,
+            DownloadedBytes = 15060000,
+            Speed = 2048.0f,
+            FileName = "music.mp3"
+        };
+
+        Assert.Equal("test-id", response.Id);
+        Assert.Equal("downloading", response.Status);
+        Assert.Equal(75.3f, response.DownloadProgress);
+        Assert.Null(response.ErrorMessage);
+        Assert.Equal(20000000L, response.TotalBytes);
+        Assert.Equal(15060000L, response.DownloadedBytes);
+        Assert.Equal(2048.0f, response.Speed);
+        Assert.Equal("music.mp3", response.FileName);
+    }
+
+    #endregion
+
+    #region ProgressErrorResponse Tests
+
+    [Fact]
+    public void ProgressErrorResponse_Deserialization_WorksCorrectly()
+    {
+        var json = """
+        {
+            "message": "Download ID not found"
+        }
+        """;
+
+        var response = JsonSerializer.Deserialize<ProgressErrorResponse>(json, JsonOptions);
+
+        Assert.NotNull(response);
+        Assert.Equal("Download ID not found", response.Message);
+    }
+
+    [Fact]
+    public void ProgressErrorResponse_Properties_CanBeSetAndRead()
+    {
+        var response = new ProgressErrorResponse
+        {
+            Message = "Invalid download ID"
+        };
+
+        Assert.Equal("Invalid download ID", response.Message);
     }
 
     #endregion
@@ -380,6 +538,35 @@ public class ApiClientDtoTests
         Assert.Equal(original.Provider, deserialized.Provider);
         Assert.Equal(original.Search, deserialized.Search);
         Assert.Equal(original.Top, deserialized.Top);
+    }
+
+    [Fact]
+    public void ProgressSuccessResponse_RoundTrip_PreservesData()
+    {
+        var original = new ProgressSuccessResponse
+        {
+            Id = "rt-id",
+            Status = "downloading",
+            DownloadProgress = 55.5f,
+            ErrorMessage = null,
+            TotalBytes = 1000000,
+            DownloadedBytes = 555000,
+            Speed = 512.0f,
+            FileName = "file.mp4"
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<ProgressSuccessResponse>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(original.Id, deserialized.Id);
+        Assert.Equal(original.Status, deserialized.Status);
+        Assert.Equal(original.DownloadProgress, deserialized.DownloadProgress);
+        Assert.Equal(original.ErrorMessage, deserialized.ErrorMessage);
+        Assert.Equal(original.TotalBytes, deserialized.TotalBytes);
+        Assert.Equal(original.DownloadedBytes, deserialized.DownloadedBytes);
+        Assert.Equal(original.Speed, deserialized.Speed);
+        Assert.Equal(original.FileName, deserialized.FileName);
     }
 
     #endregion

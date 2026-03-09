@@ -1,4 +1,7 @@
-﻿using PyScrapperDesktopApp.Models;
+﻿using System;
+using System.IO;
+using PyScrapperDesktopApp.Models;
+using Xunit;
 
 namespace PyScrapperDesktopApp.Tests.Models;
 

@@ -16,7 +16,7 @@ public class ApiClient
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public async Task<bool> SendScrapRequest(DownloadRequestData requestData, string serverUrl)
+    public async Task<string> SendScrapRequest(DownloadRequestData requestData, string serverUrl)
     {
         HttpClient client = new();
         
@@ -27,38 +27,23 @@ public class ApiClient
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"http://{serverUrl}/download", content);
         var responseData = await response.Content.ReadAsStringAsync();
-        
-        
-        try
+
+        if (response.IsSuccessStatusCode)
         {
-            var deserializedResponse = JsonSerializer.Deserialize<DownloadSuccessResponse>(responseData, JsonOptions);
+            var deserializedResponse = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);
 
-            if (deserializedResponse.Status == "error")
-            {
-                throw new Exception("Download request failed with error status");
-            }
-
-            bool isPlayable = File.Exists(deserializedResponse.Message.File);
-
-            var downloadedMedia =
-                new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now, deserializedResponse.Message.File, isPlayable, deserializedResponse.Message.identifier);
-            downloadedMedia.SetHighestId(AppData.DownloadedMedias);
-            AppData.AddDownloadedMedia(downloadedMedia);
-
-            var log = new Massage($"{deserializedResponse?.Message.Raw_status}, saved to {downloadedMedia.DownloadPath}", DateTime.Now,
-                deserializedResponse?.Message.Raw_status.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "WARNING");
+            var log = new Massage($"Download successful for URL: \"{requestData.Url}\", saved to: {deserializedResponse?.Message}", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
-            
-            return true;
+
+            return deserializedResponse?.Id!;
         }
-        catch (Exception e)
+        else
         {
-            var deserializedError = JsonSerializer.Deserialize<DownloadErrorResponse>(responseData, JsonOptions);
-            var log = new Massage("Scraping failed, server gave error: " + deserializedError?.Message.Error + $", scrap url: {requestData.Url}, Download path: {requestData.Download_path}", DateTime.Now,
-                deserializedError?.Message.Error.Contains("complete", StringComparison.OrdinalIgnoreCase) == true ? "INFO" : "ERROR");
+            var deserializedError = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);
+            var log = new Massage($"Download failed for URL: \"{requestData.Url}\", error: " + deserializedError?.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             
-            return false;
+            return "-1";
         }
     }
 
@@ -88,9 +73,9 @@ public class ApiClient
             var log = new Massage(errorResponse?.msg ?? "Server health check failed", DateTime.Now,
                 errorResponse?.type ?? "ERROR");
             _logger.LogNewMassage(log);
+            
+            return null;
         }
-
-        return null;
     }
     
     public async Task<List<YoutubeVideoItem>> SendSearchRequest(SearchRequestData requestData, string serverUrl)
@@ -106,19 +91,48 @@ public class ApiClient
         {
             var deserializedResponse = JsonSerializer.Deserialize<SearchSuccessResponse>(responseData, JsonOptions);
 
-            var log = new Massage($"Search successful for query: \"{deserializedResponse?.Message.query}\", found {deserializedResponse?.Message.results.Count} results", DateTime.Now, "INFO");
+            var log = new Massage($"Search successful for query: \"{deserializedResponse?.Query}\", found {deserializedResponse?.Results.Count} results", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            return deserializedResponse?.Message.results ?? new List<YoutubeVideoItem>();
+            return deserializedResponse?.Results ?? new List<YoutubeVideoItem>();
         }
         else
         {
-            var deserializedError = JsonSerializer.Deserialize<SearchErrorResponse>(responseData, JsonOptions);
-            var log = new Massage($"Search failed for query: \"{deserializedError?.Message.Query}\", error: " + deserializedError?.Message.Error, DateTime.Now,
+            var deserializedError = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);
+            var log = new Massage($"Search failed for query: \"{requestData.Search}\", error: " + deserializedError?.Message, DateTime.Now,
                 "ERROR");
             _logger.LogNewMassage(log);
             
             return new List<YoutubeVideoItem>();
+        }
+    }
+    
+    public async Task<ProgressSuccessResponse> GetDownloadProgress(string downloadId, string serverUrl)
+    {
+        HttpClient client = new();
+
+        var response = await client.GetAsync($"http://{serverUrl}/download/progress/{downloadId}");
+        var responseData = await response.Content.ReadAsStringAsync();
+
+        if (response.IsSuccessStatusCode)
+        {
+            var progressResponse = JsonSerializer.Deserialize<ProgressSuccessResponse>(responseData, JsonOptions);
+
+            var log = new Massage($"Download progress for ID: \"{downloadId}\": {progressResponse?.DownloadProgress}%", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            return progressResponse;
+        }
+        else
+        {
+            
+            var errorResponse = JsonSerializer.Deserialize<ProgressErrorResponse>(responseData, JsonOptions);
+
+            var log = new Massage(errorResponse?.Message!, DateTime.Now,
+                "ERROR");
+            _logger.LogNewMassage(log);
+
+            return null;
         }
     }
 
@@ -144,51 +158,6 @@ public class ApiClient
         
         [JsonPropertyName("download_path")]
         public string Download_path { get; set; }
-    }
-    
-
-    public class DownloadSuccessResponse
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; }
-        
-        [JsonPropertyName("jobtype")]
-        public string JobType { get; set; }
-        
-        [JsonPropertyName("status")]
-        public string Status { get; set; }
-        
-        [JsonPropertyName("message")]
-        public DownloadSuccessMessage Message { get; set; }
-    }
-    
-    public class DownloadErrorResponse
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; }
-        
-        [JsonPropertyName("jobtype")]
-        public string JobType { get; set; }
-        
-        [JsonPropertyName("status")]
-        public string Status { get; set; }
-        
-        [JsonPropertyName("message")]
-        public DonwloadErrorMessage Message { get; set; }
-    }
-
-    public class DownloadSuccessMessage
-    {
-        public string Provider { get; set; }
-        public string identifier { get; set; }
-        public string File { get; set; }
-        public string Raw_status { get; set; }
-    }
-    
-    public class DonwloadErrorMessage
-    {
-        public string Error { get; set; }
-        public string Url { get; set; }
     }
 
     public class ServerProcess
@@ -227,28 +196,6 @@ public class ApiClient
         public int Top { get; set; }
     }
 
-    public class SearchSuccessResponse
-    {
-        [JsonPropertyName("id")]
-        public string VideoId { get; set; }
-        
-        [JsonPropertyName("jobtype")]
-        public string Jobtype { get; set; }
-        
-        [JsonPropertyName("status")]
-        public string Status { get; set; }
-        
-        [JsonPropertyName("message")]
-        public SearchResponseMessage Message { get; set; }
-    }
-    
-    public class SearchResponseMessage
-    {
-        public string provider { get; set; }
-        public string query { get; set; }
-        public List<YoutubeVideoItem> results { get; set; }
-    }
-
     public class YoutubeVideoItem
     {
         public string videoId { get; set; }
@@ -257,25 +204,58 @@ public class ApiClient
         public Bitmap ThumbnailBitmap { get; set; }
         public string title { get; set; }
     }
-    
-    public class SearchErrorResponse
+
+    public class NormalResponse
     {
         [JsonPropertyName("id")]
         public string Id { get; set; }
         
-        [JsonPropertyName("jobtype")]
-        public string JobType { get; set; }
+        [JsonPropertyName("message")]
+        public string Message { get; set; }
+    }
+
+    public class ProgressSuccessResponse
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
         
         [JsonPropertyName("status")]
         public string Status { get; set; }
         
-        [JsonPropertyName("message")]
-        public SearchErrorMessage Message { get; set; }
+        [JsonPropertyName("downloadProgress")]
+        public float DownloadProgress { get; set; }
+        
+        [JsonPropertyName("errorMessage")]
+        public string ErrorMessage { get; set; }
+        
+        [JsonPropertyName("totalBytes")]
+        public long TotalBytes { get; set; }
+        
+        [JsonPropertyName("downloadedBytes")]
+        public long DownloadedBytes { get; set; }
+        
+        [JsonPropertyName("speed")]
+        public float Speed { get; set; }
+        
+        [JsonPropertyName("fileName")]
+        public string FileName { get; set; }
     }
     
-    public class SearchErrorMessage
+    public class ProgressErrorResponse
     {
-        public string Error { get; set; }
+        [JsonPropertyName("message")]
+        public string Message { get; set; }
+    }
+    
+    public class SearchSuccessResponse
+    {
+        [JsonPropertyName("provider")]
+        public string Provider { get; set; }
+        
+        [JsonPropertyName("query")]
         public string Query { get; set; }
+        
+        [JsonPropertyName("results")]
+        public List<YoutubeVideoItem> Results { get; set; }
     }
 }
