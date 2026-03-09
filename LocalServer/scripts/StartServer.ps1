@@ -47,15 +47,57 @@ if (Test-Path $activateScript) {
   Write-Log "WARNING: Activate.ps1 not found at $activateScript"
 }
 
-# ─── ffmpeg (call operator — own scope) ──────────────────────────────────────
-$ffCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
-if (-not $ffCmd) {
-  Write-Log "ffmpeg not found. Running InstallFFMPEG.ps1..."
-  $installScript = Join-Path $PSScriptRoot "InstallFFMPEG.ps1"
-  if (-not (Test-Path $installScript)) { throw "Missing script: $installScript" }
-  & $installScript -PersistUserPath 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
+# ─── ffmpeg: sicherstellen, dass es im Projekt-PATH liegt ────────────────────
+# Suche ffmpeg.exe unterhalb des Projektverzeichnisses
+$ffmpegInProject = Get-ChildItem -Path $AllRoot -Recurse -Filter "ffmpeg.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+
+if ($ffmpegInProject) {
+  $ffmpegBinDir = Split-Path $ffmpegInProject.FullName -Parent
+  Write-Log "ffmpeg found in project: $($ffmpegInProject.FullName)"
+
+  # Prüfen ob der Pfad bereits in der aktuellen Session-PATH ist
+  if ($env:Path -notmatch [regex]::Escape($ffmpegBinDir)) {
+    $env:Path = "$ffmpegBinDir;$env:Path"
+    Write-Log "Added ffmpeg project path to session PATH: $ffmpegBinDir"
+  } else {
+    Write-Log "Session PATH already contains ffmpeg project path: $ffmpegBinDir"
+  }
+
+  # Prüfen ob der Pfad im User-PATH dauerhaft hinterlegt ist
+  $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  if ($userPath -notmatch [regex]::Escape($ffmpegBinDir)) {
+    [Environment]::SetEnvironmentVariable("Path", ($userPath + ";" + $ffmpegBinDir), "User")
+    Write-Log "Added ffmpeg project path to User PATH (persistent): $ffmpegBinDir"
+  } else {
+    Write-Log "User PATH already contains ffmpeg project path: $ffmpegBinDir"
+  }
 } else {
-  Write-Log "ffmpeg already available: $($ffCmd.Source)"
+  # ffmpeg nicht im Projekt gefunden — auch global prüfen
+  $ffCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
+  if (-not $ffCmd) {
+    Write-Log "ffmpeg not found (neither in project nor in PATH). Running InstallFFMPEG.ps1..."
+    $installScript = Join-Path $PSScriptRoot "InstallFFMPEG.ps1"
+    if (-not (Test-Path $installScript)) { throw "Missing script: $installScript" }
+    & $installScript -PersistUserPath 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
+  } else {
+    $ffmpegBinDir = Split-Path $ffCmd.Source -Parent
+    Write-Log "ffmpeg not in project but available globally: $($ffCmd.Source)"
+
+    # Trotzdem sicherstellen, dass der Pfad in der Session-PATH ist
+    if ($env:Path -notmatch [regex]::Escape($ffmpegBinDir)) {
+      $env:Path = "$ffmpegBinDir;$env:Path"
+      Write-Log "Added global ffmpeg path to session PATH: $ffmpegBinDir"
+    }
+
+    # Und dauerhaft im User-PATH hinterlegen
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    if ($userPath -notmatch [regex]::Escape($ffmpegBinDir)) {
+      [Environment]::SetEnvironmentVariable("Path", ($userPath + ";" + $ffmpegBinDir), "User")
+      Write-Log "Added global ffmpeg path to User PATH (persistent): $ffmpegBinDir"
+    } else {
+      Write-Log "User PATH already contains global ffmpeg path: $ffmpegBinDir"
+    }
+  }
 }
 
 # ─── Backend requirements (call operator — own scope) ────────────────────────

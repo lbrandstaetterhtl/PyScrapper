@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
+using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 

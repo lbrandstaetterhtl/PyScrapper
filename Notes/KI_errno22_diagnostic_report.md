@@ -186,6 +186,20 @@ Missing `return` after setting error response for unknown providers.
 
 ## Summary
 
+yt-dlp übergibt ungültige Argumente an ffmpeg (z.B. falsche Codec-Parameter, ungültiges Ausgabeformat oder fehlerhafte URL).
+
+Ungültige Zeichen im Dateipfad (Sonderzeichen, Leerzeichen, zu langer Pfad).
+
+Inkompatible ffmpeg-Version – die von WinGet installierte Version passt möglicherweise nicht zur yt-dlp-Version.
+
+Fehlerhafte Metadaten im Quellvideo, die ffmpeg beim Muxen/Postprocessing nicht verarbeiten kann.
+
+Dateisystem-Problem – z.B. der Zielordner existiert nicht oder der Dateiname ist ungültig für Windows.
+
+Der Fehler tritt typischerweise im Postprocessing-Schritt auf, wenn yt-dlp ffmpeg aufruft, um Audio/Video zusammenzuführen oder zu konvertieren. 
+
+Es lohnt sich, die vollständige Fehlermeldung von yt-dlp anzuschauen – dort steht meist, bei welchem Aufruf genau errno 22 auftritt.
+
 | # | Severity | Fix | Why | Done|
 |---|---|---|---|---|
 | 1 | 🔴 Critical | Pass `ffmpeg_location` to yt-dlp | Eliminates PATH dependency entirely |
