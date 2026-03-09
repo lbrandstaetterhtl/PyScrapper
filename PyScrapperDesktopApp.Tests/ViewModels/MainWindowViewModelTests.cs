@@ -1,4 +1,5 @@
 ﻿using PyScrapperDesktopApp.ViewModels;
+using Xunit;
 
 namespace PyScrapperDesktopApp.Tests.ViewModels;
 

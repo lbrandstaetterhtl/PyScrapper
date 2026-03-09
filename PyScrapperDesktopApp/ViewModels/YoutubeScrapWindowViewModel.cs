@@ -134,7 +134,7 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
             
             var result = await client.SendScrapRequest(requestData, serverUrl);
         
-            if (!result)
+            if (result == "-1")
             {
                 var massageBox = new MassageBox($"Failed to start scraping. Please check the server/app logs for more details.");
                 await massageBox.ShowDialog(_ScrapWindow);

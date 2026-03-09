@@ -1,6 +1,8 @@
-﻿using Avalonia;
+﻿using System;
+using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Themes.Fluent;
+using Xunit;
 
 namespace PyScrapperDesktopApp.Tests;
 
