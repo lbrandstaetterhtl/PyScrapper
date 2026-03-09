@@ -53,6 +53,14 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                         Progress = progressData.DownloadProgress;
                         Status = progressData.Status;
                         ProgressSpeed = progressData.Speed;
+                        
+                        if (progressData.ErrorMessage is not "")
+                        {
+                            Status = $"Error: {progressData.ErrorMessage}";
+                            var log = new Massage(progressData.ErrorMessage, DateTime.Now, "ERROR");
+                            new AppLogger().LogNewMassage(log);
+                            StopProgress();
+                        } 
 
                         if (progressData.Status.Equals("complete"))
                         {
