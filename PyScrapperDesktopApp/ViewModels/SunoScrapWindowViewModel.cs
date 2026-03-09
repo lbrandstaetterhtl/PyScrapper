@@ -77,14 +77,15 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
             if (result != "-1")
             {
                 var progressWindow = new ProgressBarWindow(result);
-                progressWindow.Show();
-                
-                var log = new Massage($"Scrap request sent for URL: \"{SunoUrl}\" with media type: \"{SelectedMediaType}\"", DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
+                await progressWindow.ShowDialog(_ScrapWindow);
                 
                 var identifier = SunoUrl.Split('/')[^1];
                 
-                var media = new DownloadedMedia(SunoUrl, SelectedMediaType, DateTime.Now, Path.Combine(AppData.DownloadPath, $"{identifier}{SelectedMediaType}"), true, identifier);
+                var downloadedFilePath = Path.Combine(AppData.DownloadPath, $"{identifier}{SelectedMediaType}");
+                
+                bool isPlayable = File.Exists(downloadedFilePath);
+                
+                var media = new DownloadedMedia(SunoUrl, SelectedMediaType, DateTime.Now, downloadedFilePath, isPlayable, identifier);
                 media.SetHighestId(AppData.DownloadedMedias);
                 
                 AppData.AddDownloadedMedia(media);

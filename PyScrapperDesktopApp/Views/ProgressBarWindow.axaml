@@ -8,7 +8,6 @@
         x:DataType="vm:ProgressBarWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         WindowStartupLocation="CenterScreen"
-        Topmost="True"
         SizeToContent="WidthAndHeight"
         Title="PyScrapperDesktopApp">
         

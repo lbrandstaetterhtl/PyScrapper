@@ -118,7 +118,7 @@ public class ApiClient
         {
             var progressResponse = JsonSerializer.Deserialize<ProgressSuccessResponse>(responseData, JsonOptions);
 
-            var log = new Massage($"Download progress for ID: \"{downloadId}\": {progressResponse?.DownloadProgress}%", DateTime.Now, "INFO");
+            var log = new Massage($"Download progress for ID: \"{downloadId}\": {progressResponse?.Status}, {progressResponse?.DownloadProgress}%, {progressResponse?.Speed} MB/s", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
             return progressResponse;

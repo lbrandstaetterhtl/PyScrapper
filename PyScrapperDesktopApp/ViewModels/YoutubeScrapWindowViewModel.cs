@@ -135,10 +135,20 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
             var result = await client.SendScrapRequest(requestData, serverUrl);
         
             if (result == "-1")
-            {
-                var massageBox = new MassageBox($"Failed to start scraping. Please check the server/app logs for more details.");
-                await massageBox.ShowDialog(_ScrapWindow);
-                return;
+            { 
+                var progressWindow = new ProgressBarWindow(result);
+                await progressWindow.ShowDialog(_ScrapWindow);
+                
+                var identifier = result.Split('=')[^1];
+                
+                var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{identifier}{SelectedMediaType}");
+                
+                bool isPlayable = File.Exists(downloadFilePath);
+                
+                var media = new DownloadedMedia(item.url, SelectedMediaType, DateTime.Now, downloadFilePath, isPlayable, identifier);
+                media.SetHighestId(AppData.DownloadedMedias);
+                
+                AppData.AddDownloadedMedia(media);
             }
         }
         
