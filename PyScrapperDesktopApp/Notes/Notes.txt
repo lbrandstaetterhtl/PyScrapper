@@ -1,1 +1,10 @@
-﻿When error from server during scraping then HTTP response gives success
+﻿bugs:
+
+1# 
+Offensichtlich ein Error aber bekomme trotzdem: 
+2026-03-09 19:17:33 [INFO] Download successful for URL: "asdasdasd", saved to: Request received for download, you can view progress under /download/progress/cf7a70ef-3b14-4802-83b7-15ad34e49db8
+
+Next steps: 
+FindFFMPEG implementieren in server.py
+bug 1# fixen
+möglichst viel testen
