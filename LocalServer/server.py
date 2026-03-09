@@ -257,7 +257,7 @@ async def receive_download(data: DownloadRequest):
         download_jobs.add(task)
         log_queue.put_nowait(f"[INFO] Created download task with id {task_id} for provider {data.provider} with url {data.url}")
 
-        return {"id": task_id, "message": f"Request received for download, you can view progress under /download/progress/{task_id}"}, 200
+        return {"id": task_id, "message": f"Request received for download, you can view progress under /download/progress/{task_id}"}
         
     
     except (ValueError, TypeError) as e:
