@@ -1,7 +1,7 @@
 ﻿import sys, time, re, json, uuid
 from datetime import datetime
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 import platform
@@ -216,7 +216,7 @@ async def startup_event():
     asyncio.create_task(logger(quit_event, log_queue))
 
     log_queue.put_nowait("[INFO] Server started successfully")
-    
+
     
 
 
@@ -232,7 +232,7 @@ async def receive_command(data: CommandRequest):
         response = await process_commands(data.command, task_id)
         return response
     except Exception as e:
-        log_queue.put([f"[ERROR] Error handling command {data.command}.\nError Message: {str(e)}"])
+        log_queue.put_nowait([f"[ERROR] Error handling command {data.command}.\nError Message: {str(e)}"])
 
 
 
@@ -241,8 +241,9 @@ async def receive_command(data: CommandRequest):
 @app.post("/download")
 async def receive_download(data: DownloadRequest):
     global log_queue
+    task_id = str(uuid.uuid4())
     try:
-        task_id = str(uuid.uuid4())
+        
 
         download_progress[task_id] = {
             "id": task_id,
@@ -261,11 +262,18 @@ async def receive_download(data: DownloadRequest):
     
     except (ValueError, TypeError) as e:
         log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.url}, filepath {data.download_path}.\nError Message: Invalid type for {str(e)}")
-        return {"error": f"Invalid type for {str(e)}"}, 400
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid type for {str(e)}"
+        )
+        
 
     except Exception as e:
         log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.url}, filepath {data.download_path}.\nError Message: {str(e)}")
-        return {"error": str(e)}, 400
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 
 
@@ -274,9 +282,13 @@ async def receive_download(data: DownloadRequest):
 async def get_download_progress(task_id: str):
     progress = download_progress.get(task_id)
     if not progress:
-        log_queue(f"[ERROR] Tried to access resource /download/progress/{task_id} which doesn't exist")
-        return {"error": "No such task"}, 404
-    return progress, 200
+        log_queue.put_nowait(f"[ERROR] Tried to access resource /download/progress/{task_id} which doesn't exist")
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"No such ressource /download/progress/{task_id}"
+        )
+    return progress
 
 
 
@@ -286,14 +298,19 @@ async def get_download_progress(task_id: str):
 
 @app.post("/search")
 async def receive_search(data: SearchRequest):
+    search_id = str(uuid.uuid4())
     try:
-        search_id = str(uuid.uuid4())
+        
         response = await process_search(data, search_id)
         log_queue.put_nowait(f"[INFO] Search succesfull for job {search_id} with query {data.search} and provider {data.provider}")
         return response
+    
     except Exception as e:
         log_queue.put_nowait(f"[ERROR] Failed search task with given arguments: id {search_id} provider {data.provider} and searchinput {data.search}.\n Error Message:{str(e)}")
-        return {"error": str(e)}, 400
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 
 
@@ -315,7 +332,7 @@ def health():
         "memory_mb": mem,
         "pid": os.getpid(),
         "processes": list_python_processes()
-    }, 200
+    }
 
 def self_memory_mb():
     pid = os.getpid()
