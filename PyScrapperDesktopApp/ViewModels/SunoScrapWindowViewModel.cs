@@ -81,11 +81,11 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
                 var progressWindow = new ProgressBarWindow();
                 progressWindow.Show();
 
-                bool isDownloadCompleted = false;
+                bool errorWhileDownloading = false;
                 if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
-                    isDownloadCompleted = await vm.StartProgress(result);
+                    errorWhileDownloading = await vm.StartProgress(result);
 
-                if (isDownloadCompleted)
+                if (!errorWhileDownloading)
                 {
                     var identifier = SunoUrl.Split('/')[^1];
 
