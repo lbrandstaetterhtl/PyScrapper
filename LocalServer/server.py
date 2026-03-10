@@ -1,5 +1,6 @@
 ﻿import sys, time, re, json, uuid
 from datetime import datetime
+import urllib.request, urllib.error
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -243,6 +244,19 @@ async def receive_download(data: DownloadRequest):
     global log_queue
     task_id = str(uuid.uuid4())
     try:
+        if data.url.lower().startswith("http://"):
+            raise ValueError("HTTP sites are not supported!")
+        if not data.url.lower().startswith("https://"):
+            raise Exception("Invalid URL. Given url has to start with https://")
+        try:
+            with urllib.request.urlopen(data.url) as response:
+                if response:
+                    pass
+        except urllib.error.HTTPError:
+            raise Exception("URL is not valid")
+        except urllib.error.URLError:
+            raise Exception("URL is not valid")
+        
         
 
         download_progress[task_id] = {
