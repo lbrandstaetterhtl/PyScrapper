@@ -30,9 +30,16 @@ PyScrapper/
 ├── PyScrapperDesktopApp/         # Desktop Client (C# / Avalonia / .NET 9)
 │   ├── *.sln / *.csproj
 │   ├── Models/                   # ApiClient, AppData, AppLogger, AudioPlayer
-│   ├── ViewModels/               # MVVM ViewModels (Main, Suno, Youtube, MediaPlayer, ...)
+│   ├── ViewModels/               # MVVM ViewModels (Main, Suno, Youtube, MediaPlayer, ProgressBar, ...)
 │   ├── Views/                    # Avalonia AXAML Windows
+│   ├── Design/                   # Design-Zeit-Ressourcen (Design.axaml)
+│   ├── Notes/                    # Entwicklungsnotizen der Desktop-App
+│   ├── logs/                     # Laufzeit-Logs der Desktop-App
 │   └── data/                     # Persistente App-Daten (downloadedMedias.json)
+│
+├── PyScrapperDesktopApp.Tests/   # Unit-Tests für die Desktop App (xUnit / Moq)
+│   ├── Models/                   # Tests für ApiClient, AppData, AppLogger, DownloadedMedia, Massage
+│   └── ViewModels/               # Tests für alle ViewModels
 │
 ├── Downloads/                    # Standard-Downloadordner für Medien
 └── Notes/                        # Projektnotizen & Statistiken
@@ -47,13 +54,14 @@ PyScrapper/
 - Läuft lokal via **uvicorn**
 - Stellt folgende HTTP-Endpunkte bereit:
 
-| Methode | Pfad        | Beschreibung                                      |
-|---------|-------------|---------------------------------------------------|
-| GET     | `/`         | Root – Startbestätigung                           |
-| GET     | `/health`   | Uptime, RAM-Verbrauch, PID, laufende Python-Prozesse |
-| POST    | `/command`  | Queue-basierte Kommandos (z.B. `quit`)            |
-| POST    | `/download` | Download-Job für einen URL (Suno oder YouTube)    |
-| POST    | `/search`   | YouTube-Suche mit konfigurierbarer Trefferanzahl  |
+| Methode | Pfad                              | Beschreibung                                         |
+|---------|-----------------------------------|------------------------------------------------------|
+| GET     | `/`                               | Root – Startbestätigung                              |
+| GET     | `/health`                         | Uptime, RAM-Verbrauch, PID, laufende Python-Prozesse |
+| POST    | `/command`                        | Queue-basierte Kommandos (z.B. `quit`)               |
+| POST    | `/download`                       | Download-Job für einen URL (Suno oder YouTube)       |
+| GET     | `/download/progress/{task_id}`    | Fortschritt eines laufenden Download-Jobs abfragen   |
+| POST    | `/search`                         | YouTube-Suche mit konfigurierbarer Trefferanzahl     |
 
 - Nutzt **asyncio Queues**, um Requests von der Verarbeitung zu entkoppeln
 - Parallele Downloads durch `asyncio.Semaphore(50)` begrenzt
@@ -88,11 +96,12 @@ Empfehlung:
 
 - Cross-platform Desktop-Client, gebaut mit **Avalonia UI** und **MVVM**-Pattern
 - Kommuniziert über HTTP mit dem LocalServer (`127.0.0.1:8765`)
-- **Windows-Fenster / Views:**
+- **Windows / Views:**
   - `MainWindow` – Übersicht, Health-Check, Liste heruntergeladener Medien
   - `SunoScrapWindow` – Suno-Download per URL
   - `YoutubeScrapWindow` – YouTube-Suche & Download (mp3/mp4)
   - `MediaPlayerWindow` – integrierter Medienplayer
+  - `ProgressBarWindow` – zeigt Fortschritt & Status eines laufenden Download-Jobs
   - `InputWindow` – generisches Eingabedialog-Fenster
   - `MassageBox` – benutzerdefinierte Message-Box
 - **Medien-Wiedergabe** via **LibVLCSharp** (Audio & Video)
@@ -112,6 +121,23 @@ Empfehlung:
 | LibVLCSharp                  | 3.9.6   |
 | LibVLCSharp.Avalonia         | 3.9.6   |
 | VideoLAN.LibVLC.Windows      | 3.0.23  |
+
+---
+
+### PyScrapperDesktopApp.Tests (xUnit / Moq)
+
+- Unit-Test-Projekt für die Desktop App, **nicht** für den Python-Backend
+- Nutzt **xUnit** als Test-Framework, **Moq** für Mocking und **RichardSzalay.MockHttp** für HTTP-Mocking
+- **Avalonia.Headless** ermöglicht das Testen von Avalonia-ViewModels ohne echtes UI
+- Testabdeckung:
+  - `Models/` – Tests für `ApiClient`, `AppData`, `AppLogger`, `DownloadedMedia`, `Massage`
+  - `ViewModels/` – Tests für `MainWindowViewModel`, `SunoScrapWindowViewModel`, `YoutubeScrapWindowViewModel`, `MediaPlayerWindowViewModel`, `ViewModelBase`
+- Tests ausführen:
+
+```powershell
+cd PyScrapperDesktopApp.Tests
+dotnet test
+```
 
 ---
 
