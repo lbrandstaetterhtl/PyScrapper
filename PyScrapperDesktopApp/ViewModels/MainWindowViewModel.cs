@@ -100,7 +100,7 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
         }
             
         var mediaPlayerWindow = new MediaPlayerWindow(path);
-        await mediaPlayerWindow.ShowDialog(desktop.MainWindow);
+        mediaPlayerWindow.Show();
     }
 
     [RelayCommand]

@@ -50,7 +50,7 @@ public partial class MainWindow : Window
                 }
                 
                 var mediaPlayerWindow = new MediaPlayerWindow(media.DownloadPath);
-                await mediaPlayerWindow.ShowDialog(this);
+                mediaPlayerWindow.Show();
             }
         }
         catch (Exception ex)

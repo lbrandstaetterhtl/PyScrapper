@@ -1,17 +1,5 @@
 ﻿bugs:
 
-1# 
-Offensichtlich ein Error aber bekomme trotzdem: 
-2026-03-09 19:17:33 [INFO] Download successful for URL: "asdasdasd", saved to: Request received for download, you can view progress under /download/progress/cf7a70ef-3b14-4802-83b7-15ad34e49db8
 
-2#
-server wirft error: [2026-03-09_19-29-12] [ERROR] Failed download for job a442231c-0827-4c96-afc0-51d2b751e04b.
-                    Error Message: ERROR: [youtube] ndLX3dEbUlg: This video is not available
-                    
-aber app zeigt trotzdem: Download successful for URL: "https://www.youtube.com/watch?v=ndLX3dEbUlg", saved to: Request received for download, you can view progress under /download/progress/a442231c-0827-4c96-afc0-51d2b751e04b
-.part ist da, aber yt-dlp wirft vemutlich Errno 22
 
-Next steps: 
-FindFFMPEG implementieren in server.py, bug 2# wird dadurch wahrscheinlich gefixt
-bug 1# fixen
-möglichst viel testen
+Next steps:
