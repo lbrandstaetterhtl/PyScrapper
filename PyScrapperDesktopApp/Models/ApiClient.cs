@@ -44,7 +44,7 @@ public class ApiClient
             var log = new Massage($"Error sending download request. Server gave error: " + deserializedError?.Detail, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             
-            var massageBox = new MassageBox($"Error sending download request: {deserializedError?.Detail}");
+            var massageBox = new MessageBox($"Error sending download request: {deserializedError?.Detail}");
             await massageBox.ShowDialog(App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
             
             return "-1";
@@ -72,11 +72,13 @@ public class ApiClient
         }
         else
         {
-            var errorResponse = JsonSerializer.Deserialize<HealthErrorResponse>(responseData, JsonOptions);
+            var errorResponse = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
 
-            var log = new Massage(errorResponse?.msg ?? "Server health check failed", DateTime.Now,
-                errorResponse?.type ?? "ERROR");
+            var log = new Massage("Server gave this error while requesting health:" + errorResponse!.Detail, DateTime.Now,"ERROR");
             _logger.LogNewMassage(log);
+            
+            var massageBox = new MessageBox($"Error requesting server health: {errorResponse.Detail}");
+            await massageBox.ShowDialog(App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
             
             return null;
         }
@@ -141,9 +143,9 @@ public class ApiClient
         else
         {
             
-            var errorResponse = JsonSerializer.Deserialize<ProgressErrorResponse>(responseData, JsonOptions);
+            var errorResponse = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
 
-            var log = new Massage(errorResponse?.Message!, DateTime.Now,
+            var log = new Massage(errorResponse?.Detail!, DateTime.Now,
                 "ERROR");
             _logger.LogNewMassage(log);
 
@@ -197,6 +199,27 @@ public class ApiClient
         
         [JsonPropertyName("processes")]
         public List<ServerProcess> Processes { get; set; }
+        
+        [JsonPropertyName("active_downloads")]
+        public List<DownloadJob> ActiveDownloads { get; set; }
+        
+        [JsonPropertyName("error_messages")]
+        public List<string> ErrorMessages { get; set; }
+    }
+
+    public class DownloadJob
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+        
+        [JsonPropertyName("status")]
+        public string Status { get; set; }
+        
+        [JsonPropertyName("download_progress")]
+        public float DownloadProgress { get; set; }
+        
+        [JsonPropertyName("error_message")]
+        public string ErrorMessage { get; set; }
     }
     
     public class SearchRequestData
@@ -254,12 +277,6 @@ public class ApiClient
         
         [JsonPropertyName("fileName")]
         public string FileName { get; set; }
-    }
-    
-    public class ProgressErrorResponse
-    {
-        [JsonPropertyName("message")]
-        public string Message { get; set; }
     }
     
     public class SearchSuccessResponse

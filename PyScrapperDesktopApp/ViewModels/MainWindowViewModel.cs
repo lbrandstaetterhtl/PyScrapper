@@ -64,19 +64,10 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
     }
     
     [RelayCommand]
-    public async Task GetHealth()
+    public void GetHealth()
     {
-        ApiClient client = new();
-        
-        var serverUrl = "127.0.0.1:8765";
-        
-        var health = await client.GetHealth(serverUrl);
-        
-        var processString = health?.Processes != null
-            ? "-----" + string.Join("\n -----", health.Processes.Select(p => $"{p.Name} (PID: {p.Pid})"))
-            : "No processes information available";
-        
-        HealthCheckResult = $"Server health check successful: \n \n --Uptime: {health?.UptimeSeconds} seconds \n | \n --Memory: {health?.MemoryMb} MB \n | \n --PID: {health?.Pid} \n | \n --Processes {health?.Processes.Count}: \n {processString}";
+        var getHealthWindow = new GetServerHealthWindow();
+        getHealthWindow.Show();
     }
     
     [RelayCommand]
@@ -94,7 +85,7 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
         
         if (!File.Exists(path))
         {
-            var messageBox = new MassageBox("File does not exist. Please check the path and try again.");
+            var messageBox = new MessageBox("File does not exist. Please check the path and try again.");
             await messageBox.ShowDialog(desktop.MainWindow);
             return;
         }

@@ -1,0 +1,139 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="PyScrapperDesktopApp.Views.GetServerHealthWindow"
+        x:DataType="vm:GetServerHealthWindowViewModel"
+        SizeToContent="WidthAndHeight"
+        MaxHeight="400"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="PyScrapperDesktopApp">
+        
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="20" Spacing="10">
+                        <Border Background="Gray" Padding="10" CornerRadius="8">
+                                <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Server Health Status: " Foreground="{Binding StatusColor}" FontSize="18" FontWeight="Bold" Margin="5"/>
+                                        <TextBlock Text="{Binding ConnectionStatus}" Foreground="{Binding StatusColor}" Margin="5"/>
+                                </StackPanel>
+                        </Border>
+                        
+                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+                        
+                        <Border Background="Gray" Padding="18" CornerRadius="8">
+                                <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="PID: " FontSize="16" FontWeight="SemiBold" Margin="5"/>
+                                        <TextBlock Text="{Binding Pid}" Margin="5"/>
+                                </StackPanel>
+                        </Border>
+                        
+                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+
+                        <Border Background="Gray" Padding="18" CornerRadius="8">
+                                <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Memory Usage: " FontSize="16" FontWeight="SemiBold" Margin="5"/>
+                                        <TextBlock Text="{Binding MemoryFormatted}" Margin="5"/>
+                                </StackPanel>
+                        </Border>
+                        
+                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+                        
+                        <Border Background="Gray" Padding="18" CornerRadius="8">
+                                <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Uptime: " FontSize="16" FontWeight="SemiBold" Margin="5"/>
+                                        <TextBlock Text="{Binding UptimeFormatted}" Margin="5"/>
+                                </StackPanel>
+                        </Border>
+                        
+                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+
+                        <Border Background="Gray" Padding="18" CornerRadius="8">
+                                <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Processes: " FontSize="16" FontWeight="SemiBold"/>
+                                        <Border Background="White" BorderThickness="1" Margin="5"/>
+                                        <ItemsControl ItemsSource="{Binding Processes}">
+                                                <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                                <StackPanel>
+                                                                        <Border Background="White" BorderThickness="1" Margin="5"/>
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                                <TextBlock Text="PID: " Margin="5"/>
+                                                                                <TextBlock Text="{Binding Pid}" Margin="5"/>
+                                                                        </StackPanel>
+                                                                
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                                <TextBlock Text="Name: " Margin="5"/>
+                                                                                <TextBlock Text="{Binding Name}" Margin="5"/>
+                                                                        </StackPanel>
+                                                                        
+                                                                        <Border Background="White" BorderThickness="1" Margin="5"/>
+                                                                </StackPanel>
+                                                        </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                </StackPanel>
+                        </Border>
+                        
+                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+                        
+                        <Border Background="Gray" Padding="18" CornerRadius="8">
+                                <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Active Downloads: " FontSize="16" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding DownloadsCount}"/>
+                                        <Border Background="White" BorderThickness="1" Margin="5"/>
+                                        <ItemsControl ItemsSource="{Binding DownloadJobs}">
+                                                <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                                <StackPanel>
+                                                                        <Border Background="White" BorderThickness="1" Margin="5"/>
+                                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                                <TextBlock Text="Download Job ID: " Margin="5"/>
+                                                                                <TextBlock Text="{Binding Id}" Margin="5"/>
+                                                                        </StackPanel>
+                                                                        
+                                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                                <TextBlock Text="Progress: " Margin="5"/>
+                                                                                <TextBlock Text="{Binding DownloadProgress, StringFormat={}{0:F1}%}" Margin="5"/>
+                                                                        </StackPanel>
+                                                                
+                                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                                <TextBlock Text="Status: " Margin="5"/>
+                                                                                <TextBlock Text="{Binding  Status}" Margin="5"/>
+                                                                        </StackPanel>
+                                                                        <Border Background="White" BorderThickness="1" Margin="5"/>
+                                                                </StackPanel>
+                                                        </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                </StackPanel>
+                        </Border>
+                        
+                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+                        
+                        <Border Background="Gray" Padding="18" CornerRadius="8">
+                                <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Recent Errors: " FontSize="16" FontWeight="SemiBold"/>
+                                        <Border Background="White" BorderThickness="1" Margin="5"/>
+                                        <TextBlock Text="{Binding ErrorsCount}"/>
+                                        <ItemsControl ItemsSource="{Binding ErrorMessages}">
+                                                <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                                <Border Background="red" CornerRadius="8" Padding="8">
+                                                                        <TextBlock Text="{Binding}" Margin="5"/>
+                                                                </Border>
+                                                        </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                </StackPanel>
+                        </Border>
+                        
+                        <Border Background="LightGray" BorderThickness="1"/>
+                        
+                        <Button Classes="primary" Content="Close" Command="{Binding CloseCommand}" HorizontalAlignment="Center"/>
+                </StackPanel>
+        </ScrollViewer>
+        
+</Window>

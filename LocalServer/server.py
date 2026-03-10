@@ -352,19 +352,33 @@ start_time = time.time()
 
 @app.get("/health")
 def health():
-    uptime_seconds = time.time() - start_time
     try:
-        mem = self_memory_mb()
-    except Exception as e:
-        mem = None
+        uptime_seconds = time.time() - start_time
+        try:
+            mem = self_memory_mb()
+        except Exception as e:
+            mem = None
+        
+        active_downloads = [v for v in download_progress.values() if v["status"] not in ("completed", "error")]
 
-    return {
-        "ok": True,
-        "uptime_seconds": round(uptime_seconds, 2),
-        "memory_mb": mem,
-        "pid": os.getpid(),
-        "processes": list_python_processes()
-    }
+        downloads_with_errors = [v for v in download_progress.values() if v["status"] == "error"]
+    
+        error_messages = [v["errorMessage"] for v in downloads_with_errors if v["errorMessage"]]
+    
+        return {
+            "ok": True,
+            "uptime_seconds": round(uptime_seconds, 2),
+            "memory_mb": mem,
+            "pid": os.getpid(),
+            "processes": list_python_processes(),
+            "active_downloads": active_downloads,
+            "error_messages": error_messages
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 def self_memory_mb():
     pid = os.getpid()
