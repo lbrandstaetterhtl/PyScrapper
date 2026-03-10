@@ -176,7 +176,7 @@ def download_to_file(
 
                 progress_dict['downloadProgress'] = percent
                 progress_dict['downloadedBytes'] = downloaded
-                
+
                 speed = downloaded / elapsed_time if elapsed_time > 0 else 0
                 if speed:
                     progress_dict["speed"] = round(speed / 1024 / 1024, 2)
@@ -220,6 +220,8 @@ def download (
 
     file = search_media(html=html, identifier=identifier, mediatype=mediatype)
     out_file = os.path.join(out_path, f"{identifier}{mediatype}")
+    if os.path.exists(out_file):
+        raise SunoError(f"Destination out file {out_file} already exists. No Download has started")
 
     
     download_to_file(url=file, out_file=out_file, session=session, progress_dict=progress_dict)

@@ -257,6 +257,9 @@ def download(
  
     identifier = url.replace("https://www.youtube.com/watch?v=", "")
     out_file = os.path.join(out_path, f"{identifier}.mp4")
+    if os.path.exists(out_file):
+        raise YoutubeDownloadError(f"Destination out file {out_file} already exists. No Download has started")
+
 
     ydl_opts = {
 #bv = best video, ba = best audio
