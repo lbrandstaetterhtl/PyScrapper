@@ -145,7 +145,7 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
                 if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
                     errorWhileDownloading = await vm.StartProgress(result);
 
-                if (errorWhileDownloading)
+                if (!errorWhileDownloading)
                 {
                     var identifier = item.url.Split('=')[^1];
 
@@ -164,6 +164,8 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
                     var massageBox = new MassageBox("Download failed, check logs for more details");
                     await massageBox.ShowDialog(_ScrapWindow);
                 }
+                
+                Task.Delay(1000).Wait();
             }
         }
         
