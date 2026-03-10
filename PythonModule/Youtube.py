@@ -7,6 +7,7 @@ import re
 import os
 import shutil
 import pathlib
+from .core import get_html
 
 
 def find_ffmpeg() -> str | None:
@@ -65,14 +66,10 @@ def search(
 
     search_url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(search)
 
-    request = urllib.request.Request(
-            search_url,
-            method='GET',
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
+    
 
 
-    html:str = get_html(request, session=session)
+    html:str = get_html(url=search_url, session=session)
     jsondata: dict = search_json(html=html, keyword="var ytInitialData = ")
 
 
@@ -123,41 +120,7 @@ def search(
 
 
 
-def get_html(
-        request:urllib.request.Request,
-        session: http.cookiejar.CookieJar = None,
-        decode:str = "utf-8"
-        
-        ) -> str:
-    if not session:
-        raise SessionError("GET_HTML: No session was given")
 
-    try:
-        with session.open(request) as response:
-            final_url = response.geturl()
-            html = response.read().decode(decode)
-            low = html.lower()
-
-
-            #if "consent.youtube.com" in final_url or "consent.youtube.com" in low or "before you continue to youtube" in low:
-            #   raise SessionError("Consent page detected, cannot proceed with request. Please ensure that the session has the necessary cookies to bypass the consent")
-            
-    
-    except urllib.error.HTTPError as e:
-        raise urllib.error.HTTPError(e.url, e.code, f"Failed to get request - {e.reason}", e.headers, e.fp) from e
-
-    except urllib.error.URLError as e:
-        raise urllib.error.URLError(f"GET_HTML: Failed to get request - {e}") from e
-
-    except UnicodeDecodeError as e:
-        raise UnicodeError(f"GET_HTML: Failed to decode the HTML - {e}") from e
-   
-
-    if not html:
-        raise urllib.error.URLError("GET_HTML: Failed to get request - HTML")
-
-
-    return html
 
 
 

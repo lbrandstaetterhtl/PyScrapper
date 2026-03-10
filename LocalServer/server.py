@@ -14,7 +14,7 @@ import os, signal
 import asyncio
 
 #Module imports for scrapping
-from PythonModule import Session, Suno, Youtube 
+from PythonModule import Session, Suno, Youtube, Archive 
 
 
 
@@ -31,7 +31,7 @@ log_file = os.path.join(log_dir, "server_runtime.log")
 os.makedirs(log_dir, exist_ok=True)
 
 
-supported_providers = ["suno", "suno.com", "youtube", "youtube.com"]
+supported_providers = ["suno", "suno.com", "youtube", "youtube.com", "archive", "internetarchive", "archive.org", "internetarchive.org"]
 
 
 
@@ -65,7 +65,9 @@ class DownloadRequest(BaseModel):
     provider: str
     url: str
     mediatype: str = ".mp3"
+    filename: str
     download_path: str = os.path.join(project_root, "downloads")
+    
 
 class SearchRequest(BaseModel):
     provider: str
@@ -156,6 +158,14 @@ async def process_downloads(
                     await asyncio.to_thread(Youtube.download, url=download_request.url, out_path=download_request.download_path, progress_dict=progress_dict)
                 else:
                     await asyncio.to_thread(Youtube.download_audio_only, url=download_request.url, out_path=download_request.download_path, progress_dict=progress_dict)
+       
+       
+        elif download_request.provider.lower() in ("archive", "archive.org", "internetarchive", "internetarchive.org"):
+            async with download_limiter:
+                await asyncio.to_thread(Archive.download, url=download_request.url, out_path=download_request.download_path, session=ses, progress_dict=progress_dict, mediatype=download_request.mediatype, filename=download_request.filename)
+
+
+
 
         log_queue.put_nowait(f"[INFO] Successfully completed downloadjob {progress_dict.get('id')}")
         
