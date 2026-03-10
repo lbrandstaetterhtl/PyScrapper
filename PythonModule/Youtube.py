@@ -5,7 +5,27 @@ import re
 from yt_dlp import YoutubeDL
 import re
 import os
-#FFMPEG MUST BE INSTALLED FOR DOWNLOAD TO WORK
+import shutil
+import pathlib
+
+
+def find_ffmpeg() -> str | None:
+    """Locate ffmpeg.exe – checks PATH first, then the WinGet package folder (yt-dlp.FFmpeg)."""
+    # 1) Already on PATH?
+    path = shutil.which("ffmpeg")
+    if path:
+        return str(pathlib.Path(path).resolve())
+
+    # 2) WinGet packages (yt-dlp.FFmpeg)
+    local_app = os.environ.get("LOCALAPPDATA", "")
+    if local_app:
+        pkg_root = pathlib.Path(local_app) / "Microsoft" / "WinGet" / "Packages"
+        if pkg_root.is_dir():
+            for hit in pkg_root.rglob("ffmpeg.exe"):
+                if "yt-dlp.FFmpeg" in str(hit):
+                    return str(hit.resolve())
+
+    return None
 
 
 class NoSearchError(Exception): ...
@@ -187,7 +207,7 @@ def iter_value_from_json(
 def download_audio_only(
         url: str,
         out_path: str,
-        progress_dict: dict 
+        progress_dict: dict
 
         ):
     if not url:
@@ -208,6 +228,10 @@ def download_audio_only(
             "preferredquality": "192",
         }],
     }
+
+    ffmpeg = find_ffmpeg()
+    if ffmpeg:
+        ydl_opts["ffmpeg_location"] = ffmpeg
 
     progress_dict['status'] = "downloading..."
     
@@ -248,6 +272,11 @@ def download(
 
 
     }
+
+    ffmpeg = find_ffmpeg()
+    if ffmpeg:
+        ydl_opts["ffmpeg_location"] = ffmpeg
+
     progress_dict['status'] = "downloading..."
     progress_dict['filename'] = out_file
     with YoutubeDL(ydl_opts) as ydl:

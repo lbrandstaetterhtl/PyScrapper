@@ -248,7 +248,7 @@ async def receive_download(data: DownloadRequest):
         download_progress[task_id] = {
             "id": task_id,
             "status": "queued",
-            "downloadProgress": "0%",
+            "downloadProgress": 0,
             "errorMessage": ""
         }
 
