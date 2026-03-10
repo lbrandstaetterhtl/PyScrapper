@@ -1,6 +1,7 @@
 ﻿import sys, time, re, json, uuid
 from datetime import datetime
-import urllib.request, urllib.error
+import urllib.error, urllib.request
+
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -241,21 +242,11 @@ async def receive_command(data: CommandRequest):
 
 @app.post("/download")
 async def receive_download(data: DownloadRequest):
-    global log_queue
+    global log_queue, ses
     task_id = str(uuid.uuid4())
     try:
-        if data.url.lower().startswith("http://"):
-            raise ValueError("HTTP sites are not supported!")
-        if not data.url.lower().startswith("https://"):
-            raise Exception("Invalid URL. Given url has to start with https://")
-        try:
-            with urllib.request.urlopen(data.url) as response:
-                if response:
-                    pass
-        except urllib.error.HTTPError:
-            raise Exception("URL is not valid")
-        except urllib.error.URLError:
-            raise Exception("URL is not valid")
+        
+        validate_url(session=ses, url=data.url)
         
         
 
@@ -325,6 +316,33 @@ async def receive_search(data: SearchRequest):
             status_code=500,
             detail=str(e)
         )
+
+
+
+
+def validate_url(url: str, session):
+    
+    if url.lower().startswith("http://"):
+            raise ValueError("HTTP sites are not supported!")
+    if not url.lower().startswith("https://"):
+        raise Exception("Invalid URL. Given url has to start with https://")
+    request = urllib.request.Request(
+        url,
+        method="GET",
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+    )
+    try:
+        with session.open(request) as response:
+            if response:
+                print(response)
+    
+    except urllib.error.URLError:
+        raise Exception("URL is not valid")
+    except Exception as e:
+        raise Exception(str(e))
+
 
 
 
