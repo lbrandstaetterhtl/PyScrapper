@@ -26,14 +26,14 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isFinished = false;
     
-    public ProgressBarWindowViewModel(string id)
+    public ProgressBarWindowViewModel()
     {
         _apiClient = new ApiClient();
-        StartProgress(id);
     }
 
-    public void StartProgress(string id)
+    public async Task<bool> StartProgress(string id)
     {
+        bool errorWhileDownloading = false;
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
         
@@ -49,19 +49,25 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                     var progressResponse = _apiClient.GetDownloadProgress(id, "127.0.0.1:8765");
                     var progressData = progressResponse.Result;
                     
+                    if (progressData == null) throw new Exception("Failed to get progress data");
+                    
                     Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                     {
-                        Progress = progressData.DownloadProgress;
-                        Status = progressData.Status;
-                        ProgressSpeed = progressData.Speed;
-                        
                         if (progressData.ErrorMessage is not "")
                         {
                             Status = $"Error: {progressData.ErrorMessage}";
                             var log = new Massage(progressData.ErrorMessage, DateTime.Now, "ERROR");
                             new AppLogger().LogNewMassage(log);
+                            errorWhileDownloading = true;
                             StopProgress();
-                        } 
+                        }
+                        else
+                        {
+                            Status = progressData.Status;
+                        }
+                        
+                        Progress = progressData.DownloadProgress;
+                        ProgressSpeed = progressData.Speed;
 
                         if (progressData.Status.Equals("complete"))
                         {
@@ -92,17 +98,19 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                 }
             }
         }, token);
+        
+        return errorWhileDownloading;
     }
 
-    public void StopProgress()
+    private void StopProgress()
     {
         _cts?.Cancel();
     }
 
     [RelayCommand]
-    public void Close()
+    private void Close()
     {
-        CloseRequested.Invoke();
+        CloseRequested!.Invoke();
     }
     
     

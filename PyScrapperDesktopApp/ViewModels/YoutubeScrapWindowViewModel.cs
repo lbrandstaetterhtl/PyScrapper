@@ -134,21 +134,36 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
             
             var result = await client.SendScrapRequest(requestData, serverUrl);
         
-            if (result == "-1")
+            if (result != "-1")
             { 
-                var progressWindow = new ProgressBarWindow(result);
-                await progressWindow.ShowDialog(_ScrapWindow);
+                Task.Delay(2000).Wait();
+                 
+                var progressWindow = new ProgressBarWindow();
+                progressWindow.Show();
                 
-                var identifier = result.Split('=')[^1];
-                
-                var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{identifier}{SelectedMediaType}");
-                
-                bool isPlayable = File.Exists(downloadFilePath);
-                
-                var media = new DownloadedMedia(item.url, SelectedMediaType, DateTime.Now, downloadFilePath, isPlayable, identifier);
-                media.SetHighestId(AppData.DownloadedMedias);
-                
-                AppData.AddDownloadedMedia(media);
+                bool isDownloadCompleted = false;
+                if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
+                    isDownloadCompleted = await vm.StartProgress(result);
+
+                if (isDownloadCompleted)
+                {
+                    var identifier = item.url.Split('=')[^1];
+
+                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{identifier}{SelectedMediaType}");
+
+                    bool isPlayable = File.Exists(downloadFilePath);
+
+                    var media = new DownloadedMedia(item.url, SelectedMediaType, DateTime.Now, downloadFilePath,
+                        isPlayable, identifier);
+                    media.SetHighestId(AppData.DownloadedMedias);
+
+                    AppData.AddDownloadedMedia(media);
+                }
+                else
+                {
+                    var massageBox = new MassageBox("Download failed, check logs for more details");
+                    await massageBox.ShowDialog(_ScrapWindow);
+                }
             }
         }
         

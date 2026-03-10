@@ -4,11 +4,11 @@ namespace PyScrapperDesktopApp.Views;
 
 public partial class ProgressBarWindow : Window
 {
-    public ProgressBarWindow(string id)
+    public ProgressBarWindow()
     {
         InitializeComponent();
         
-        var vm = new ViewModels.ProgressBarWindowViewModel(id);
+        var vm = new ViewModels.ProgressBarWindowViewModel();
         vm.CloseRequested += Close;
         DataContext = vm;
     }

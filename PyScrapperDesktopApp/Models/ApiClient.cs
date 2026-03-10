@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using PyScrapperDesktopApp.Views;
 
@@ -32,7 +33,7 @@ public class ApiClient
         {
             var deserializedResponse = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);
 
-            var log = new Massage($"Download successful for URL: \"{requestData.Url}\", saved to: {deserializedResponse?.Message}", DateTime.Now, "INFO");
+            var log = new Massage($"Server received request and sent message: {deserializedResponse?.Message}", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
             return deserializedResponse?.Id!;
@@ -40,8 +41,11 @@ public class ApiClient
         else
         {
             var deserializedError = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
-            var log = new Massage($"Download failed for URL: \"{requestData.Url}\", error: " + deserializedError?.Detail, DateTime.Now, "ERROR");
+            var log = new Massage($"Error sending download request. Server gave error: " + deserializedError?.Detail, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
+            
+            var massageBox = new MassageBox($"Error sending download request: {deserializedError?.Detail}");
+            await massageBox.ShowDialog(App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
             
             return "-1";
         }
@@ -116,12 +120,23 @@ public class ApiClient
 
         if (response.IsSuccessStatusCode)
         {
-            var progressResponse = JsonSerializer.Deserialize<ProgressSuccessResponse>(responseData, JsonOptions);
+            try
+            {
+                var progressResponse = JsonSerializer.Deserialize<ProgressSuccessResponse>(responseData, JsonOptions);
 
-            var log = new Massage($"Download progress for ID: \"{downloadId}\": {progressResponse?.Status}, {progressResponse?.DownloadProgress}%, {progressResponse?.Speed} MB/s", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
+                var log = new Massage(
+                    $"Download progress for ID: \"{downloadId}\": {progressResponse?.Status}, {progressResponse?.DownloadProgress}%, {progressResponse?.Speed} MB/s",
+                    DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
 
-            return progressResponse;
+                return progressResponse;
+            }
+            catch (Exception ex)
+            {
+                var log = new Massage($"Error parsing progress response for ID: \"{downloadId}\": {ex.Message}", DateTime.Now, "ERROR");
+                _logger.LogNewMassage(log);
+                return null;
+            }
         }
         else
         {
