@@ -15,6 +15,7 @@
                 <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"></RowDefinition>
                         <RowDefinition Height="Auto"></RowDefinition>
+                        <RowDefinition Height="Auto"></RowDefinition>
                         <RowDefinition Height="*"></RowDefinition>
                 </Grid.RowDefinitions>
                 
@@ -24,11 +25,16 @@
                 </StackPanel>
                 
                 <StackPanel Grid.Row="1" Classes="UICell">
+                        <TextBlock Text="Enter a filename: " Margin="5"/>
+                        <TextBox Text="{Binding Filename}" Classes="UI"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Row="2" Classes="UICell">
                         <TextBlock Text="Select Mediatype: " Margin="5"/>
                         <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
                 </StackPanel>
                 
-                <StackPanel Margin="5" Grid.Row="2" Classes="UICell">
+                <StackPanel Margin="5" Grid.Row="3" Classes="UICell">
                         <Button Classes="primary" Content="Scrap" Command="{Binding ScrapCommand}"/>
                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>

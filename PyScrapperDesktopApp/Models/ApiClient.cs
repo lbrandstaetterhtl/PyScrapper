@@ -173,6 +173,9 @@ public class ApiClient
         [JsonPropertyName("mediatype")]
         public string Mediatype { get; set; }
         
+        [JsonPropertyName("filename")]
+        public string Filename { get; set; }
+        
         [JsonPropertyName("download_path")]
         public string Download_path { get; set; }
     }

@@ -24,6 +24,18 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
     
     private readonly Window _ScrapWindow;
 
+    private string _filename;
+    
+    public string Filename
+    {
+        get => _filename;
+        set
+        {
+            _filename = value;
+            OnPropertyChanged(nameof(Filename));
+        }
+    }
+
     public string SunoUrl
     {
         get => _sunoUrl;
@@ -69,6 +81,7 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
                 Provider = "suno",
                 Url = SunoUrl,
                 Mediatype = SelectedMediaType,
+                Filename = Filename,
                 Download_path = AppData.DownloadPath
             };
         
@@ -89,7 +102,7 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
                 {
                     var identifier = SunoUrl.Split('/')[^1];
 
-                    var downloadedFilePath = Path.Combine(AppData.DownloadPath, $"{identifier}{SelectedMediaType}");
+                    var downloadedFilePath = Path.Combine(AppData.DownloadPath, $"{Filename}{SelectedMediaType}");
 
                     bool isPlayable = File.Exists(downloadedFilePath);
 

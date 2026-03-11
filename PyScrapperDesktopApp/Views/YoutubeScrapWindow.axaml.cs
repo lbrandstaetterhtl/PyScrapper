@@ -13,7 +13,7 @@ public partial class YoutubeScrapWindow : Window
 {
     private YoutubeScrapWindowViewModel? _vm;
     
-    public YoutubeScrapWindow()
+    public  YoutubeScrapWindow()
     {
         if (Design.IsDesignMode) return;
         
@@ -27,13 +27,13 @@ public partial class YoutubeScrapWindow : Window
         
         int buttonCount = 0;
         
-        EnterButton.Click += (sender, args) =>
+        EnterButton.Click += async (sender, args) =>
         {
             if (buttonCount == 0)
             {
                 SearchGrid.IsVisible = false;
                 ResultsGrid.IsVisible = true;
-                _vm.Search();
+                await _vm.Search();
                 buttonCount++;
             }
         };

@@ -126,11 +126,15 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
 
         foreach (var item in SelectedYoutubeVideoItems)
         {
+            var inputWindow = new InputWindow($"Enter filename for the video '{item.title}' (without extension):");
+            var filename = await inputWindow.ShowDialog<string>(_ScrapWindow);
+            
             requestData = new ApiClient.DownloadRequestData()
             {
                 Provider = "youtube",
                 Url = item.url,
                 Mediatype = SelectedMediaType,
+                Filename = filename,
                 Download_path = AppData.DownloadPath
             };
             
@@ -151,7 +155,7 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
                 {
                     var identifier = item.url.Split('=')[^1];
 
-                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{identifier}{SelectedMediaType}");
+                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{filename}{SelectedMediaType}");
 
                     bool isPlayable = File.Exists(downloadFilePath);
 
@@ -189,18 +193,27 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
         };
         
         var results = await client.SendSearchRequest(requestData, serverUrl);
+
+        var log = new Massage("", DateTime.Now, "Init");
         
         if (results.Count == 0)
         {
             var massageBox = new MessageBox($"No results found for query: {SearchQuery}. Please try a different query.");
             await massageBox.ShowDialog(_ScrapWindow);
+            
+            log = new Massage("No results found for query: " + SearchQuery, DateTime.Now, "INFO");
+            new AppLogger().LogNewMassage(log);
+            
             return;
         }
         
         foreach (var item in results)
         {
             using var httpClient = new HttpClient();
-            var bytes = await httpClient.GetByteArrayAsync(item.thumbnail);
+            var thumbnailUrl = $"https://i.ytimg.com/vi/{item.videoId}/hqdefault.jpg";
+
+            var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
+            
             using var stream = new MemoryStream(bytes);
             item.ThumbnailBitmap = new Bitmap(stream);
         }

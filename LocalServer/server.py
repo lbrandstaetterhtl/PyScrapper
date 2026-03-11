@@ -373,7 +373,7 @@ def health():
         except Exception as e:
             mem = None
         
-        active_downloads = [v for v in download_progress.values() if v["status"] not in ("completed", "error")]
+        active_downloads = [v for v in download_progress.values() if v["status"] not in ("complete", "error")]
 
         downloads_with_errors = [v for v in download_progress.values() if v["status"] == "error"]
     

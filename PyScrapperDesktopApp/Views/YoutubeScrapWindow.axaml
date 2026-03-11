@@ -58,7 +58,7 @@
                         <ListBox.ItemTemplate>
                                 <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Spacing="10">
-                                                <Image Stretch="Uniform" MaxHeight="70" MaxWidth="150" Source="{Binding ThumbnailBitmap}"/>
+                                                <Image Stretch="Uniform" MaxHeight="100" MaxWidth="200" Source="{Binding ThumbnailBitmap}"/>
                                                 <TextBlock Text="{Binding title}"/>
                                                 <TextBlock Text="{Binding url}"/>
                                         </StackPanel>

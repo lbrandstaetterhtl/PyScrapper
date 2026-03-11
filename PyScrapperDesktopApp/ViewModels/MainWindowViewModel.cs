@@ -57,7 +57,7 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
     }
     
     [RelayCommand]
-    public async Task OpenSunoScrapWindow()
+    private async Task OpenSunoScrapWindow()
     {
         if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
