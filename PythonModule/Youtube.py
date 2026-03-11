@@ -203,7 +203,6 @@ def download_audio_only(
         ydl.download([url])
 
     progress_dict['status'] = "complete"
-    progress_dict['filename'] = out_file
 
 
 def download(
@@ -280,7 +279,7 @@ def build_progress_hook(progress_dict: dict):
                 progress_dict["speed"] = None
 
         elif status == "finished":
-            progress_dict["status"] = "processing"
+            progress_dict["status"] = "complete"
             progress_dict["downloadProgress"] = 100
 
         elif status == "error":

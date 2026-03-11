@@ -92,7 +92,7 @@ public partial class MediaPlayerWindow : Window
                     {
                         await Task.Delay(1000, cts.Token);
                         if (cts.IsCancellationRequested) break;
-                        await Dispatcher.UIThread.InvokeAsync(() => _vm.ScrubTo(SeekSlider.Value + 1));
+                        await Dispatcher.UIThread.InvokeAsync(() => _vm.SeekToSeconds(SeekSlider.Value + 5));
                     }
                 }
                 catch (TaskCanceledException) { }

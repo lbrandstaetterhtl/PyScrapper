@@ -277,9 +277,6 @@ public class ApiClient
         
         [JsonPropertyName("speed")]
         public float Speed { get; set; }
-        
-        [JsonPropertyName("fileName")]
-        public string FileName { get; set; }
     }
     
     public class SearchSuccessResponse
@@ -299,5 +296,4 @@ public class ApiClient
         [JsonPropertyName("detail")] 
         public string Detail { get; set; }
     }
-
 }

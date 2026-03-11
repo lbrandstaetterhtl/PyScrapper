@@ -124,11 +124,12 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 
         _lastRequestedPositionSeconds = seconds;
         _suppressPlayerUpdateUntil = DateTime.UtcNow.AddMilliseconds(900);
+        _audioPlayer.Play();
     }
 
     private void RefreshFromPlayer()
     {
-        var meta = _audioPlayer?.Player?.Media?.Meta(MetadataType.Title);
+        var meta = _audioPlayer.Player.Media?.Meta(MetadataType.Title);
         string mediaTitle = !string.IsNullOrEmpty(meta) ? meta.Split('.')[0] : "Unknown Title";
         NowPlayingTitle = mediaTitle;
 
@@ -216,13 +217,13 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void MoveForward()
     {
-        SeekToSeconds(PositionSeconds + 1);
+        SeekToSeconds(PositionSeconds + 10);
     }
     
     [RelayCommand]
     private void MoveBackward()
     {
-        SeekToSeconds(PositionSeconds - 1);
+        SeekToSeconds(PositionSeconds - 10);
     }
 
     public void Dispose()

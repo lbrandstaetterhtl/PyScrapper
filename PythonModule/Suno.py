@@ -193,5 +193,4 @@ def download (
 
     
     download_to_file(url=file, out_file=out_file, session=session, progress_dict=progress_dict)
-    progress_dict['filename'] = out_file
 

@@ -351,7 +351,6 @@ public class ApiClientDtoTests
         Assert.Equal(10485760L, response.TotalBytes);
         Assert.Equal(4770816L, response.DownloadedBytes);
         Assert.Equal(1024.5f, response.Speed);
-        Assert.Equal("video.mp4", response.FileName);
     }
 
     [Fact]
@@ -414,7 +413,6 @@ public class ApiClientDtoTests
             TotalBytes = 20000000,
             DownloadedBytes = 15060000,
             Speed = 2048.0f,
-            FileName = "music.mp3"
         };
 
         Assert.Equal("test-id", response.Id);
@@ -424,7 +422,6 @@ public class ApiClientDtoTests
         Assert.Equal(20000000L, response.TotalBytes);
         Assert.Equal(15060000L, response.DownloadedBytes);
         Assert.Equal(2048.0f, response.Speed);
-        Assert.Equal("music.mp3", response.FileName);
     }
 
     #endregion
@@ -522,7 +519,6 @@ public class ApiClientDtoTests
             TotalBytes = 1000000,
             DownloadedBytes = 555000,
             Speed = 512.0f,
-            FileName = "file.mp4"
         };
 
         var json = JsonSerializer.Serialize(original, JsonOptions);
@@ -536,7 +532,6 @@ public class ApiClientDtoTests
         Assert.Equal(original.TotalBytes, deserialized.TotalBytes);
         Assert.Equal(original.DownloadedBytes, deserialized.DownloadedBytes);
         Assert.Equal(original.Speed, deserialized.Speed);
-        Assert.Equal(original.FileName, deserialized.FileName);
     }
 
     #endregion
