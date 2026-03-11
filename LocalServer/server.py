@@ -149,15 +149,15 @@ async def process_downloads(
 
         if download_request.provider.lower() in ("suno", "suno.com"):
             async with download_limiter:
-                await asyncio.to_thread(Suno.download, session=ses, url=download_request.url, out_path=download_request.download_path,  mediatype=download_request.mediatype, progress_dict=progress_dict)
+                await asyncio.to_thread(Suno.download, filename=download_request.filename,session=ses, url=download_request.url, out_path=download_request.download_path,  mediatype=download_request.mediatype, progress_dict=progress_dict)
                 
 
         elif download_request.provider.lower() in ("youtube", "youtube.com"):
             async with download_limiter:
                 if download_request.mediatype.lower() == ".mp4":
-                    await asyncio.to_thread(Youtube.download, url=download_request.url, out_path=download_request.download_path, progress_dict=progress_dict)
+                    await asyncio.to_thread(Youtube.download,filename=download_request.filename ,url=download_request.url, out_path=download_request.download_path, progress_dict=progress_dict)
                 else:
-                    await asyncio.to_thread(Youtube.download_audio_only, url=download_request.url, out_path=download_request.download_path, progress_dict=progress_dict)
+                    await asyncio.to_thread(Youtube.download_audio_only,filename=download_request.filename, url=download_request.url, out_path=download_request.download_path, progress_dict=progress_dict)
        
        
         elif download_request.provider.lower() in ("archive", "archive.org", "internetarchive", "internetarchive.org"):
@@ -194,6 +194,10 @@ async def process_search(search_request: SearchRequest, search_id:str):
 
         if search_request.provider.lower() in ("youtube", "youtube.com"):
             results = await asyncio.to_thread(Youtube.search, session=ses, search=search_request.search, top=search_request.top)
+        
+        elif search_request.provider.lower() in ("archive" "archive.org"):
+            results = await asyncio.to_thread(Archive.search, searchquery=search_request.search, top=search_request.top, session=ses)
+
 
         response = {
                     "provider": search_request.provider,

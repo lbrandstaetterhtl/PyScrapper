@@ -170,16 +170,17 @@ def iter_value_from_json(
 def download_audio_only(
         url: str,
         out_path: str,
-        progress_dict: dict
+        progress_dict: dict,
+        filename: str = "YoutubeAudioOnly"
+    ):
 
-        ):
     if not url:
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No URL was given for download")
     if not out_path:
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No download path was given")
 
     identifier = url.replace("https://www.youtube.com/watch?v=", "")
-    out_file = os.path.join(out_path, f"{identifier}")
+    out_file = os.path.join(out_path, f"{filename}")
 
     ydl_opts = {
         "format": "bestaudio/best",
@@ -208,7 +209,8 @@ def download_audio_only(
 def download(
         url: str,
         out_path: str,
-        progress_dict: dict
+        progress_dict: dict,
+        filename: str = "YoutubeVideo"
 ):
     if not url:
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No URL was given for download")
@@ -218,8 +220,8 @@ def download(
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No progress dict was given")
 
  
-    identifier = url.replace("https://www.youtube.com/watch?v=", "")
-    out_file = os.path.join(out_path, f"{identifier}.mp4")
+    #identifier = url.replace("https://www.youtube.com/watch?v=", "")
+    out_file = os.path.join(out_path, f"{filename}.mp4")
     if os.path.exists(out_file):
         raise YoutubeDownloadError(f"Destination out file {out_file} already exists. No Download has started")
 

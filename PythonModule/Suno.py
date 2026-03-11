@@ -166,7 +166,8 @@ def download (
         session,
         out_path: str = os.path.join("downloads"),
         mediatype = ".mp3",
-        progress_dict: dict = None
+        progress_dict: dict = None,
+        filename: str = "SunoSong"
         
 ):
     if mediatype not in (".mp3", ".mp4", ".wav"):
@@ -186,7 +187,7 @@ def download (
     identifier = strip
 
     file = search_media(html=html, identifier=identifier, mediatype=mediatype)
-    out_file = os.path.join(out_path, f"{identifier}{mediatype}")
+    out_file = os.path.join(out_path, f"{filename}{mediatype}")
     if os.path.exists(out_file):
         raise SunoError(f"Destination out file {out_file} already exists. No Download has started")
 
