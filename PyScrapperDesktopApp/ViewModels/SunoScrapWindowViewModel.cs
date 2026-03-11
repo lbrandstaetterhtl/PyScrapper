@@ -101,7 +101,7 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
                 }
                 else
                 {
-                    var massageBox = new MassageBox("Download failed, check logs for more details");
+                    var massageBox = new MessageBox("Download failed, check logs for more details");
                     await massageBox.ShowDialog(_ScrapWindow);
                 }
             }

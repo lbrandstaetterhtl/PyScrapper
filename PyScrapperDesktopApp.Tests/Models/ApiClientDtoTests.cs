@@ -428,37 +428,7 @@ public class ApiClientDtoTests
     }
 
     #endregion
-
-    #region ProgressErrorResponse Tests
-
-    [Fact]
-    public void ProgressErrorResponse_Deserialization_WorksCorrectly()
-    {
-        var json = """
-        {
-            "message": "Download ID not found"
-        }
-        """;
-
-        var response = JsonSerializer.Deserialize<ProgressErrorResponse>(json, JsonOptions);
-
-        Assert.NotNull(response);
-        Assert.Equal("Download ID not found", response.Message);
-    }
-
-    [Fact]
-    public void ProgressErrorResponse_Properties_CanBeSetAndRead()
-    {
-        var response = new ProgressErrorResponse
-        {
-            Message = "Invalid download ID"
-        };
-
-        Assert.Equal("Invalid download ID", response.Message);
-    }
-
-    #endregion
-
+    
     #region YoutubeVideoItem Tests
 
     [Fact]

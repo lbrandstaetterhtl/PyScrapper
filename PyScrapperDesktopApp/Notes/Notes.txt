@@ -1,5 +1,5 @@
 ﻿bugs:
 
-
+GetHealthCheck spamming the logs
 
 Next steps:

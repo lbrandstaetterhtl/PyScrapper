@@ -161,7 +161,7 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
                 }
                 else
                 {
-                    var massageBox = new MassageBox("Download failed, check logs for more details");
+                    var massageBox = new MessageBox("Download failed, check logs for more details");
                     await massageBox.ShowDialog(_ScrapWindow);
                 }
                 
@@ -190,7 +190,7 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
         
         if (results.Count == 0)
         {
-            var massageBox = new MassageBox($"No results found for query: {SearchQuery}. Please try a different query.");
+            var massageBox = new MessageBox($"No results found for query: {SearchQuery}. Please try a different query.");
             await massageBox.ShowDialog(_ScrapWindow);
             return;
         }
