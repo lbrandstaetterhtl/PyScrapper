@@ -8,6 +8,7 @@ using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
@@ -26,6 +27,8 @@ public partial class App : Application
 
     public override async void OnFrameworkInitializationCompleted()
     {
+        if (Design.IsDesignMode) return;
+        
         base.OnFrameworkInitializationCompleted();
         
         var log = new Massage("Application initializing...", DateTime.Now, "INFO");

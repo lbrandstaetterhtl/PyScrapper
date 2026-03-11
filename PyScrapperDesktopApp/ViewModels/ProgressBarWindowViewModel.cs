@@ -33,6 +33,8 @@ public partial class ProgressBarWindowViewModel : ObservableObject
 
     public async Task<bool> StartProgress(string id)
     {
+        if (Design.IsDesignMode) return true;
+        
         bool errorWhileDownloading = false;
         _cts = new CancellationTokenSource();
         var token = _cts.Token;

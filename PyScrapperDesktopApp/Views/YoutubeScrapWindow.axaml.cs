@@ -15,6 +15,8 @@ public partial class YoutubeScrapWindow : Window
     
     public YoutubeScrapWindow()
     {
+        if (Design.IsDesignMode) return;
+        
         InitializeComponent();
         
         _vm = new YoutubeScrapWindowViewModel(this);

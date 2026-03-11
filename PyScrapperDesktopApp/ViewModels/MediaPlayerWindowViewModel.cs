@@ -1,6 +1,7 @@
 ﻿// C#
 using System;
 using System.IO;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -40,6 +41,8 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 
     public MediaPlayerWindowViewModel(AudioPlayer audioPlayer, string path)
     {
+        if (Design.IsDesignMode) return;
+        
         _audioPlayer = audioPlayer;
 
         _audioPlayer.Volume = volume;

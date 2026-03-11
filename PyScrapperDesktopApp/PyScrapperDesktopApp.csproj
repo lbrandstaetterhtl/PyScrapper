@@ -32,4 +32,10 @@
     <ItemGroup>
       <Folder Include="logs\" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Views\GetServerHealthWindow.axaml.cs">
+        <DependentUpon>GetServerHealthWindow.axaml</DependentUpon>
+      </Compile>
+    </ItemGroup>
 </Project>

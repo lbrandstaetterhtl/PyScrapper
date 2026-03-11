@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -59,6 +60,13 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
         _cts = new CancellationTokenSource();
         
         var token = _cts.Token;
+        
+        if (Design.IsDesignMode)
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+            return;
+        }
 
         Task.Run(async () =>
         {
@@ -98,7 +106,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
                     _logger.LogNewMassage(log);
                 }
             }
-        });
+        }, token);
     }
     
     private void SetOffline(string reason)

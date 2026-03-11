@@ -16,6 +16,8 @@ public partial class MainWindow : Window
     
     public MainWindow()
     {
+        if (Design.IsDesignMode) return;
+        
         InitializeComponent();
 
         _vm = new MainWindowViewModel();

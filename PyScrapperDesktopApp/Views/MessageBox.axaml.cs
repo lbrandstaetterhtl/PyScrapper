@@ -7,6 +7,8 @@ public partial class MessageBox : Window
     
     public MessageBox(string message)
     {
+        if (Design.IsDesignMode) return;
+        
         InitializeComponent();
         Massage.Text = message;
         

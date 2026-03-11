@@ -108,6 +108,8 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
     
     public YoutubeScrapWindowViewModel(Window scrapWindow)
     {
+        if (Design.IsDesignMode) return;
+        
         _ScrapWindow = scrapWindow;
         
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke());

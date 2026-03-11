@@ -20,6 +20,8 @@ public partial class MediaPlayerWindow : Window
 
     public MediaPlayerWindow(string path)
     {
+        if (Design.IsDesignMode) return;
+        
         InitializeComponent();
         
         //path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase)

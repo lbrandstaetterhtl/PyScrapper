@@ -20,6 +20,8 @@ public partial class InputWindowViewModel : ObservableObject
 
     public InputWindowViewModel(Window Window, string massage)
     {
+        if (Design.IsDesignMode) return;
+        
         _Window = Window;
         Massage = massage;
     }

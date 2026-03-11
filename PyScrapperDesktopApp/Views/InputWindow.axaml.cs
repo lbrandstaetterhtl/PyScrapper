@@ -7,6 +7,8 @@ public partial class InputWindow : Window
 {
     public InputWindow(string massage)
     {
+        if (Design.IsDesignMode) return;
+        
         InitializeComponent();
         
         var vm = new InputWindowViewModel(this, massage);

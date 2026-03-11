@@ -7,6 +7,8 @@ public partial class SunoScrapWindow : Window
 {
     public SunoScrapWindow()
     {
+        if (Design.IsDesignMode) return;
+        
         InitializeComponent();
         
         var vm = new SunoScrapWindowViewModel(this);

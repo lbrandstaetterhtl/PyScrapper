@@ -111,6 +111,8 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
 
     public SunoScrapWindowViewModel(Window scrapWindow)
     {
+        if (Design.IsDesignMode) return;
+        
         _ScrapWindow = scrapWindow;
     
         ScrapCommand = new RelayCommand(Scrap);

@@ -215,10 +215,10 @@ public class ApiClient
         [JsonPropertyName("status")]
         public string Status { get; set; }
         
-        [JsonPropertyName("download_progress")]
+        [JsonPropertyName("downloadProgress")]
         public float DownloadProgress { get; set; }
         
-        [JsonPropertyName("error_message")]
+        [JsonPropertyName("errorMessage")]
         public string ErrorMessage { get; set; }
     }
     

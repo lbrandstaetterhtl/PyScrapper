@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
@@ -43,6 +44,8 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
 
     public MainWindowViewModel()
     {
+        if (Design.IsDesignMode) return;
+        
         DownloadedMediaList = AppData.DownloadedMedias;
     }
     
@@ -66,6 +69,8 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
     [RelayCommand]
     public void GetHealth()
     {
+        if (Design.IsDesignMode) return;
+        
         var getHealthWindow = new GetServerHealthWindow();
         getHealthWindow.Show();
     }
@@ -95,7 +100,7 @@ public partial class MainWindowViewModel : INotifyPropertyChanged
     }
 
     [RelayCommand]
-    public async Task OpenYoutubeScrapWindow()
+    private async Task OpenYoutubeScrapWindow()
     {
         if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
