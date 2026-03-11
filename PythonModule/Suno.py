@@ -1,7 +1,7 @@
 import urllib.request, urllib.error, urllib.parse
 import re, os
 import time
-
+from .core import get_html
 
 
 class SunoError(Exception): ...
@@ -16,40 +16,7 @@ class SunoNotFound(SunoError): ...
 
 
 
-def get_html(
-        session = None,
-        url: str = None,
-        decode: str = "utf-8"
-)-> str:
-    
-    if not url:
-        raise SunoNotEnoughArguments("No URL was given")
-    if not session:
-        raise SunoNotEnoughArguments("No Session was given")
-    
-    request = urllib.request.Request(
-        url,
-        method="GET",
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-        )
 
-
-    try:
-        with session.open(request) as response:
-            Bytes = response.read()
-            html = Bytes.decode(decode)
-            return html
-
-    except urllib.error.HTTPError as e:
-        raise urllib.error.HTTPError(f"HTTP Error {e}")
-    
-    except urllib.error.URLError as e:
-        raise urllib.error.URLError(f"URL ERROR {e}")
-    
-    except UnicodeDecodeError:
-        raise UnicodeDecodeError(f"Failed to decode with given decode standard {decode}")
 
 
 
@@ -199,7 +166,8 @@ def download (
         session,
         out_path: str = os.path.join("downloads"),
         mediatype = ".mp3",
-        progress_dict: dict = None
+        progress_dict: dict = None,
+        filename: str = "SunoSong"
         
 ):
     if mediatype not in (".mp3", ".mp4", ".wav"):
@@ -219,7 +187,7 @@ def download (
     identifier = strip
 
     file = search_media(html=html, identifier=identifier, mediatype=mediatype)
-    out_file = os.path.join(out_path, f"{identifier}{mediatype}")
+    out_file = os.path.join(out_path, f"{filename}{mediatype}")
     if os.path.exists(out_file):
         raise SunoError(f"Destination out file {out_file} already exists. No Download has started")
 

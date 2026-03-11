@@ -7,6 +7,7 @@ import re
 import os
 import shutil
 import pathlib
+from .core import get_html
 
 
 def find_ffmpeg() -> str | None:
@@ -65,14 +66,10 @@ def search(
 
     search_url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(search)
 
-    request = urllib.request.Request(
-            search_url,
-            method='GET',
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
+    
 
 
-    html:str = get_html(request, session=session)
+    html:str = get_html(url=search_url, session=session)
     jsondata: dict = search_json(html=html, keyword="var ytInitialData = ")
 
 
@@ -123,41 +120,7 @@ def search(
 
 
 
-def get_html(
-        request:urllib.request.Request,
-        session: http.cookiejar.CookieJar = None,
-        decode:str = "utf-8"
-        
-        ) -> str:
-    if not session:
-        raise SessionError("GET_HTML: No session was given")
 
-    try:
-        with session.open(request) as response:
-            final_url = response.geturl()
-            html = response.read().decode(decode)
-            low = html.lower()
-
-
-            #if "consent.youtube.com" in final_url or "consent.youtube.com" in low or "before you continue to youtube" in low:
-            #   raise SessionError("Consent page detected, cannot proceed with request. Please ensure that the session has the necessary cookies to bypass the consent")
-            
-    
-    except urllib.error.HTTPError as e:
-        raise urllib.error.HTTPError(e.url, e.code, f"Failed to get request - {e.reason}", e.headers, e.fp) from e
-
-    except urllib.error.URLError as e:
-        raise urllib.error.URLError(f"GET_HTML: Failed to get request - {e}") from e
-
-    except UnicodeDecodeError as e:
-        raise UnicodeError(f"GET_HTML: Failed to decode the HTML - {e}") from e
-   
-
-    if not html:
-        raise urllib.error.URLError("GET_HTML: Failed to get request - HTML")
-
-
-    return html
 
 
 
@@ -207,16 +170,17 @@ def iter_value_from_json(
 def download_audio_only(
         url: str,
         out_path: str,
-        progress_dict: dict
+        progress_dict: dict,
+        filename: str = "YoutubeAudioOnly"
+    ):
 
-        ):
     if not url:
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No URL was given for download")
     if not out_path:
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No download path was given")
 
     identifier = url.replace("https://www.youtube.com/watch?v=", "")
-    out_file = os.path.join(out_path, f"{identifier}")
+    out_file = os.path.join(out_path, f"{filename}")
 
     ydl_opts = {
         "format": "bestaudio/best",
@@ -245,7 +209,8 @@ def download_audio_only(
 def download(
         url: str,
         out_path: str,
-        progress_dict: dict
+        progress_dict: dict,
+        filename: str = "YoutubeVideo"
 ):
     if not url:
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No URL was given for download")
@@ -255,8 +220,8 @@ def download(
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No progress dict was given")
 
  
-    identifier = url.replace("https://www.youtube.com/watch?v=", "")
-    out_file = os.path.join(out_path, f"{identifier}.mp4")
+    #identifier = url.replace("https://www.youtube.com/watch?v=", "")
+    out_file = os.path.join(out_path, f"{filename}.mp4")
     if os.path.exists(out_file):
         raise YoutubeDownloadError(f"Destination out file {out_file} already exists. No Download has started")
 
