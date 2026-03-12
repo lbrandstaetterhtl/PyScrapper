@@ -13,15 +13,14 @@
         
         <StackPanel Margin="20" Spacing="12">
 
-                <TextBlock Text="{Binding Status}" FontSize="14"/>
+                <TextBlock Text="{Binding Status}" Classes="UILabel"/>
 
+                <TextBlock Text="{Binding Progress, StringFormat={}{0}%}" Classes="UIValue"/>
+                
                 <ProgressBar Minimum="0"
                              Maximum="100"
                              Value="{Binding Progress}"
                              Height="24"/>
-
-                <TextBlock Text="{Binding Progress, StringFormat={}{0}%}"
-                           HorizontalAlignment="Center"/>
                 
                 <Button Content="Close" Command="{Binding CloseCommand}"/>
         </StackPanel>

@@ -14,123 +14,140 @@
         
         <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="20" Spacing="10">
-                        <Border Background="Gray" Padding="10" CornerRadius="8">
-                                <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Server Health Status: " Foreground="{Binding StatusColor}" FontSize="18" FontWeight="Bold" Margin="5"/>
-                                        <TextBlock Text="{Binding ConnectionStatus}" Foreground="{Binding StatusColor}" Margin="5"/>
+                        <Border Classes="Seperator"/>
+                        
+                        <Border Classes="Cell">
+                                <StackPanel Classes="UICell" Width="400" Height="50">
+                                        <TextBlock Text="Server Health Status: " Foreground="{Binding StatusColor}" Classes="UILabel"/>
+                                        <TextBlock Text="{Binding ConnectionStatus}" Foreground="{Binding StatusColor}" Classes="UIValue"/>
                                 </StackPanel>
                         </Border>
                         
-                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+                        <Border Classes="Seperator"/>
                         
-                        <Border Background="Gray" Padding="18" CornerRadius="8">
-                                <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="PID: " FontSize="16" FontWeight="SemiBold" Margin="5"/>
-                                        <TextBlock Text="{Binding Pid}" Margin="5"/>
+                        <Border Classes="Cell">
+                                <StackPanel Classes="UICell" Width="400" Height="50">
+                                        <TextBlock Text="{Binding LastHealthCheckTime}" Foreground="{Binding StatusColor}" Classes="UIValue"/>
                                 </StackPanel>
                         </Border>
                         
-                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+                        <Border Classes="Seperator"/>
+                        
+                        <Border Classes="Cell">
+                                <StackPanel Classes="UICell" Width="400" Height="50">
+                                        <TextBlock Text="PID: " Classes="UILabel"/>
+                                        <TextBlock Text="{Binding Pid}" Classes="UIValue"/>
+                                </StackPanel>
+                        </Border>
+                        
+                        <Border Classes="Seperator"/>
 
-                        <Border Background="Gray" Padding="18" CornerRadius="8">
-                                <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Memory Usage: " FontSize="16" FontWeight="SemiBold" Margin="5"/>
-                                        <TextBlock Text="{Binding MemoryFormatted}" Margin="5"/>
+                        <Border Classes="Cell">
+                                <StackPanel Classes="UICell" Width="400" Height="50">
+                                        <TextBlock Text="Memory Usage: " Classes="UILabel"/>
+                                        <TextBlock Text="{Binding MemoryFormatted}" Classes="UIValue"/>
                                 </StackPanel>
                         </Border>
                         
-                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+                        <Border Classes="Seperator"/>
                         
-                        <Border Background="Gray" Padding="18" CornerRadius="8">
-                                <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Uptime: " FontSize="16" FontWeight="SemiBold" Margin="5"/>
-                                        <TextBlock Text="{Binding UptimeFormatted}" Margin="5"/>
+                        <Border Classes="Cell">
+                                <StackPanel Classes="UICell" Width="400" Height="50">
+                                        <TextBlock Text="Uptime: " Classes="UILabel"/>
+                                        <TextBlock Text="{Binding UptimeFormatted}" Classes="UIValue"/>
                                 </StackPanel>
                         </Border>
                         
-                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+                        <Border Classes="Seperator"/>
 
-                        <Border Background="Gray" Padding="18" CornerRadius="8">
-                                <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Processes: " FontSize="16" FontWeight="SemiBold"/>
-                                        <Border Background="White" BorderThickness="1" Margin="5"/>
+                        <Border Classes="Cell">
+                                <StackPanel Classes="UICell" MaxWidth="400" Width="400" MaxHeight="150">
+                                        <TextBlock Text="Processes: " Classes="UILabel"/>
+                                        <Border Classes="Seperator"/>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding Processes}">
                                                 <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
-                                                                <StackPanel>
-                                                                        <Border Background="White" BorderThickness="1" Margin="5"/>
-                                                                        <StackPanel Orientation="Horizontal">
-                                                                                <TextBlock Text="PID: " Margin="5"/>
-                                                                                <TextBlock Text="{Binding Pid}" Margin="5"/>
-                                                                        </StackPanel>
+                                                                        <StackPanel>
+                                                                                <Border Classes="Seperator"/>
+                                                                                
+                                                                                        <StackPanel Classes="UICell">
+                                                                                                <TextBlock Text="PID: " Classes="UIValue"/>
+                                                                                                <TextBlock Text="{Binding Pid}" Classes="UIValue"/>
+                                                                                        </StackPanel>
                                                                 
-                                                                        <StackPanel Orientation="Horizontal">
-                                                                                <TextBlock Text="Name: " Margin="5"/>
-                                                                                <TextBlock Text="{Binding Name}" Margin="5"/>
-                                                                        </StackPanel>
+                                                                                        <StackPanel Classes="UICell">
+                                                                                                <TextBlock Text="Name: " Classes="UIValue"/>
+                                                                                                <TextBlock Text="{Binding Name}" Classes="UIValue"/>
+                                                                                        </StackPanel>
                                                                         
-                                                                        <Border Background="White" BorderThickness="1" Margin="5"/>
-                                                                </StackPanel>
+                                                                                <Border Classes="Seperator"/>
+                                                                        </StackPanel>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                         </ItemsControl>
+                                        </ScrollViewer>
                                 </StackPanel>
                         </Border>
                         
-                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+                        <Border Classes="Seperator"/>
                         
-                        <Border Background="Gray" Padding="18" CornerRadius="8">
-                                <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Active Downloads: " FontSize="16" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding DownloadsCount}"/>
-                                        <Border Background="White" BorderThickness="1" Margin="5"/>
+                        <Border Classes="Cell">
+                                <StackPanel Classes="UICell" MaxWidth="400" Width="400" MaxHeight="150">
+                                        <TextBlock Text="Active Downloads: " Classes="UILabel"/>
+                                        <TextBlock Text="{Binding DownloadsCount}" Classes="UILabel"/>
+                                        <Border Classes="Seperator"/>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding DownloadJobs}">
                                                 <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
-                                                                <StackPanel>
-                                                                        <Border Background="White" BorderThickness="1" Margin="5"/>
-                                                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                                <TextBlock Text="Download Job ID: " Margin="5"/>
-                                                                                <TextBlock Text="{Binding Id}" Margin="5"/>
-                                                                        </StackPanel>
+                                                                        <StackPanel>
+                                                                                <Border Classes="Seperator"/>
+                                                                                        <StackPanel Classes="UICell">
+                                                                                                <TextBlock Text="Download Job ID: " Classes="UIValue"/>
+                                                                                                <TextBlock Text="{Binding Id}" Classes="UIValue"/>
+                                                                                        </StackPanel>
                                                                         
-                                                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                                <TextBlock Text="Progress: " Margin="5"/>
-                                                                                <TextBlock Text="{Binding DownloadProgress, StringFormat={}{0:F1}%}" Margin="5"/>
-                                                                        </StackPanel>
+                                                                                        <StackPanel Classes="UICell">
+                                                                                                <TextBlock Text="Progress: " Classes="UIValue"/>
+                                                                                                <TextBlock Text="{Binding DownloadProgress, StringFormat={}{0:F1}%}" Classes="UIValue"/>
+                                                                                        </StackPanel>
                                                                 
-                                                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                                <TextBlock Text="Status: " Margin="5"/>
-                                                                                <TextBlock Text="{Binding  Status}" Margin="5"/>
+                                                                                        <StackPanel Classes="UICell">
+                                                                                                <TextBlock Text="Status: " Classes="UIValue"/>
+                                                                                                <TextBlock Text="{Binding  Status}" Classes="UIValue"/>
+                                                                                        </StackPanel>
+                                                                                <Border Classes="Seperator"/>
                                                                         </StackPanel>
-                                                                        <Border Background="White" BorderThickness="1" Margin="5"/>
-                                                                </StackPanel>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                         </ItemsControl>
+                                        </ScrollViewer>
                                 </StackPanel>
                         </Border>
                         
-                        <Border Background="LightGray" BorderThickness="1" Margin="5"/>
+                        <Border Classes="Seperator"/>
                         
-                        <Border Background="Gray" Padding="18" CornerRadius="8">
-                                <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Recent Errors: " FontSize="16" FontWeight="SemiBold"/>
-                                        <Border Background="White" BorderThickness="1" Margin="5"/>
-                                        <TextBlock Text="{Binding ErrorsCount}"/>
+                        <Border Classes="Cell">
+                                <StackPanel Classes="UICell" Width="400" MaxWidth="400" MaxHeight="150">
+                                        <TextBlock Text="Recent Errors: " Classes="UILabel"/>
+                                        <TextBlock Text="{Binding ErrorsCount}" Classes="UILabel"/>
+                                        <Border Classes="Seperator"/>
+                                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding ErrorMessages}">
                                                 <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
-                                                                <Border Background="red" CornerRadius="8" Padding="8">
-                                                                        <TextBlock Text="{Binding}" Margin="5"/>
-                                                                </Border>
+                                                                        <Border Background="red" Classes="Cell">
+                                                                                <TextBlock Text="{Binding}" Classes="UIValue"/>
+                                                                        </Border>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                         </ItemsControl>
+                                        </ScrollViewer>
                                 </StackPanel>
                         </Border>
                         
-                        <Border Background="LightGray" BorderThickness="1"/>
+                        <Border Classes="Seperator"/>
                         
                         <Button Classes="primary" Content="Close" Command="{Binding CloseCommand}" HorizontalAlignment="Center"/>
                 </StackPanel>

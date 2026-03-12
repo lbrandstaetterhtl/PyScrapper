@@ -16,7 +16,7 @@
         Title="PyScrapperDesktopApp">
         
         <StackPanel Margin="16" Spacing="10">
-                <TextBlock Text="{Binding Massage}" FontSize="16" FontWeight="Bold"/>
+                <TextBlock Text="{Binding Massage}" Classes="UILabel"/>
                 
                 <TextBox Text="{Binding InputText, Mode=TwoWay}" Classes="UI"/>
                 

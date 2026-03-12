@@ -22,17 +22,17 @@
                 </Grid.RowDefinitions>
                 
                 <StackPanel Grid.Row="0" Classes="UICell">
-                        <TextBlock Text="Enter Query: " Classes="UI"/>
+                        <TextBlock Text="Enter Query: " Classes="UILabel"/>
                         <TextBox Classes="UI" Text="{Binding SearchQuery}"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Row="1" Classes="UICell">
-                        <TextBlock Text="Search results: " Classes="UI"/>
+                        <TextBlock Text="Search results: " Classes="UILabel"/>
                         <NumericUpDown Minimum="1" Value="1" Maximum="25" AllowSpin="True" FormatString="0" Text="{Binding SearchResultsCount}"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Row="2" Classes="UICell">
-                        <TextBlock Text="Select Mediatype: " Margin="5"/>
+                        <TextBlock Text="Select Mediatype: " Classes="UILabel"/>
                         <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
                 </StackPanel>
                 
@@ -50,8 +50,8 @@
                 </Grid.RowDefinitions>
                 
                 <StackPanel Grid.Row="0" Classes="UICell">
-                        <TextBlock Text="Select videos to scrap: " Classes="UI"/>
-                        <Button Content="Done" Command="{Binding Scrap}"/>
+                        <TextBlock Text="Select videos to scrap: " Classes="UILabel"/>
+                        <Button Classes="primary" Content="Done" Command="{Binding Scrap}"/>
                 </StackPanel>
                 
                 <ListBox Grid.Row="1" SelectionMode="Multiple, Toggle" ItemsSource="{Binding YoutubeVideoItems}" SelectedItems="{Binding SelectedYoutubeVideoItems}">
@@ -59,8 +59,8 @@
                                 <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                                 <Image Stretch="Uniform" MaxHeight="100" MaxWidth="200" Source="{Binding ThumbnailBitmap}"/>
-                                                <TextBlock Text="{Binding title}"/>
-                                                <TextBlock Text="{Binding url}"/>
+                                                <TextBlock Text="{Binding title}" Classes="UIValue"/>
+                                                <TextBlock Text="{Binding url}" Classes="UIValue"/>
                                         </StackPanel>
                                 </DataTemplate>
                         </ListBox.ItemTemplate>

@@ -103,22 +103,22 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
                 }
                 catch (Exception e)
                 {
-                    Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                    {
-                        SetOffline(e.Message);
-                    });
+                    Avalonia.Threading.Dispatcher.UIThread.Post(SetOffline);
                     
                     var log = new Massage("Health check failed: " + e.Message, DateTime.Now, "ERROR");
                     _logger.LogNewMassage(log);
                 }
 
                 _runCount++;
+                
+                await Task.Delay(5000, token).WaitAsync(token);
             }
         }, token);
     }
     
-    private void SetOffline(string reason)
+    private void SetOffline()
     {
+        StatusColor = Brushes.LightCoral;
         ConnectionStatus = "Server is not reachable";
         UptimeFormatted = "N/A";
         MemoryFormatted = "N/A";
@@ -128,7 +128,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
         DownloadsCount = 0;
         ErrorMessages.Clear();
         ErrorsCount = 0;
-        LastHealthCheckTime = "Last attempt: " + DateTime.Now.ToString("HH:mm:ss") + " -- " + reason;
+        LastHealthCheckTime = "Last attempt: " + DateTime.Now.ToString("HH:mm:ss");
     }
     
     public void StopHealthCheck()
