@@ -55,6 +55,8 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     
     public event Action? CloseRequested;
     
+    private int _runCount = 0;
+    
     public void StartHealthCheck()
     {
         _cts = new CancellationTokenSource();
@@ -70,11 +72,15 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
 
         Task.Run(async () =>
         {
+            _runCount = 0;
+            
             while (!token.IsCancellationRequested)
-            {
+            { 
+                bool logHealthResponse = _runCount % 5 == 0;
+                
                 try
                 {
-                    var health = await _apiClient.GetHealth(ServerUrl);
+                    var health = await _apiClient.GetHealth(ServerUrl, logHealthResponse);
 
                     if (health != null)
                     {
@@ -105,6 +111,8 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
                     var log = new Massage("Health check failed: " + e.Message, DateTime.Now, "ERROR");
                     _logger.LogNewMassage(log);
                 }
+
+                _runCount++;
             }
         }, token);
     }

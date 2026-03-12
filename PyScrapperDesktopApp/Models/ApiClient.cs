@@ -51,7 +51,7 @@ public class ApiClient
         }
     }
 
-    public async Task<HealthResponse> GetHealth(string serverUrl)
+    public async Task<HealthResponse> GetHealth(string serverUrl, bool loogHealthResponse = true)
     {
         HttpClient client = new();
 
@@ -62,11 +62,14 @@ public class ApiClient
         {
             var health = JsonSerializer.Deserialize<HealthResponse>(responseData, JsonOptions);
 
-            var text =
-                $"Server health check successful: Uptime {health?.UptimeSeconds} seconds, Memory {health?.MemoryMb} MB, PID {health?.Pid}, Processes {health?.Processes.Count}";
+            if (loogHealthResponse)
+            {
+                var text =
+                    $"Server health check successful: Uptime {health?.UptimeSeconds} seconds, Memory {health?.MemoryMb} MB, PID {health?.Pid}, Processes {health?.Processes.Count}";
 
-            var log = new Massage(text, DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
+                var log = new Massage(text, DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+            }
 
             return health;
         }
