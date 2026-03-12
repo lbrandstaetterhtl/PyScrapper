@@ -1,5 +1,9 @@
 ﻿bugs:
 
-GetHealthCheck spamming the logs
+1#
+picture explains itself
 
 Next steps:
+fix 1#
+add Archive window
+window to show logs to user
