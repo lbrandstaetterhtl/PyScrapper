@@ -8,6 +8,7 @@
         x:DataType="vm:GetServerHealthWindowViewModel"
         SizeToContent="WidthAndHeight"
         MaxHeight="400"
+        MaxWidth="600"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/avalonia-logo.ico"
         Title="PyScrapperDesktopApp">
@@ -68,21 +69,19 @@
                                         <ItemsControl ItemsSource="{Binding Processes}">
                                                 <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
-                                                                        <StackPanel>
-                                                                                <Border Classes="Seperator"/>
-                                                                                
-                                                                                        <StackPanel Classes="UICell">
-                                                                                                <TextBlock Text="PID: " Classes="UIValue"/>
-                                                                                                <TextBlock Text="{Binding Pid}" Classes="UIValue"/>
-                                                                                        </StackPanel>
+                                                                <StackPanel>
+                                                                        <Border Classes="Seperator"/>
+                                                                                <StackPanel Classes="UICell">
+                                                                                        <TextBlock Text="PID: " Classes="UIValue"/>
+                                                                                        <TextBlock Text="{Binding Pid}" Classes="UIValue"/>
+                                                                                </StackPanel>
                                                                 
-                                                                                        <StackPanel Classes="UICell">
-                                                                                                <TextBlock Text="Name: " Classes="UIValue"/>
-                                                                                                <TextBlock Text="{Binding Name}" Classes="UIValue"/>
-                                                                                        </StackPanel>
-                                                                        
-                                                                                <Border Classes="Seperator"/>
-                                                                        </StackPanel>
+                                                                                <StackPanel Classes="UICell">
+                                                                                        <TextBlock Text="Name: " Classes="UIValue"/>
+                                                                                        <TextBlock Text="{Binding Name}" Classes="UIValue"/>
+                                                                                </StackPanel>
+                                                                        <Border Classes="Seperator"/>
+                                                                </StackPanel>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -101,24 +100,24 @@
                                         <ItemsControl ItemsSource="{Binding DownloadJobs}">
                                                 <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
-                                                                        <StackPanel>
-                                                                                <Border Classes="Seperator"/>
-                                                                                        <StackPanel Classes="UICell">
-                                                                                                <TextBlock Text="Download Job ID: " Classes="UIValue"/>
-                                                                                                <TextBlock Text="{Binding Id}" Classes="UIValue"/>
-                                                                                        </StackPanel>
+                                                                <StackPanel>
+                                                                        <Border Classes="Seperator"/>
+                                                                                <StackPanel Classes="UICell">
+                                                                                        <TextBlock Text="Download Job ID: " Classes="UIValue"/>
+                                                                                        <TextBlock Text="{Binding Id}" Classes="UIValue"/>
+                                                                                </StackPanel>
                                                                         
-                                                                                        <StackPanel Classes="UICell">
-                                                                                                <TextBlock Text="Progress: " Classes="UIValue"/>
-                                                                                                <TextBlock Text="{Binding DownloadProgress, StringFormat={}{0:F1}%}" Classes="UIValue"/>
-                                                                                        </StackPanel>
+                                                                                <StackPanel Classes="UICell">
+                                                                                        <TextBlock Text="Progress: " Classes="UIValue"/>
+                                                                                        <TextBlock Text="{Binding DownloadProgress, StringFormat={}{0:F1}%}" Classes="UIValue"/>
+                                                                                </StackPanel>
                                                                 
-                                                                                        <StackPanel Classes="UICell">
-                                                                                                <TextBlock Text="Status: " Classes="UIValue"/>
-                                                                                                <TextBlock Text="{Binding  Status}" Classes="UIValue"/>
-                                                                                        </StackPanel>
-                                                                                <Border Classes="Seperator"/>
-                                                                        </StackPanel>
+                                                                                <StackPanel Classes="UICell">
+                                                                                        <TextBlock Text="Status: " Classes="UIValue"/>
+                                                                                        <TextBlock Text="{Binding  Status}" Classes="UIValue"/>
+                                                                                </StackPanel>
+                                                                        <Border Classes="Seperator"/>
+                                                                </StackPanel>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -137,9 +136,9 @@
                                         <ItemsControl ItemsSource="{Binding ErrorMessages}">
                                                 <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
-                                                                        <Border Background="red" Classes="Cell">
-                                                                                <TextBlock Text="{Binding}" Classes="UIValue"/>
-                                                                        </Border>
+                                                                <Border Background="red" Classes="Cell">
+                                                                        <TextBlock Text="{Binding}" Classes="UIValue"/>
+                                                                </Border>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                         </ItemsControl>

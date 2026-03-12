@@ -8,6 +8,8 @@
         x:DataType="vm:YoutubeScrapWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         WindowStartupLocation="CenterScreen"
+        CanMaximize="False"
+        CanMinimize="False"
         SizeToContent="WidthAndHeight"
         Title="PyScrapperDesktopApp">
         

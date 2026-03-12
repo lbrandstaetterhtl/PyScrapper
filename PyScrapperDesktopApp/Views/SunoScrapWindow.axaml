@@ -8,6 +8,9 @@
         x:DataType="vm:SunoScrapWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         WindowStartupLocation="CenterOwner"
+        CanMaximize="False"
+        CanResize="False"
+        CanMinimize="False"
         SizeToContent="WidthAndHeight"
         Title="PyScrapperDesktopApp">
         
