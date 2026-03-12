@@ -37,11 +37,13 @@
             <ItemsControl ItemsSource="{Binding DownloadedMediaList}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border DoubleTapped="MediaDoubleClick" Classes="Cell">
+                        <Border DoubleTapped="MediaDoubleClick" Classes="Cell" HorizontalAlignment="Left">
                             <Border.ContextFlyout>
                                 <MenuFlyout>
                                     <MenuItem Header="Copy Download Path" Click="CopyDownloadPathClick"/>
                                     <MenuItem Header="Copy URL" Click="CopyUrlClick"/>
+                                    <MenuItem Header="Delete File" Click="DeleteFile"/>
+                                    <MenuItem Header="Delete Only The Media Item" Click="DeleteMedia"/>
                                 </MenuFlyout>
                             </Border.ContextFlyout>
                             

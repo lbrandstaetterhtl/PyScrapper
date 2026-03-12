@@ -41,7 +41,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
         
         Task.Run( async () =>
         {
-            while (_progress < 100)
+            while (!_isFinished)
             {
                 if (token.IsCancellationRequested)
                     break;

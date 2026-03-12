@@ -97,4 +97,50 @@ public partial class MainWindow : Window
             CopyStringToClipboard(media.Url);
         }
     }
+    
+    private void DeleteMedia(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { DataContext: DownloadedMedia media })
+        {
+            AppData.RemoveDownloadedMedia(media);
+            
+            var log = new Massage("Media removed from the list: " + media.Url, DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            
+            var messageBox = new MessageBox("Media removed from the list: " + media.Url);
+            messageBox.ShowDialog(this);
+        }
+    }
+    
+    private void DeleteFile(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { DataContext: DownloadedMedia media })
+        {
+            try
+            {
+                if (File.Exists(media.DownloadPath))
+                {
+                    File.Delete(media.DownloadPath);
+                    
+                    var log = new Massage("File deleted successfully: " + media.DownloadPath, DateTime.Now, "INFO");
+                    _logger.LogNewMassage(log);
+                    
+                    var messageBox = new MessageBox("File deleted successfully: " + media.DownloadPath);
+                    messageBox.ShowDialog(this);
+                }
+                else
+                {
+                    throw new Exception("File not found");
+                }
+            }
+            catch (Exception ex)
+            {
+                var log = new Massage("An error occurred while trying to delete the file: " + ex.Message, DateTime.Now, "ERROR");
+                _logger.LogNewMassage(log);
+                
+                var messageBox = new MessageBox("An error occurred while trying to delete the file: " + ex.Message);
+                messageBox.ShowDialog(this);
+            }
+        }
+    }
 }

@@ -9,6 +9,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Interactivity;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.Views;
