@@ -7,7 +7,7 @@ import re
 import os
 import shutil
 import pathlib
-from .core import get_html
+from PythonModule.core import get_html
 
 
 def find_ffmpeg() -> str | None:
@@ -169,18 +169,18 @@ def iter_value_from_json(
 
 def download_audio_only(
         url: str,
-        out_path: str,
+        out_file: str,
         progress_dict: dict,
-        filename: str = "YoutubeAudioOnly"
+        
     ):
 
     if not url:
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No URL was given for download")
-    if not out_path:
-        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No download path was given")
+    if not out_file:
+        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No out_file was given")
 
     identifier = url.replace("https://www.youtube.com/watch?v=", "")
-    out_file = os.path.join(out_path, f"{filename}")
+    
 
     ydl_opts = {
         "format": "bestaudio/best",
@@ -207,20 +207,20 @@ def download_audio_only(
 
 def download(
         url: str,
-        out_path: str,
+        out_file: str,
         progress_dict: dict,
-        filename: str = "YoutubeVideo"
+        
 ):
     if not url:
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No URL was given for download")
-    if not out_path:
-        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No path to download to was given")
+    if not out_file:
+        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No out file was given")
     if not progress_dict:
         raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No progress dict was given")
 
  
     #identifier = url.replace("https://www.youtube.com/watch?v=", "")
-    out_file = os.path.join(out_path, f"{filename}.mp4")
+
     if os.path.exists(out_file):
         raise YoutubeDownloadError(f"Destination out file {out_file} already exists. No Download has started")
 

@@ -1,7 +1,7 @@
 import urllib.request, urllib.error, urllib.parse
 import re, os
 import time
-from .core import get_html
+from PythonModule.core import get_html
 
 
 class SunoError(Exception): ...
@@ -31,8 +31,6 @@ def search_media(
     if not html:
         raise SunoNotEnoughArguments("No html to search was given")
     
-    if mediatype not in (".mp3", ".mp4", ".wav"):
-        raise SunoInvalidType("Invalid type for media")
     
     if not identifier:
         raise SunoNotEnoughArguments("No identifier was given")
@@ -164,14 +162,14 @@ def download_to_file(
 def download (
         url: str,
         session,
-        out_path: str = os.path.join("downloads"),
+        out_file: str,
         mediatype = ".mp3",
         progress_dict: dict = None,
-        filename: str = "SunoSong"
+        
+        
         
 ):
-    if mediatype not in (".mp3", ".mp4", ".wav"):
-        raise SunoInvalidType(f"invalid type {mediatype}, use .mp3, .mp4 or .wav")
+
     if not url: 
         raise SunoNotEnoughArguments("No url was given!")
     if not session:
@@ -179,7 +177,6 @@ def download (
     if not progress_dict:
         raise SunoNotEnoughArguments("No progress dict was given")
     
-    os.makedirs(out_path, exist_ok=True)
 
     html = get_html(url=url, session=session)
 
@@ -187,7 +184,6 @@ def download (
     identifier = strip
 
     file = search_media(html=html, identifier=identifier, mediatype=mediatype)
-    out_file = os.path.join(out_path, f"{filename}{mediatype}")
     if os.path.exists(out_file):
         raise SunoError(f"Destination out file {out_file} already exists. No Download has started")
 

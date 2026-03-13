@@ -1,26 +1,30 @@
-﻿import sys, time, re, json, uuid
-from datetime import datetime
-import urllib.error, urllib.request
+﻿
+from PythonModule.models.settings import PROGRESSDICT
+from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest
+from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
+from PythonModule import Session
+
+
+
+
 
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-
-import platform
-import subprocess
+import sys, time, re, json, uuid
+from datetime import datetime
 
 
-import os, signal
+import urllib.error, urllib.request
+import platform, subprocess
+
+import os
 import asyncio
 
-#Module imports for scrapping
-from PythonModule import Session, Suno, Youtube, Archive 
 
 
 
 
 #Global Variables
-#Downlaod path
 current_path = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_path)
 
@@ -29,11 +33,6 @@ log_dir = os.path.join(project_root, "LocalServer", "logs")
 log_file = os.path.join(log_dir, "server_runtime.log")
 #Make sure it exists and if it doesn't it will create it
 os.makedirs(log_dir, exist_ok=True)
-
-
-supported_providers = ["suno", "suno.com", "youtube", "youtube.com", "archive", "internetarchive", "archive.org", "internetarchive.org"]
-
-
 
 
 #Session for cookies and stuff which will be used to request ressources
@@ -57,22 +56,7 @@ download_progress = {}
 
 
 
-class CommandRequest(BaseModel):
-    command: str
 
-
-class DownloadRequest(BaseModel):
-    provider: str
-    url: str
-    mediatype: str = ".mp3"
-    filename: str
-    download_path: str = os.path.join(project_root, "downloads")
-    
-
-class SearchRequest(BaseModel):
-    provider: str
-    search: str
-    top: int = 5
 
 class SearchError(Exception): ...
 class CommandError(Exception): ...
@@ -111,20 +95,7 @@ async def logger(
 
 
 #Processes the commands from a user
-async def process_commands(line: str, job_id:str):
-    global quit_event, log_queue, log_file
-    match line.lower():
-        case "quit":
-            
-            with open(log_file, "a", encoding="utf-8") as f:
-                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                f.write(f"[{str(timestamp)}] " + "[INFO] Server shutting down..." + "\n")
 
-            quit_event.set()
-            if os.name == "nt":
-                os._exit(0)
-        case _:
-            raise CommandError("PROCESS_COMMANDS: UNKNOWN COMMAND")
             
 
 
@@ -134,83 +105,11 @@ async def process_commands(line: str, job_id:str):
 #Limits the parralel downloads to 50 at a time, change value for more or less downlaods
 download_limiter = asyncio.Semaphore(50)
 #Starts download from a user
-async def process_downloads(
-        download_request: DownloadRequest,
-        progress_dict: dict
-          ):
-    global ses, supported_providers, log_queue
-    
-    os.makedirs(download_request.download_path, exist_ok=True)
 
-    try:
-        if download_request.provider.lower() not in supported_providers:
-            raise DownloadError(f"Unknown provider {download_request.provider}")
-
-
-        if download_request.provider.lower() in ("suno", "suno.com"):
-            async with download_limiter:
-                await asyncio.to_thread(Suno.download, filename=download_request.filename,session=ses, url=download_request.url, out_path=download_request.download_path,  mediatype=download_request.mediatype, progress_dict=progress_dict)
-                
-
-        elif download_request.provider.lower() in ("youtube", "youtube.com"):
-            async with download_limiter:
-                if download_request.mediatype.lower() == ".mp4":
-                    await asyncio.to_thread(Youtube.download,filename=download_request.filename ,url=download_request.url, out_path=download_request.download_path, progress_dict=progress_dict)
-                else:
-                    await asyncio.to_thread(Youtube.download_audio_only,filename=download_request.filename, url=download_request.url, out_path=download_request.download_path, progress_dict=progress_dict)
-       
-       
-        elif download_request.provider.lower() in ("archive", "archive.org", "internetarchive", "internetarchive.org"):
-            async with download_limiter:
-                await asyncio.to_thread(Archive.download, url=download_request.url, out_path=download_request.download_path, session=ses, progress_dict=progress_dict, mediatype=download_request.mediatype, filename=download_request.filename)
-
-
-
-
-        log_queue.put_nowait(f"[INFO] Successfully completed downloadjob {progress_dict.get('id')}")
-        
-
-              
-            
-
-    except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Failed download for job {progress_dict.get('id')}.\nError Message: {str(e)}")
-        progress_dict["status"] = "error"
-        progress_dict["errorMessage"] = str(e)
-       
         
         
         
 
-async def process_search(search_request: SearchRequest, search_id:str):
-    global ses, supported_providers
-
-    try:
-        if search_request.provider.lower() not in supported_providers:
-            raise SearchError("PROCESS_SEARCH: No supported provider was given")
-
-
-
-
-        if search_request.provider.lower() in ("youtube", "youtube.com"):
-            results = await asyncio.to_thread(Youtube.search, session=ses, search=search_request.search, top=search_request.top)
-        
-        elif search_request.provider.lower() in ("archive" "archive.org"):
-            results = await asyncio.to_thread(Archive.search, searchquery=search_request.search, top=search_request.top, session=ses)
-
-
-        response = {
-                    "provider": search_request.provider,
-                    "query": search_request.search,
-                    "results": results
-                }
-        return response
-    
-
-        
-
-    except Exception as e:
-        raise SearchError(f"SEARCH_ERROR: {str(e)}")
 
 
 
@@ -243,12 +142,19 @@ async def startup_event():
 
 @app.post("/command")
 async def receive_command(data: CommandRequest):
+    global log_file, log_queue, quit_event
     try:
-        task_id = str(uuid.uuid4())
-        response = await process_commands(data.command, task_id)
-        return response
+    
+        await commandProcessor.CommandProcessor(
+            command=data.command,
+            logFile=log_file,
+            logQueue=log_queue,
+            quitEvent=quit_event
+        ).run()
+
     except Exception as e:
         log_queue.put_nowait([f"[ERROR] Error handling command {data.command}.\nError Message: {str(e)}"])
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 
@@ -256,26 +162,40 @@ async def receive_command(data: CommandRequest):
 
 @app.post("/download")
 async def receive_download(data: DownloadRequest):
-    global log_queue, ses
+    global log_queue, ses, download_limiter
     task_id = str(uuid.uuid4())
     try:
         
-        validate_url(session=ses, url=data.url)
+        utils.validate_url(session=ses, url=data.url)
         
         
 
-        download_progress[task_id] = {
-            "id": task_id,
-            "status": "queued",
-            "downloadProgress": 0,
-            "errorMessage": ""
-        }
+        download_progress[task_id] = PROGRESSDICT.copy()
+        download_progress[task_id]['id'] = task_id
 
-        task = asyncio.create_task(process_downloads(data, download_progress[task_id]), name=task_id)
-        task.add_done_callback(lambda t: download_jobs.discard(t))
+        task = asyncio.create_task(downloadProcessor.DownloadProcessor(
+            downloadRequest=data,
+            progressDict=download_progress[task_id],
+            session=ses,
+            downloadLimiter=download_limiter,
+            logQueue=log_queue
+            ).run()
+            ,
+            name=task_id)
+        
+        def done(t: asyncio.Task):
+            download_jobs.discard(t)
+            asyncio.create_task(utils.cleanup_progress(
+                download_progess=download_progress,
+                task_id=task_id,
+                delay=60
+            ))
+
+        task.add_done_callback(done)
         download_jobs.add(task)
-        log_queue.put_nowait(f"[INFO] Created download task with id {task_id} for provider {data.provider} with url {data.url}")
 
+
+        log_queue.put_nowait(f"[INFO] Created download task with id {task_id} for provider {data.provider} with url {data.url}")
         return {"id": task_id, "message": f"Request received for download, you can view progress under /download/progress/{task_id}"}
         
     
@@ -316,11 +236,18 @@ async def get_download_progress(task_id: str):
 
 
 @app.post("/search")
+
 async def receive_search(data: SearchRequest):
+    global ses
     search_id = str(uuid.uuid4())
     try:
         
-        response = await process_search(data, search_id)
+        response = await searchProcessor.SearchProcessor(
+            searchRequest=data,
+            session=ses,
+            ).run()
+        
+
         log_queue.put_nowait(f"[INFO] Search succesfull for job {search_id} with query {data.search} and provider {data.provider}")
         return response
     
@@ -334,28 +261,7 @@ async def receive_search(data: SearchRequest):
 
 
 
-def validate_url(url: str, session):
-    
-    if url.lower().startswith("http://"):
-            raise ValueError("HTTP sites are not supported!")
-    if not url.lower().startswith("https://"):
-        raise Exception("Invalid URL. Given url has to start with https://")
-    request = urllib.request.Request(
-        url,
-        method="GET",
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-    )
-    try:
-        with session.open(request) as response:
-            if response:
-                print(response)
-    
-    except urllib.error.URLError:
-        raise Exception("URL is not valid")
-    except Exception as e:
-        raise Exception(str(e))
+
 
 
 

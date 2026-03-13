@@ -31,14 +31,14 @@ def get_html(
                 chunks.append(chunk)
             
 #the b"" for the join is used so we can python it is Bytes we are dealing with            
-            html = b"".join(chunks).decode("utf-8")
+            html = b"".join(chunks).decode(decode)
             return html
 
     except urllib.error.HTTPError as e:
-        raise urllib.error.HTTPError(f"HTTP Error {e}")
+        raise
     
     except urllib.error.URLError as e:
-        raise urllib.error.URLError(f"URL ERROR {e}")
+        raise
     
     except UnicodeDecodeError:
         raise UnicodeDecodeError(f"Failed to decode with given decode standard {decode}")
