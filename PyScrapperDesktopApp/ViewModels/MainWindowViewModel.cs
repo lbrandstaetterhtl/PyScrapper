@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.Views;
@@ -17,44 +18,16 @@ using PyScrapperDesktopApp.Views;
 namespace PyScrapperDesktopApp.ViewModels;
 
 
-public partial class MainWindowViewModel : INotifyPropertyChanged
+public partial class MainWindowViewModel : ObservableObject
 {
+    [ObservableProperty]
     private ObservableCollection<DownloadedMedia> _downloadedMediaList;
-    
-    private string _healthCheckResult;
-
-    public ObservableCollection<DownloadedMedia> DownloadedMediaList
-    {
-        get => _downloadedMediaList;
-        set
-        {
-            _downloadedMediaList = value;
-            OnPropertyChanged(nameof(DownloadedMediaList));
-        }
-    }
-
-    public string HealthCheckResult
-    {
-        get => _healthCheckResult;
-        set
-        {
-            _healthCheckResult = value;
-            OnPropertyChanged(nameof(HealthCheckResult));
-        }
-    }
 
     public MainWindowViewModel()
     {
         if (Design.IsDesignMode) return;
         
         DownloadedMediaList = AppData.DownloadedMedias;
-    }
-    
-    public event PropertyChangedEventHandler? PropertyChanged;
-    
-    private void OnPropertyChanged(string propertyName)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
     
     [RelayCommand]

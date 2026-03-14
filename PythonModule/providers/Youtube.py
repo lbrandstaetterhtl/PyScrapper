@@ -81,7 +81,7 @@ def search(
         video = videorenderer.get("videoId")
         if not video:
             continue
-        dictionary = {"videoId": video}
+        dictionary = {"identifier": video}
         
 
 

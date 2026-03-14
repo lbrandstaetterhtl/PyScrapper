@@ -2,6 +2,7 @@
 using PyScrapperDesktopApp.Models;
 using Xunit;
 using static PyScrapperDesktopApp.Models.ApiClient;
+using HealthResponse = PyScrapperDesktopApp.Models.HealthResponse;
 
 namespace PyScrapperDesktopApp.Tests.Models;
 
@@ -266,7 +267,7 @@ public class ApiClientDtoTests
         Assert.Equal("test query", response.Query);
         Assert.NotNull(response.Results);
         Assert.Single(response.Results);
-        Assert.Equal("abc123", response.Results[0].videoId);
+        Assert.Equal("abc123", response.Results[0].identifier);
         Assert.Equal("Test Video", response.Results[0].title);
     }
 
@@ -317,8 +318,8 @@ public class ApiClientDtoTests
 
         Assert.NotNull(response);
         Assert.Equal(2, response.Results.Count);
-        Assert.Equal("id1", response.Results[0].videoId);
-        Assert.Equal("id2", response.Results[1].videoId);
+        Assert.Equal("id1", response.Results[0].identifier);
+        Assert.Equal("id2", response.Results[1].identifier);
     }
 
     #endregion
@@ -431,15 +432,15 @@ public class ApiClientDtoTests
     [Fact]
     public void YoutubeVideoItem_Properties_CanBeSetAndRead()
     {
-        var item = new YoutubeVideoItem
+        var item = new SearchResultItem()
         {
-            videoId = "XPwUIDYKHX4",
+            identifier = "XPwUIDYKHX4",
             url = "https://youtube.com/watch?v=XPwUIDYKHX4",
             thumbnail = "https://img.youtube.com/vi/XPwUIDYKHX4/0.jpg",
             title = "Test Video Title"
         };
 
-        Assert.Equal("XPwUIDYKHX4", item.videoId);
+        Assert.Equal("XPwUIDYKHX4", item.identifier);
         Assert.Equal("https://youtube.com/watch?v=XPwUIDYKHX4", item.url);
         Assert.Equal("https://img.youtube.com/vi/XPwUIDYKHX4/0.jpg", item.thumbnail);
         Assert.Equal("Test Video Title", item.title);

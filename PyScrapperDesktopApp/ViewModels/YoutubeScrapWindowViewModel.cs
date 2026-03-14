@@ -6,103 +6,38 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
-public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
+public partial class YoutubeScrapWindowViewModel : ObservableObject
 {
+    [ObservableProperty]
     private string _searchQuery;
 
+    [ObservableProperty]
     private string _searchResultsCount;
 
-    private List<ApiClient.YoutubeVideoItem> _youtubeVideoItems = new();
+    [ObservableProperty]
+    private List<ApiClient.SearchResultItem> _youtubeVideoItems = new();
     
-    private List<ApiClient.YoutubeVideoItem> _selectedYoutubeVideoItem = new();
+    [ObservableProperty]
+    private List<ApiClient.SearchResultItem> _selectedYoutubeVideoItems = new();
     
-    private readonly List<string> _availableMediaType = [".mp3", ".mp4"];
+    [ObservableProperty]
+    private List<string> _availableMediaTypes = [".mp3", ".mp4"];
     
-    private readonly Window _ScrapWindow;
-
-    public List<ApiClient.YoutubeVideoItem> YoutubeVideoItems
-    {
-        get => _youtubeVideoItems;
-        set
-        {
-            if (_youtubeVideoItems != value)
-            {
-                _youtubeVideoItems = value;
-                OnPropertyChanged(nameof(YoutubeVideoItems));
-            }
-        }
-    }
-
-    public List<ApiClient.YoutubeVideoItem> SelectedYoutubeVideoItems
-    {
-        get => _selectedYoutubeVideoItem;
-        set
-        {
-            if (_selectedYoutubeVideoItem != value)
-            {
-                _selectedYoutubeVideoItem = value;
-                OnPropertyChanged(nameof(SelectedYoutubeVideoItems));
-            }
-        }
-    }
-    
-    public string SearchResultsCount
-    {
-        get => _searchResultsCount;
-        set
-        {
-            if (_searchResultsCount != value)
-            {
-                _searchResultsCount = value;
-                OnPropertyChanged(nameof(SearchResultsCount));
-            }
-        }
-    }
-    
-    public string SearchQuery
-    {
-        get => _searchQuery;
-        set
-        {
-            if (_searchQuery != value)
-            {
-                _searchQuery = value;
-                OnPropertyChanged(nameof(SearchQuery));
-            }
-        }
-    }
-    
+    [ObservableProperty]
     private string _selectedMediaType;
     
-    public string SelectedMediaType
-    {
-        get => _selectedMediaType;
-        set
-        {
-            if (_selectedMediaType != value)
-            {
-                _selectedMediaType = value;
-                OnPropertyChanged(nameof(SelectedMediaType));
-            }
-        }
-    }
+    [ObservableProperty]
+    private Window _ScrapWindow;
+    
     
     public RelayCommand CancelCommand { get; set; }
-    
-    public IEnumerable<string> AvailableMediaTypes => _availableMediaType;
-    
-    public event PropertyChangedEventHandler? PropertyChanged;
-    
-    private void OnPropertyChanged(string propertyName)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
     
     public event Action? RequestClose;
     
@@ -122,14 +57,14 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
         
         string serverUrl = "127.0.0.1:8765";
 
-        var requestData = new ApiClient.DownloadRequestData();
+        var requestData = new DownloadRequestData();
 
-        foreach (var item in SelectedYoutubeVideoItems)
+        foreach (var item in _selectedYoutubeVideoItems)
         {
             var inputWindow = new InputWindow($"Enter filename for the video '{item.title}' (without extension):");
             var filename = await inputWindow.ShowDialog<string>(_ScrapWindow);
             
-            requestData = new ApiClient.DownloadRequestData()
+            requestData = new DownloadRequestData()
             {
                 Provider = "youtube",
                 Url = item.url,
@@ -155,11 +90,11 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
                 {
                     var identifier = item.url.Split('=')[^1];
 
-                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{filename}{SelectedMediaType}");
+                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{filename}{_selectedYoutubeVideoItems}");
 
                     bool isPlayable = File.Exists(downloadFilePath);
 
-                    var media = new DownloadedMedia(item.url, SelectedMediaType, DateTime.Now, downloadFilePath,
+                    var media = new DownloadedMedia(item.url, _selectedMediaType, DateTime.Now, downloadFilePath,
                         isPlayable, identifier);
                     media.SetHighestId(AppData.DownloadedMedias);
 
@@ -185,7 +120,7 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
 
         string serverUrl = "127.0.0.1:8765";
 
-        var requestData = new ApiClient.SearchRequestData()
+        var requestData = new SearchRequestData()
         {
             Search = SearchQuery,
             Provider = "youtube",
@@ -210,7 +145,7 @@ public partial class YoutubeScrapWindowViewModel : INotifyPropertyChanged
         foreach (var item in results)
         {
             using var httpClient = new HttpClient();
-            var thumbnailUrl = $"https://i.ytimg.com/vi/{item.videoId}/hqdefault.jpg";
+            var thumbnailUrl = $"https://i.ytimg.com/vi/{item.identifier}/hqdefault.jpg";
 
             var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
             

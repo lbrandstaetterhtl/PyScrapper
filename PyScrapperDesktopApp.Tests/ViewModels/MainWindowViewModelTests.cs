@@ -14,35 +14,6 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void HealthCheckResult_SetGet_Works()
-    {
-        var vm = new MainWindowViewModel();
-
-        vm.HealthCheckResult = "Server is healthy";
-
-        Assert.Equal("Server is healthy", vm.HealthCheckResult);
-    }
-
-    [Fact]
-    public void HealthCheckResult_RaisesPropertyChanged()
-    {
-        var vm = new MainWindowViewModel();
-        var propertyChangedRaised = false;
-        string? changedPropertyName = null;
-
-        vm.PropertyChanged += (sender, args) =>
-        {
-            propertyChangedRaised = true;
-            changedPropertyName = args.PropertyName;
-        };
-
-        vm.HealthCheckResult = "test";
-
-        Assert.True(propertyChangedRaised);
-        Assert.Equal(nameof(vm.HealthCheckResult), changedPropertyName);
-    }
-
-    [Fact]
     public void DownloadedMediaList_SetGet_Works()
     {
         var vm = new MainWindowViewModel();
@@ -70,14 +41,6 @@ public class MainWindowViewModelTests
 
         Assert.True(propertyChangedRaised);
         Assert.Equal(nameof(vm.DownloadedMediaList), changedPropertyName);
-    }
-
-    [Fact]
-    public void HealthCheckResult_InitiallyNull()
-    {
-        var vm = new MainWindowViewModel();
-
-        Assert.Null(vm.HealthCheckResult);
     }
 }
 

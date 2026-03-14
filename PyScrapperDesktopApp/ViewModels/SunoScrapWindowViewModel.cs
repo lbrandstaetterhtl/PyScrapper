@@ -7,66 +7,35 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Xml;
 using Avalonia.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
-public class SunoScrapWindowViewModel : INotifyPropertyChanged
+public partial class SunoScrapWindowViewModel : ObservableObject
 {
+    [ObservableProperty]
     private string _sunoUrl;
+    
     private readonly AppLogger _logger = new();
     
-    private readonly List<string> _availableMediaType = [".mp3", ".mp4"];
+    [ObservableProperty]
+    private List<string> _availableMediaType = [".mp3", ".mp4"];
 
-    private string _selectedMediaTypes;
+    [ObservableProperty]
+    private string _selectedMediaType;
     
-    private readonly Window _ScrapWindow;
+    private Window _ScrapWindow;
 
+    [ObservableProperty]
     private string _filename;
-    
-    public string Filename
-    {
-        get => _filename;
-        set
-        {
-            _filename = value;
-            OnPropertyChanged(nameof(Filename));
-        }
-    }
-
-    public string SunoUrl
-    {
-        get => _sunoUrl;
-        set
-        {
-            _sunoUrl = value;
-            OnPropertyChanged(nameof(SunoUrl));
-        }
-    }
-    
-    public string SelectedMediaType
-    {
-        get => _selectedMediaTypes;
-        set
-        {
-            _selectedMediaTypes = value;
-            OnPropertyChanged(nameof(SelectedMediaType));
-        }
-    }
     
     public RelayCommand ScrapCommand { get; set; }
     public RelayCommand CancelCommand { get; set; }
     
     public IEnumerable<string> AvailableMediaTypes => _availableMediaType;
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-    
-    private void OnPropertyChanged(string propertyName)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
     
     public event Action? RequestClose;
     
@@ -76,12 +45,12 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
         
             string serverUrl = "127.0.0.1:8765";
         
-            var requestData = new ApiClient.DownloadRequestData()
+            var requestData = new DownloadRequestData()
             {
                 Provider = "suno",
-                Url = SunoUrl,
-                Mediatype = SelectedMediaType,
-                Filename = Filename,
+                Url = _sunoUrl,
+                Mediatype = _sunoUrl,
+                Filename = _filename,
                 Download_path = AppData.DownloadPath
             };
         
@@ -100,9 +69,9 @@ public class SunoScrapWindowViewModel : INotifyPropertyChanged
 
                 if (!errorWhileDownloading)
                 {
-                    var identifier = SunoUrl.Split('/')[^1];
+                    var identifier = _sunoUrl.Split('/')[^1];
 
-                    var downloadedFilePath = Path.Combine(AppData.DownloadPath, $"{Filename}{SelectedMediaType}");
+                    var downloadedFilePath = Path.Combine(AppData.DownloadPath, $"{_sunoUrl}{_selectedMediaType}{identifier}.mp3");
 
                     bool isPlayable = File.Exists(downloadedFilePath);
 

@@ -36,7 +36,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     private ObservableCollection<ApiClient.ServerProcess> _processes = new();
     
     [ObservableProperty]
-    private ObservableCollection<ApiClient.DownloadJob> _downloadJobs = new();
+    private ObservableCollection<ApiClient.DownloadJobItem> _downloadJobs = new();
     
     [ObservableProperty]
     private int _downloadsCount;
@@ -90,7 +90,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
                         MemoryFormatted = $"{health.MemoryMb} MB";
                         Pid = health.Pid;
                         Processes = new ObservableCollection<ApiClient.ServerProcess>(health.Processes);
-                        DownloadJobs = new ObservableCollection<ApiClient.DownloadJob>(health.ActiveDownloads);
+                        DownloadJobs = new ObservableCollection<ApiClient.DownloadJobItem>(health.ActiveDownloads);
                         DownloadsCount = health.ActiveDownloads.Count;
                         ErrorMessages = new ObservableCollection<string>(health.ErrorMessages);
                         ErrorsCount = health.ErrorMessages.Count;

@@ -87,7 +87,7 @@ public class ApiClient
         }
     }
     
-    public async Task<List<YoutubeVideoItem>> SendSearchRequest(SearchRequestData requestData, string serverUrl)
+    public async Task<List<SearchResultItem>> SendSearchRequest(SearchRequestData requestData, string serverUrl)
     {
         HttpClient client = new();
 
@@ -103,7 +103,7 @@ public class ApiClient
             var log = new Massage($"Search successful for query: \"{deserializedResponse?.Query}\", found {deserializedResponse?.Results.Count} results", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            return deserializedResponse?.Results ?? new List<YoutubeVideoItem>();
+            return deserializedResponse?.Results ?? new List<SearchResultItem>();
         }
         else
         {
@@ -112,7 +112,7 @@ public class ApiClient
                 "ERROR");
             _logger.LogNewMassage(log);
             
-            return new List<YoutubeVideoItem>();
+            return new List<SearchResultItem>();
         }
     }
     
@@ -156,64 +156,13 @@ public class ApiClient
         }
     }
 
-    public class HealthErrorResponse
-    {
-        [JsonPropertyName("msg")]
-        public string msg { get; set; }
-        
-        [JsonPropertyName("type")]
-        public string type { get; set; }
-    }
-
-    public class DownloadRequestData
-    {
-        [JsonPropertyName("provider")]
-        public string Provider { get; set; }
-        
-        [JsonPropertyName("url")]
-        public string Url { get; set; }
-        
-        [JsonPropertyName("mediatype")]
-        public string Mediatype { get; set; }
-        
-        [JsonPropertyName("filename")]
-        public string Filename { get; set; }
-        
-        [JsonPropertyName("download_path")]
-        public string Download_path { get; set; }
-    }
-
     public class ServerProcess
     {
         public int Pid { get; set; }
         public string Name { get; set; }
     }
 
-    public class HealthResponse
-    {
-        [JsonPropertyName("ok")]
-        public bool Ok { get; set; }
-        
-        [JsonPropertyName("uptime_seconds")]
-        public double UptimeSeconds { get; set; }
-        
-        [JsonPropertyName("memory_mb")]
-        public double MemoryMb { get; set; }
-        
-        [JsonPropertyName("pid")]
-        public int Pid { get; set; }
-        
-        [JsonPropertyName("processes")]
-        public List<ServerProcess> Processes { get; set; }
-        
-        [JsonPropertyName("active_downloads")]
-        public List<DownloadJob> ActiveDownloads { get; set; }
-        
-        [JsonPropertyName("error_messages")]
-        public List<string> ErrorMessages { get; set; }
-    }
-
-    public class DownloadJob
+    public class DownloadJobItem
     {
         [JsonPropertyName("id")]
         public string Id { get; set; }
@@ -227,76 +176,13 @@ public class ApiClient
         [JsonPropertyName("errorMessage")]
         public string ErrorMessage { get; set; }
     }
-    
-    public class SearchRequestData
-    {
-        [JsonPropertyName("provider")]
-        public string Provider { get; set; }
-        
-        [JsonPropertyName("search")]
-        public string Search { get; set; }
-        
-        [JsonPropertyName("top")]
-        public int Top { get; set; }
-    }
 
-    public class YoutubeVideoItem
+    public class SearchResultItem
     {
-        public string videoId { get; set; }
+        public string identifier { get; set; }
         public string url { get; set; }
         public string thumbnail { get; set; }
         public Bitmap ThumbnailBitmap { get; set; }
         public string title { get; set; }
-    }
-
-    public class NormalResponse
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; }
-        
-        [JsonPropertyName("message")]
-        public string Message { get; set; }
-    }
-
-    public class ProgressSuccessResponse
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; }
-        
-        [JsonPropertyName("status")]
-        public string Status { get; set; }
-        
-        [JsonPropertyName("downloadProgress")]
-        public float DownloadProgress { get; set; }
-        
-        [JsonPropertyName("errorMessage")]
-        public string ErrorMessage { get; set; }
-        
-        [JsonPropertyName("totalBytes")]
-        public long TotalBytes { get; set; }
-        
-        [JsonPropertyName("downloadedBytes")]
-        public long DownloadedBytes { get; set; }
-        
-        [JsonPropertyName("speed")]
-        public float Speed { get; set; }
-    }
-    
-    public class SearchSuccessResponse
-    {
-        [JsonPropertyName("provider")]
-        public string Provider { get; set; }
-        
-        [JsonPropertyName("query")]
-        public string Query { get; set; }
-        
-        [JsonPropertyName("results")]
-        public List<YoutubeVideoItem> Results { get; set; }
-    }
-
-    public class HttpErrorResponse
-    {
-        [JsonPropertyName("detail")] 
-        public string Detail { get; set; }
     }
 }

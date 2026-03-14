@@ -79,13 +79,13 @@ public class YoutubeScrapWindowViewModelTests
     public void YoutubeVideoItems_SetGet_Works()
     {
         var vm = CreateVm();
-        var items = new List<YoutubeVideoItem>
+        var items = new List<SearchResultItem>
         {
-            new() { videoId = "abc", title = "Test" }
+            new() { identifier = "abc", title = "Test" }
         };
         vm.YoutubeVideoItems = items;
         Assert.Single(vm.YoutubeVideoItems);
-        Assert.Equal("abc", vm.YoutubeVideoItems[0].videoId);
+        Assert.Equal("abc", vm.YoutubeVideoItems[0].identifier);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class YoutubeScrapWindowViewModelTests
             if (args.PropertyName == nameof(YoutubeScrapWindowViewModel.YoutubeVideoItems))
                 raised = true;
         };
-        vm.YoutubeVideoItems = new List<YoutubeVideoItem>();
+        vm.YoutubeVideoItems = new List<SearchResultItem>();
         Assert.True(raised);
     }
 
@@ -106,9 +106,9 @@ public class YoutubeScrapWindowViewModelTests
     public void SelectedYoutubeVideoItems_SetGet_Works()
     {
         var vm = CreateVm();
-        var items = new List<YoutubeVideoItem>
+        var items = new List<SearchResultItem>
         {
-            new() { videoId = "sel1", title = "Selected" }
+            new() { identifier = "sel1", title = "Selected" }
         };
         vm.SelectedYoutubeVideoItems = items;
         Assert.Single(vm.SelectedYoutubeVideoItems);
