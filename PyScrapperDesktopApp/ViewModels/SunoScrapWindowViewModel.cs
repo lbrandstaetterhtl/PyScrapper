@@ -49,7 +49,7 @@ public partial class SunoScrapWindowViewModel : ObservableObject
             {
                 Provider = "suno",
                 Url = _sunoUrl,
-                Mediatype = _sunoUrl,
+                Mediatype = _selectedMediaType,
                 Filename = _filename,
                 Download_path = AppData.DownloadPath
             };
@@ -71,7 +71,7 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                 {
                     var identifier = _sunoUrl.Split('/')[^1];
 
-                    var downloadedFilePath = Path.Combine(AppData.DownloadPath, $"{_sunoUrl}{_selectedMediaType}{identifier}.mp3");
+                    var downloadedFilePath = Path.Combine(AppData.DownloadPath, $"{_filename}{_selectedMediaType}");
 
                     bool isPlayable = File.Exists(downloadedFilePath);
 

@@ -90,7 +90,7 @@ public partial class YoutubeScrapWindowViewModel : ObservableObject
                 {
                     var identifier = item.url.Split('=')[^1];
 
-                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{filename}{_selectedYoutubeVideoItems}");
+                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{filename}{_selectedMediaType}");
 
                     bool isPlayable = File.Exists(downloadFilePath);
 

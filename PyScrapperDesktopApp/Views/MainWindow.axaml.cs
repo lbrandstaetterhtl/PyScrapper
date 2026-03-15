@@ -23,14 +23,6 @@ public partial class MainWindow : Window
         _vm = new MainWindowViewModel();
         
         DataContext = _vm;
-        
-        Closed += OnClosed;
-    }
-    
-    private void OnClosed(object? sender, EventArgs e)
-    {
-        var jsonFilePath = Path.Combine(AppData.DataPath, "downloadedMedias.json");
-        DownloadedMedia.SaveMediasToJson(AppData.DownloadedMedias, jsonFilePath);
     }
 
     private async void MediaDoubleClick(object? sender, RoutedEventArgs e)

@@ -95,7 +95,7 @@ public partial class App : Application
                 DataContext = new MainWindowViewModel(),
             };
             
-            var medias = DownloadedMedia.GetMediasFromJson(Path.Combine(AppData.DataPath, "downloadedMedias.json"));
+            /*var medias = DownloadedMedia.GetMediasFromJson(Path.Combine(AppData.DataPath, "downloadedMedias.json"));
             
             var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
 
@@ -110,6 +110,33 @@ public partial class App : Application
                 }
             }
 
+            foreach (var media in medias)
+            {
+                if (File.Exists(media.DownloadPath))
+                {
+                    media.IsPlayable = true;
+                }
+                else
+                {
+                    media.IsPlayable = false;
+                    media.DownloadPath = "Does not exist";
+                }
+                
+                AppData.AddDownloadedMedia(media);
+            }*/
+
+            var medias = await DatabaseOperations.LoadDownloadedMedias();
+
+            var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
+            
+            foreach (var mediaToRemove in mediasToRemove)
+            {
+                medias.Remove(mediaToRemove);
+                    
+                log = new Massage($"Media with id {mediaToRemove.Id} removed from the list because it does not exist", DateTime.Now, "WARNING");
+                _logger.LogNewMassage(log);
+            }
+            
             foreach (var media in medias)
             {
                 if (File.Exists(media.DownloadPath))
@@ -192,7 +219,12 @@ public partial class App : Application
 
     private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
-        var log = new Massage("Shutting down local server...", DateTime.Now, "INFO");
+        var log = new Massage("Saving Data...", DateTime.Now, "INFO");
+        _logger.LogNewMassage(log);
+        
+        DatabaseOperations.SaveDownloadedMedias(AppData.DownloadedMedias);
+        
+        log = new Massage("Shutting down local server...", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
         
         RunPsScript("StopServer.ps1");
