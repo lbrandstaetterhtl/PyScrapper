@@ -1,6 +1,6 @@
-
 #Imports
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Optional
 
 import os
 
@@ -25,7 +25,15 @@ class CommandRequest(BaseModel):
 
     
 
+class SearchFilters(BaseModel):
+    creator: Optional[str] = ""
+    tags: Optional[list[str]] = None
+
+
+
 class SearchRequest(BaseModel):
     provider: str
     search: str
     top: int = 5
+    
+    filters: SearchFilters = Field(default_factory=SearchFilters)

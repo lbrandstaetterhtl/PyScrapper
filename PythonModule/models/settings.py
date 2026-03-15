@@ -17,9 +17,16 @@ VALIDSUNONAMES = [
     "suno.com",
     "www.suno.com"
 ]
+VALIDBANDCAMPNAMES = [
+    "bandcamp",
+    "band-camp",
+    "bandcamp.com",
+    "www.bandcamp.cp,"
+]
 
 SUPPORTEDPROVIDERS = {
     'archive': VALIDARCHIVENAMES,
+    'bandcamp' : VALIDBANDCAMPNAMES,
     'youtube': VALIDYOUTUBENAMES,
     'suno': VALIDSUNONAMES
 }
@@ -44,9 +51,14 @@ SUPPORTEDSUNOFILES = [
     "mp3",
     "mp4"
 ]
+SUPPORTEDBANDCAMPFILES = [
+    ".mp3",
+    "mp3"
+]
 
 SUPPORTEDFILES = {
     "archive" : SUPPORTEDARCHIVEFILES,
+    "bandcamp" : SUPPORTEDBANDCAMPFILES,
     "youtube" : SUPPORTEDYOUTUBEFILES,
     "suno" : SUPPORTEDSUNOFILES
 }

@@ -1,4 +1,4 @@
-from PythonModule.providers import Youtube, Suno, Archive
+from PythonModule.providers import Youtube, Suno, Archive, Bandcamp
 from PythonModule.models.requests import DownloadRequest
 from PythonModule.Session import Session
 from . import utils
@@ -88,6 +88,9 @@ class DownloadProcessor():
 
             elif provider == "suno":
                 await self.SunoDownload(out_file)
+            
+            elif provider == "bandcamp":
+                await self.BandCampDownload(out_file)
 
             else:
                 raise Exception("invalid provider was somehow passed")
@@ -163,6 +166,19 @@ class DownloadProcessor():
                 session=self.session,
                 mediatype=self.downloadRequest.mediatype
 
+            )
+    async def BandCampDownload(
+            self,
+            out_file: str
+    ):
+        async with self.downloadLimiter:
+            await asyncio.to_thread(
+                Bandcamp.download,
+                url=self.downloadRequest.url,
+                out_file=out_file,
+                progress_dict=self.progressDict,
+                session=self.session,
+                
             )
 #END OF SUNODOWNLOAD
                 

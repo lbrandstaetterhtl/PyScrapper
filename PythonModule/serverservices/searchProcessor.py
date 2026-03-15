@@ -1,5 +1,5 @@
 
-from PythonModule.providers import Youtube, Suno, Archive
+from PythonModule.providers import Youtube, Suno, Archive, Bandcamp
 from PythonModule.models.requests import SearchRequest
 from PythonModule.Session import Session
 from . import utils
@@ -41,11 +41,20 @@ class SearchProcessor():
                 search= self.searchRequest.search,
                 session=self.session,
                 top=self.searchRequest.top
-
-
             )
+
         elif provider == "suno":
             results = {}
+
+            
+        elif provider == "bandcamp":
+            results = await asyncio.to_thread(
+                Bandcamp.search,
+                search= self.searchRequest.search,
+                filters = self.searchRequest.filters,
+                session = self.session,
+                top = self.searchRequest.top
+            )
 
         response = {
                     "provider": self.searchRequest.provider,
