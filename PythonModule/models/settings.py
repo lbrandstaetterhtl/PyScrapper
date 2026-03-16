@@ -35,7 +35,11 @@ SUPPORTEDARCHIVEFILES = [
     ".mp3",
     ".mp4",
     "mp3",
-    "mp4"
+    "mp4",
+    ".wav",
+    "wav",
+    ".mkv",
+    "mkv"
 ]
 
 SUPPORTEDYOUTUBEFILES = [

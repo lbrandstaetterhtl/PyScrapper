@@ -1,16 +1,23 @@
-import { useState } from "react";
-import type { SearchPanelPropertys, saveResults } from "../models/types";
+import { useState, } from "react";
+import type { SearchPanelPropertys, SearchResult } from "../models/types";
+
 import sendServerRequest from "../fetchRequests/searchRequest";
+import "../../designs/searchPanel.css"
+import { providers, } from "../models/config";
 
 
 
 
 
+type Props = {
+    ifResults: (results: SearchResult[]) => void;
+    
+}
 
 
 
 
-function SearchPanel(props: saveResults)
+function SearchPanel(props: Props)
 {
 //mit setSerachData kann man dann die Values von searchData was aus SearchPanelPropertys besteht ändern
     const [searchData, setSearchData] = useState<SearchPanelPropertys>
@@ -34,24 +41,25 @@ function SearchPanel(props: saveResults)
     }
 
     return (
-        <div>
-            <div>
+        <div className="searchPanel">
+            <div className="searchPanel-searchOptions">
+                <h1>PyScrapper - Finder</h1>
                 <p>Provider</p>
-                <input
-                    type="text"
-                    placeholder="...bandcamp"
-/*value wird dann vom jetztigen State des providers im Textfeld den eingetippsten provider anzeigen */
-                    value={searchData.provider}
-/*onChange ist ein Event wenn das Textfeld geändert wird dann wrid setsearchData aufgerufen und wir ändern den Provider */
-                    onChange={(e) =>
-                        setSearchData
-                        ({
-/*...searchData kopiert uns den aktuellen Status von searchData und dann überschrieben wir provider */
+                <select
+                    onChange={(e) => 
+                        setSearchData({
                             ...searchData,
                             provider: e.target.value
                         })
                     }
-                />
+                >
+                    {providers.map((provider, i) =>(
+                        <option value={provider} key={provider ?? i}>
+                            {provider}
+                        </option>
+                    ))}
+
+                </select>
                 <p>Searchquery</p>
                 <input
                 type="text"
@@ -96,13 +104,16 @@ function SearchPanel(props: saveResults)
                 } 
                 />
                 
-
+                
             </div>
-            <div>
+            <div className="searchPanel-buttons">
                 <button onClick={handleClick}>
                     Start Search
                 </button>
             </div>
+        
+                
+            
         </div>
     )
 }

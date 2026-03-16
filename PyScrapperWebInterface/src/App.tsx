@@ -3,7 +3,10 @@ import SearchPanelResults from "./components/panels/searchPanelResults";
 import DownloadRequestPanel from "./components/panels/dowloadRequestPanel";
 import DownloadProgressPanel from "./components/panels/downloadProgressPanel";
 import type { SearchResult } from "./components/models/types";
+import TextBoxPanel from "./components/panels/textBoxPanel";
+import { HOME_INFO_TEXT } from "./components/models/text/HOME_INFO";
 import { useState} from "react"
+import "./designs/App.css"
 
 function App() {
   const [results, setResults] = useState<any[] | null>(null)
@@ -32,52 +35,58 @@ function App() {
   }
 
   return (
-    <>
-      <div>
-        <h1>PyScrapper Web GUI</h1>
-        <p>Mein erstes React Interface läuft. :D</p>
-        
-        <SearchPanel ifResults={(newResult) =>{
-          setResults(newResult)
-          setActivePanel("results")
-        }
+    
+    <div className="app">
+      <div className="app-shell">
+      <h1>PyScrapper Web GUI</h1>
+      
+      
+      <SearchPanel ifResults={(newResult) =>{
+        setResults(newResult)
+        setActivePanel("results")
+      }
 
 
-        }
-        
+      }
+      
+      />
+
+
+      {results && activePanel === "results" &&(
+        <SearchPanelResults
+          searchResults={results}
+          saveResult={handleSelectResults}
+          
+          />
+      )}
+
+      {selectedResult && activePanel === "request"&&(
+        <DownloadRequestPanel
+        result={selectedResult}
+        onClose={handleCloseRequestPanel}
+        onStartDownload={handleStartDownload}
         />
+      )}
 
+      {downloadProgress && activePanel === "progress" &&(
+        <DownloadProgressPanel
+          responseForDownload={downloadProgress}
+          onClose={handleCloseProgressPanel}
 
-        {results && activePanel === "results" &&(
-          <SearchPanelResults
-           searchResults={results}
-           saveResult={handleSelectResults}
-           
-           />
-        )}
+        />
+      )}
 
-        {selectedResult && activePanel === "request"&&(
-          <DownloadRequestPanel
-          result={selectedResult}
-          onClose={handleCloseRequestPanel}
-          onStartDownload={handleStartDownload}
-          />
-        )}
+      
 
-        {downloadProgress && activePanel === "progress" &&(
-          <DownloadProgressPanel
-            responseForDownload={downloadProgress}
-            onClose={handleCloseProgressPanel}
+      
+      
 
-          />
-        )}
-        
-
-        
-        
-
+      
+      
       </div>
-    </>    
+      <TextBoxPanel message={HOME_INFO_TEXT}/>
+    </div>
+      
       
     
   );

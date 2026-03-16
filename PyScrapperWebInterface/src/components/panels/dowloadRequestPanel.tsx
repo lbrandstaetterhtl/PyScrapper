@@ -1,6 +1,9 @@
 import { useState } from "react"
 import type { downloadRequest, SearchResult } from "../models/types"
+import  { MEDIATYPES }  from "../models/config"
 import sendDownloadRequest from "../fetchRequests/downloadRequest"
+
+import "../../designs/downloadRequestPanel.css"
 
 type Props = {
     result: SearchResult
@@ -31,55 +34,71 @@ function DownloadRequestPanel(props: Props)
     }
     
     return (
-        <div style={{border:"1px solid white", padding:"10px"}}>
-            <div 
-                key={props.result.identifier ?? "Test"}
-                style={{
-                    border: "4px",
-                    borderColor: "pink",
-                    padding: "10px",
-                    marginBottom: "10px",
-                    
-                }}
-                >
+        <div className="downloadRequestPanel">
+
+            <div className="downloadRequestPanel-shell">
+
+                <div className="downloadRequestPanel-header">
+                    <p>{(props.result.provider).toUpperCase()} - {props.result.title}</p>
                     <img
                         src={props.result.thumbnail}
                         alt={props.result.title}
-                        width={300}
-                        height={120}
+                        
                     />
-                <p>{props.result.title}</p>
+
+
+                </div>
+                    
+                <div className="downloadRequestPanel-downloadOptions">
+                    <h3>Download Options</h3>
+                <select onChange={function(e) {
+                    setMediatype(e.target.value)
+                }}
+                >
+
+                {MEDIATYPES[props.result.provider].map((mediatype: string, i) => 
+                (
+                    <option key={mediatype ?? i} value={mediatype}>
+                        {mediatype}
+                    </option>
+                )
+                    
+                    
+                )}
+
+                </select>
+
+                <p>Filename</p>
+                <input
+                    value={filename}
+                    onChange={(e) => setFilename(e.target.value)}
+                />
+                <p>OutPath</p>
+                <input
+                    value={outPath}
+                    onChange={(e)=> setOutPath(e.target.value)}
+                />
+
+                </div>
+                
             </div>
               
 
 
-            <h3>Download Options</h3>
-
-            <p>Mediatype</p>
-            <input 
-                value={mediatype}
-                onChange={(e) => setMediatype(e.target.value)}
-            />
-
-            <p>Filename</p>
-            <input
-                value={filename}
-                onChange={(e) => setFilename(e.target.value)}
-            />
-
-            <p>OutPath</p>
-            <input
-                value={outPath}
-                onChange={(e)=> setOutPath(e.target.value)}
-            />
             
-            <button onClick={handleDownload}>
-                Start Download
-            </button>
 
-            <button onClick={props.onClose}>
-                Cancel
-            </button>
+            
+            <div className="downloadRequestPanel-buttons">
+                <button onClick={handleDownload}>
+                    Start Download
+                </button>
+
+                <button onClick={props.onClose}>
+                    Cancel
+                </button>
+
+            </div>
+            
 
         </div>
     )

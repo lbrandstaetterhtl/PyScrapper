@@ -1,5 +1,5 @@
 import type { SearchResult } from "../models/types";
-
+import "../../designs/searchResultsPanel.css"
 
 
 
@@ -28,48 +28,48 @@ function SearchPanelResults(
 
     return (
         <>
-            <div>
-                <h2> Search Results</h2>
+            <div className="searchResultsPanel">
+                
+                    <h1> Search Results</h1>
 
-                <ul>
-                    
-                    {
-                    props.searchResults.map((result, i) => (
-                    
+                    <ul>
                         
-                            <div 
-                            key={result.identifier ?? i}
-                            style={{
-                                border: "4px",
-                                borderColor: "pink",
-                                padding: "10px",
-                                marginBottom: "10px",
+                        {
+                        props.searchResults.map((result, i) => (
+                        
+                            
+                                <div className="searchResultsPanel-result"
+                                key={result.identifier ?? i}
                                 
-                            }}
-                            >
-                                <img
-                                    src={result.thumbnail}
-                                    alt={result.title}
-                                    width={300}
-                                    height={120}
-                                />
-                                <p>{result.title}</p>
+                                >
+                                    
+                                    <img
+                                        src={result.thumbnail}
+                                        alt={result.title}
+                                        width={300}
+                                        height={120}
+                                    />
+                                    <p>{result.title}</p>
+                                    
 
-                                <button onClick={() => handleSetResults(result)}>
-                                    Select
-        
-                                </button>
-                            </div>
+                                    <div className="searchResultsPanel-buttons">
+                                        <button onClick={() => handleSetResults(result)}>
+                                            Select
+                
+                                        </button>
+                                    </div>
+                                </div>
                             
                             
+                                
+                                
+                            )
                             
                         )
-                        
-                    )
-                    }
+                        }
 
-                    
-                </ul>
+                        
+                    </ul>
                 
             </div>
         </>

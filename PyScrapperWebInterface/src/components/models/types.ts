@@ -1,3 +1,5 @@
+import type { Provider } from "./config"
+
 export type SearchPanelPropertys = {
     provider: string;
     search: string;
@@ -6,9 +8,7 @@ export type SearchPanelPropertys = {
 
 
 
-export type saveResults = {
-    ifResults: (results: SearchResult[]) => void;
-}
+
 
 
 export type downloadRequestResponse = {
@@ -33,11 +33,11 @@ export type SearchResult = {
     url : string;
     thumbnail: string;
     title: string;
-    provider: string;
+    provider: Provider;
 }
 
 export type downloadRequest = {
-    provider: string;
+    provider: Provider;
     url: string;
     mediatype: string;
     filename: string;

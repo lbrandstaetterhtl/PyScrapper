@@ -1,0 +1,17 @@
+.app {
+  min-height: 100vh;
+  padding: 40px;
+  color: white;
+
+  background: linear-gradient(
+    to bottom,
+    #8a1a80,
+    #380d3a,
+    #000000
+  );
+}
+
+.app-shell {
+  max-width: 1000px;
+  margin: auto;
+}
