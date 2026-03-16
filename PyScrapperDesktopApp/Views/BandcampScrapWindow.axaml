@@ -8,13 +8,14 @@
         x:DataType="vm:BandcampScrapWindowViewModel"
         SizeToContent="WidthAndHeight"
         MaxHeight="400"
+        MaxWidth="700"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
         
-        <StackPanel>
+        <Grid RowDefinitions="Auto, *">
                 
-                <Grid Name="SearchGrid">
+                <Grid Grid.Row="0" Name="SearchGrid">
                         <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"></RowDefinition>
                                 <RowDefinition Height="Auto"></RowDefinition>
@@ -38,7 +39,7 @@
                         </StackPanel>
                 </Grid>
                 
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <Grid Name="ResultsGrid" IsVisible="False">
                         <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"></RowDefinition>
@@ -70,6 +71,6 @@
                 </Grid>
                 </ScrollViewer>
                 
-        </StackPanel>
+        </Grid>
         
 </Window>

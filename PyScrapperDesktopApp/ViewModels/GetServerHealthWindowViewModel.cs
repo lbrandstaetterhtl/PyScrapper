@@ -30,7 +30,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     private string _memoryFormatted = "N/A";
 
     [ObservableProperty]
-    private int pid;
+    private int _pid;
     
     [ObservableProperty]
     private ObservableCollection<ApiClient.ServerProcess> _processes = new();

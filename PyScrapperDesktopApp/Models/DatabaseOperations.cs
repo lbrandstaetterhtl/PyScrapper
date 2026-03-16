@@ -29,7 +29,7 @@ public abstract class DatabaseOperations
                     DownloadedAt TEXT,
                     DownloadPath TEXT,
                     IsPlayable BOOLEAN
-                );
+                )STRICT;
                 """;
 
             create.ExecuteNonQuery();
@@ -85,7 +85,7 @@ public abstract class DatabaseOperations
                 DownloadedAt TEXT,
                 DownloadPath TEXT,
                 IsPlayable BOOLEAN
-            );
+            )STRICT;
             """;
 
         create.ExecuteNonQuery();
@@ -133,7 +133,7 @@ public abstract class DatabaseOperations
                 DownloadedAt TEXT,
                 DownloadPath TEXT,
                 IsPlayable BOOLEAN
-            );
+            )STRICT;
             """;
         
         create.ExecuteNonQuery();
