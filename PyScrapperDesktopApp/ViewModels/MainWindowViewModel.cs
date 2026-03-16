@@ -82,4 +82,14 @@ public partial class MainWindowViewModel : ObservableObject
         var youtubeScrapWindow = new Views.YoutubeScrapWindow();
         await youtubeScrapWindow.ShowDialog(desktop.MainWindow);
     }
+
+    [RelayCommand]
+    private async Task OpenBandcampScrapWindow()
+    {
+        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            return;
+
+        var bandcampScrapWindow = new BandcampScrapWindow();
+        await bandcampScrapWindow.ShowDialog(desktop.MainWindow);
+    }
 }

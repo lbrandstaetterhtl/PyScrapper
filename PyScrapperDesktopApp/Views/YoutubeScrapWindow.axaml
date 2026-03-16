@@ -60,7 +60,7 @@
                 
                 <StackPanel Grid.Row="0" Classes="UICell">
                         <TextBlock Text="Select videos to scrap: " Classes="UILabel"/>
-                        <Button Classes="primary" Content="Done" Command="{Binding Scrap}"/>
+                        <Button Classes="primary" Content="Done" Command="{Binding ScrapCommand}"/>
                 </StackPanel>
                 
                 <ListBox Grid.Row="1" SelectionMode="Multiple, Toggle" ItemsSource="{Binding YoutubeVideoItems}" SelectedItems="{Binding SelectedYoutubeVideoItems}">

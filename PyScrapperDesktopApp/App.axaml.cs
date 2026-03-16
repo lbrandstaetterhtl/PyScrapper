@@ -13,6 +13,7 @@ using Avalonia.Markup.Xaml;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 using PyScrapperDesktopApp.Views;
+using Tmds.DBus.Protocol;
 
 namespace PyScrapperDesktopApp;
 
@@ -95,6 +96,9 @@ public partial class App : Application
                 DataContext = new MainWindowViewModel(),
             };
 
+            log = new Massage("Loading Data...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            
             var medias = await DatabaseOperations.LoadDownloadedMediasNoDuplicates();
 
             var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();

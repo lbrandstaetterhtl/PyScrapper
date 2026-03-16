@@ -8,7 +8,6 @@
         x:DataType="vm:BandcampScrapWindowViewModel"
         SizeToContent="WidthAndHeight"
         MaxHeight="400"
-        MaxWidth="600"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
@@ -49,7 +48,7 @@
                         
                         <StackPanel Grid.Row="0" Classes="UICell">
                                 <TextBlock Text="Select videos to scrap: " Classes="UILabel"/>
-                                <Button Classes="primary" Content="Done" Command="{Binding Scrap}"/>
+                                <Button Classes="primary" Content="Done" Command="{Binding ScrapCommand}"/>
                         </StackPanel>
                         
                         <ListBox Grid.Row="1" SelectionMode="Multiple, Toggle" ItemsSource="{Binding Items}" SelectedItems="{Binding SelectedItems}">

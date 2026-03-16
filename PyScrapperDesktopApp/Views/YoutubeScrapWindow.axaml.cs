@@ -13,7 +13,7 @@ public partial class YoutubeScrapWindow : Window
 {
     private YoutubeScrapWindowViewModel? _vm;
     
-    public  YoutubeScrapWindow()
+    public YoutubeScrapWindow()
     {
         if (Design.IsDesignMode) return;
         

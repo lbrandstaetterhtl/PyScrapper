@@ -26,6 +26,7 @@
             <MenuItem Header="Scrap">
                 <MenuItem Header="From Suno" Command="{Binding OpenSunoScrapWindowCommand}"/>
                 <MenuItem Header="From Youtube" Command="{Binding OpenYoutubeScrapWindowCommand}"/>
+                <MenuItem Header="From Bandcamp" Command="{Binding OpenBandcampScrapWindowCommand}"/>
             </MenuItem>
             <MenuItem Header="Open Media Player" Command="{Binding OpenMediaPlayerWindow}"/>
             <MenuItem Header="Server">
