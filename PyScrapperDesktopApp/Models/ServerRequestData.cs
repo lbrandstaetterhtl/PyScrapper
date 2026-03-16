@@ -20,8 +20,6 @@ public class DownloadRequestData
     public string Download_path { get; set; }
 }
 
-
-    
 public class SearchRequestData
 {
     [JsonPropertyName("provider")]

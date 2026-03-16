@@ -1,0 +1,76 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="PyScrapperDesktopApp.Views.BandcampScrapWindow"
+        x:DataType="vm:BandcampScrapWindowViewModel"
+        SizeToContent="WidthAndHeight"
+        MaxHeight="400"
+        MaxWidth="600"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/PyScrapperLogo.ico"
+        Title="PyScrapperDesktopApp">
+        
+        <StackPanel>
+                
+                <Grid Name="SearchGrid">
+                        <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"></RowDefinition>
+                                <RowDefinition Height="Auto"></RowDefinition>
+                                <RowDefinition Height="Auto"></RowDefinition>
+                                <RowDefinition Height="*"></RowDefinition>
+                        </Grid.RowDefinitions>
+                
+                        <StackPanel Grid.Row="0" Classes="UICell">
+                                <TextBlock Text="Enter Query: " Classes="UILabel"/>
+                                <TextBox Classes="UI" Text="{Binding SearchQuery}"/>
+                        </StackPanel>
+                
+                        <StackPanel Grid.Row="1" Classes="UICell">
+                                <TextBlock Text="Search results: " Classes="UILabel"/>
+                                <NumericUpDown Minimum="1" Value="1" Maximum="25" AllowSpin="True" FormatString="0" Text="{Binding SearchResultsCount}"/>
+                        </StackPanel>
+                
+                        <StackPanel Margin="5" Grid.Row="3" Classes="UICell">
+                                <Button Classes="primary" x:Name="EnterButton" Content="Search"/>
+                                <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
+                        </StackPanel>
+                </Grid>
+                
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid Name="ResultsGrid" IsVisible="False">
+                        <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"></RowDefinition>
+                                <RowDefinition Height="*"></RowDefinition>
+                                <RowDefinition Height="Auto"></RowDefinition>
+                        </Grid.RowDefinitions>
+                        
+                        <StackPanel Grid.Row="0" Classes="UICell">
+                                <TextBlock Text="Select videos to scrap: " Classes="UILabel"/>
+                                <Button Classes="primary" Content="Done" Command="{Binding Scrap}"/>
+                        </StackPanel>
+                        
+                        <ListBox Grid.Row="1" SelectionMode="Multiple, Toggle" ItemsSource="{Binding Items}" SelectedItems="{Binding SelectedItems}">
+                                <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <Image Stretch="Uniform" MaxHeight="100" MaxWidth="200" Source="{Binding ThumbnailBitmap}"/>
+                                                        <TextBlock Text="{Binding title}" Classes="UIValue"/>
+                                                        <TextBlock Text="{Binding url}" Classes="UIValue"/>
+                                                </StackPanel>
+                                        </DataTemplate>
+                                </ListBox.ItemTemplate>
+                        </ListBox>
+                        
+                        <StackPanel Margin="5" Grid.Row="2" Classes="UICell">
+                                <Button Classes="primary" Name="BackToSearch" Content="Back"/>
+                        </StackPanel>
+                        
+                </Grid>
+                </ScrollViewer>
+                
+        </StackPanel>
+        
+</Window>

@@ -36,7 +36,6 @@ public partial class YoutubeScrapWindowViewModel : ObservableObject
     [ObservableProperty]
     private Window _ScrapWindow;
     
-    
     public RelayCommand CancelCommand { get; set; }
     
     public event Action? RequestClose;

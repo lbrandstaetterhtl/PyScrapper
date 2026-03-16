@@ -1,18 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 
 namespace PyScrapperDesktopApp.Models;
 
-public class DatabaseOperations
+public abstract class DatabaseOperations
 {
-    private static string DatabaseFilePath = AppData.DataPath + @"\Data.sqlite";
+    private static readonly string DatabaseFilePath = AppData.DataPath + @"\Data.sqlite";
     
     static readonly SqliteConnection Connection = new($"Data Source={DatabaseFilePath}");
     
-    public static Task SaveDownloadedMedias(ObservableCollection<DownloadedMedia> downloadedMedias)
+    public static void SaveDownloadedMedias(ObservableCollection<DownloadedMedia> downloadedMedias)
     {
         try
         {
@@ -59,12 +58,12 @@ public class DatabaseOperations
             }
             
             Connection.Close();
-
-            return Task.CompletedTask;
         }
         catch (Exception exception)
         {
-            return Task.FromException(exception);
+            var logger = new AppLogger();
+            var log = new Massage("Error while saving downloaded medias to database: " + exception.Message, DateTime.Now, "ERROR");
+            logger.LogNewMassage(log);
         }
     }
     
@@ -142,7 +141,7 @@ public class DatabaseOperations
         var select = Connection.CreateCommand();
         select.CommandText = "SELECT DISTINCT Id, Identifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias GROUP BY Identifier;";
         
-        using var reader = select.ExecuteReader();
+        await using var reader = await select.ExecuteReaderAsync();
         while (reader.Read())
         {
             var media = new DownloadedMedia(
