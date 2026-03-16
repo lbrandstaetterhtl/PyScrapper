@@ -229,7 +229,6 @@ def download(
 #bv = best video, ba = best audio
         "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "outtmpl": out_file,
-        "restrictfilenames": True,
         "merge_output_format": "mp4",
         "progress_hooks": [build_progress_hook(progress_dict)],
         "postprocessors": [{
