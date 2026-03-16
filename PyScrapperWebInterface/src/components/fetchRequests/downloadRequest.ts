@@ -17,6 +17,10 @@ async function sendDownloadRequest(downloadRequest: downloadRequest)
 
             console.log("Sucessful download request", response)
 
+        const data = await response.json()
+        console.log("successfull download request", data)
+        return data
+
 
     }
     catch (error){

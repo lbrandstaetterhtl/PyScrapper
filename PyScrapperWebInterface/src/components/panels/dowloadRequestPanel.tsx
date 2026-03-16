@@ -5,6 +5,7 @@ import sendDownloadRequest from "../fetchRequests/downloadRequest"
 type Props = {
     result: SearchResult
     onClose: () => void
+    onStartDownload: (response: any) => void
 }
 
 function DownloadRequestPanel(props: Props)
@@ -24,13 +25,33 @@ function DownloadRequestPanel(props: Props)
             download_path: outPath
         }
 
-        await sendDownloadRequest(request)
+        const response = await sendDownloadRequest(request)
 
-        props.onClose()
+        props.onStartDownload(response)
     }
-
+    
     return (
         <div style={{border:"1px solid white", padding:"10px"}}>
+            <div 
+                key={props.result.identifier ?? "Test"}
+                style={{
+                    border: "4px",
+                    borderColor: "pink",
+                    padding: "10px",
+                    marginBottom: "10px",
+                    
+                }}
+                >
+                    <img
+                        src={props.result.thumbnail}
+                        alt={props.result.title}
+                        width={300}
+                        height={120}
+                    />
+                <p>{props.result.title}</p>
+            </div>
+              
+
 
             <h3>Download Options</h3>
 
@@ -51,7 +72,7 @@ function DownloadRequestPanel(props: Props)
                 value={outPath}
                 onChange={(e)=> setOutPath(e.target.value)}
             />
-
+            
             <button onClick={handleDownload}>
                 Start Download
             </button>

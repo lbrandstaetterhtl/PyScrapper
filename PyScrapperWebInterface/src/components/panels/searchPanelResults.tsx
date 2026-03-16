@@ -1,10 +1,11 @@
 import type { SearchResult } from "../models/types";
-import DownloadRequestPanel from "./dowloadRequestPanel";
-import { useState } from "react";
+
+
 
 
 type Props = {
     searchResults: SearchResult[]
+    saveResult: (result: any) => void
 }
 
 
@@ -13,7 +14,17 @@ function SearchPanelResults(
     props: Props
 )
 {
-    const  [selectedResult, setSelectedResult] = useState<SearchResult | null>(null)
+
+
+    
+
+    function handleSetResults(result:any){
+       
+        props.saveResult(result)
+
+
+
+    }
 
     return (
         <>
@@ -29,9 +40,11 @@ function SearchPanelResults(
                             <div 
                             key={result.identifier ?? i}
                             style={{
-                                border: "1px pink",
+                                border: "4px",
+                                borderColor: "pink",
                                 padding: "10px",
-                                marginBottom: "10px"
+                                marginBottom: "10px",
+                                
                             }}
                             >
                                 <img
@@ -42,8 +55,9 @@ function SearchPanelResults(
                                 />
                                 <p>{result.title}</p>
 
-                                <button onClick={() => setSelectedResult(result)}>
-                                    Download
+                                <button onClick={() => handleSetResults(result)}>
+                                    Select
+        
                                 </button>
                             </div>
                             
@@ -54,12 +68,7 @@ function SearchPanelResults(
                     )
                     }
 
-                    {selectedResult && (
-                        <DownloadRequestPanel
-                            result={selectedResult}
-                            onClose={() => setSelectedResult(null)}
-                        />
-                    )}
+                    
                 </ul>
                 
             </div>

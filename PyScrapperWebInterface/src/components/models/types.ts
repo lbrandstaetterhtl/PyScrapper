@@ -11,6 +11,22 @@ export type saveResults = {
 }
 
 
+export type downloadRequestResponse = {
+    id: string;
+    message: string;
+}
+
+export type downloadProgressResponse = {
+    id: string;
+    status: string;
+    downloadProgress: number;
+    errorMessage: string;
+    totalBytes: number;
+    downloadedBytes: number;
+    speed: number;
+    eta: number;
+}
+
 
 export type SearchResult = {
     identifier? : string;
