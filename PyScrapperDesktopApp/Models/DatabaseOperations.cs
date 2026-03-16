@@ -10,36 +10,38 @@ public class DatabaseOperations
 {
     private static string DatabaseFilePath = AppData.DataPath + @"\Data.sqlite";
     
-    static SqliteConnection _connection = new($"Data Source={DatabaseFilePath}");
+    static readonly SqliteConnection Connection = new($"Data Source={DatabaseFilePath}");
     
-    public static async Task SaveDownloadedMedias(ObservableCollection<DownloadedMedia> downloadedMedias)
+    public static Task SaveDownloadedMedias(ObservableCollection<DownloadedMedia> downloadedMedias)
     {
-        _connection.Open();
+        try
+        {
+            Connection.Open();
         
-        var create = _connection.CreateCommand();
+            var create = Connection.CreateCommand();
         
-        create.CommandText =
-            """
-            CREATE TABLE IF NOT EXISTS DownloadedMedias (
-                Id INTEGER PRIMARY KEY,
-                Identifier TEXT,
-                Url TEXT,
-                MediaType TEXT,
-                DownloadedAt TEXT,
-                DownloadPath TEXT,
-                IsPlayable BOOLEAN
-            );
-            """;
+            create.CommandText =
+                """
+                CREATE TABLE IF NOT EXISTS DownloadedMedias (
+                    Id INTEGER PRIMARY KEY,
+                    Identifier TEXT,
+                    Url TEXT,
+                    MediaType TEXT,
+                    DownloadedAt TEXT,
+                    DownloadPath TEXT,
+                    IsPlayable BOOLEAN
+                );
+                """;
 
             create.ExecuteNonQuery();
             
-            var delete = _connection.CreateCommand();
+            var delete = Connection.CreateCommand();
             delete.CommandText = "DELETE FROM DownloadedMedias;";
             delete.ExecuteNonQuery();
             
             foreach (var media in downloadedMedias)
             {
-                var insert = _connection.CreateCommand();
+                var insert = Connection.CreateCommand();
                 insert.CommandText =
                     """
                     INSERT INTO DownloadedMedias (Id, Identifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable)
@@ -55,15 +57,24 @@ public class DatabaseOperations
                 
                 insert.ExecuteNonQuery();
             }
+            
+            Connection.Close();
+
+            return Task.CompletedTask;
+        }
+        catch (Exception exception)
+        {
+            return Task.FromException(exception);
+        }
     }
     
     public static async Task<ObservableCollection<DownloadedMedia>> LoadDownloadedMedias()
     {
         var downloadedMedias = new ObservableCollection<DownloadedMedia>();
         
-        _connection.Open();
+        Connection.Open();
         
-        var create = _connection.CreateCommand();
+        var create = Connection.CreateCommand();
         
         create.CommandText =
             """
@@ -80,29 +91,79 @@ public class DatabaseOperations
 
         create.ExecuteNonQuery();
         
-        var select = _connection.CreateCommand();
+        var select = Connection.CreateCommand();
         select.CommandText = "SELECT Id, Identifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias;";
-        
-        using (var reader = select.ExecuteReader())
-        {
-            while (reader.Read())
-            {
-                var media = new DownloadedMedia(
-                    reader.GetString(2), // Url
-                    reader.GetString(3), // MediaType
-                    DateTime.Parse(reader.GetString(4)), // DownloadedAt
-                    reader.GetString(5), // DownloadPath
-                    reader.GetBoolean(6), // IsPlayable
-                    reader.GetString(1) // Identifier
-                )
-                {
-                    Id = reader.GetInt32(0) // Id
-                };
-                
-                downloadedMedias.Add(media);
-            }
-        }
 
+        await using var reader = await select.ExecuteReaderAsync();
+        while (reader.Read())
+        {
+            var media = new DownloadedMedia(
+                reader.GetString(2), // Url
+                reader.GetString(3), // MediaType
+                DateTime.Parse(reader.GetString(4)), // DownloadedAt
+                reader.GetString(5), // DownloadPath
+                reader.GetBoolean(6), // IsPlayable
+                reader.GetString(1) // Identifier
+            )
+            {
+                Id = reader.GetInt32(0) // Id
+            };
+                
+            downloadedMedias.Add(media);
+        }
+        
+        Connection.Close();
         return downloadedMedias;
     }
+
+    public static async Task<ObservableCollection<DownloadedMedia>> LoadDownloadedMediasNoDuplicates()
+    {
+        var medias = new ObservableCollection<DownloadedMedia>();
+        
+        Connection.Open();
+        
+        var create = Connection.CreateCommand();
+        
+        create.CommandText =
+            """
+            CREATE TABLE IF NOT EXISTS DownloadedMedias (
+                Id INTEGER PRIMARY KEY,
+                Identifier TEXT,
+                Url TEXT,
+                MediaType TEXT,
+                DownloadedAt TEXT,
+                DownloadPath TEXT,
+                IsPlayable BOOLEAN
+            );
+            """;
+        
+        create.ExecuteNonQuery();
+        
+        var select = Connection.CreateCommand();
+        select.CommandText = "SELECT DISTINCT Id, Identifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias GROUP BY Identifier;";
+        
+        using var reader = select.ExecuteReader();
+        while (reader.Read())
+        {
+            var media = new DownloadedMedia(
+                reader.GetString(2), // Url
+                reader.GetString(3), // MediaType
+                DateTime.Parse(reader.GetString(4)), // DownloadedAt
+                reader.GetString(5), // DownloadPath
+                reader.GetBoolean(6), // IsPlayable
+                reader.GetString(1) // Identifier
+            )
+            {
+                Id = reader.GetInt32(0) // Id
+            };
+            
+            medias.Add(media);
+        }
+
+        Connection.Close();
+        
+        return medias;
+    }
+    
+    
 }

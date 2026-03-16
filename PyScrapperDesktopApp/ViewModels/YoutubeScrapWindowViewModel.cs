@@ -59,7 +59,7 @@ public partial class YoutubeScrapWindowViewModel : ObservableObject
 
         var requestData = new DownloadRequestData();
 
-        foreach (var item in _selectedYoutubeVideoItems)
+        foreach (var item in SelectedYoutubeVideoItems)
         {
             var inputWindow = new InputWindow($"Enter filename for the video '{item.title}' (without extension):");
             var filename = await inputWindow.ShowDialog<string>(_ScrapWindow);
@@ -90,11 +90,11 @@ public partial class YoutubeScrapWindowViewModel : ObservableObject
                 {
                     var identifier = item.url.Split('=')[^1];
 
-                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{filename}{_selectedMediaType}");
+                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{filename}{SelectedMediaType}");
 
                     bool isPlayable = File.Exists(downloadFilePath);
 
-                    var media = new DownloadedMedia(item.url, _selectedMediaType, DateTime.Now, downloadFilePath,
+                    var media = new DownloadedMedia(item.url, SelectedMediaType, DateTime.Now, downloadFilePath,
                         isPlayable, identifier);
                     media.SetHighestId(AppData.DownloadedMedias);
 

@@ -19,9 +19,6 @@ public partial class SunoScrapWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _sunoUrl;
     
-    private readonly AppLogger _logger = new();
-    
-    [ObservableProperty]
     private List<string> _availableMediaType = [".mp3", ".mp4"];
 
     [ObservableProperty]
@@ -31,15 +28,14 @@ public partial class SunoScrapWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private string _filename;
-    
-    public RelayCommand ScrapCommand { get; set; }
     public RelayCommand CancelCommand { get; set; }
     
     public IEnumerable<string> AvailableMediaTypes => _availableMediaType;
     
     public event Action? RequestClose;
     
-    private async void Scrap()
+    [RelayCommand]
+    private async Task Scrap()
     {
             ApiClient client = new();
         
@@ -48,9 +44,9 @@ public partial class SunoScrapWindowViewModel : ObservableObject
             var requestData = new DownloadRequestData()
             {
                 Provider = "suno",
-                Url = _sunoUrl,
-                Mediatype = _selectedMediaType,
-                Filename = _filename,
+                Url = SunoUrl,
+                Mediatype = SelectedMediaType,
+                Filename = Filename,
                 Download_path = AppData.DownloadPath
             };
         
@@ -69,9 +65,9 @@ public partial class SunoScrapWindowViewModel : ObservableObject
 
                 if (!errorWhileDownloading)
                 {
-                    var identifier = _sunoUrl.Split('/')[^1];
+                    var identifier = SunoUrl.Split('/')[^1];
 
-                    var downloadedFilePath = Path.Combine(AppData.DownloadPath, $"{_filename}{_selectedMediaType}");
+                    var downloadedFilePath = Path.Combine(AppData.DownloadPath, $"{Filename}{SelectedMediaType}");
 
                     bool isPlayable = File.Exists(downloadedFilePath);
 
@@ -96,8 +92,6 @@ public partial class SunoScrapWindowViewModel : ObservableObject
         if (Design.IsDesignMode) return;
         
         _ScrapWindow = scrapWindow;
-    
-        ScrapCommand = new RelayCommand(Scrap);
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke());
     }
 }

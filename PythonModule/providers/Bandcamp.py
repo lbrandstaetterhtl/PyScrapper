@@ -98,7 +98,7 @@ def get_searchResults(
             searchBlock=track
         )
         titel_pattern = r'<div class="heading">.*?<a.*?>(.*?)</a>'
-        dictionary["title"] = searchBlocks(
+        dictionary['title'] = searchBlocks(
             pattern=titel_pattern,
             searchBlock=track
         )

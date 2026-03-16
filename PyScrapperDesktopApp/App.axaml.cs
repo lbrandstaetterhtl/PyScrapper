@@ -94,38 +94,8 @@ public partial class App : Application
             {
                 DataContext = new MainWindowViewModel(),
             };
-            
-            /*var medias = DownloadedMedia.GetMediasFromJson(Path.Combine(AppData.DataPath, "downloadedMedias.json"));
-            
-            var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
 
-            if (mediasToRemove.Any())
-            {
-                foreach (var mediaToRemove in mediasToRemove)
-                {
-                    medias.Remove(mediaToRemove);
-                    
-                     log = new Massage($"Media with id {mediaToRemove.Id} removed from the list because it does not exist", DateTime.Now, "WARNING");
-                    _logger.LogNewMassage(log);
-                }
-            }
-
-            foreach (var media in medias)
-            {
-                if (File.Exists(media.DownloadPath))
-                {
-                    media.IsPlayable = true;
-                }
-                else
-                {
-                    media.IsPlayable = false;
-                    media.DownloadPath = "Does not exist";
-                }
-                
-                AppData.AddDownloadedMedia(media);
-            }*/
-
-            var medias = await DatabaseOperations.LoadDownloadedMedias();
+            var medias = await DatabaseOperations.LoadDownloadedMediasNoDuplicates();
 
             var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
             
@@ -170,11 +140,6 @@ public partial class App : Application
         }
     }
     
-    /// <summary>
-    /// Finds the repo root by walking up from the exe directory until a folder
-    /// containing "LocalServer" is found. Works from any build output location
-    /// or if the exe is copied elsewhere — as long as it stays inside the repo.
-    /// </summary>
     private static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -188,8 +153,6 @@ public partial class App : Application
             "Could not locate repo root (no 'LocalServer' folder found in any parent directory).");
     }
 
-    /// <param name="scriptFile">Script filename only (e.g. "StartServer.ps1")</param>
-    /// <param name="wait">If true, blocks until the script finishes.</param>
     private void RunPsScript(string scriptFile, bool wait = false)
     {
         var repoRoot = FindRepoRoot();
@@ -208,8 +171,6 @@ public partial class App : Application
         var p = new Process { StartInfo = psi };
         p.Start();
 
-        // Drain stdout/stderr asynchronously so the child process never
-        // blocks on a full pipe buffer (classic deadlock cause).
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
 

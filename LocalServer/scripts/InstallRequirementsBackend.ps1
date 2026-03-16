@@ -41,5 +41,8 @@ if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
 }
 else {
+  $env:NODE_NO_WARNINGS = "1"
+  playwright install 2>&1 | Out-File -Append -FilePath $LogFile -Encoding UTF8
+  Remove-Item Env:\NODE_NO_WARNINGS
   Write-Log "Requirements installed successfully."
 }

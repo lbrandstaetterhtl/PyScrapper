@@ -69,8 +69,6 @@ public class ProgressSuccessResponse
     public float Speed { get; set; }
 }
 
-
-    
 public class SearchSuccessResponse
 {
     [JsonPropertyName("provider")]
