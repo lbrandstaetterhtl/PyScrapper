@@ -79,7 +79,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
         
-        var youtubeScrapWindow = new Views.YoutubeScrapWindow();
+        var youtubeScrapWindow = new ScrapWindowWithSearch("youtube");
         await youtubeScrapWindow.ShowDialog(desktop.MainWindow);
     }
 
@@ -89,7 +89,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
 
-        var bandcampScrapWindow = new BandcampScrapWindow();
+        var bandcampScrapWindow = new ScrapWindowWithSearch("bandcamp");
         await bandcampScrapWindow.ShowDialog(desktop.MainWindow);
     }
 }
