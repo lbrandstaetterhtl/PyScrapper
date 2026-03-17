@@ -22,7 +22,7 @@ function SearchPanel(props: Props)
 //mit setSerachData kann man dann die Values von searchData was aus SearchPanelPropertys besteht ändern
     const [searchData, setSearchData] = useState<SearchPanelPropertys>
     ({
-        provider: "",
+        provider: providers[0] ?? "",
         search: "",
         top: 5
     })
