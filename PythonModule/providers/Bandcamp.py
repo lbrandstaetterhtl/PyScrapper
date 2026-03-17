@@ -48,12 +48,14 @@ def build_search_url(
         filters: SearchFilters
 ):
     if not isinstance(filters, SearchFilters): raise ValueError("'filters' must be from Type SearchFilters")
-    
-    base_url = "https://bandcamp.com/search?q="
-    search_url = base_url + urllib.parse.quote(search)
+    params = {
+        "q" : search,
+        "item_type" : "t"
+    }
 
-    if isinstance(filters.creator, str) and filters.creator:
-        search_url = search_url + urllib.parse.quote(filters.creator)
+    base_url = "https://bandcamp.com/search?"
+    search_url = base_url + urllib.parse.urlencode(params)
+    
 
     return search_url
 
@@ -155,7 +157,10 @@ def download(
         pattern=streamurl_pattern,
         searchBlock=html
     )
-    
+    if not streamingUrl:
+        raise ValueError(f"No streaming URL was found, can't download with given url {url}")
+
+
     embeddedplayer_pattern = r'<meta property="og:video".*?content="(https://bandcamp.com/EmbeddedPlayer.*?)">'
     embeddedPlayerUrl = searchBlocks(
         pattern=embeddedplayer_pattern,
@@ -244,6 +249,7 @@ def download_to_file(
 
     except urllib.error.HTTPError as e:
         if e.code == 403 and retry == True:
+            progress_dict['status'] == "EMERGENCY ERROR 403, TRYING EMERGENCY BROWSER !!!"
             print("Trying the emergency Browser")
             BrowserButtonPress(url=embeddedPlayerUrl, button_name="#big_play_button")
             download_to_file(

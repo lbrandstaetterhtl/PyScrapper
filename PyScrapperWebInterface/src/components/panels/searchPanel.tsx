@@ -77,7 +77,7 @@ function SearchPanel(props: Props)
                 <input
 /*Mit type sagen wir hier das nur Zahlen erlaubt sind und wir bekommen dadurch pfeile womit man hoch und runter setzen kann */                
                 type="number" 
-                max="10"
+                max="25"
                 min="1"
                 value={searchData.top}
                 onChange={(e) =>
