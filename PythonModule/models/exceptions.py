@@ -60,5 +60,17 @@ class CommandError(Exception):
 
         )
         super().__init__(exceptionMessage)
+
+class UnsupportedURL(Exception):
+    def __init__(
+            self,
+            url: str,
+            supported: list
+    ): 
+        exceptionMessage = (
+            f"Given URL is not supported for download. Provided URL: {url}"
+            f"Following URL types are supported: {', '.join(supported)}"
+        )
+        super().__init__(exceptionMessage)
     
     

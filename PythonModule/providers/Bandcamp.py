@@ -1,10 +1,12 @@
-import urllib.parse, urllib.request, urllib.error
-from PythonModule.core import get_html
-from PythonModule.models.requests import SearchFilters
-import re
-import time
-from html import unescape
 from PythonModule.emergencyBrowser import BrowserButtonPress
+import PythonModule.core as core
+from PythonModule.models.requests import SearchFilters
+from PythonModule.models.exceptions import InvalidURL
+import urllib.parse, urllib.request, urllib.error
+import re
+
+
+
 
 def search(
         search: str,
@@ -19,21 +21,24 @@ def search(
     
     
     
-    search_url = build_search_url(
+    searchURL = build_search_url(
         search=search,
-        filters=filters
-    )
-
-    html = get_html(
-        url=search_url,
-        session=session
     )
 
     
+    html = core.get_html(
+        url=searchURL,
+        session=session
+    )
+         
+    
 
-    results =get_searchResults(
+    
+    
+    results= get_searchResults(
         html=html,
-        top=top   
+        top=top,
+        filters=filters   
     )
 
     return results
@@ -45,19 +50,20 @@ def search(
 
 def build_search_url(
         search: str,
-        filters: SearchFilters
-):
-    if not isinstance(filters, SearchFilters): raise ValueError("'filters' must be from Type SearchFilters")
-    params = {
-        "q" : search,
-        "item_type" : "t"
-    }
-
-    base_url = "https://bandcamp.com/search?"
-    search_url = base_url + urllib.parse.urlencode(params)
+        
+) -> list[str]:
     
+   
+    
+    base_url = "https://bandcamp.com/search?"
 
-    return search_url
+    
+    params = {
+        "q" : search
+    }
+    searchURL = base_url + urllib.parse.urlencode(params)
+    return searchURL
+    
 
 
 
@@ -65,7 +71,8 @@ def build_search_url(
 
 def get_searchResults(
         html: str,
-        top: int
+        top: int,
+        filters: SearchFilters
         
 )-> list[dict]:
     if not isinstance(html, str): raise ValueError("Please provide html to search")
@@ -81,6 +88,8 @@ def get_searchResults(
         pattern=result_items_pattern,
         searchBlock=html
     )
+    if allTracks is None:
+        raise ValueError("Didn't find tracks with given html")
 
 
     tracks = re.findall(
@@ -89,38 +98,77 @@ def get_searchResults(
         re.DOTALL
     )
     
+    
 
-
-    for track in tracks[:top]:
-        dictionary = {}
-        thumbnail_pattern = r'<img src="(.*?)">'
-
-        dictionary['thumbnail'] = searchBlocks(
-            pattern=thumbnail_pattern,
-            searchBlock=track
-        )
-        titel_pattern = r'<div class="heading">.*?<a.*?>(.*?)</a>'
-        dictionary['title'] = searchBlocks(
-            pattern=titel_pattern,
-            searchBlock=track
-        )
-
-        url_pattern = r'<div class="heading">.*?<a href="(.*?)"'
-        dictionary['url'] = searchBlocks(
-            pattern=url_pattern,
-            searchBlock=track
-        )
-
-        results.append(dictionary)
+    for track in tracks:
+        if len(results) >= top:
+            break
+        type_pattern = r'data-search=.*?(?:&quot;|")type(?:&quot;|")\s*:\s*(?:&quot;|")(.*?)(?:&quot;|")'
+    
         
-        
+       
+        trackType = searchBlocks(
+            pattern=type_pattern,
+            searchBlock=track
+        )
+        MyType = typeMapping(trackType)
+        if MyType is None:
+                
+            continue
+    
+        if filters.tags:
+            if MyType not in filters.tags:
+                continue
+            
+        result = buildResult(
+            track=track,
+            typeGiven=MyType
+            
+        )
+                   
+        results.append(result)
+                
 
     return results
         
     
+
+
+def buildResult(
+        track: str,
+        typeGiven: str
+
+) -> dict:
+    dictionary = {}
+    thumbnail_pattern = r'<img src="(.*?)">'
+
+    dictionary['thumbnail'] = searchBlocks(
+        pattern=thumbnail_pattern,
+        searchBlock=track
+    )
+    titel_pattern = r'<div class="heading">.*?<a.*?>(.*?)</a>'
+    dictionary['title'] = searchBlocks(
+        pattern=titel_pattern,
+        searchBlock=track
+    )
+
+    url_pattern = r'<div class="heading">.*?<a href="(.*?)"'
+    dictionary['url'] = searchBlocks(
+        pattern=url_pattern,
+        searchBlock=track
+    )
+    dictionary["type"] = typeGiven 
+    return dictionary  
     
     
-    
+
+
+def typeMapping(givenType: str) -> str:
+    mapping = {
+        "t" : "track",
+        "a" : "album"
+    }
+    return mapping.get(givenType, None)
 
     
     
@@ -136,8 +184,75 @@ def searchBlocks(
         result_block = match.group(1).strip()
         return result_block
     else:
-        return ""
+        return None
 
+
+
+
+
+def validateURL(
+        url: str,
+) -> str:
+   
+
+    if url.startswith("https://t4.bcbits.com/"):
+        return "streamURL"
+    
+    elif url.startswith("https://") and "track" in url:
+        return "trackURL"
+    
+    elif url.startswith("https://") and "album" in url:
+        return "albumURL"
+    
+    else:
+        supported = ["streamURL", "trackURL", "albumURL"]
+        raise InvalidURL(
+            url=url,
+            supported=supported
+        )
+    
+
+
+
+
+def extractStreamingURL(
+        urlType: str,
+        url: str,
+        session
+) -> list[str]:
+    
+    match urlType:
+        case "streamURL":
+            streamingURL = url
+            return [streamingURL],[None]
+        
+        case "trackURL":
+            html = core.get_html(
+            url=url,
+            session=session
+            )
+
+
+            streamurl_pattern = r'(https://t4.bcbits.com/stream/.*?);}'
+
+            streamingUrl = searchBlocks(
+                pattern=streamurl_pattern,
+                searchBlock=html
+            )
+            
+
+            if not streamingUrl:
+                raise ValueError(f"No streaming URL was found, can't download with given url {url}")
+            
+            return [streamingUrl], [url]
+        
+        case "albumURL":
+            raise Exception("albumURL not yet supported")
+        case _:
+            raise Exception(f"None supported urlType was given. '{urlType}'")
+
+
+    
 
 
 
@@ -146,124 +261,73 @@ def download(
         session,
         progress_dict: dict,
         out_file: str,
-        chunk_size: int = 8192
 ):
-    html = get_html(
+    
+    urlType = validateURL(
+        url=url
+    )
+
+    streamingURLList, trackURLList = extractStreamingURL(
         url=url,
+        urlType=urlType,
         session=session
     )
-    streamurl_pattern = r'(https://t4.bcbits.com/stream/.*?);}'
-    streamingUrl = searchBlocks(
-        pattern=streamurl_pattern,
-        searchBlock=html
-    )
-    if not streamingUrl:
-        raise ValueError(f"No streaming URL was found, can't download with given url {url}")
-
-
-    embeddedplayer_pattern = r'<meta property="og:video".*?content="(https://bandcamp.com/EmbeddedPlayer.*?)">'
-    embeddedPlayerUrl = searchBlocks(
-        pattern=embeddedplayer_pattern,
-        searchBlock=html
-    )
-
-    
-    embeddedPlayer_request = urllib.request.Request(
-        embeddedPlayerUrl,
-        headers={
-            "Origin" : url
-        }
-    )
-    session.open(embeddedPlayer_request).read()
     
     
-    request = urllib.request.Request(
-        streamingUrl,
-        method="GET",
-        headers={
-            "Referer" : streamingUrl,
-            "Origin" : url,
-            "Range": "bytes=0-",
-        }
+    retry = True
+    for streamingURL, trackURL in zip(streamingURLList, trackURLList):
         
-        
-    )
+        request = urllib.request.Request(
+            streamingURL,
+            method="GET",
+            headers={
+                "Referer" : streamingURL,
+                "Origin" : url,
+                "Range": "bytes=0-",
+                }   
+            )
 
-    download_to_file(
-        request=request,
-        session=session,
-        out_file=out_file,
-        progress_dict=progress_dict,
-        embeddedPlayerUrl=embeddedPlayerUrl
-    )
+
+        try:
+            core.download_to_file(
+                request=request,
+                session=session,
+                out_file=out_file,
+                progress_dict=progress_dict,
+                
+            )
+        except urllib.error.HTTPError as e:
+            if e.code == 403 and retry and urlType !="streamURL":
+                retry = False
+
+                trackHTML = core.get_html(
+                    url=trackURL,
+                    session=session
+                )
+
+                embeddedplayer_pattern = r'<meta property="og:video".*?content="(https://bandcamp.com/EmbeddedPlayer.*?)">'
+                embeddedPlayerUrl = searchBlocks(
+                    pattern=embeddedplayer_pattern,
+                    searchBlock=trackHTML
+                )
+                if not embeddedPlayerUrl:
+                    raise Exception
+
+                BrowserButtonPress(url=embeddedPlayerUrl, button_name="#big_play_button")
+
+
+                core.download_to_file(
+                    request=request,
+                    session=session,
+                    out_file=out_file,
+                    progress_dict=progress_dict
+
+                )
+            else: raise
+
+        except Exception:
+            raise
 
 
    
 
-def download_to_file(
-        request,
-        session,
-        out_file:str,
-        progress_dict: dict,
-        embeddedPlayerUrl: str,
-        chunk_size: int = 8192,
-        retry: bool = True,
-        
-):
-    try:
-        with session.open(request) as response, open(out_file, "wb") as f:
-            downloading = True
-
-            progress_dict['status'] = "downloading..."
-
-            total_size = int(response.headers.get("Content-Length", 0))
-            progress_dict["totalBytes"] = total_size
-
-            downloaded: int = 0
-            start_time = time.time()
-
-            while downloading:
-                chunk = response.read(chunk_size)
-                if not chunk:
-                    downloading=False
-                    break
-
-                
-                f.write(chunk)
-
-
-                downloaded += len(chunk)
-                percent = 100 / total_size * downloaded
-                elapsed_time = time.time() - start_time
-                
-
-
-                progress_dict['downloadProgress'] = percent
-                progress_dict['downloadedBytes'] = downloaded
-
-                speed = downloaded / elapsed_time if elapsed_time > 0 else 0
-                if speed:
-                    progress_dict["speed"] = round(speed / 1024 / 1024, 2)
-
-        progress_dict['status'] = "complete"
-
-    except urllib.error.HTTPError as e:
-        if e.code == 403 and retry == True:
-            progress_dict['status'] == "EMERGENCY ERROR 403, TRYING EMERGENCY BROWSER !!!"
-            print("Trying the emergency Browser")
-            BrowserButtonPress(url=embeddedPlayerUrl, button_name="#big_play_button")
-            download_to_file(
-    request=request,
-    session=session,
-    out_file=out_file,
-    progress_dict=progress_dict,
-    embeddedPlayerUrl=embeddedPlayerUrl,
-    retry=False
-)
-        else:
-            raise
-
-
-
-    except Exception:
-        raise

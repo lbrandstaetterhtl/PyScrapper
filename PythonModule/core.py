@@ -1,4 +1,5 @@
 import urllib.error, urllib.request
+import time
 
 class ArgumentError(Exception): ...
 
@@ -42,4 +43,63 @@ def get_html(
     
     except UnicodeDecodeError:
         raise UnicodeDecodeError(f"Failed to decode with given decode standard {decode}")
+
+
+
+
+
+def download_to_file(
+        request,
+        session,
+        out_file:str,
+        progress_dict: dict,
+        chunk_size: int = 8192,
+        
+        
+):
+    try:
+        with session.open(request) as response, open(out_file, "wb") as f:
+            downloading = True
+
+            progress_dict['status'] = "downloading..."
+
+            total_size = int(response.headers.get("Content-Length", 0))
+            progress_dict["totalBytes"] = total_size
+
+            downloaded: int = 0
+            start_time = time.time()
+
+            while downloading:
+                chunk = response.read(chunk_size)
+                if not chunk:
+                    downloading=False
+                    break
+
+                
+                f.write(chunk)
+
+
+                downloaded += len(chunk)
+                percent = 100 / total_size * downloaded
+                elapsed_time = time.time() - start_time
+                
+
+
+                progress_dict['downloadProgress'] = percent
+                progress_dict['downloadedBytes'] = downloaded
+
+                speed = downloaded / elapsed_time if elapsed_time > 0 else 0
+                if speed:
+                    progress_dict["speed"] = round(speed / 1024 / 1024, 2)
+                remaining = total_size - downloaded
+                if speed > 0:
+                    eta = remaining / speed
+                    progress_dict['eta'] = round(eta, 1)
+                
+
+        progress_dict['status'] = "complete"
+
+    except Exception:
+        raise
+    
     

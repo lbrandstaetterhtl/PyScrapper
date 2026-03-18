@@ -5,8 +5,7 @@ from typing import Optional
 import os
 
 #Downlaod path
-current_path = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_path)
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 #Classes

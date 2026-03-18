@@ -63,7 +63,7 @@ function SearchPanel(props: Props)
                 <p>Searchquery</p>
                 <input
                 type="text"
-                placeholder="...Expedition 33"
+                placeholder="Cute puppy video"
                 value={searchData.search}
                 onChange={(e) =>
                     setSearchData
