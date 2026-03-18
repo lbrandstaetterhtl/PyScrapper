@@ -40,79 +40,95 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     /// The method also handles cancellation of the progress tracking and error handling, updating the status message and logging any errors encountered during the process.
     /// </summary>
     /// <param name="id"></param>
-    /// <returns></returns>
+    /// <returns name="errorWhileDownloading"></returns>
     /// <exception cref="Exception"></exception>
-    public async Task<bool> StartProgress(string id)
+    public Task<bool> StartProgress(string id)
     {
-        if (Design.IsDesignMode) return true;
-        
-        bool errorWhileDownloading = false;
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
-        
-        Task.Run( async () =>
+        try
         {
-            while (!_isFinished)
+            try
             {
-                if (token.IsCancellationRequested)
-                    break;
-                
-                try
-                {
-                    var progressResponse = _apiClient.GetDownloadProgress(id, "127.0.0.1:8765");
-                    var progressData = progressResponse.Result;
-                    
-                    if (progressData == null) throw new Exception("Failed to get progress data");
-                    
-                    Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                    {
-                        if (progressData.ErrorMessage is not "")
-                        {
-                            Status = $"Error: {progressData.ErrorMessage}";
-                            var log = new Massage(progressData.ErrorMessage, DateTime.Now, "ERROR");
-                            new AppLogger().LogNewMassage(log);
-                            errorWhileDownloading = true;
-                            StopProgress();
-                        }
-                        else
-                        {
-                            Status = progressData.Status;
-                        }
-                        
-                        Progress = progressData.DownloadProgress;
-                        ProgressSpeed = progressData.Speed;
+                if (Design.IsDesignMode) return Task.FromResult(true);
 
-                        if (progressData.Status.Equals("complete"))
-                        {
-                            IsFinished = true;
-                            StopProgress();
-                        }
-                    });
-                }
-                catch (OperationCanceledException)
+                bool errorWhileDownloading = false;
+                _cts = new CancellationTokenSource();
+                var token = _cts.Token;
+
+                Task.Run(async () =>
                 {
-                    break;
-                }
-                catch (Exception e)
-                {
-                    Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                    while (!_isFinished)
                     {
-                        Status = $"Error: {e.Message}";
-                    });
-                }
-                
-                try
-                {
-                    await Task.Delay(1000, token);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
+                        if (token.IsCancellationRequested)
+                            break;
+
+                        try
+                        {
+                            var progressResponse = _apiClient.GetDownloadProgress(id, "127.0.0.1:8765");
+                            var progressData = progressResponse.Result;
+
+                            if (progressData == null) throw new Exception("Failed to get progress data");
+
+                            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                            {
+                                if (progressData.ErrorMessage is not "")
+                                {
+                                    Status = $"Error: {progressData.ErrorMessage}";
+                                    var log = new Massage(progressData.ErrorMessage, DateTime.Now, "ERROR");
+                                    new AppLogger().LogNewMassage(log);
+                                    errorWhileDownloading = true;
+                                    StopProgress();
+                                }
+                                else
+                                {
+                                    Status = progressData.Status;
+                                }
+
+                                Progress = progressData.DownloadProgress;
+                                ProgressSpeed = progressData.Speed;
+
+                                if (progressData.Status.Equals("complete"))
+                                {
+                                    IsFinished = true;
+                                    StopProgress();
+                                }
+                            });
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
+                        catch (Exception e)
+                        {
+                            Avalonia.Threading.Dispatcher.UIThread.Post(() => { Status = $"Error: {e.Message}"; });
+                        }
+
+                        try
+                        {
+                            await Task.Delay(1000, token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
+                    }
+                }, token);
+
+                return Task.FromResult(errorWhileDownloading);
             }
-        }, token);
-        
-        return errorWhileDownloading;
+            catch (Exception e)
+            {
+                var log = new Massage("Error while tracking progress: " + e.Message, DateTime.Now, "ERROR");
+                new AppLogger().LogNewMassage(log);
+            
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => { Status = $"Error: {e.Message}"; });
+
+                return Task.FromResult(true);
+            }
+        }
+        catch (Exception exception)
+        {
+            return Task.FromException<bool>(exception);
+        }
     }
 
     /// <summary>
