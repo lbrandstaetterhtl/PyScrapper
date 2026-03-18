@@ -37,7 +37,7 @@ public abstract class DatabaseOperations
                     MediaType TEXT,
                     DownloadedAt TEXT,
                     DownloadPath TEXT,
-                    IsPlayable BOOLEAN
+                    IsPlayable INTEGER
                 )STRICT;
                 """;
 
@@ -97,7 +97,7 @@ public abstract class DatabaseOperations
                 MediaType TEXT,
                 DownloadedAt TEXT,
                 DownloadPath TEXT,
-                IsPlayable BOOLEAN
+                IsPlayable INTEGER
             )STRICT;
             """;
 
@@ -149,7 +149,7 @@ public abstract class DatabaseOperations
                 MediaType TEXT,
                 DownloadedAt TEXT,
                 DownloadPath TEXT,
-                IsPlayable BOOLEAN
+                IsPlayable INTEGER
             )STRICT;
             """;
         

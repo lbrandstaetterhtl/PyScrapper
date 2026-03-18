@@ -11,6 +11,9 @@
         CanMaximize="False"
         CanMinimize="False"
         SizeToContent="WidthAndHeight"
+        MinHeight="400"
+        MinWidth="600"
+        MaxWidth="800"
         MaxHeight="600"
         Title="PyScrapperDesktopApp">
         

@@ -314,18 +314,28 @@ def health():
 
 def self_memory_mb():
     pid = os.getpid()
-    out = subprocess.check_output(
-        ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV"],
-        text=True,
-        errors="replace"
-    )
-    line = out.splitlines()[1]
-    mem = line.split(",")[-1]
-    digits = re.sub(r"\D", "", mem) 
-    if not digits:
+    try:
+        if platform.system() == "Windows":
+            out = subprocess.check_output(
+                ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV"],
+                text=True, errors="replace"
+            )
+            line = out.splitlines()[1]
+            mem = line.split(",")[-1]
+            digits = re.sub(r"\D", "", mem)
+            if not digits:
+                return None
+            return round(int(digits) / 1024, 2)
+        else:
+            # Linux: /proc/{pid}/status auslesen
+            with open(f"/proc/{pid}/status") as f:
+                for line in f:
+                    if line.startswith("VmRSS:"):
+                        kb = int(line.split()[1])
+                        return round(kb / 1024, 2)
+            return None
+    except Exception:
         return None
-    kb = int(digits)
-    return round(kb / 1024, 2)
 
 def list_python_processes():
     if platform.system() != "Windows":

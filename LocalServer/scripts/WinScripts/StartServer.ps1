@@ -1,16 +1,23 @@
-﻿param(
-[string]$HostAddr = "127.0.0.1",
-[int]$Port = 8765,
-[switch]$NoVenv
+param(
+    [string]$HostAddr = "127.0.0.1",
+    [int]$Port = 8765,
+    [switch]$NoVenv
 )
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
 
 $ErrorActionPreference = "Stop"
 
-# Pfad-Setup für Logging
-$ServerRoot = Split-Path -Parent $PSScriptRoot
-$AllRoot = Split-Path -Parent $ServerRoot
-$LogDir = Join-Path $ServerRoot "logs"
+# --- Verzeichnisse berechnen --------------------------------
+# $PSScriptRoot = ...\PyScrapper\LocalServer\scripts\WinScripts
+$ScriptsDir  = Split-Path -Parent $PSScriptRoot
+# $ScriptsDir  = ...\PyScrapper\LocalServer\scripts
+$LocalServer = Split-Path -Parent $ScriptsDir
+# $LocalServer = ...\PyScrapper\LocalServer
+$RepoRoot    = Split-Path -Parent $LocalServer
+# $RepoRoot    = ...\PyScrapper
+
+# --- Logging Setup ------------------------------------------
+$LogDir = Join-Path $LocalServer "logs"
 if (-not (Test-Path $LogDir)) {
   New-Item -ItemType Directory -Path $LogDir | Out-Null
 }
@@ -26,12 +33,13 @@ function Write-Log {
 
 Write-Log "== Start Server =="
 
-# In Script-Ordner wechseln (damit server.py sicher gefunden wird)
-Set-Location -Path $AllRoot
+# In LocalServer wechseln (damit server.py sicher gefunden wird)
+Set-Location -Path $LocalServer
 
-# ─── Virtual Environment (must be dot-sourced so PATH changes apply here) ───
-$venvDir = Join-Path $PSScriptRoot ".venv"
-$pythonExe = Join-Path $venvDir "Scripts\python.exe"
+# ─── Virtual Environment ────────────────────────────────────
+# .venv liegt unter scripts\
+$venvDir       = Join-Path $ScriptsDir ".venv"
+$pythonExe     = Join-Path $venvDir "Scripts\python.exe"
 $activateScript = Join-Path $venvDir "Scripts\Activate.ps1"
 
 if (-not (Test-Path $pythonExe)) {
@@ -47,15 +55,14 @@ if (Test-Path $activateScript) {
   Write-Log "WARNING: Activate.ps1 not found at $activateScript"
 }
 
-# ─── ffmpeg: sicherstellen, dass es im Projekt-PATH liegt ────────────────────
-# Suche ffmpeg.exe unterhalb des Projektverzeichnisses
-$ffmpegInProject = Get-ChildItem -Path $AllRoot -Recurse -Filter "ffmpeg.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+# ─── ffmpeg ─────────────────────────────────────────────────
+$ffmpegInProject = Get-ChildItem -Path $RepoRoot -Recurse -Filter "ffmpeg.exe" -ErrorAction SilentlyContinue |
+                   Select-Object -First 1
 
 if ($ffmpegInProject) {
   $ffmpegBinDir = Split-Path $ffmpegInProject.FullName -Parent
   Write-Log "ffmpeg found in project: $($ffmpegInProject.FullName)"
 
-  # Prüfen ob der Pfad bereits in der aktuellen Session-PATH ist
   if ($env:Path -notmatch [regex]::Escape($ffmpegBinDir)) {
     $env:Path = "$ffmpegBinDir;$env:Path"
     Write-Log "Added ffmpeg project path to session PATH: $ffmpegBinDir"
@@ -63,7 +70,6 @@ if ($ffmpegInProject) {
     Write-Log "Session PATH already contains ffmpeg project path: $ffmpegBinDir"
   }
 
-  # Prüfen ob der Pfad im User-PATH dauerhaft hinterlegt ist
   $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
   if ($userPath -notmatch [regex]::Escape($ffmpegBinDir)) {
     [Environment]::SetEnvironmentVariable("Path", ($userPath + ";" + $ffmpegBinDir), "User")
@@ -72,7 +78,6 @@ if ($ffmpegInProject) {
     Write-Log "User PATH already contains ffmpeg project path: $ffmpegBinDir"
   }
 } else {
-  # ffmpeg nicht im Projekt gefunden — auch global prüfen
   $ffCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
   if (-not $ffCmd) {
     Write-Log "ffmpeg not found (neither in project nor in PATH). Running InstallFFMPEG.ps1..."
@@ -83,13 +88,11 @@ if ($ffmpegInProject) {
     $ffmpegBinDir = Split-Path $ffCmd.Source -Parent
     Write-Log "ffmpeg not in project but available globally: $($ffCmd.Source)"
 
-    # Trotzdem sicherstellen, dass der Pfad in der Session-PATH ist
     if ($env:Path -notmatch [regex]::Escape($ffmpegBinDir)) {
       $env:Path = "$ffmpegBinDir;$env:Path"
       Write-Log "Added global ffmpeg path to session PATH: $ffmpegBinDir"
     }
 
-    # Und dauerhaft im User-PATH hinterlegen
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     if ($userPath -notmatch [regex]::Escape($ffmpegBinDir)) {
       [Environment]::SetEnvironmentVariable("Path", ($userPath + ";" + $ffmpegBinDir), "User")
@@ -100,9 +103,11 @@ if ($ffmpegInProject) {
   }
 }
 
-# ─── Backend requirements (call operator — own scope) ────────────────────────
+# ─── Backend Requirements ───────────────────────────────────
 & (Join-Path $PSScriptRoot "InstallRequirementsBackend.ps1") 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
 
-
+# ─── uvicorn starten ────────────────────────────────────────
 Write-Log "Starting uvicorn: server:app on $HostAddr`:$Port"
-Start-Process -FilePath "python" -ArgumentList "-m uvicorn LocalServer.server:app --host $HostAddr --port $Port" -NoNewWindow -Wait
+Start-Process -FilePath "python" `
+              -ArgumentList "-m uvicorn LocalServer.server:app --host $HostAddr --port $Port" `
+              -NoNewWindow -Wait

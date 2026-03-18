@@ -1,11 +1,17 @@
-﻿param(
+param(
     [switch]$PersistUserPath
 )
-
 $ErrorActionPreference = "Stop"
 
-$ServerRoot = Split-Path -Parent $PSScriptRoot
-$LogDir = Join-Path $ServerRoot "logs"
+# --- Verzeichnisse berechnen --------------------------------
+# $PSScriptRoot = ...\PyScrapper\LocalServer\scripts\WinScripts
+$ScriptsDir  = Split-Path -Parent $PSScriptRoot
+# $ScriptsDir  = ...\PyScrapper\LocalServer\scripts
+$LocalServer = Split-Path -Parent $ScriptsDir
+# $LocalServer = ...\PyScrapper\LocalServer
+
+# --- Logging Setup ------------------------------------------
+$LogDir = Join-Path $LocalServer "logs"
 if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir | Out-Null
 }
@@ -19,10 +25,9 @@ function Write-Log {
 }
 
 function Find-FFmpegExe {
-    # 1) schon im PATH?
+    # 1) Schon im PATH?
     $cmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
-
     # 2) WinGet packages durchsuchen (yt-dlp.FFmpeg)
     $pkgRoot = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"
     if (Test-Path $pkgRoot) {
@@ -31,13 +36,12 @@ function Find-FFmpegExe {
                 Select-Object -First 1
         if ($hit) { return $hit.FullName }
     }
-
     return $null
 }
 
 Write-Log "Checking for ffmpeg..."
-
 $ffmpegExe = Find-FFmpegExe
+
 if (-not $ffmpegExe) {
     Write-Log "ffmpeg not found. Installing via WinGet..."
     winget install --id=yt-dlp.FFmpeg -e --source=winget
@@ -50,7 +54,7 @@ if (-not $ffmpegExe) {
 
 $ffbin = Split-Path $ffmpegExe -Parent
 
-# Für aktuelle Session (und alle Kind-Prozesse) sofort nutzbar
+# Session-PATH
 if ($env:Path -notmatch [regex]::Escape($ffbin)) {
     $env:Path = "$ffbin;$env:Path"
     Write-Log "Added to Session PATH: $ffbin"

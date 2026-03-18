@@ -78,18 +78,28 @@ public class ApiClient
 
         if (response.IsSuccessStatusCode)
         {
-            var health = JsonSerializer.Deserialize<HealthResponse>(responseData, JsonOptions);
-
-            if (loogHealthResponse)
+            try
             {
-                var text =
-                    $"Server health check successful: Uptime {health?.UptimeSeconds} seconds, Memory {health?.MemoryMb} MB, PID {health?.Pid}, Processes {health?.Processes.Count}";
+                var health = JsonSerializer.Deserialize<HealthResponse>(responseData, JsonOptions);
 
-                var log = new Massage(text, DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
+                if (loogHealthResponse)
+                {
+                    var text =
+                        $"Server health check successful: Uptime {health?.UptimeSeconds} seconds, Memory {health?.MemoryMb} MB, PID {health?.Pid}, Processes {health?.Processes.Count}";
+
+                    var log = new Massage(text, DateTime.Now, "INFO");
+                    _logger.LogNewMassage(log);
+                }
+
+                return health;
             }
+            catch (Exception ex)
+            {
+                var log = new Massage($"Error sending health request: {ex.Message}", DateTime.Now, "ERROR");
+                _logger.LogNewMassage(log);
 
-            return health;
+                return null;
+            }
         }
         else
         {

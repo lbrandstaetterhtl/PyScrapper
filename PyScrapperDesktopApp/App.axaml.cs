@@ -42,7 +42,7 @@ public partial class App : Application
             log = new Massage("Installing frontend requirements", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             
-            RunPsScript("InstallRequirementsFrontend.ps1", wait: true);
+            RunScript("InstallRequirementsFrontend", wait: true);
             
             log = new Massage("Frontend requirements installation completed", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
@@ -50,7 +50,7 @@ public partial class App : Application
             log = new Massage("Starting local server and installing requirements for backend", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             
-            RunPsScript("StartServer.ps1");
+            RunScript("StartServer");
             
             
             int maxTries = 30;
@@ -157,20 +157,40 @@ public partial class App : Application
             "Could not locate repo root (no 'LocalServer' folder found in any parent directory).");
     }
 
-    private void RunPsScript(string scriptFile, bool wait = false)
+    private void RunScript(string scriptFile, bool wait = false)
     {
         var repoRoot = FindRepoRoot();
 
-        var psi = new ProcessStartInfo
+        ProcessStartInfo psi;
+
+        if (OperatingSystem.IsWindows())
         {
-            FileName = "powershell.exe",
-            Arguments = $"-ExecutionPolicy Bypass -File \"{repoRoot}\\LocalServer\\scripts\\{scriptFile}\"",
-            WorkingDirectory = repoRoot,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
+            psi = new ProcessStartInfo
+            {
+                FileName  = "powershell.exe",
+                Arguments = $"-ExecutionPolicy Bypass -File \"{repoRoot}\\LocalServer\\scripts\\WinScripts\\{scriptFile}.ps1\"",
+                WorkingDirectory      = repoRoot,
+                UseShellExecute       = false,
+                CreateNoWindow        = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError  = true
+            };
+        }
+        else // Linux / macOS
+        {
+            var scriptPath = $"{repoRoot}/LocalServer/scripts/LinuxScripts/{scriptFile}.sh";
+
+            psi = new ProcessStartInfo
+            {
+                FileName  = "bash",
+                Arguments = $"\"{scriptPath}\"",
+                WorkingDirectory      = repoRoot,
+                UseShellExecute       = false,
+                CreateNoWindow        = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError  = true
+            };
+        }
 
         var p = new Process { StartInfo = psi };
         p.Start();
@@ -192,7 +212,7 @@ public partial class App : Application
         log = new Massage("Shutting down local server...", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
         
-        RunPsScript("StopServer.ps1");
+        RunScript("StopServer");
         
         log = new Massage("Local server is shutdown", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);

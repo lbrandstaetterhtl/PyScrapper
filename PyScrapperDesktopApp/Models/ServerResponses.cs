@@ -28,7 +28,7 @@ public class HealthResponse
         public double UptimeSeconds { get; set; }
         
     [JsonPropertyName("memory_mb")]
-        public double MemoryMb { get; set; }
+        public double? MemoryMb { get; set; }
         
     [JsonPropertyName("pid")]
     public int Pid { get; set; }
