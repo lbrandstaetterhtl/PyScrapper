@@ -2,6 +2,10 @@
 
 namespace PyScrapperDesktopApp.Models;
 
+/// <summary>
+/// Class representing the data structure for a download request, containing properties for the provider, URL, media type, filename, and download path.
+/// This class is used to serialize and deserialize JSON data when making download requests to the server.
+/// </summary>
 public class DownloadRequestData
 {
     [JsonPropertyName("provider")]
@@ -20,6 +24,10 @@ public class DownloadRequestData
     public string Download_path { get; set; }
 }
 
+/// <summary>
+/// Class representing the data structure for a search request, containing properties for the provider, search query, and the number of top results to return.
+/// This class is used to serialize and deserialize JSON data when making search requests to the server.
+/// </summary>
 public class SearchRequestData
 {
     [JsonPropertyName("provider")]

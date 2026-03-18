@@ -26,11 +26,22 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isFinished = false;
     
+    /// <summary>
+    /// Constructor for the ProgressBarWindowViewModel class, which initializes the API client used for fetching download progress data. This class is responsible for managing the state and logic of a progress bar window that displays the download progress, status, and speed of a download operation.
+    /// It also handles cancellation of the progress tracking when necessary.
+    /// </summary>
     public ProgressBarWindowViewModel()
     {
         _apiClient = new ApiClient();
     }
 
+    /// <summary>
+    /// StartProgress method that initiates the tracking of download progress for a given download ID. It runs a background task that periodically fetches the download progress data from the API and updates the UI accordingly.
+    /// The method also handles cancellation of the progress tracking and error handling, updating the status message and logging any errors encountered during the process.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
     public async Task<bool> StartProgress(string id)
     {
         if (Design.IsDesignMode) return true;
@@ -104,11 +115,18 @@ public partial class ProgressBarWindowViewModel : ObservableObject
         return errorWhileDownloading;
     }
 
+    /// <summary>
+    /// Stops the progress tracking by canceling the associated CancellationTokenSource, which signals the background task to stop fetching progress data and exit gracefully.
+    /// This method is called when the download is complete or when an error occurs, ensuring that resources are properly released and the UI is updated accordingly.
+    /// </summary>
     private void StopProgress()
     {
         _cts?.Cancel();
     }
 
+    /// <summary>
+    /// Closes the ProgressBarWindow by invoking the CloseRequested event, which signals that the window should be closed. This method is called when the user clicks the close button on the window or when the download is complete, ensuring that any ongoing progress tracking tasks are properly canceled and that the window is closed gracefully.
+    /// </summary>
     [RelayCommand]
     private void Close()
     {

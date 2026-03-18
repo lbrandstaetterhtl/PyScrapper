@@ -1,0 +1,218 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using PyScrapperDesktopApp.Models;
+using PyScrapperDesktopApp.Views;
+
+namespace PyScrapperDesktopApp.ViewModels;
+
+public partial class ScrapWindowWithSearchViewModel : ObservableObject
+{
+    [ObservableProperty]
+    private string _searchQuery;
+
+    [ObservableProperty]
+    private string _searchResultsCount;
+
+    [ObservableProperty]
+    private List<ApiClient.SearchResultItem> _Items = new();
+    
+    [ObservableProperty]
+    private List<ApiClient.SearchResultItem> _selectedItems = new();
+    
+    [ObservableProperty]
+    private List<string> _availableMediaTypes = [".mp3", ".mp4"];
+    
+    [ObservableProperty]
+    private string _selectedMediaType = ".mp3";
+    
+    [ObservableProperty]
+    private Window _ScrapWindow;
+    
+    private readonly List<string> _providers = ["youtube", "suno", "bandcamp", "youtube.com", "suno.com", "bandcamp.com"];
+    private string _selectedProvider;
+    
+    public RelayCommand CancelCommand { get; set; }
+    
+    public event Action? RequestClose;
+    
+    /// <summary>
+    /// Constructor for the ScrapWindowWithSearchViewModel class, which initializes the view model with the provided scrap window and provider.
+    /// It checks if the application is in design mode to avoid executing code that should only run at runtime, and it validates the provided provider against a list of supported providers. If the provider is valid, it sets up the CancelCommand to allow closing the window when requested.
+    /// If any exceptions occur during initialization, it logs the error and displays a message box to inform the user before closing the window.
+    /// </summary>
+    /// <param name="scrapWindow"></param>
+    /// <param name="provider"></param>
+    /// <exception cref="Exception"></exception>
+    public ScrapWindowWithSearchViewModel(Window scrapWindow, string provider)
+    {
+        try
+        {
+            if (Design.IsDesignMode) return;
+
+            _ScrapWindow = scrapWindow;
+            
+            if (!_providers.Contains(provider)) throw new Exception("Provider not found");
+                
+            _selectedProvider = provider;
+
+            CancelCommand = new RelayCommand(() => RequestClose?.Invoke());
+        }
+        catch (Exception ex)
+        {
+            var log = new Massage($"Error initializing ScrapWindowWithSearchViewModel: {ex.Message}", DateTime.Now, "ERROR");
+            new AppLogger().LogNewMassage(log);
+
+            if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+                return;
+            
+            var messageBox = new MessageBox("An error occurred: " + ex.Message);
+            messageBox.ShowDialog(desktop.MainWindow);
+            
+            RequestClose?.Invoke();
+        }
+    }
+    
+    /// <summary>
+    /// Scrap method that is executed when the user clicks the button to start the scrap process.
+    /// It iterates through the selected items from the search results, prompts the user to enter a filename for each video, and sends a scrap request to the API for each item. If the scrap request is successful, it shows a progress window to track the download progress and updates the list of downloaded media in the AppData once the download is complete.
+    /// If any errors occur during the scrap or download process, it displays a message box to inform the user and logs the error details.
+    /// </summary>
+    [RelayCommand]
+    private async Task Scrap()
+    {
+        var client = new ApiClient();
+        
+        string serverUrl = "127.0.0.1:8765";
+
+        var requestData = new DownloadRequestData();
+
+        foreach (var item in SelectedItems)
+        {
+            var inputWindow = new InputWindow($"Enter filename for the video '{item.title}' (without extension):");
+            var filename = await inputWindow.ShowDialog<string>(_ScrapWindow);
+            
+            requestData = new DownloadRequestData()
+            {
+                Provider = _selectedProvider,
+                Url = item.url,
+                Mediatype = SelectedMediaType,
+                Filename = filename,
+                Download_path = AppData.DownloadPath
+            };
+            
+            var result = await client.SendScrapRequest(requestData, serverUrl);
+        
+            if (result != "-1")
+            { 
+                Task.Delay(2000).Wait();
+                 
+                var progressWindow = new ProgressBarWindow();
+                progressWindow.Show();
+                
+                bool errorWhileDownloading = false;
+                if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
+                    errorWhileDownloading = await vm.StartProgress(result);
+
+                if (!errorWhileDownloading)
+                {
+                    var identifier = item.url.Split('=')[^1];
+
+                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{filename}{SelectedMediaType}");
+
+                    bool isPlayable = File.Exists(downloadFilePath);
+
+                    var media = new DownloadedMedia(item.url, SelectedMediaType, DateTime.Now, downloadFilePath,
+                        isPlayable, identifier);
+                    media.SetHighestId(AppData.DownloadedMedias);
+
+                    AppData.AddDownloadedMedia(media);
+                }
+                else
+                {
+                    var massageBox = new MessageBox("Download failed, check logs for more details");
+                    await massageBox.ShowDialog(_ScrapWindow);
+                }
+                
+                Task.Delay(1000).Wait();
+            }
+        }
+        
+        RequestClose?.Invoke();
+    }
+
+    /// <summary>
+    /// Search method that is executed when the user clicks the button to perform a search based on the entered search query and selected provider.
+    /// It sends a search request to the API with the specified search query, provider, and the number of top results to return.
+    /// If the search is successful, it processes the search results and retrieves the thumbnail images for the results based on the provider.
+    /// The search results are then displayed in the user interface for the user to select from.
+    /// If no results are found, it shows a message box to inform the user and logs the search query with an appropriate message.
+    /// If any errors occur during the search process, it displays a message box to inform the user and logs the error details.
+    /// This functionality allows the user to easily search for media content from different providers and view relevant results directly within the scrap window.
+    /// </summary>
+    [RelayCommand]
+    public async Task Search()
+    {
+        var client = new ApiClient();
+
+        string serverUrl = "127.0.0.1:8765";
+
+        var requestData = new SearchRequestData()
+        {
+            Search = SearchQuery,
+            Provider = _selectedProvider,
+            Top = Convert.ToInt32(SearchResultsCount),
+        };
+        
+        var results = await client.SendSearchRequest(requestData, serverUrl);
+
+        var log = new Massage("", DateTime.Now, "Init");
+        
+        if (results.Count == 0)
+        {
+            var massageBox = new MessageBox($"No results found for query: {SearchQuery}. Please try a different query.");
+            await massageBox.ShowDialog(_ScrapWindow);
+            
+            log = new Massage("No results found for query: " + SearchQuery, DateTime.Now, "INFO");
+            new AppLogger().LogNewMassage(log);
+            
+            return;
+        }
+
+        if (_selectedProvider == _providers[0] || _selectedProvider == _providers[3])
+        {
+            foreach (var item in results)
+            {
+                using var httpClient = new HttpClient();
+                var thumbnailUrl = $"https://i.ytimg.com/vi/{item.identifier}/hqdefault.jpg";
+
+                var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
+
+                using var stream = new MemoryStream(bytes);
+                item.ThumbnailBitmap = new Bitmap(stream);
+            }
+        }
+        else if (_selectedProvider == _providers[2] || _selectedProvider == _providers[5])
+        {
+            foreach (var item in results)
+            {
+                using var httpClient = new HttpClient();
+                var thumbnailUrl = item.thumbnail;
+
+                var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
+
+                using var stream = new MemoryStream(bytes);
+                item.ThumbnailBitmap = new Bitmap(stream);
+            }
+        }
+
+        Items = results;
+    }
+}

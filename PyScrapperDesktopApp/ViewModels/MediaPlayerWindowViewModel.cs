@@ -10,6 +10,10 @@ using PyScrapperDesktopApp.Models;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
+/// <summary>
+/// Class responsible for managing the state and logic of the MediaPlayerWindow, which provides functionality to play audio media files. It handles loading media, controlling playback (play, pause, stop), scrubbing through the media timeline, adjusting volume, and updating the UI with the current playback position and duration.
+/// The class also logs significant events related to media playback using an AppLogger instance.
+/// </summary>
 public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 {
     private readonly AppLogger _logger = new();
@@ -39,6 +43,12 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string durationText = "0:00";
 
+    /// <summary>
+    /// Constructor for the MediaPlayerWindowViewModel, which initializes the view model with an instance of AudioPlayer and a path to the media file to be played.
+    /// It sets up a timer to periodically refresh the playback position and duration from the audio player, and it logs significant events such as opening the media file and starting playback.
+    /// </summary>
+    /// <param name="audioPlayer"></param>
+    /// <param name="path"></param>
     public MediaPlayerWindowViewModel(AudioPlayer audioPlayer, string path)
     {
         if (Design.IsDesignMode) return;
@@ -63,6 +73,10 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _logger.LogNewMassage(massage);
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the "Play" button. It starts playback of the currently loaded media in the audio player and logs this event using the AppLogger instance.
+    /// This allows the user to control media playback and provides feedback on the action taken.
+    /// </summary>
     [RelayCommand] public void Play()
     {
         _audioPlayer.Play();
@@ -70,6 +84,10 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _logger.LogNewMassage(massage);
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the "Pause" button. It pauses playback of the currently loaded media in the audio player and logs this event using the AppLogger instance.
+    /// This allows the user to control media playback and provides feedback on the action taken.
+    /// </summary>
     [RelayCommand] public void Pause()
     {
         _audioPlayer.Pause();
@@ -77,6 +95,10 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _logger.LogNewMassage(massage);
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the "Stop" button. It stops playback of the currently loaded media in the audio player and logs this event using the AppLogger instance.
+    /// This allows the user to control media playback and provides feedback on the action taken.
+    /// </summary>
     [RelayCommand] public void Stop()
     {
         _audioPlayer.Stop();
@@ -84,12 +106,22 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _logger.LogNewMassage(massage);
     }
 
+    /// <summary>
+    /// Command method that is executed when the user begins scrubbing through the media timeline (e.g., by dragging a slider).
+    /// It sets the IsScrubbing property to true, which can be used to temporarily suspend updates from the audio player while the user is actively scrubbing.
+    /// This allows for smoother UI updates and prevents conflicts between user input and automatic updates from the audio player.
+    /// </summary>
     [RelayCommand]
     public void BeginScrub()
     {
         IsScrubbing = true;
     }
 
+    /// <summary>
+    /// Command method that is executed when the user scrubs to a specific position in the media timeline (e.g., by dragging a slider to a new position). It takes the target position in seconds as a parameter.
+    /// The method pauses the audio player, updates the PositionSeconds property to reflect the new position, and updates the CurrentlyText and DurationText properties to show the new playback position and remaining duration.
+    /// </summary>
+    /// <param name="seconds"></param>
     [RelayCommand]
     public void ScrubTo(double seconds)
     {
@@ -108,6 +140,10 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Command method that is executed when the user finishes scrubbing through the media timeline (e.g., by releasing a slider).
+    /// It seeks the audio player to the new position specified by PositionSeconds, sets IsScrubbing to false, and resumes playback.
+    /// </summary>
     [RelayCommand]
     public void EndScrub()
     {
@@ -116,6 +152,11 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _audioPlayer.Play();
     }
 
+    /// <summary>
+    /// Seeks the audio player to a specific position in the media timeline, given in seconds.
+    /// It pauses the audio player, updates the TimeMS property to reflect the new position, and sets a suppression period during which updates from the audio player will be ignored to allow for smoother UI updates.
+    /// </summary>
+    /// <param name="seconds"></param>
     public void SeekToSeconds(double seconds)
     {
         _audioPlayer.Pause();
@@ -127,6 +168,11 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _audioPlayer.Play();
     }
 
+    /// <summary>
+    /// Refreshes the playback position, duration, and media title from the audio player. This method is called periodically by the timer to update the UI with the current state of the audio player.
+     /// It checks if the user is currently scrubbing and updates the CurrentlyText and DurationText properties accordingly. If not scrubbing, it updates the PositionSeconds property based on the current time of the audio player and formats the text for display.
+     /// The method also handles a suppression period to prevent conflicts between user input and automatic updates from the audio player, ensuring smoother UI updates during scrubbing.
+    /// </summary>
     private void RefreshFromPlayer()
     {
         var meta = _audioPlayer.Player.Media?.Meta(MetadataType.Title);
@@ -190,6 +236,12 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Formats a given total number of seconds into a string representation of the time in the format "H:MM:SS" if the total hours are 1 or more, or "M:SS" if less than 1 hour.
+    /// The method ensures that minutes and seconds are always displayed with two digits for consistency.
+    /// </summary>
+    /// <param name="totalSeconds"></param>
+    /// <returns></returns>
     private static string FormatTime(long totalSeconds)
     {
         totalSeconds = Math.Max(0, totalSeconds);
@@ -200,6 +252,10 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
             : $"{ts.Minutes}:{ts.Seconds:00}";
     }
     
+    /// <summary>
+    /// Increases the volume of the audio player by 5 units, ensuring that the volume does not exceed the maximum limit of 100.
+    /// It updates the Volume property and sets the audio player's volume accordingly.
+    /// </summary>
     [RelayCommand]
     private void IncreaseVolume()
     {
@@ -207,6 +263,10 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _audioPlayer.Volume = Volume;
     }
 
+    /// <summary>
+    /// Decreases the volume of the audio player by 5 units, ensuring that the volume does not go below the minimum limit of 0.
+    /// It updates the Volume property and sets the audio player's volume accordingly.
+    /// </summary>
     [RelayCommand]
     private void DecreaseVolume()
     {
@@ -214,18 +274,32 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _audioPlayer.Volume = Volume;
     }
     
+    /// <summary>
+    /// Moves the playback position forward by 10 seconds.
+    /// It calls the SeekToSeconds method with the new target position, which handles pausing, seeking, and resuming playback while ensuring smooth UI updates.
+    /// </summary>
     [RelayCommand]
     private void MoveForward()
     {
         SeekToSeconds(PositionSeconds + 10);
     }
     
+    /// <summary>
+    /// Moves the playback position backward by 10 seconds.
+    /// It calls the SeekToSeconds method with the new target position, which handles pausing, seeking, and resuming playback while ensuring smooth UI updates.
+    /// The method ensures that the new position does not go below 0 seconds.
+    /// </summary>
     [RelayCommand]
     private void MoveBackward()
     {
         SeekToSeconds(PositionSeconds - 10);
     }
 
+    
+    /// <summary>
+    /// Disposes of the MediaPlayerWindowViewModel by stopping the timer and disposing of the audio player.
+    /// It also logs the disposal event using the AppLogger instance.
+    /// </summary>
     public void Dispose()
     {
         _timer.Stop();

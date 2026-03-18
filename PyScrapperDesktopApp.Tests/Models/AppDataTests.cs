@@ -89,7 +89,7 @@ public class AppDataTests
     {
         Assert.NotNull(AppData.PyScrapperPath);
         Assert.NotNull(AppData.DownloadPath);
-        Assert.NotNull(AppData.LogsPath);
+        Assert.NotNull(AppData.AppLogsPath);
         Assert.NotNull(AppData.DataPath);
     }
 
@@ -102,7 +102,7 @@ public class AppDataTests
     [Fact]
     public void LogsPath_ContainsLogs()
     {
-        Assert.Contains("logs", AppData.LogsPath);
+        Assert.Contains("logs", AppData.AppLogsPath);
     }
 
     [Fact]

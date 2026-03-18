@@ -4,8 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="PyScrapperDesktopApp.Views.YoutubeScrapWindow"
-        x:DataType="vm:YoutubeScrapWindowViewModel"
+        x:Class="PyScrapperDesktopApp.Views.ScrapWindowWithSearch"
+        x:DataType="vm:ScrapWindowWithSearchViewModel"
         Icon="/Assets/PyScrapperLogo.ico"
         WindowStartupLocation="CenterScreen"
         CanMaximize="False"
@@ -39,7 +39,7 @@
                         <NumericUpDown Minimum="1" Value="1" Maximum="25" AllowSpin="True" FormatString="0" Text="{Binding SearchResultsCount}"/>
                 </StackPanel>
                 
-                <StackPanel Grid.Row="2" Classes="UICell">
+                <StackPanel Grid.Row="2" Classes="UICell" x:Name="MediaTypePanel">
                         <TextBlock Text="Select Mediatype: " Classes="UILabel"/>
                         <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
                 </StackPanel>
@@ -50,7 +50,7 @@
                 </StackPanel>
                 </Grid>
                 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left">
         <Grid Name="ResultsGrid" IsVisible="False">
                 <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"></RowDefinition>
@@ -63,7 +63,7 @@
                         <Button Classes="primary" Content="Done" Command="{Binding ScrapCommand}"/>
                 </StackPanel>
                 
-                <ListBox Grid.Row="1" SelectionMode="Multiple, Toggle" ItemsSource="{Binding YoutubeVideoItems}" SelectedItems="{Binding SelectedYoutubeVideoItems}">
+                <ListBox Grid.Row="1" SelectionMode="Multiple, Toggle" ItemsSource="{Binding Items}" SelectedItems="{Binding SelectedItems}">
                         <ListBox.ItemTemplate>
                                 <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Spacing="10">

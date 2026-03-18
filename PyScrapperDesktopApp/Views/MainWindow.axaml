@@ -28,9 +28,13 @@
                 <MenuItem Header="From Youtube" Command="{Binding OpenYoutubeScrapWindowCommand}"/>
                 <MenuItem Header="From Bandcamp" Command="{Binding OpenBandcampScrapWindowCommand}"/>
             </MenuItem>
-            <MenuItem Header="Open Media Player" Command="{Binding OpenMediaPlayerWindow}"/>
+            <MenuItem Header="Open Media Player" Command="{Binding OpenMediaPlayerWindowCommand}"/>
             <MenuItem Header="Server">
-                <MenuItem Header="Get Health" Command="{Binding GetHealth}"/>
+                <MenuItem Header="Get Health" Command="{Binding GetHealthCommand}"/>
+            </MenuItem>
+            <MenuItem Header="Logs">
+                <MenuItem Header="App Logs" Command="{Binding ShowAppLogsCommand}"/>
+                <MenuItem Header="Server Logs" Command="{Binding ShowServerLogsCommand}"/>
             </MenuItem>
         </Menu>
         

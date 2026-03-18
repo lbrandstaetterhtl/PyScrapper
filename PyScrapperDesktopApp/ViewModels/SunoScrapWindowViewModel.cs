@@ -34,6 +34,13 @@ public partial class SunoScrapWindowViewModel : ObservableObject
     
     public event Action? RequestClose;
     
+    /// <summary>
+    /// Scrap method that is executed when the user initiates the scraping process.
+    /// It creates an instance of the ApiClient and sends a scrap request to the server with the provided URL, media type, filename, and download path.
+    /// If the request is successful, it waits for a short delay before showing a progress bar window to track the download progress.
+    /// Once the download is complete, it checks if the downloaded file is playable and adds it to the list of downloaded media in the AppData.
+    /// If any errors occur during the process, it displays a message box to inform the user.
+    /// </summary>
     [RelayCommand]
     private async Task Scrap()
     {
@@ -87,6 +94,11 @@ public partial class SunoScrapWindowViewModel : ObservableObject
             RequestClose?.Invoke();
     }
 
+    /// <summary>
+    /// Constructor for the SunoScrapWindowViewModel class, which initializes the view model for the Suno scrap window.
+    /// It sets up the necessary properties and commands for the scrap functionality, including the CancelCommand that allows the user to close the scrap window without initiating the scrap process.
+    /// </summary>
+    /// <param name="scrapWindow"></param>
     public SunoScrapWindowViewModel(Window scrapWindow)
     {
         if (Design.IsDesignMode) return;

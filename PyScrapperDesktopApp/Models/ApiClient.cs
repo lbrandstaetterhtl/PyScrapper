@@ -11,12 +11,23 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.Models;
 
+/// <summary>
+/// Client for communicating with the server API.
+/// It provides methods for sending scrap requests, getting server health, sending search requests, and getting download progress.
+/// </summary>
 public class ApiClient
 {
     private readonly AppLogger _logger = new();
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>
+    /// Sends a scrap request to the server and returns the download ID if successful, or "-1" if there was an error.
+    /// Also logs the response from the server and shows a message box if there was an error.
+    /// </summary>
+    /// <param name="requestData"></param>
+    /// <param name="serverUrl"></param>
+    /// <returns name="id"></returns>
     public async Task<string> SendScrapRequest(DownloadRequestData requestData, string serverUrl)
     {
         HttpClient client = new();
@@ -51,6 +62,13 @@ public class ApiClient
         }
     }
 
+    /// <summary>
+    /// Gets the health of the server by sending a GET request to the /health endpoint. If successful, it logs the health information and returns a HealthResponse object.
+    /// If there is an error, it logs the error and shows a message box with the error detail, then returns null.
+    /// </summary>
+    /// <param name="serverUrl"></param>
+    /// <param name="loogHealthResponse"></param>
+    /// <returns name="health"></returns>
     public async Task<HealthResponse> GetHealth(string serverUrl, bool loogHealthResponse = true)
     {
         HttpClient client = new();
@@ -87,6 +105,14 @@ public class ApiClient
         }
     }
     
+    /// <summary>
+    /// Sends a search request to the server with the given search parameters. If successful, it logs the number of results found and returns a list of SearchResultItem objects.
+    /// If there is an error, it logs the error and shows a message box with the error detail, then returns an empty list. The search results include the identifier, url, thumbnail url, and title of each result.
+    /// The thumbnail is also downloaded as a Bitmap and stored in the Thumbnail
+    /// </summary>
+    /// <param name="requestData"></param>
+    /// <param name="serverUrl"></param>
+    /// <returns name="results"></returns>
     public async Task<List<SearchResultItem>> SendSearchRequest(SearchRequestData requestData, string serverUrl)
     {
         HttpClient client = new();
@@ -116,6 +142,16 @@ public class ApiClient
         }
     }
     
+    /// <summary>
+    /// Gets the download progress for a given download ID by sending a GET request to the /download/progress/{downloadId} endpoint.
+    /// If successful, it logs the progress information and returns a ProgressSuccessResponse object.
+    /// If there is an error, it logs the error and shows a message box with the error detail, then returns null.
+    /// The progress information includes the status, download progress percentage, download speed in MB/s, total bytes, and downloaded bytes.
+    /// This information can be used to update the UI with the current progress of the download.
+    /// </summary>
+    /// <param name="downloadId"></param>
+    /// <param name="serverUrl"></param>
+    /// <returns name="progressResponse"></returns>
     public async Task<ProgressSuccessResponse> GetDownloadProgress(string downloadId, string serverUrl)
     {
         HttpClient client = new();
@@ -156,12 +192,19 @@ public class ApiClient
         }
     }
 
+    /// <summary>
+    /// ServerProcess represents a process running on the server, with its PID and name.
+    /// This information is included in the health response from the server and can be used for monitoring and debugging purposes.
+    /// </summary>
     public class ServerProcess
     {
         public int Pid { get; set; }
         public string Name { get; set; }
     }
 
+    /// <summary>
+    /// DownloadJobItem represents an active download job on the server, with its ID, status, download progress percentage, and any error message if applicable.
+    /// </summary>
     public class DownloadJobItem
     {
         [JsonPropertyName("id")]
@@ -177,6 +220,10 @@ public class ApiClient
         public string ErrorMessage { get; set; }
     }
 
+    /// <summary>
+    /// SearchResultItem represents a single search result item returned from the server in response to a search request.
+    /// It includes the identifier, url, thumbnail url, title, and a Bitmap of the thumbnail image.
+    /// </summary>
     public class SearchResultItem
     {
         public string identifier { get; set; }

@@ -1,29 +1,21 @@
-﻿using System;
-using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Data;
-using Avalonia.Interactivity;
-using PyScrapperDesktopApp.Models;
+﻿using Avalonia.Controls;
 using PyScrapperDesktopApp.ViewModels;
 
 namespace PyScrapperDesktopApp.Views;
 
-public partial class YoutubeScrapWindow : Window
+public partial class ScrapWindowWithSearch : Window
 {
-    private YoutubeScrapWindowViewModel? _vm;
-    
-    public YoutubeScrapWindow()
+    public ScrapWindowWithSearch(string provider)
     {
         if (Design.IsDesignMode) return;
         
         InitializeComponent();
         
-        _vm = new YoutubeScrapWindowViewModel(this);
+       var vm = new ScrapWindowWithSearchViewModel(this, provider);
         
-        DataContext = _vm;
+        DataContext = vm;
         
-        _vm.RequestClose += Close;
+        vm.RequestClose += Close;
         
         int buttonCount = 0;
         
@@ -33,7 +25,7 @@ public partial class YoutubeScrapWindow : Window
             {
                 SearchGrid.IsVisible = false;
                 ResultsGrid.IsVisible = true;
-                await _vm.Search();
+                await vm.Search();
                 buttonCount++;
             }
         };
@@ -47,5 +39,10 @@ public partial class YoutubeScrapWindow : Window
                 buttonCount--;
             }
         };
+        
+        if (provider == "bandcamp" || provider == "bandcamp.com")
+        {
+            MediaTypePanel.IsVisible = false;
+        }
     }
 }

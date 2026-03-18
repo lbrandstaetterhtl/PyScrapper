@@ -17,12 +17,19 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
-
+/// <summary>
+/// Class responsible for managing the state and logic of the MainWindow, which serves as the central hub of the application. It handles the display of downloaded media, navigation to various functionalities such as scraping from different providers, opening a media player, and viewing logs.
+/// The class also manages user interactions through commands and ensures that the UI is updated accordingly based on the application's state and user actions.
+/// </summary>
 public partial class MainWindowViewModel : ObservableObject
 {
     [ObservableProperty]
     private ObservableCollection<DownloadedMedia> _downloadedMediaList;
 
+    /// <summary>
+    /// Constructor for the MainWindowViewModel, which initializes the view model and sets up the list of downloaded media by fetching it from the AppData.
+    /// It also checks if the application is in design mode to avoid executing code that should only run at runtime.
+    /// </summary>
     public MainWindowViewModel()
     {
         if (Design.IsDesignMode) return;
@@ -30,6 +37,10 @@ public partial class MainWindowViewModel : ObservableObject
         DownloadedMediaList = AppData.DownloadedMedias;
     }
     
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to open the Suno scrap window.
+    /// It checks if the application is running in a desktop environment and then creates and shows the SunoScrapWindow as a dialog, allowing the user to interact with it without leaving the main window.
+    /// </summary>
     [RelayCommand]
     private async Task OpenSunoScrapWindow()
     {
@@ -40,8 +51,13 @@ public partial class MainWindowViewModel : ObservableObject
         await sunoScrapWindow.ShowDialog(desktop.MainWindow);
     }
     
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to check the server health.
+    /// It creates and shows the GetServerHealthWindow, which displays the health status of the server by periodically fetching data from an API endpoint.
+    /// This allows the user to monitor the server's status
+    /// </summary>
     [RelayCommand]
-    public void GetHealth()
+    private void GetHealth()
     {
         if (Design.IsDesignMode) return;
         
@@ -49,8 +65,14 @@ public partial class MainWindowViewModel : ObservableObject
         getHealthWindow.Show();
     }
     
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to open the media player window.
+    /// It prompts the user to enter a valid file path for an audio file (e.g., .mp3) and checks if the file exists. If the file exists, it creates and shows the MediaPlayerWindow, allowing the user to play the selected media file.
+    /// If the file does not exist, it displays a message box informing the user to check the path and try again.
+    /// This functionality enables the user to easily access and play their media files directly from the main window of the application.
+    /// </summary>
     [RelayCommand]
-    public async Task OpenMediaPlayerWindow()
+    private async Task OpenMediaPlayerWindow()
     {
         if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
@@ -73,6 +95,10 @@ public partial class MainWindowViewModel : ObservableObject
         mediaPlayerWindow.Show();
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to open the YouTube scrap window.
+    /// It checks if the application is running in a desktop environment and then creates and shows the ScrapWindowWithSearch with "youtube" as the provider, allowing the user to interact with it and perform scraping operations specific to YouTube without leaving the main window.
+    /// </summary>
     [RelayCommand]
     private async Task OpenYoutubeScrapWindow()
     {
@@ -83,6 +109,10 @@ public partial class MainWindowViewModel : ObservableObject
         await youtubeScrapWindow.ShowDialog(desktop.MainWindow);
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to open the Bandcamp scrap window.
+    /// It checks if the application is running in a desktop environment and then creates and shows the ScrapWindowWithSearch with "bandcamp" as the provider, allowing the user to interact with it and perform scraping operations specific to Bandcamp without leaving the main window.
+    /// </summary>
     [RelayCommand]
     private async Task OpenBandcampScrapWindow()
     {
@@ -91,5 +121,37 @@ public partial class MainWindowViewModel : ObservableObject
 
         var bandcampScrapWindow = new ScrapWindowWithSearch("bandcamp");
         await bandcampScrapWindow.ShowDialog(desktop.MainWindow);
+    }
+    
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to show the application logs.
+    /// It reads the contents of the app.log file from the application's logs directory and displays it in a new LogsWindow.
+    /// If the log file does not exist, it shows a message indicating that no logs were found.
+    /// This allows the user to easily access and review the application logs for troubleshooting or monitoring purposes directly from the main window.
+    /// </summary>
+    [RelayCommand]
+    private void ShowAppLogs()
+    {
+        var logs = File.Exists(AppData.AppLogsPath + @"\app.log") ? File.ReadAllText(AppData.AppLogsPath + @"\app.log") : "No logs found.";
+        var label = "App Logs:\n\n";
+        
+        var logWindow = new LogsWindow(logs, label);
+        logWindow.Show();
+    }
+    
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to show the server logs.
+    /// It reads the contents of the server_runtime.log file from the application's server logs directory and displays it in a new LogsWindow.
+    /// If the log file does not exist, it shows a message indicating that no logs were found.
+    /// This allows the user to easily access and review the server logs for troubleshooting or monitoring purposes directly from the main window, providing insights into the server's runtime behavior and any potential issues that may arise.
+    /// </summary>
+    [RelayCommand]
+    private void ShowServerLogs()
+    {
+        var logs = File.Exists(AppData.ServerLogsPath + @"\server_runtime.log") ? File.ReadAllText(AppData.ServerLogsPath + @"\server_runtime.log") : "No logs found.";
+        var label = "Server Logs:\n\n";
+        
+        var logWindow = new LogsWindow(logs, label);
+        logWindow.Show();
     }
 }

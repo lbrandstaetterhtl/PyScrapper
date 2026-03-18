@@ -11,6 +11,10 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
+/// <summary>
+/// Class responsible for managing the state and logic of the GetServerHealthWindow, which displays the health status of a server by periodically fetching data from an API endpoint. It handles the connection status, uptime, memory usage, active processes, download jobs, and error messages, updating the UI accordingly.
+/// The class also manages cancellation of the health check when the window is closed.
+/// </summary>
 public partial class GetServerHealthWindowViewModel : ObservableObject
 {
     private readonly ApiClient _apiClient = new();
@@ -57,6 +61,11 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     
     private int _runCount = 0;
     
+    /// <summary>
+    /// Starts the health check process by creating a cancellation token and running a loop that periodically fetches the server's health status from the API. The loop updates the connection status, uptime, memory usage, active processes, download jobs, and error messages based on the response from the server. If an error occurs during the health check, it sets the status to offline and logs the error message. T
+    /// he health check runs every 5 seconds until it is canceled when the window is closed.
+    /// </summary>
+    /// <exception cref="Exception"></exception>
     public void StartHealthCheck()
     {
         _cts = new CancellationTokenSource();
@@ -116,6 +125,10 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
         }, token);
     }
     
+    /// <summary>
+    /// Sets the status of the server to offline by updating the connection status, status color, uptime, memory usage, process ID, active processes, download jobs, and error messages to indicate that the server is not reachable. This method is called when an error occurs during the health check to reflect the offline status in the UI and log the error message.
+    /// It also updates the last health check time to indicate when the last attempt was made to check the server's health.
+    /// </summary>
     private void SetOffline()
     {
         StatusColor = Brushes.LightCoral;
@@ -131,12 +144,20 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
         LastHealthCheckTime = "Last attempt: " + DateTime.Now.ToString("HH:mm:ss");
     }
     
+    /// <summary>
+    /// Stops the health check process by canceling the cancellation token and invoking the CloseRequested event to signal that the window should be closed. This method is called when the user closes the window or when an error occurs that requires stopping the health check, ensuring that any ongoing tasks are properly canceled and resources are released.
+    /// It also allows for any necessary cleanup actions to be performed before the window is closed.
+    /// </summary>
     public void StopHealthCheck()
     {
         _cts.Cancel();
         CloseRequested?.Invoke();
     }
     
+    /// <summary>
+    /// Closes the GetServerHealthWindow by stopping the health check process and invoking the CloseRequested event. This method is called when the user clicks the close button on the window, ensuring that any ongoing health check tasks are properly canceled and that the window is closed gracefully.
+    /// It also allows for any necessary cleanup actions to be performed before the window is closed, such as releasing resources or saving state if needed.
+    /// </summary>
     [RelayCommand]
     private void Close()
     {
