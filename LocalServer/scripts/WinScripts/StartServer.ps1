@@ -34,7 +34,7 @@ function Write-Log {
 Write-Log "== Start Server =="
 
 # In LocalServer wechseln (damit server.py sicher gefunden wird)
-Set-Location -Path $LocalServer
+Set-Location -Path $RepoRoot
 
 # ─── Virtual Environment ────────────────────────────────────
 # .venv liegt unter scripts\
@@ -108,6 +108,7 @@ if ($ffmpegInProject) {
 
 # ─── uvicorn starten ────────────────────────────────────────
 Write-Log "Starting uvicorn: server:app on $HostAddr`:$Port"
-Start-Process -FilePath "python" `
+Start-Process -FilePath $pythonExe `
               -ArgumentList "-m uvicorn LocalServer.server:app --host $HostAddr --port $Port" `
+              -WorkingDirectory $RepoRoot `
               -NoNewWindow -Wait
