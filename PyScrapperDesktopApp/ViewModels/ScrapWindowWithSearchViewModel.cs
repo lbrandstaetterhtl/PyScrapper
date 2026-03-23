@@ -132,6 +132,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     var media = new DownloadedMedia(item.url, SelectedMediaType, DateTime.Now, downloadFilePath,
                         isPlayable, identifier);
                     media.SetHighestId(AppData.DownloadedMedias);
+                    media.SetTitle();
 
                     AppData.AddDownloadedMedia(media);
                 }

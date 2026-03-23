@@ -54,5 +54,12 @@
                 <Setter Property="Margin" Value="5"/>
                 <Setter Property="HorizontalAlignment" Value="Center"/>
         </Style>
+        
+        <Style Selector="ListBox.SelectableItem">
+                <Setter Property="Margin" Value="5"/>
+                <Setter Property="Padding" Value="5"/>
+                <Setter Property="CornerRadius" Value="8"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
          
 </Styles>

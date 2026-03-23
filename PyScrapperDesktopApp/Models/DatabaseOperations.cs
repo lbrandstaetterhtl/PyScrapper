@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 
@@ -13,6 +16,8 @@ public abstract class DatabaseOperations
     private static readonly string DatabaseFilePath = AppData.DataPath + @"\Data.sqlite";
     
     static readonly SqliteConnection Connection = new($"Data Source={DatabaseFilePath}");
+    
+    private static readonly AppLogger Logger = new();
     
     /// <summary>
     /// Saves the provided collection of downloaded media to the SQLite database.
@@ -70,9 +75,8 @@ public abstract class DatabaseOperations
         }
         catch (Exception exception)
         {
-            var logger = new AppLogger();
             var log = new Massage("Error while saving downloaded medias to database: " + exception.Message, DateTime.Now, "ERROR");
-            logger.LogNewMassage(log);
+            Logger.LogNewMassage(log);
         }
     }
     
@@ -181,5 +185,109 @@ public abstract class DatabaseOperations
         return downloadedMedias;
     }
     
+    /// <summary>
+    /// Loads the collection of playlists from the SQLite database, creating the necessary table if it doesn't exist and retrieving distinct records based on the Name to populate an ObservableCollection of Playlist objects without duplicates.
+    /// </summary>
+    /// <returns name="playlists"></returns>
+    public static async Task<ObservableCollection<Playlist>> LoadPlaylistsNoDuplicates()
+    {
+        var playlists = new ObservableCollection<Playlist>();
+        
+        Connection.Open();
+
+        var createCommand = Connection.CreateCommand();
+
+        createCommand.CommandText =
+            """
+                CREATE TABLE IF NOT EXISTS Playlists (
+                    Id INTEGER PRIMARY KEY,
+                    Name TEXT,
+                    Description TEXT,
+                    MediaIds TEXT,
+                    PlayableMediaIds TEXT
+                )STRICT;
+            """;
+        
+        createCommand.ExecuteNonQuery();
+        
+        var selectCommand = Connection.CreateCommand();
+        
+        selectCommand.CommandText = "SELECT DISTINCT Id, Name, Description, MediaIds, PlayableMediaIds FROM Playlists GROUP BY Name;";
+        
+        await using var reader = await selectCommand.ExecuteReaderAsync();
+
+        while (reader.Read())
+        {
+            var playlist = new Playlist(
+                JsonSerializer.Deserialize<List<int>>(reader.GetString(3)),
+                reader.GetString(1), // Name
+                reader.IsDBNull(2) ? null : reader.GetString(2)
+                )
+            {
+                Id = reader.GetInt32(0),
+                PlayableMediaIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(4))
+            };
+            
+            playlists.Add(playlist);
+        }
+        
+        Connection.Close();
+        
+        return playlists;
+    }
     
+    /// <summary>
+    /// Saves the provided collection of playlists to the SQLite database. It creates the necessary table if it doesn't exist, clears existing records, and inserts the new playlist data. If any errors occur during this process, they are logged using the AppLogger class.
+    /// </summary>
+    /// <param name="playlists"></param>
+    public static void SavePlaylists(ObservableCollection<Playlist> playlists)
+    {
+        try
+        {
+            Connection.Open();
+            
+            var createCommand = Connection.CreateCommand();
+
+            createCommand.CommandText =
+                """
+                    CREATE TABLE IF NOT EXISTS Playlists (
+                        Id INTEGER PRIMARY KEY,
+                        Name TEXT,
+                        Description TEXT,
+                        MediaIds TEXT,
+                        PlayableMediaIds TEXT
+                    )STRICT;
+                """;
+        
+            createCommand.ExecuteNonQuery();
+            
+            var deleteCommand = Connection.CreateCommand();
+            deleteCommand.CommandText = "DELETE FROM Playlists;";
+            deleteCommand.ExecuteNonQuery();
+            
+            foreach (var playlist in playlists)
+            {
+                var insertCommand = Connection.CreateCommand();
+                insertCommand.CommandText =
+                    """
+                    INSERT INTO Playlists (Id, Name, Description, MediaIds, PlayableMediaIds)
+                    VALUES ($id, $name, $description, $mediaIds, $playableMediaIds);
+                    """;
+                insertCommand.Parameters.AddWithValue("$id", playlist.Id);
+                insertCommand.Parameters.AddWithValue("$name", playlist.Name);
+                insertCommand.Parameters.AddWithValue("$description", playlist.Description);
+                insertCommand.Parameters.AddWithValue("$mediaIds", JsonSerializer.Serialize(playlist.MediaIds));
+                insertCommand.Parameters.AddWithValue("$playableMediaIds", JsonSerializer.Serialize(playlist.PlayableMediaIds));
+                
+                insertCommand.ExecuteNonQuery();
+            }
+            
+            Connection.Close();
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while saving playlists: " + e.Message, DateTime.Now, "ERROR");
+            Logger.LogNewMassage(log);
+        }
+    }
 }

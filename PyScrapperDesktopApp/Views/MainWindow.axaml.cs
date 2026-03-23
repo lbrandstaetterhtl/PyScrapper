@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using FluentAvalonia.Core;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
@@ -134,5 +135,26 @@ public partial class MainWindow : Window
                 messageBox.ShowDialog(this);
             }
         }
+    }
+    
+    private void PlaylistDoubleClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Border { DataContext: Playlist playlist })
+        {
+            var playlistWindow = new PlaylistDetailsWindow(playlist);
+            playlistWindow.Show();
+        }
+    }
+    
+    private void ShowPlaylistsClick(object? sender, RoutedEventArgs e)
+    {
+        DownloadedMediasList.IsVisible = false;
+        PlaylistsList.IsVisible = true;
+    }
+    
+    private void ShowDownloadedMediasClick(object? sender, RoutedEventArgs e)
+    {
+        PlaylistsList.IsVisible = false;
+        DownloadedMediasList.IsVisible = true;
     }
 }

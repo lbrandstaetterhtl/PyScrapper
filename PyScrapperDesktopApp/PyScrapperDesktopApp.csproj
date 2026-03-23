@@ -38,8 +38,8 @@
       <Compile Update="Views\GetServerHealthWindow.axaml.cs">
         <DependentUpon>GetServerHealthWindow.axaml</DependentUpon>
       </Compile>
-      <Compile Update="Views\BandcampScrapWindow.axaml.cs">
-        <DependentUpon>BandcampScrapWindow.axaml</DependentUpon>
+      <Compile Update="Views\PlaylistDetailsWindow.axaml.cs">
+        <DependentUpon>PlaylistDetailsWindow.axaml</DependentUpon>
       </Compile>
     </ItemGroup>
 </Project>

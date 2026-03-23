@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -9,6 +10,7 @@ public class AppData
 {
     public static ObservableCollection<DownloadedMedia> DownloadedMedias = new();
     public static ObservableCollection<DownloadedMedia> PlayableMedias = new();
+    public static ObservableCollection<Playlist> Playlists = new();
     public static string PyScrapperPath { get;} = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
     public static string DownloadPath { get;} = Path.Combine(PyScrapperPath, "Downloads");
     public static string AppLogsPath { get;} = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
@@ -42,6 +44,11 @@ public class AppData
             PlayableMedias.Remove(media);
         }
     }
+    
+    public static void AddPlaylist(Playlist playlist)
+    {
+        Playlists.Add(playlist);
+    }
 }
 
 /// <summary>
@@ -57,6 +64,7 @@ public class DownloadedMedia(string url, string mediaType, DateTime downloadedAt
 {
     public int Id { get; set; }
     public string Identifier { get; set; } = identifier;
+    public string Title { get; set; } = string.Empty;
     public string Url { get; set; } = url;
     public string MediaType { get; set; } = mediaType;
     public DateTime DownloadedAt { get; set; } = downloadedAt;
@@ -78,6 +86,55 @@ public class DownloadedMedia(string url, string mediaType, DateTime downloadedAt
         else
         {
             Id = 1;
+        }
+    }
+
+    public void SetTitle()
+    {
+        Title = DownloadPath.Split('/')[^1].Split('.')[0];
+    }
+}
+
+/// <summary>
+/// Class representing a playlist, which contains a list of media IDs and a name, along with a unique identifier for the playlist itself.
+/// </summary>
+/// <param name="mediaIds"></param>
+/// <param name="name"></param>
+public class Playlist(List<int> mediaIds, string name, string description)
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = name;
+    public string? Description { get; set; } = description;
+    public List<int> MediaIds { get; set; } = mediaIds;
+    public List<int> PlayableMediaIds { get; set; } = new();
+    public int Count => MediaIds.Count;
+    
+    /// <summary>
+    /// Sets the id property to the highest existing id in the provided collection of playlists plus one, ensuring a unique identifier for each playlist item.
+    /// </summary>
+    /// <param name="playlists"></param>
+    public void SetHighestId(ObservableCollection<Playlist> playlists)
+    {
+        if (playlists.Count > 0)
+        {
+            Id = playlists.Max(p => p.Id) + 1;
+        }
+        else
+        {
+            Id = 1;
+        }
+    }
+    
+    public void SetPlayableMediaIds(ObservableCollection<DownloadedMedia> playableMedias)
+    {
+        foreach (var mediaId in MediaIds)
+        {
+            var media = playableMedias.FirstOrDefault(m => m.Id == mediaId);
+
+            if (media is not null)
+            {
+                PlayableMediaIds.Add(media.Id);
+            }
         }
     }
 }

@@ -1,0 +1,57 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="PyScrapperDesktopApp.Views.PlaylistDetailsWindow"
+        x:DataType="vm:PlaylistDetailsWindowViewModel"
+        SizeToContent="WidthAndHeight"
+        MaxHeight="400"
+        MaxWidth="600"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/PyScrapperLogo.ico"
+        Title="PyScrapperDesktopApp">
+        
+        <StackPanel>
+                
+                <StackPanel Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" Classes="UICell">
+                        <TextBlock Text="Playlist Name: " Classes="UILabel"/>
+                        <TextBlock Text="{Binding PlaylistName}" Classes="UIValue"/>
+                </StackPanel>
+                
+                <StackPanel Orientation="Horizontal" Classes="UICell">
+                        <TextBlock Text="Playlist description: " Classes="UILabel"/>
+                        <TextBlock Text="{Binding Description}" Classes="UIValue"/>
+                </StackPanel>
+                </StackPanel>
+                
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Medias}">
+                        <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                        <Border Classes="Cell" HorizontalAlignment="Left" DoubleTapped="DoubleClickMedia">
+                                                <Border.ContextFlyout>
+                                                        <MenuFlyout>
+                                                                <MenuItem Header="Play" Click="PlayButtonClick"/>
+                                                        </MenuFlyout>
+                                                </Border.ContextFlyout>
+                                                <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Title}" Classes="UIValue"/>
+                                                        <TextBlock Text="{Binding DownloadPath}" Classes="UIValue"/>
+                                                        <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}"/>
+                                                </StackPanel>
+                                        </Border>
+                                </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                </ScrollViewer>
+                
+                <StackPanel Classes="UICell">
+                        <Button Classes="primary" Content="Play Playlist" />
+                        <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
+                </StackPanel>
+        </StackPanel>
+        
+</Window>

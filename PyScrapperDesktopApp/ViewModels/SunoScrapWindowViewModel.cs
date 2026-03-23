@@ -9,6 +9,7 @@ using System.Xml;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LibVLCSharp.Shared;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.Views;
 
@@ -72,6 +73,8 @@ public partial class SunoScrapWindowViewModel : ObservableObject
 
                 if (!errorWhileDownloading)
                 {
+                    Task.Delay(2000).Wait();
+                    
                     var identifier = SunoUrl.Split('/')[^1];
 
                     var downloadedFilePath = Path.Combine(AppData.DownloadPath, $"{Filename}{SelectedMediaType}");
@@ -81,6 +84,7 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                     var media = new DownloadedMedia(SunoUrl, SelectedMediaType, DateTime.Now, downloadedFilePath,
                         isPlayable, identifier);
                     media.SetHighestId(AppData.DownloadedMedias);
+                    media.SetTitle();
 
                     AppData.AddDownloadedMedia(media);
                 }

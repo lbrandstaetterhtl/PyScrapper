@@ -20,7 +20,7 @@ namespace PyScrapperDesktopApp;
 public partial class App : Application
 {
     private readonly AppLogger _logger = new AppLogger();
-    
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -28,108 +28,139 @@ public partial class App : Application
 
     public override async void OnFrameworkInitializationCompleted()
     {
-        if (Design.IsDesignMode) return;
-        
-        base.OnFrameworkInitializationCompleted();
-        
-        var log = new Massage("Application initializing...", DateTime.Now, "INFO");
-        _logger.LogNewMassage(log);
-        
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        try
         {
-            DisableAvaloniaDataAnnotationValidation();
-            
-            log = new Massage("Installing frontend requirements", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-            
-            RunScript("InstallRequirementsFrontend", wait: true);
-            
-            log = new Massage("Frontend requirements installation completed", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-            
-            log = new Massage("Starting local server and installing requirements for backend", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-            
-            RunScript("StartServer");
-            
-            
-            int maxTries = 30;
-            int tries = 0;
-            bool serverStarted = false;
-            
-            do
-            {
-                try
-                {
-                    await Task.Delay(1000);
-                    var healthResponse = await new ApiClient().GetHealth("127.0.0.1:8765");
 
-                    if (healthResponse.Ok)
-                    {
-                        serverStarted = true;
-                    }
-                
-                }
-                catch (Exception e)
+            if (Design.IsDesignMode) return;
+
+            base.OnFrameworkInitializationCompleted();
+
+            var log = new Massage("Application initializing...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                DisableAvaloniaDataAnnotationValidation();
+
+                log = new Massage("Installing frontend requirements", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+
+                RunScript("InstallRequirementsFrontend", wait: true);
+
+                log = new Massage("Frontend requirements installation completed", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+
+                log = new Massage("Starting local server and installing requirements for backend", DateTime.Now,
+                    "INFO");
+                _logger.LogNewMassage(log);
+
+                RunScript("StartServer");
+
+
+                int maxTries = 30;
+                int tries = 0;
+                bool serverStarted = false;
+
+                do
                 {
-                    log = new Massage("Waiting for local server to start...", DateTime.Now, "INFO");
+                    try
+                    {
+                        await Task.Delay(1000);
+                        var healthResponse = await new ApiClient().GetHealth("127.0.0.1:8765");
+
+                        if (healthResponse.Ok)
+                        {
+                            serverStarted = true;
+                        }
+
+                    }
+                    catch (Exception e)
+                    {
+                        log = new Massage("Waiting for local server to start...", DateTime.Now, "INFO");
+                        _logger.LogNewMassage(log);
+                    }
+
+                    tries++;
+                } while (!serverStarted && tries < maxTries);
+
+                if (!serverStarted)
+                {
+                    log = new Massage("Failed to start local server after multiple attempts", DateTime.Now, "ERROR");
+                    _logger.LogNewMassage(log);
+                    desktop.Shutdown(1);
+                    return;
+                }
+
+                log = new Massage("Local server started and backend requirements installation complete", DateTime.Now,
+                    "INFO");
+                _logger.LogNewMassage(log);
+
+                desktop.Exit += OnExit;
+
+                desktop.MainWindow = new MainWindow
+                {
+                    DataContext = new MainWindowViewModel(),
+                };
+
+                log = new Massage("Loading Data...", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+
+                var medias = await DatabaseOperations.LoadDownloadedMediasNoDuplicates();
+
+                var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
+
+                foreach (var mediaToRemove in mediasToRemove)
+                {
+                    medias.Remove(mediaToRemove);
+
+                    log = new Massage(
+                        $"Media with id {mediaToRemove.Id} removed from the list because it does not exist",
+                        DateTime.Now, "WARNING");
                     _logger.LogNewMassage(log);
                 }
-                tries ++;
-            } while (!serverStarted && tries < maxTries);
-            
-            if (!serverStarted)
-            {
-                log = new Massage("Failed to start local server after multiple attempts", DateTime.Now, "ERROR");
+
+                foreach (var media in medias)
+                {
+                    if (File.Exists(media.DownloadPath))
+                    {
+                        media.IsPlayable = true;
+                    }
+                    else
+                    {
+                        media.IsPlayable = false;
+                        media.DownloadPath = "Does not exist";
+                    }
+
+                    AppData.AddDownloadedMedia(media);
+                }
+
+                var playlists = await DatabaseOperations.LoadPlaylistsNoDuplicates();
+
+                foreach (var playlist in playlists)
+                {
+                    AppData.AddPlaylist(playlist);
+                }
+
+                log = new Massage(
+                    $"Application started with {AppData.DownloadedMedias.Count} listed medias and {AppData.PlayableMedias.Count} playable medias | deleted {mediasToRemove.Count} medias",
+                    DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
+
+                log = new Massage($"Application started with {AppData.Playlists.Count} playlists", DateTime.Now,
+                    "INFO");
+                _logger.LogNewMassage(log);
+
+                desktop.MainWindow.Show();
+            }
+        }
+        catch (Exception e)
+        {
+            var log = new Massage($"Application failed to start: {e.Message}", DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
                 desktop.Shutdown(1);
-                return;
             }
-            
-            log = new Massage("Local server started and backend requirements installation complete", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-            
-            desktop.Exit += OnExit;
-            
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = new MainWindowViewModel(),
-            };
-
-            log = new Massage("Loading Data...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-            
-            var medias = await DatabaseOperations.LoadDownloadedMediasNoDuplicates();
-
-            var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
-            
-            foreach (var mediaToRemove in mediasToRemove)
-            {
-                medias.Remove(mediaToRemove);
-                    
-                log = new Massage($"Media with id {mediaToRemove.Id} removed from the list because it does not exist", DateTime.Now, "WARNING");
-                _logger.LogNewMassage(log);
-            }
-            
-            foreach (var media in medias)
-            {
-                if (File.Exists(media.DownloadPath))
-                {
-                    media.IsPlayable = true;
-                }
-                else
-                {
-                    media.IsPlayable = false;
-                    media.DownloadPath = "Does not exist";
-                }
-                
-                AppData.AddDownloadedMedia(media);
-            }
-
-            log = new Massage($"Application started with {AppData.DownloadedMedias.Count} listed medias and {AppData.PlayableMedias.Count} playable medias | deleted {mediasToRemove.Count} medias", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-            
-            desktop.MainWindow.Show();
         }
     }
 
@@ -208,6 +239,7 @@ public partial class App : Application
         _logger.LogNewMassage(log);
         
         DatabaseOperations.SaveDownloadedMedias(AppData.DownloadedMedias);
+        DatabaseOperations.SavePlaylists(AppData.Playlists);
         
         log = new Massage("Shutting down local server...", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);

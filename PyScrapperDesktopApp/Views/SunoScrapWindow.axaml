@@ -38,7 +38,7 @@
                 </StackPanel>
                 
                 <StackPanel Grid.Row="3" Classes="UICell">
-                        <Button Classes="primary" Content="Scrap" Command="{Binding Scrap}"/>
+                        <Button Classes="primary" Content="Scrap" Command="{Binding ScrapCommand}"/>
                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
         </Grid>

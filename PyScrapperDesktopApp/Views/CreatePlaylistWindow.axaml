@@ -1,0 +1,45 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="PyScrapperDesktopApp.Views.CreatePlaylistWindow"
+        x:DataType="vm:CreatePlaylistWindowViewModel"
+        SizeToContent="WidthAndHeight"
+        MaxHeight="400"
+        MaxWidth="600"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/PyScrapperLogo.ico"
+        Title="PyScrapperDesktopApp">
+        
+        <StackPanel>
+                <StackPanel Orientation="Horizontal" Classes="UICell">
+                        <TextBlock Text="Playlist Name: " Classes="UILabel"/>
+                        <TextBox Text="{Binding PlaylistName}" Classes="UI"/>
+                </StackPanel>
+                
+                <StackPanel Orientation="Horizontal" Classes="UICell">
+                        <TextBlock Text="Playlist description (optional): " Classes="UILabel"/>
+                        <TextBox Text="{Binding Description}" Classes="UI"/>
+                </StackPanel>
+                
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <ListBox ItemsSource="{Binding AvailableMedias}" SelectionMode="Multiple, Toggle" SelectedItems="{Binding SelectedMedias}" Classes="SelectableItem">
+                        <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Title}" Classes="UIValue"/>
+                                                <TextBlock Text="{Binding DownloadPath}" Classes="UIValue"/>
+                                        </StackPanel>
+                                </DataTemplate>
+                        </ListBox.ItemTemplate>
+                </ListBox>
+                </ScrollViewer>
+                
+                <StackPanel Classes="UICell">
+                        <Button Classes="primary" Content="Create Playlist" Command="{Binding CreatePlaylistCommand}"/>
+                        <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
+                </StackPanel>
+        </StackPanel>
+</Window>

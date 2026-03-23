@@ -23,8 +23,9 @@ namespace PyScrapperDesktopApp.ViewModels;
 /// </summary>
 public partial class MainWindowViewModel : ObservableObject
 {
-    [ObservableProperty]
-    private ObservableCollection<DownloadedMedia> _downloadedMediaList;
+    public ObservableCollection<DownloadedMedia> DownloadedMediaList => AppData.DownloadedMedias;
+    
+    public ObservableCollection<Playlist> Playlists => AppData.Playlists;
 
     /// <summary>
     /// Constructor for the MainWindowViewModel, which initializes the view model and sets up the list of downloaded media by fetching it from the AppData.
@@ -33,8 +34,6 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel()
     {
         if (Design.IsDesignMode) return;
-        
-        DownloadedMediaList = AppData.DownloadedMedias;
     }
     
     /// <summary>
@@ -153,5 +152,20 @@ public partial class MainWindowViewModel : ObservableObject
         
         var logWindow = new LogsWindow(logs, label);
         logWindow.Show();
+    }
+    
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to create a new playlist.
+    /// It checks if the application is running in a desktop environment and then creates and shows the CreatePlaylistWindow as a dialog, allowing the user to interact with it and create a new playlist without leaving the main window.
+    /// This functionality enables users to easily manage their playlists directly from the main window of the application, enhancing the overall user experience and providing convenient access to playlist creation features.
+    /// </summary>
+    [RelayCommand]
+    private void CreatePlaylist()
+    {
+        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            return;
+
+        var createPlaylistWindow = new CreatePlaylistWindow();
+        createPlaylistWindow.ShowDialog(desktop.MainWindow);
     }
 }
