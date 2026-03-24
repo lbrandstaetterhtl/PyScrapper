@@ -17,16 +17,9 @@
 
 # --- Verzeichnisse berechnen --------------------------------
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}")")" && pwd)"
-# SCRIPT_DIR  = .../PyScrapper/LocalServer/scripts/LinuxScripts
-
 SCRIPTS_DIR="$(dirname "$SCRIPT_DIR")"
-# SCRIPTS_DIR = .../PyScrapper/LocalServer/scripts
-
 LOCAL_SERVER="$(dirname "$SCRIPTS_DIR")"
-# LOCAL_SERVER = .../PyScrapper/LocalServer
-
 REPO_ROOT="$(dirname "$LOCAL_SERVER")"
-# REPO_ROOT = .../PyScrapper  ← hier liegen die .csproj-Projekte
 
 # --- Logging Setup ------------------------------------------
 LOG_DIR="$LOCAL_SERVER/logs"
@@ -45,48 +38,73 @@ write_log() {
 
 write_log "== Install Frontend Requirements =="
 
+# ─── dotnet PATH fix ─────────────────────────────────────────────
+# Bevorzuge ~/.dotnet gegenüber /run/host (Flatpak-Sandbox liefert
+# sonst .NET 10 das wegen zu alter glibc crasht)
+if [[ -x "$HOME/.dotnet/dotnet" ]]; then
+    export DOTNET_ROOT="$HOME/.dotnet"
+    export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
+    write_log "Using ~/.dotnet/dotnet (DOTNET_ROOT=$DOTNET_ROOT)"
+fi
+
+# ─── dotnet funktionsfähig prüfen ────────────────────────────────
+is_dotnet_functional() {
+    local version_output
+    version_output="$(dotnet --version 2>&1)"
+    if echo "$version_output" | grep -qiE "Failed|Error|HRESULT|not found"; then
+        return 1
+    fi
+    echo "$version_output"
+    return 0
+}
+
 # ─── .NET SDK ────────────────────────────────────────────────────
 write_log "Checking .NET SDK..."
 
 if command -v dotnet &>/dev/null; then
-    SDK_VERSION="$(dotnet --version 2>&1)"
-    write_log ".NET SDK $SDK_VERSION detected ✓"
+    SDK_VERSION="$(is_dotnet_functional)"
+    if [[ $? -eq 0 ]]; then
+        write_log ".NET SDK $SDK_VERSION detected ✓"
+    else
+        write_log "dotnet found but not functional (likely wrong version or glibc mismatch)."
+        write_log "Attempting installation of .NET 9 via dotnet-install.sh..."
+        command -v dotnet > /dev/null && unset -f dotnet 2>/dev/null || true
+        DOTNET_FUNCTIONAL=0
+    fi
 else
-    write_log ".NET SDK not found — attempting automatic installation..."
+    DOTNET_FUNCTIONAL=0
+fi
 
+if [[ "${DOTNET_FUNCTIONAL:-1}" -eq 0 ]]; then
     write_log "Installing .NET SDK via pacman..."
-    if sudo pacman -S dotnet-sdk --noconfirm >> "$LOG_FILE" 2>&1; then
+    if sudo pacman -S dotnet-sdk-9.0 --noconfirm >> "$LOG_FILE" 2>&1; then
         write_log "pacman install succeeded."
     else
-        write_log "WARNING: pacman install failed or package not found."
-    fi
-
-    if ! command -v dotnet &>/dev/null; then
-        write_log "Falling back to dotnet-install.sh..."
+        write_log "WARNING: pacman install failed, trying dotnet-install.sh..."
 
         INSTALL_SCRIPT="/tmp/dotnet-install.sh"
-
         if curl -fsSL "https://dot.net/v1/dotnet-install.sh" -o "$INSTALL_SCRIPT"; then
             chmod +x "$INSTALL_SCRIPT"
             "$INSTALL_SCRIPT" --channel 9.0 2>&1 | while IFS= read -r line; do
                 write_log "  $line"
             done
 
-            DOTNET_DIR="$HOME/.dotnet"
-            if [[ -d "$DOTNET_DIR" ]]; then
-                export PATH="$DOTNET_DIR:$PATH"
-                write_log "Added $DOTNET_DIR to session PATH"
+            if [[ -x "$HOME/.dotnet/dotnet" ]]; then
+                export DOTNET_ROOT="$HOME/.dotnet"
+                export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
+                write_log "Added $HOME/.dotnet to PATH"
             fi
         else
             write_log "ERROR: Failed to download dotnet-install.sh"
         fi
     fi
 
-    if command -v dotnet &>/dev/null; then
-        SDK_VERSION="$(dotnet --version 2>&1)"
+    SDK_VERSION="$(is_dotnet_functional 2>/dev/null)"
+    if [[ $? -eq 0 ]]; then
         write_log ".NET SDK $SDK_VERSION installed ✓"
     else
-        write_log "ERROR: .NET SDK could not be installed. Please install manually from https://dot.net"
+        write_log "ERROR: .NET SDK could not be installed or is not functional."
+        write_log "Please install manually: https://dot.net"
         exit 1
     fi
 fi
@@ -127,8 +145,6 @@ else
 fi
 
 # ─── NuGet Packages aus .csproj ──────────────────────────────────
-# .csproj-Dateien liegen unter REPO_ROOT (PyScrapper/)
-# z.B. PyScrappperDesktopApp/, PyScrappperDesktopApp.Tests/ usw.
 write_log "Repo root: $REPO_ROOT"
 
 mapfile -t CSPROJ_FILES < <(
