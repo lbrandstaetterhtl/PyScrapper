@@ -1,10 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
-using FluentAvalonia.Core;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
@@ -38,7 +36,9 @@ public partial class MainWindow : Window
                     throw new Exception("Media not found");
                 }
                 
-                var mediaPlayerWindow = new MediaPlayerWindow(media.DownloadPath);
+                List<DownloadedMedia> mediaList = [media];
+                
+                var mediaPlayerWindow = new MediaPlayerWindow(mediaList);
                 mediaPlayerWindow.Show();
             }
         }
@@ -115,6 +115,8 @@ public partial class MainWindow : Window
                 {
                     File.Delete(media.DownloadPath);
                     
+                    media.IsPlayable = false;
+                    
                     var log = new Massage("File deleted successfully: " + media.DownloadPath, DateTime.Now, "INFO");
                     _logger.LogNewMassage(log);
                     
@@ -143,6 +145,29 @@ public partial class MainWindow : Window
         {
             var playlistWindow = new PlaylistDetailsWindow(playlist);
             playlistWindow.Show();
+        }
+    }
+    
+    private void OpenPlaylistDetailsClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { DataContext: Playlist playlist })
+        {
+            var playlistWindow = new PlaylistDetailsWindow(playlist);
+            playlistWindow.Show();
+        }
+    }
+    
+    private void DeletePlaylist(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { DataContext: Playlist playlist })
+        {
+            AppData.RemovePlaylist(playlist);
+            
+            var log = new Massage("Playlist removed from the list: " + playlist.Name, DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            
+            var messageBox = new MessageBox("Playlist removed from the list: " + playlist.Name);
+            messageBox.ShowDialog(this);
         }
     }
     

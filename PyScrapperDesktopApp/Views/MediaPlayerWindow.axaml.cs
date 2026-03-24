@@ -1,10 +1,7 @@
-﻿// csharp
-// Datei: Views/MediaPlayerWindow.axaml.cs
-using System;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Threading;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
@@ -18,19 +15,17 @@ public partial class MediaPlayerWindow : Window
     
     private CancellationTokenSource? _holdCts; 
 
-    public MediaPlayerWindow(string path)
+    public MediaPlayerWindow(List<DownloadedMedia> medias)
     {
         if (Design.IsDesignMode) return;
         
         InitializeComponent();
         
         //path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase)
-        
-        bool enableVideo = false;
 
-        _vm = new MediaPlayerWindowViewModel(new AudioPlayer(enableVideo), path);
+        _vm = new MediaPlayerWindowViewModel(new AudioPlayer(), medias);
         
-        if (enableVideo)
+        if (false == true)
         {
             VideoView.MaxHeight = 300;
             VideoView.MaxWidth = 300;

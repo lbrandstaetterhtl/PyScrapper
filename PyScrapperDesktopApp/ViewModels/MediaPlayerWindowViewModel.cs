@@ -1,6 +1,8 @@
 ﻿// C#
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -42,6 +44,9 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string durationText = "0:00";
+    
+    private int _currentMediaIndex = 0;
+    private List<DownloadedMedia> _mediaList = new();
 
     /// <summary>
     /// Constructor for the MediaPlayerWindowViewModel, which initializes the view model with an instance of AudioPlayer and a path to the media file to be played.
@@ -49,28 +54,59 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     /// </summary>
     /// <param name="audioPlayer"></param>
     /// <param name="path"></param>
-    public MediaPlayerWindowViewModel(AudioPlayer audioPlayer, string path)
+    public MediaPlayerWindowViewModel(AudioPlayer audioPlayer, List<DownloadedMedia> medias)
     {
         if (Design.IsDesignMode) return;
         
         _audioPlayer = audioPlayer;
+        
+        _mediaList = medias;
 
         _audioPlayer.Volume = volume;
 
-        // langsameres Polling, glättet UI-Updates weiter
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _timer.Tick += (s, e) => RefreshFromPlayer();
         _timer.Start();
+        
+        _audioPlayer.Player.EndReached += OnTrackEnded;
+        
+        PlayTrack(_currentMediaIndex);
+    }
+    
+    private void PlayTrack(int index)
+    {
+        if (index < 0 || index >= _mediaList.Count) return;
 
-        _audioPlayer.Open(path);
+        _currentMediaIndex = index;
+        _audioPlayer.Open(_mediaList[index].DownloadPath);
+        _audioPlayer.Play();
 
-        var massage = new Massage("audio player opened " + Path.GetFileName(path), DateTime.Now, "INFO");
+        var massage = new Massage("audio player opened " + Path.GetFileName(_mediaList[index].DownloadPath), DateTime.Now, "INFO");
         _logger.LogNewMassage(massage);
 
         _audioPlayer.Play();
 
         massage = new Massage("audio player started playing", DateTime.Now, "INFO");
         _logger.LogNewMassage(massage);
+    }
+
+    
+    private void OnTrackEnded(object? sender, EventArgs e)
+    { 
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_currentMediaIndex + 1 < _mediaList.Count)
+            {
+                _currentMediaIndex++;
+                PlayTrack(_currentMediaIndex);
+                RefreshFromPlayer();
+            }
+            else
+            {
+                _currentMediaIndex = 0;
+                _audioPlayer.Stop();
+            }
+        });
     }
 
     /// <summary>

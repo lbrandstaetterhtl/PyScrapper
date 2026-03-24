@@ -49,6 +49,11 @@ public class AppData
     {
         Playlists.Add(playlist);
     }
+
+    public static void RemovePlaylist(Playlist playlist)
+    {
+        Playlists.Remove(playlist);
+    }
 }
 
 /// <summary>
@@ -91,7 +96,7 @@ public class DownloadedMedia(string url, string mediaType, DateTime downloadedAt
 
     public void SetTitle()
     {
-        Title = DownloadPath.Split('/')[^1].Split('.')[0];
+        Title = Path.GetFileNameWithoutExtension(DownloadPath);
     }
 }
 

@@ -89,8 +89,15 @@ public partial class MainWindowViewModel : ObservableObject
             await messageBox.ShowDialog(desktop.MainWindow);
             return;
         }
-            
-        var mediaPlayerWindow = new MediaPlayerWindow(path);
+        
+        List<DownloadedMedia> mediaList =
+        [
+            AppData.DownloadedMedias.FirstOrDefault(m => m.DownloadPath == path) ??
+            new DownloadedMedia("", "", DateTime.Now, path, true, "")
+
+        ];
+
+        var mediaPlayerWindow = new MediaPlayerWindow(mediaList);
         mediaPlayerWindow.Show();
     }
 

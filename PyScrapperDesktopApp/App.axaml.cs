@@ -121,6 +121,8 @@ public partial class App : Application
 
                 foreach (var media in medias)
                 {
+                    media.SetTitle();
+                    
                     if (File.Exists(media.DownloadPath))
                     {
                         media.IsPlayable = true;

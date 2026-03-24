@@ -149,6 +149,13 @@ public partial class ProgressBarWindowViewModel : ObservableObject
         CloseRequested!.Invoke();
     }
     
+    public async Task WaitUntilFinished()
+    {
+        while (!IsFinished)
+        {
+            await Task.Delay(500);
+        }
+    }
     
     public event Action? CloseRequested;
 }

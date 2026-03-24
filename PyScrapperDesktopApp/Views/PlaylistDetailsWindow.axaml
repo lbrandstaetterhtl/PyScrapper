@@ -18,12 +18,20 @@
                 <StackPanel Orientation="Horizontal">
                 <StackPanel Orientation="Horizontal" Classes="UICell">
                         <TextBlock Text="Playlist Name: " Classes="UILabel"/>
-                        <TextBlock Text="{Binding PlaylistName}" Classes="UIValue"/>
+                        <Grid RowDefinitions="Auto, *">
+                        <TextBlock Grid.Row="0" Text="{Binding PlaylistName}" Classes="UILabel"/>
+                        <Border Grid.Row="1" Classes="Seperator"/>
+                        </Grid>
                 </StackPanel>
+                        
+                        <Border Classes="Seperator"/>
                 
                 <StackPanel Orientation="Horizontal" Classes="UICell">
                         <TextBlock Text="Playlist description: " Classes="UILabel"/>
-                        <TextBlock Text="{Binding Description}" Classes="UIValue"/>
+                        <Grid RowDefinitions="Auto, *">
+                        <TextBlock Grid.Row="0" Text="{Binding Description}" Classes="UILabel"/>
+                        <Border Grid.Row="1" Classes="Seperator"/>
+                        </Grid>
                 </StackPanel>
                 </StackPanel>
                 
@@ -32,16 +40,18 @@
                         <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                         <Border Classes="Cell" HorizontalAlignment="Left" DoubleTapped="DoubleClickMedia">
+                                                
                                                 <Border.ContextFlyout>
                                                         <MenuFlyout>
                                                                 <MenuItem Header="Play" Click="PlayButtonClick"/>
                                                         </MenuFlyout>
                                                 </Border.ContextFlyout>
+                                                
                                                 <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="{Binding Title}" Classes="UIValue"/>
-                                                        <TextBlock Text="{Binding DownloadPath}" Classes="UIValue"/>
-                                                        <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}"/>
+                                                        <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}" Classes="IsPlayable"/>
                                                 </StackPanel>
+                                                
                                         </Border>
                                 </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -49,7 +59,7 @@
                 </ScrollViewer>
                 
                 <StackPanel Classes="UICell">
-                        <Button Classes="primary" Content="Play Playlist" />
+                        <Button Classes="primary" Content="Play Playlist" Command="{Binding PlayPlaylistCommand}"/>
                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
         </StackPanel>

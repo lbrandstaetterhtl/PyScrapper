@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -20,7 +21,7 @@ public partial class PlaylistDetailsWindow : Window
         vm.CloseRequested += Close;
     }
     
-    public void PlayMedia(DownloadedMedia media)
+    private void PlayMedia(DownloadedMedia media)
     {
         try
         {
@@ -31,8 +32,10 @@ public partial class PlaylistDetailsWindow : Window
                     media.IsPlayable = false;
                     throw new Exception("Media not found");
                 }
+                
+                List<DownloadedMedia> mediaList = [media];
 
-                var mediaPlayerWindow = new MediaPlayerWindow(media.DownloadPath);
+                var mediaPlayerWindow = new MediaPlayerWindow(mediaList);
                 mediaPlayerWindow.Show();
             }
         }

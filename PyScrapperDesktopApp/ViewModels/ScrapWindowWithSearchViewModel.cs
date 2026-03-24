@@ -116,17 +116,28 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                  
                 var progressWindow = new ProgressBarWindow();
                 progressWindow.Show();
-                
-                bool errorWhileDownloading = false;
-                if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
-                    errorWhileDownloading = await vm.StartProgress(result);
 
+                var vm = progressWindow.DataContext as ProgressBarWindowViewModel;
+
+                if (vm == null)
+                {
+                    var messageBox = new MessageBox("ProgressBar ViewModel not found");
+                    await messageBox.ShowDialog(_ScrapWindow);
+                    continue;
+                }
+
+                bool errorWhileDownloading = await vm.StartProgress(result);
+                
                 if (!errorWhileDownloading)
                 {
+                    await vm.WaitUntilFinished();
+                    
                     var identifier = item.url.Split('=')[^1];
 
                     var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{filename}{SelectedMediaType}");
 
+                    Task.Delay(2000).Wait();
+                    
                     bool isPlayable = File.Exists(downloadFilePath);
 
                     var media = new DownloadedMedia(item.url, SelectedMediaType, DateTime.Now, downloadFilePath,

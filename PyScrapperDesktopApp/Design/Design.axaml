@@ -61,5 +61,12 @@
                 <Setter Property="CornerRadius" Value="8"/>
                 <Setter Property="HorizontalAlignment" Value="Center"/>
         </Style>
+        
+        <Style Selector="CheckBox.IsPlayable">
+                <Setter Property="Margin" Value="5"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                <Setter Property="IsEnabled" Value="False"/>
+        </Style>
          
 </Styles>

@@ -59,11 +59,10 @@
                             
                             <StackPanel Classes="UICell">
                             <TextBlock Text="{Binding Id}" Classes="UIValue"/>
-                            <TextBlock Text="{Binding Url}" Classes="UIValue"/>
-                            <TextBlock Text="{Binding DownloadPath}" Classes="UIValue"/>
+                            <TextBlock Text="{Binding Title}" Classes="UIValue"/>
                             <TextBlock Text="{Binding MediaType}" Classes="UIValue"/>
                             <TextBlock Text="{Binding DownloadedAt}" Classes="UIValue"/>
-                            <CheckBox IsEnabled="False" Content="Is Playable" IsChecked="{Binding IsPlayable}" Margin="5"/>
+                            <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}" Classes="IsPlayable"/>
                         </StackPanel>
                         </Border>
                     </DataTemplate>
@@ -78,6 +77,13 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border Classes="Cell" HorizontalAlignment="Left" DoubleTapped="PlaylistDoubleClick">
+                            <Border.ContextFlyout>
+                                <MenuFlyout>
+                                    <MenuItem Header="Delete Playlist" Click="DeletePlaylist"/>
+                                    <MenuItem Header="Open Playlist Details" Click="OpenPlaylistDetailsClick"/>
+                                </MenuFlyout>
+                            </Border.ContextFlyout>
+                            
                             <StackPanel Classes="UICell">
                                 <TextBlock Text="{Binding Name}" Classes="UIValue"/>
                                 <TextBlock Text="{Binding Description}" Classes="UIValue"/>
