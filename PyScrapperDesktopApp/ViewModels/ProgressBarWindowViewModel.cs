@@ -149,6 +149,9 @@ public partial class ProgressBarWindowViewModel : ObservableObject
         CloseRequested!.Invoke();
     }
     
+    /// <summary>
+    /// Waits until the download is finished by periodically checking the IsFinished property. This method can be used to block the calling thread until the download process is complete, allowing for any necessary cleanup actions to be performed after the download finishes.
+    /// </summary>
     public async Task WaitUntilFinished()
     {
         while (!IsFinished)
