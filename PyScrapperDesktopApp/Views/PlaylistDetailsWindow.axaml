@@ -35,7 +35,7 @@
                 </StackPanel>
                 </StackPanel>
                 
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer MaxHeight="250" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Medias}">
                         <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -44,6 +44,7 @@
                                                 <Border.ContextFlyout>
                                                         <MenuFlyout>
                                                                 <MenuItem Header="Play" Click="PlayButtonClick"/>
+                                                                <MenuItem Header="Remove from Playlist" Click="RemoveButtonClick"/>
                                                         </MenuFlyout>
                                                 </Border.ContextFlyout>
                                                 

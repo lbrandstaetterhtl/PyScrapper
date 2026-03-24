@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace PyScrapperDesktopApp.Models;
 
@@ -112,7 +113,7 @@ public class Playlist(List<int> mediaIds, string name, string description)
     public string? Description { get; set; } = description;
     public List<int> MediaIds { get; set; } = mediaIds;
     public List<int> PlayableMediaIds { get; set; } = new();
-    public int Count => MediaIds.Count;
+    public int Count { get; set; } = mediaIds.Count;
     
     /// <summary>
     /// Sets the id property to the highest existing id in the provided collection of playlists plus one, ensuring a unique identifier for each playlist item.
@@ -140,6 +141,34 @@ public class Playlist(List<int> mediaIds, string name, string description)
             {
                 PlayableMediaIds.Add(media.Id);
             }
+        }
+    }
+    
+    public void AddMedia(int mediaId)
+    {
+        if (!MediaIds.Contains(mediaId))
+        {
+            var index = AppData.Playlists.IndexOf(this);
+            
+            MediaIds.Add(mediaId);
+            Count = MediaIds.Count;
+            
+            AppData.Playlists.Insert(index, this);
+            AppData.Playlists.RemoveAt(index+1);
+        }
+    }
+    
+    public void RemoveMedia(int mediaId)
+    {
+        if (MediaIds.Contains(mediaId))
+        {
+            var index = AppData.Playlists.IndexOf(this);
+            
+            MediaIds.Remove(mediaId);
+            Count = MediaIds.Count;
+            
+            AppData.Playlists.Insert(index, this);
+            AppData.Playlists.RemoveAt(index+1);
         }
     }
 }

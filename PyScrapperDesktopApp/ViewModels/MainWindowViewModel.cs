@@ -175,4 +175,37 @@ public partial class MainWindowViewModel : ObservableObject
         var createPlaylistWindow = new CreatePlaylistWindow();
         createPlaylistWindow.ShowDialog(desktop.MainWindow);
     }
+    
+    [RelayCommand]
+    private void SortByName()
+    {
+        var sortedList = AppData.DownloadedMedias.OrderBy(m => m.Title).ToList();
+        AppData.DownloadedMedias.Clear();
+        foreach (var media in sortedList)
+        {
+            AppData.DownloadedMedias.Add(media);
+        }
+    }
+    
+    [RelayCommand]
+    private void SortByDate()
+    {
+        var sortedList = AppData.DownloadedMedias.OrderBy(m => m.DownloadedAt).ToList();
+        AppData.DownloadedMedias.Clear();
+        foreach (var media in sortedList)
+        {
+            AppData.DownloadedMedias.Add(media);
+        }
+    }
+    
+    [RelayCommand]
+    private void SortById()
+    {
+        var sortedList = AppData.DownloadedMedias.OrderBy(m => m.Id).ToList();
+        AppData.DownloadedMedias.Clear();
+        foreach (var media in sortedList)
+        {
+            AppData.DownloadedMedias.Add(media);
+        }
+    }
 }

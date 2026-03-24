@@ -7,24 +7,24 @@
         x:Class="PyScrapperDesktopApp.Views.CreatePlaylistWindow"
         x:DataType="vm:CreatePlaylistWindowViewModel"
         SizeToContent="WidthAndHeight"
-        MaxHeight="400"
+        MaxHeight="600"
         MaxWidth="600"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
         
-        <StackPanel>
-                <StackPanel Orientation="Horizontal" Classes="UICell">
+        <Grid RowDefinitions="Auto, Auto, Auto, *">
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Classes="UICell">
                         <TextBlock Text="Playlist Name: " Classes="UILabel"/>
                         <TextBox Text="{Binding PlaylistName}" Classes="UI"/>
                 </StackPanel>
                 
-                <StackPanel Orientation="Horizontal" Classes="UICell">
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Classes="UICell">
                         <TextBlock Text="Playlist description (optional): " Classes="UILabel"/>
                         <TextBox Text="{Binding Description}" Classes="UI"/>
                 </StackPanel>
                 
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer MaxHeight="200" Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <ListBox ItemsSource="{Binding AvailableMedias}" SelectionMode="Multiple, Toggle" SelectedItems="{Binding SelectedMedias}" Classes="SelectableItem">
                         <ListBox.ItemTemplate>
                                 <DataTemplate>
@@ -37,9 +37,9 @@
                 </ListBox>
                 </ScrollViewer>
                 
-                <StackPanel Classes="UICell">
+                <StackPanel Grid.Row="3" Classes="UICell">
                         <Button Classes="primary" Content="Create Playlist" Command="{Binding CreatePlaylistCommand}"/>
                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
-        </StackPanel>
+        </Grid>
 </Window>

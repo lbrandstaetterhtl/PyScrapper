@@ -3,6 +3,7 @@
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:models="clr-namespace:PyScrapperDesktopApp.Models"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -24,6 +25,11 @@
         <Grid.ColumnDefinitions>*</Grid.ColumnDefinitions>
         
         <Menu Grid.Row="0">
+            <MenuItem Header="Sort">
+                <MenuItem Header="By Title" Command="{Binding SortByNameCommand}"/>
+                <MenuItem Header="By Date" Command="{Binding SortByDateCommand}"/>
+                <MenuItem Header="By ID" Command="{Binding SortByIdCommand}"/>
+            </MenuItem>
             <MenuItem Header="Scrap">
                 <MenuItem Header="From Suno" Command="{Binding OpenSunoScrapWindowCommand}"/>
                 <MenuItem Header="From Youtube" Command="{Binding OpenYoutubeScrapWindowCommand}"/>
@@ -50,6 +56,17 @@
                         <Border DoubleTapped="MediaDoubleClick" Classes="Cell" HorizontalAlignment="Left">
                             <Border.ContextFlyout>
                                 <MenuFlyout>
+                                    <MenuItem Header="Add To Playlist">
+                                        <ListBox ItemsSource="{x:Static models:AppData.Playlists}" 
+                                                 SelectionMode="Single" 
+                                                 SelectionChanged="AddToPlaylistClick">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate x:DataType="models:Playlist">
+                                                    <TextBlock Text="{Binding Name}" Classes="UIValue"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </MenuItem>
                                     <MenuItem Header="Copy Download Path" Click="CopyDownloadPathClick"/>
                                     <MenuItem Header="Copy URL" Click="CopyUrlClick"/>
                                     <MenuItem Header="Delete File" Click="DeleteFile"/>

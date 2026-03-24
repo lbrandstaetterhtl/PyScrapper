@@ -30,7 +30,7 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     [ObservableProperty]
     private int _playlistId;
     
-    private readonly Playlist _playlist;
+    public readonly Playlist _playlist;
     
     /// <summary>
     /// Constructor for the PlaylistDetailsWindowViewModel class, which initializes the view model with the details of a given playlist. It sets the playlist name, description, and media items based on the provided playlist object.
@@ -44,6 +44,11 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
         PlaylistId = playlist.Id;
         Medias = AppData.DownloadedMedias.Where(m => playlist.MediaIds.Contains(m.Id)).ToList();
         _playlist = playlist;
+    }
+    
+    public void RefreshMedias()
+    {
+        Medias = AppData.DownloadedMedias.Where(m => _playlist.MediaIds.Contains(m.Id)).ToList();
     }
     
     public Action? CloseRequested { get; set; }

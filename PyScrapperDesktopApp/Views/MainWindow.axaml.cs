@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using PyScrapperDesktopApp.Models;
@@ -181,5 +182,20 @@ public partial class MainWindow : Window
     {
         PlaylistsList.IsVisible = false;
         DownloadedMediasList.IsVisible = true;
+    }
+    
+    private void AddToPlaylistClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not ListBox { SelectedItem: Playlist playlist } listBox) return;
+        if (listBox.DataContext is not DownloadedMedia media) return;
+
+        playlist.AddMedia(media.Id);
+        listBox.SelectedItem = null;
+        
+        var messageBox = new MessageBox($"Added {media.Title} to {playlist.Name}");
+        messageBox.ShowDialog(this);
+    
+        var log = new Massage($"Added {media.Title} to {playlist.Name}", DateTime.Now, "INFO");
+        _logger.LogNewMassage(log);
     }
 }

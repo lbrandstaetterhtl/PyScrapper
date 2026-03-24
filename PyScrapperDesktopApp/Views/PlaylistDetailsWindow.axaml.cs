@@ -65,4 +65,16 @@ public partial class PlaylistDetailsWindow : Window
             PlayMedia(media);
         }
     }
+    
+    public void RemoveButtonClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { DataContext: DownloadedMedia media })
+        {
+            if (DataContext is PlaylistDetailsWindowViewModel vm)
+            {
+                vm._playlist.RemoveMedia(media.Id);
+                vm.RefreshMedias();
+            }
+        }
+    }
 }
