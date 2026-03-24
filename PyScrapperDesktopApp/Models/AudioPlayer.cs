@@ -25,17 +25,7 @@ public class AudioPlayer : IDisposable
     {
         Core.Initialize();
 
-        if (!enableVideo)
-        {
-            _vlc = new LibVLC("--avcodec-hw=none");    
-        }
-        else
-        {
-            _vlc = new LibVLC(
-                "--avcodec-hw=none",
-                "--vout=none"
-            );
-        }
+        _vlc = new LibVLC();
 
         Player = new MediaPlayer(_vlc);
     }

@@ -14,7 +14,7 @@ public class AppData
     public static ObservableCollection<Playlist> Playlists = new();
     
     private static string BinaryDir = AppDomain.CurrentDomain.BaseDirectory;
-    public static string PyScrapperPath { get; } = Directory.GetParent(BinaryDir)!.Parent!.Parent!.Parent!.FullName;    
+    public static string PyScrapperPath { get; } = Directory.GetParent(BinaryDir)!.Parent!.Parent!.Parent!.Parent!.FullName;
     public static string DownloadPath { get;} = Path.Combine(PyScrapperPath, "Downloads");
     public static string AppLogsPath { get;} = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
     public static string ServerLogsPath { get;} = Path.Combine(PyScrapperPath, "LocalServer", "logs");
