@@ -73,6 +73,12 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         PlayTrack(_currentMediaIndex);
     }
     
+    /// <summary>
+    /// Plays the media track at the specified index in the media list.
+    /// It checks if the index is valid, updates the current media index, opens the media file in the audio player, and starts playback.
+    /// It also logs the events of opening the media file and starting playback using the AppLogger instance.
+    /// </summary>
+    /// <param name="index"></param>
     private void PlayTrack(int index)
     {
         if (index < 0 || index >= _mediaList.Count) return;
@@ -90,7 +96,13 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _logger.LogNewMassage(massage);
     }
 
-    
+    /// <summary>
+    /// Event handler that is called when the currently playing track reaches its end.
+    /// It checks if there are more tracks in the media list to play, and if so, it increments the current media index and plays the next track.
+    /// If there are no more tracks, it resets the current media index to 0 and stops playback.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     private void OnTrackEnded(object? sender, EventArgs e)
     { 
         Dispatcher.UIThread.Post(() =>

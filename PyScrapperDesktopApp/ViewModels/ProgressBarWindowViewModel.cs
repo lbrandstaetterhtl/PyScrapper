@@ -9,6 +9,11 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
+/// <summary>
+/// ProgressBarWindowViewModel is a ViewModel class that manages the state and logic for a progress bar window in a desktop application.
+/// It interacts with an API client to fetch download progress data and updates the UI accordingly.
+/// The class also handles cancellation of the progress tracking and provides a mechanism to close the window when the download is complete or when an error occurs.
+/// </summary>
 public partial class ProgressBarWindowViewModel : ObservableObject
 {
     private readonly ApiClient _apiClient;

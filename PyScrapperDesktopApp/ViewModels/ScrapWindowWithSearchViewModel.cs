@@ -13,6 +13,12 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
+/// <summary>
+/// ScrapWindowWithSearchViewModel is a view model class that manages the logic and data for a scrap window with search functionality in the PyScrapperDesktopApp.
+/// It allows users to search for media content from various providers, select items from the search results, and initiate the scrap process to download the selected media.
+/// The view model handles user interactions, communicates with the API client to perform search and scrap operations, and updates the user interface accordingly.
+/// It also includes error handling and logging mechanisms to ensure a smooth user experience.
+/// </summary>
 public partial class ScrapWindowWithSearchViewModel : ObservableObject
 {
     [ObservableProperty]

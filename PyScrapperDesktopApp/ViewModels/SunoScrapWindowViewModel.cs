@@ -15,6 +15,14 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
+/// <summary>
+/// SunoScrapWindowViewModel is a view model class that manages the data and logic for the Suno scrap window in the PyScrapperDesktopApp.
+/// It inherits from ObservableObject, allowing it to notify the view of property changes.
+/// The view model contains properties for the Suno URL, selected media type, filename, and a list of available media types.
+/// It also includes a command for initiating the scrap process and an event for requesting the closure of the scrap window.
+/// The Scrap method handles the scraping logic, including sending a request to the server, showing a progress bar window, and adding the downloaded media to the AppData if successful.
+/// If any errors occur during the process, it displays a message box to inform the user.
+/// </summary>
 public partial class SunoScrapWindowViewModel : ObservableObject
 {
     [ObservableProperty]
