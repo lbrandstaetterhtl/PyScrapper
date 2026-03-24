@@ -109,6 +109,32 @@ if [[ "${DOTNET_FUNCTIONAL:-1}" -eq 0 ]]; then
     fi
 fi
 
+# ─── VLC ─────────────────────────────────────────────────────────
+write_log "Checking VLC / libvlc..."
+
+VLC_OK=0
+if pacman -Q vlc &>/dev/null; then
+    VLC_VERSION="$(pacman -Q vlc 2>/dev/null | awk '{print $2}')"
+    write_log "VLC $VLC_VERSION detected ✓"
+    VLC_OK=1
+fi
+
+if [[ $VLC_OK -eq 0 ]]; then
+    write_log "VLC not found — installing via pacman..."
+    if sudo pacman -S vlc --noconfirm >> "$LOG_FILE" 2>&1; then
+        VLC_VERSION="$(pacman -Q vlc 2>/dev/null | awk '{print $2}')"
+        write_log "VLC $VLC_VERSION installed ✓"
+        VLC_OK=1
+    else
+        write_log "ERROR: Failed to install VLC."
+        exit 1
+    fi
+fi
+
+# ldconfig aktualisieren damit libvlc.so gefunden wird
+sudo ldconfig >> "$LOG_FILE" 2>&1
+write_log "ldconfig updated ✓"
+
 # ─── Avalonia Templates ──────────────────────────────────────────
 write_log "Checking Avalonia templates..."
 

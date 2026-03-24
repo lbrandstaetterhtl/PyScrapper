@@ -57,7 +57,7 @@ public partial class App : Application
                 RunScript("StartServer");
 
 
-                int maxTries = 30;
+                int maxTries = 100;
                 int tries = 0;
                 bool serverStarted = false;
 
