@@ -1,15 +1,9 @@
 ﻿bugs:
 
 1#
-picture explains itself
-
-2#
 Server search responses are inconsistent models
 
-3#
-because of cleanup search is not working properly / too tired to fix it
 
 Next steps:
 fix 1#
 add Archive window
-window to show logs to user
