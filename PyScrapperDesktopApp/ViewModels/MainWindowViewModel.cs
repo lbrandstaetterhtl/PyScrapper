@@ -97,8 +97,8 @@ public partial class MainWindowViewModel : ObservableObject
 
         ];
 
-        var mediaPlayerWindow = new MediaPlayerWindow(mediaList);
-        mediaPlayerWindow.Show();
+        //var mediaPlayerWindow = new MediaPlayerWindow(mediaList);
+        //mediaPlayerWindow.Show();
     }
 
     /// <summary>

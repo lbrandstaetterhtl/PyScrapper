@@ -1,8 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System;
 using Avalonia.Controls;
-using Avalonia.Threading;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
@@ -10,152 +7,68 @@ namespace PyScrapperDesktopApp.Views;
 
 public partial class MediaPlayerWindow : Window
 {
-    private readonly MediaPlayerWindowViewModel _vm;
-    private CancellationTokenSource? _seekCts;
-    
-    private CancellationTokenSource? _holdCts; 
-
-    public MediaPlayerWindow(List<DownloadedMedia> medias)
+    public MediaPlayerWindow(DownloadedMedia media = null, Playlist playlist = null)
     {
-        if (Design.IsDesignMode) return;
-        
         InitializeComponent();
         
-        //path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase)
+        var vm = new MediaPlayerWindowViewModel();
+        DataContext = vm;
 
-        _vm = new MediaPlayerWindowViewModel(new AudioPlayer(), medias);
+        VideoView.Initialized += OnVideoViewInitialized;
+        Closing += OnWindowClosing;
+        CloseButton.Click += (s, e) => Close();
         
-        if (false == true)
+        Opened += (_, _) =>
         {
-            VideoView.MaxHeight = 300;
-            VideoView.MaxWidth = 300;
-            VideoView.MediaPlayer = _vm._audioPlayer.Player;
-        }
-        
-        DataContext = _vm;
-
-        SeekSlider.PointerPressed += (_, _) =>
-        {
-            _vm._audioPlayer.TimeMS = (int)(SeekSlider.Value * 1000);
-            _vm.BeginScrub();
+            if (playlist != null)
+                vm.LoadPlaylist(playlist);
+            else
+                vm._audioPlayer.PlayFile(media.DownloadPath);
         };
-
-        SeekSlider.PointerReleased += async (_, _) =>
+        
+        VolumeSlider.ValueChanged += (s, e) =>
         {
-            if (_vm.IsScrubbing)
+            if (DataContext is MediaPlayerWindowViewModel vm && VolumeSlider.IsFocused)
             {
-                _vm._audioPlayer.TimeMS = (int)(SeekSlider.Value * 1000);
-                _seekCts?.Cancel();
-                _seekCts?.Dispose();
-                var cts = new CancellationTokenSource();
-                _seekCts = cts;
-                try
-                {
-                    if (!cts.IsCancellationRequested)
-                        _vm.EndScrub();
-                }
-                catch (TaskCanceledException) { }
+                vm.Volume = (int)e.NewValue;
+                vm._audioPlayer.MediaPlayer.Volume = vm.Volume;
             }
         };
-        VolumeSlider.ValueChanged += (_, _) =>
+    }
+    
+    private void OnVideoViewInitialized(object? sender, EventArgs e)
+    {
+        if (DataContext is MediaPlayerWindowViewModel vm)
         {
-            if (VolumeSlider.IsPointerOver)
-                _vm._audioPlayer.Volume = (int)VolumeSlider.Value;
-        };
-
-        SeekSlider.PointerCaptureLost += (_, _) =>
-        {
-            _vm._audioPlayer.TimeMS = (int)(SeekSlider.Value * 1000);
-            if (_vm.IsScrubbing)
-                _vm.EndScrub();
-        };
-        
-        ForwardButton.PointerPressed += (_, _) =>
-        {
-            _holdCts?.Cancel();
-            _holdCts?.Dispose();
-            var cts = new CancellationTokenSource();
-            _holdCts = cts;
-
-            Dispatcher.UIThread.Post(() => _vm.ScrubTo(SeekSlider.Value + 1));
-
-            Task.Run(async () =>
-            {
-                try
-                {
-                    while (!cts.IsCancellationRequested)
-                    {
-                        await Task.Delay(1000, cts.Token);
-                        if (cts.IsCancellationRequested) break;
-                        await Dispatcher.UIThread.InvokeAsync(() => _vm.SeekToSeconds(SeekSlider.Value + 5));
-                    }
-                }
-                catch (TaskCanceledException) { }
-            });
-        };
-
-        ForwardButton.PointerReleased += (_, _) =>
-        {
-            _holdCts?.Cancel();
-            _holdCts?.Dispose();
-            _holdCts = null;
-        };
-
-        ForwardButton.PointerCaptureLost += (_, _) =>
-        {
-            _holdCts?.Cancel();
-            _holdCts?.Dispose();
-            _holdCts = null;
-        };
-
-        BackwardButton.PointerPressed += (_, _) =>
-        {
-            _holdCts?.Cancel();
-            _holdCts?.Dispose();
-            var cts = new CancellationTokenSource();
-            _holdCts = cts;
-
-            Dispatcher.UIThread.Post(() => _vm.ScrubTo(SeekSlider.Value - 1));
-
-            Task.Run(async () =>
-            {
-                try
-                {
-                    while (!cts.IsCancellationRequested)
-                    {
-                        await Task.Delay(1000, cts.Token);
-                        if (cts.IsCancellationRequested) break;
-                        await Dispatcher.UIThread.InvokeAsync(() => _vm.ScrubTo(SeekSlider.Value - 1));
-                    }
-                }
-                catch (TaskCanceledException) { }
-            });
-        };
-
-        BackwardButton.PointerReleased += (_, _) =>
-        {
-            _holdCts?.Cancel();
-            _holdCts?.Dispose();
-            _holdCts = null;
-        };
-
-        BackwardButton.PointerCaptureLost += (_, _) =>
-        {
-            _holdCts?.Cancel();
-            _holdCts?.Dispose();
-            _holdCts = null;
-        };
-
-        Closed += (_, _) =>
-        {
+            VideoView.MediaPlayer = vm.MediaPlayer;
             
-            _seekCts?.Cancel();
-            _holdCts?.Cancel();
-            _seekCts?.Dispose();
-            _holdCts?.Dispose();
-            _vm.Dispose();
-        };
+            vm.OnVideoViewReady(this);
+            
+            vm.VideoAvailableChanged += OnVideoAvailableChanged;
+        }
+    }
+    
+    private void OnVideoAvailableChanged(object? sender, bool hasVideo)
+    {
+        if (DataContext is MediaPlayerWindowViewModel vm)
+        {
+            VideoView.MediaPlayer = hasVideo ? vm.MediaPlayer : null;
+        }
+    }
+    
+    private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (DataContext is MediaPlayerWindowViewModel vm)
+        {
+            vm.VideoAvailableChanged -= OnVideoAvailableChanged;
+            vm.MediaPlayer.Stop();
+        }
         
-        CloseButton.Click += (_, _) => Close();
+        VideoView.MediaPlayer = null;
+
+        if (DataContext is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
     }
 }

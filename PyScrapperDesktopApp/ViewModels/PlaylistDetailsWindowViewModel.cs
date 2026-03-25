@@ -79,16 +79,14 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
             return;
         }
         
-        var playableMedias = AppData.PlayableMedias.Where(m => _playlist.PlayableMediaIds.Contains(m.Id)).ToList();
-        
-        if (playableMedias.Count == 0)
+        if (_playlist.PlayableMediaIds.Count == 0)
         {
             var messageBox = new MessageBox("No playable media found in this playlist.");
             messageBox.ShowDialog(desktop.MainWindow);
             return;
         }
         
-        var mediaPlayerWindow = new MediaPlayerWindow(playableMedias);
+        var mediaPlayerWindow = new MediaPlayerWindow(playlist: _playlist);
         mediaPlayerWindow.Show();
     }
 }

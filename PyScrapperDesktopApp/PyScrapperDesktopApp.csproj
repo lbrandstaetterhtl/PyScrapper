@@ -30,6 +30,11 @@
         <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23" />
     </ItemGroup>
 
+    <Target Name="GenerateVlcCache" AfterTargets="Build">
+        <Exec Command="&quot;$(OutDir)libvlc\win-x64\vlc-cache-gen.exe&quot; &quot;$(OutDir)libvlc\win-x64\plugins\&quot;"
+              ContinueOnError="true"/>
+    </Target>
+
     <ItemGroup>
       <Folder Include="logs\" />
     </ItemGroup>

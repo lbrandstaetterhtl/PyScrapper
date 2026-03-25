@@ -37,9 +37,8 @@ public partial class MainWindow : Window
                     throw new Exception("Media not found");
                 }
                 
-                List<DownloadedMedia> mediaList = [media];
                 
-                var mediaPlayerWindow = new MediaPlayerWindow(mediaList);
+                var mediaPlayerWindow = new MediaPlayerWindow(media: media);
                 mediaPlayerWindow.Show();
             }
         }
