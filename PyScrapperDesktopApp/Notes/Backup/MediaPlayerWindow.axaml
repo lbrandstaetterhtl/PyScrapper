@@ -1,12 +1,10 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+﻿ <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:avalonia="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="PyScrapperDesktopApp.Views.MediaPlayerWindow"
-        x:DataType="vm:MediaPlayerWindowViewModel"
         Icon="/Assets/PyScrapperLogo.ico"
         SizeToContent="WidthAndHeight"
         CanMaximize="False"
@@ -16,7 +14,7 @@
         MaxHeight="500"
         Title="PyScrapperDesktopApp">
         
-        <StackPanel Margin="16" Spacing="10">
+        <!--<StackPanel Margin="16" Spacing="10">
                 
                 <TextBlock Text="Volume" FontSize="14" FontWeight="SemiBold"/>
                 <Slider Name="VolumeSlider" IsEnabled="False" Minimum="3" Maximum="100" Value="{Binding Volume, Mode=TwoWay}" TickFrequency="0.0000001" IsSnapToTickEnabled="True"/>
@@ -51,5 +49,5 @@
                 </StackPanel>
                 
                 <Button Name="CloseButton" Classes="primary" Content="Close"/>
-        </StackPanel>
+        </StackPanel>-->
 </Window>

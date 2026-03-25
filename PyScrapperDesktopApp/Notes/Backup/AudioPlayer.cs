@@ -1,4 +1,4 @@
-﻿using System;
+﻿/*using System;
 using System.Threading;
 using System.Threading.Tasks;
 using LibVLCSharp.Shared;
@@ -137,4 +137,4 @@ public class AudioPlayer : IDisposable
             });
         }
     }
-}
+}*/

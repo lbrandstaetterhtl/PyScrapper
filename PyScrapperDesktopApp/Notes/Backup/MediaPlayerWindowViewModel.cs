@@ -1,4 +1,4 @@
-﻿// C#
+﻿/* C#
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -357,4 +357,4 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         var massage = new Massage("audio player disposed", DateTime.Now, "INFO");
         _logger.LogNewMassage(massage);
     }
-}
+}*/

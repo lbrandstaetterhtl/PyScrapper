@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿/*using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -184,4 +184,4 @@ public partial class MediaPlayerWindow : Window
         // Dann von VideoView trennen BEVOR Avalonia das Handle zerstört
         VideoView.MediaPlayer = null;
     }
-}
+}*/
