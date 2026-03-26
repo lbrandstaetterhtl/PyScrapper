@@ -12,29 +12,32 @@ public partial class MediaPlayerWindow : Window
     private int _playButtonCounter = 0;
     public MediaPlayerWindow(DownloadedMedia media = null, Playlist playlist = null)
     {
+        
         InitializeComponent();
         
         var vm = new MediaPlayerWindowViewModel();
         DataContext = vm;
-
-        Closing += OnWindowClosing;
-        CloseButton.Click += (s, e) => Close();
         
-        Opened += (_, _) =>
+        Opened += (s, e) =>
         {
+            if (DataContext is not MediaPlayerWindowViewModel vm) return;
+
             VideoView.MediaPlayer = vm.MediaPlayer;
-            
+
             if (playlist != null)
             {
                 vm.LoadPlaylist(playlist);
                 vm.IsPlaylistMode = true;
             }
-            else
+            else if (media != null)
             {
                 vm._audioPlayer.PlayFile(media.DownloadPath);
                 vm.IsPlaylistMode = false;
             }
         };
+
+        Closing += OnWindowClosing;
+        CloseButton.Click += (s, e) => Close();
         
         SeekSlider.AddHandler(
             PointerPressedEvent,
