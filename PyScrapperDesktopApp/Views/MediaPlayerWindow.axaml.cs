@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
@@ -7,6 +9,7 @@ namespace PyScrapperDesktopApp.Views;
 
 public partial class MediaPlayerWindow : Window
 {
+    private int _playButtonCounter = 0;
     public MediaPlayerWindow(DownloadedMedia media = null, Playlist playlist = null)
     {
         InitializeComponent();
@@ -14,53 +17,111 @@ public partial class MediaPlayerWindow : Window
         var vm = new MediaPlayerWindowViewModel();
         DataContext = vm;
 
-        VideoView.Initialized += OnVideoViewInitialized;
         Closing += OnWindowClosing;
         CloseButton.Click += (s, e) => Close();
         
         Opened += (_, _) =>
         {
-            if (playlist != null)
-                vm.LoadPlaylist(playlist);
-            else
-                vm._audioPlayer.PlayFile(media.DownloadPath);
-        };
-        
-        VolumeSlider.ValueChanged += (s, e) =>
-        {
-            if (DataContext is MediaPlayerWindowViewModel vm && VolumeSlider.IsFocused)
-            {
-                vm.Volume = (int)e.NewValue;
-                vm._audioPlayer.MediaPlayer.Volume = vm.Volume;
-            }
-        };
-    }
-    
-    private void OnVideoViewInitialized(object? sender, EventArgs e)
-    {
-        if (DataContext is MediaPlayerWindowViewModel vm)
-        {
             VideoView.MediaPlayer = vm.MediaPlayer;
             
-            vm.OnVideoViewReady(this);
-            
-            vm.VideoAvailableChanged += OnVideoAvailableChanged;
-        }
-    }
-    
-    private void OnVideoAvailableChanged(object? sender, bool hasVideo)
-    {
-        if (DataContext is MediaPlayerWindowViewModel vm)
+            if (playlist != null)
+            {
+                vm.LoadPlaylist(playlist);
+                vm.IsPlaylistMode = true;
+            }
+            else
+            {
+                vm._audioPlayer.PlayFile(media.DownloadPath);
+                vm.IsPlaylistMode = false;
+            }
+        };
+        
+        SeekSlider.AddHandler(
+            PointerPressedEvent,
+            (s, e) =>
+            {
+                if (DataContext is not MediaPlayerWindowViewModel vm) return;
+                vm.SeekSliderMoving = true;
+            },
+            handledEventsToo: true
+        );
+
+        SeekSlider.AddHandler(
+            PointerReleasedEvent,
+            (s, e) =>
+            {
+                if (DataContext is not MediaPlayerWindowViewModel vm) return;
+                vm._audioPlayer.MediaPlayer.Time = (long)(SeekSlider.Value * 1000);
+                vm.SeekSliderMoving = false;
+            },
+            handledEventsToo: true
+        );
+
+        SeekSlider.ValueChanged += (s, e) =>
         {
-            VideoView.MediaPlayer = hasVideo ? vm.MediaPlayer : null;
-        }
+            if (DataContext is not MediaPlayerWindowViewModel vm) return;
+            if (vm.SeekSliderMoving)
+                vm.PositionSeconds = e.NewValue;
+        };
+        
+        VolumeSlider.AddHandler(
+            PointerPressedEvent,
+            (s, e) =>
+            {
+                if (DataContext is not MediaPlayerWindowViewModel vm) return;
+                vm.VolumeSliderMoving = true;
+            },
+            handledEventsToo: true
+        );
+
+        VolumeSlider.AddHandler(
+            PointerReleasedEvent,
+            (s, e) =>
+            {
+                if (DataContext is not MediaPlayerWindowViewModel vm) return;
+                vm._audioPlayer.MediaPlayer.Volume = (int)VolumeSlider.Value;
+                vm.VolumeSliderMoving = false;
+            },
+            handledEventsToo: true
+        );
+
+        VolumeSlider.ValueChanged += (s, e) =>
+        {
+            if (DataContext is not MediaPlayerWindowViewModel vm) return;
+            if (vm.VolumeSliderMoving)
+                vm.Volume = (int)e.NewValue;
+        };
+        
+        PlayButton.Click += (s, e) =>
+        {
+            if (DataContext is not MediaPlayerWindowViewModel vm) return;
+            if (_playButtonCounter == 0)
+            {
+                vm.Pause();
+                PlayButton.Content = "Play";
+                _playButtonCounter++;
+            }
+            else
+            {
+                vm.Play();
+                PlayButton.Content = "Pause";
+                _playButtonCounter--;
+            }
+        };
+        
+        StopButton.Click += (s, e) =>
+        {
+            if (DataContext is not MediaPlayerWindowViewModel vm) return;
+            vm.Pause();
+            PlayButton.Content = "Play";
+            _playButtonCounter = 1;
+        };
     }
     
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
         if (DataContext is MediaPlayerWindowViewModel vm)
         {
-            vm.VideoAvailableChanged -= OnVideoAvailableChanged;
             vm.MediaPlayer.Stop();
         }
         

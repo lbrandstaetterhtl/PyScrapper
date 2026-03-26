@@ -31,6 +31,15 @@ public class AppLogger
             File.AppendAllText(logFilePath, logEntry + Environment.NewLine);
         }
     }
+
+    public void LogDebugMessage(Massage massage)
+    {
+        var logger = new AppLogger();
+        var logEntry = $"{massage.Timestamp:yyyy-MM-dd HH:mm:ss} [{massage.Type}] {massage.Text}";
+        Console.WriteLine(logEntry);
+        
+        logger.LogNewMassage(massage);
+    }
 }
 
 /// <summary>

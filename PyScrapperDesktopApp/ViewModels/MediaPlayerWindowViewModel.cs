@@ -36,17 +36,36 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isShuffleEnabled;
     
+    [ObservableProperty]
+    private bool _isPlaylistMode;
+    
+    public bool VolumeSliderMoving { get; set; }
+    public bool SeekSliderMoving { get; set; }
+
     public string CurrentlyText => TimeSpan.FromSeconds(PositionSeconds).ToString(@"mm\:ss");
+
     public string DurationText => TimeSpan.FromSeconds(DurationSeconds).ToString(@"mm\:ss");
     
     public MediaPlayer MediaPlayer => _audioPlayer.MediaPlayer;
     
     public event EventHandler<bool>? VideoAvailableChanged;
+    private readonly AppLogger _logger = new();
+    private bool _volumeInitialized = false;
 
     public MediaPlayerWindowViewModel()
     {
+        _audioPlayer.MediaPlayer.Playing += (s, e) =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                _audioPlayer.MediaPlayer.Volume = Volume;
+            });
+        };
+        
         _audioPlayer.TrackChanged += (s, title) =>
         {
+            _volumeInitialized = false;
+            
             Dispatcher.UIThread.Post(() =>
             {
                 NowPlayingTitle = title ?? "Unknown Title";
@@ -62,22 +81,23 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
                 VideoAvailableChanged?.Invoke(this, hasVideo);
             });
         };
-
-        _audioPlayer.MediaPlayer.VolumeChanged += (s, e) =>
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                Volume = (int)e.Volume;
-            });
-        };
         
         _audioPlayer.MediaPlayer.TimeChanged += (s, e) =>
         {
-            Dispatcher.UIThread.Post(() =>
+            if (!_volumeInitialized)
             {
-                PositionSeconds = e.Time / 1000.0;
-                OnPropertyChanged(nameof(CurrentlyText));
-            });
+                _volumeInitialized = true;
+                _audioPlayer.MediaPlayer.Volume = Volume;
+            }
+            
+            if (!SeekSliderMoving)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    PositionSeconds = e.Time / 1000.0;
+                    OnPropertyChanged(nameof(CurrentlyText));
+                });
+            }
         };
 
         _audioPlayer.MediaPlayer.LengthChanged += (s, e) =>
@@ -88,8 +108,11 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(DurationText));
             });
         };
-        
-        _audioPlayer.MediaPlayer.Volume = Volume;
+    }
+    
+    public string FormatTime(double seconds)
+    {
+        return TimeSpan.FromSeconds(seconds).ToString(@"mm\:ss");
     }
     
     public void OnVideoViewReady(Window mediaPlayerWindow)
@@ -102,11 +125,9 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _audioPlayer.ToggleShuffle();
     }
     
-    [RelayCommand]
-    private void Play() => _audioPlayer.MediaPlayer.Play();
+    public void Play() => _audioPlayer.MediaPlayer.Play();
  
-    [RelayCommand]
-    private void Pause() => _audioPlayer.MediaPlayer.Pause();
+    public void Pause() => _audioPlayer.MediaPlayer.Pause();
 
     [RelayCommand]
     private void Stop()
@@ -130,14 +151,20 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
  
     [RelayCommand]
     private void MoveBackward() => _audioPlayer.MediaPlayer.Time -= 10_000;
- 
+
     [RelayCommand]
-    private void IncreaseVolume() =>
-        _audioPlayer.MediaPlayer.Volume = Math.Min(100, _audioPlayer.MediaPlayer.Volume + 5);
- 
+    private void IncreaseVolume()
+    {
+        Volume = Math.Min(100, Volume + 5);
+        _audioPlayer.MediaPlayer.Volume = Volume;
+    }
+
     [RelayCommand]
-    private void DecreaseVolume() =>
-        _audioPlayer.MediaPlayer.Volume = Math.Max(0, _audioPlayer.MediaPlayer.Volume - 5);
+    private void DecreaseVolume()
+    {
+        Volume = Math.Max(0, Volume - 5);
+        _audioPlayer.MediaPlayer.Volume = Volume;
+    }
 
     [RelayCommand]
     private async Task OpenFiles()

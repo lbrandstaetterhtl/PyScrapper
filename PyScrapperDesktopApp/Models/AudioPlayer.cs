@@ -19,7 +19,7 @@ public class AudioPlayer : IDisposable
 
     private string? CurrentFile {get; set;}
 
-    private bool isShuffleEnabled { get; set; }
+    private bool IsShuffleEnabled { get; set; }
     
     public bool HasNext => _currentIndex < _playlistTracks.Count - 1;
     public bool HasPrevious => _currentIndex > 0;
@@ -29,14 +29,18 @@ public class AudioPlayer : IDisposable
     public event EventHandler<bool> VideoAvailableChanged;
     
     private Media? _currentMedia;
+    private readonly AppLogger _logger = new();
 
     public AudioPlayer()
     {
-        _libVLC = new LibVLC(enableDebugLogs: true, "--verbose=1", "--file-caching=500");
+        _libVLC = new LibVLC("--verbose=1", "--file-caching=500", "--avcodec-hw=none");
         
         _mediaPlayer = new MediaPlayer(_libVLC);
 
-        _mediaPlayer.EndReached += (s, e) => { PlayNext(); };
+        _mediaPlayer.EndReached += (s, e) =>
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(_ => PlayNext());
+        };
 
         _mediaPlayer.ESAdded += OnEsAdded;
         _mediaPlayer.ESDeleted += OnEsDeleted;
@@ -69,8 +73,11 @@ public class AudioPlayer : IDisposable
         _playlistTracks.Clear();
         _playlistTracks.AddRange(list);
         _currentIndex = -1;
+        
+        var log = new Massage($"Loaded playlist '{playlist.Name}' with {_playlistTracks.Count} playable tracks", DateTime.Now, "INFO");
+        _logger.LogNewMassage(log);
 
-        if (isShuffleEnabled)
+        if (IsShuffleEnabled)
         {
             ShufflePlaylist();
         }
@@ -104,25 +111,27 @@ public class AudioPlayer : IDisposable
     {    
         CurrentFile = filePath;
 
-        _mediaPlayer.Stop();
-
         _currentMedia?.Dispose();
 
         _currentMedia = new Media(_libVLC, filePath, FromType.FromPath);
         _currentMedia.AddOption(":file-caching=500");
 
-        _mediaPlayer.Play(_currentMedia);
+        _mediaPlayer.Media = _currentMedia;
+        _mediaPlayer.Play();
+        
+        var log = new Massage($"Playing file: {filePath}", DateTime.Now, "INFO");
+        _logger.LogNewMassage(log);
 
         TrackChanged?.Invoke(this, CurrentFile);
     }
 
     public void ToggleShuffle()
     {
-        isShuffleEnabled = !isShuffleEnabled;
+        IsShuffleEnabled = !IsShuffleEnabled;
         
         var currentFile = CurrentFile;
 
-        if (isShuffleEnabled)
+        if (IsShuffleEnabled)
         {
             ShufflePlaylist();
         }
@@ -148,6 +157,9 @@ public class AudioPlayer : IDisposable
             int j = rng.Next(0, i + 1);
             (_playlistTracks[i], _playlistTracks[j]) = (_playlistTracks[j], _playlistTracks[i]);
         }
+        
+        var log = new Massage($"Playlist shuffled", DateTime.Now, "INFO");
+        _logger.LogNewMassage(log);
     }
 
     public void Stop()
