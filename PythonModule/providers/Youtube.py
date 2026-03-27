@@ -227,7 +227,7 @@ def download(
 
     ydl_opts = {
 #bv = best video, ba = best audio
-        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        "format": "bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]",
         "outtmpl": out_file,
         "merge_output_format": "mp4",
         "progress_hooks": [build_progress_hook(progress_dict)],

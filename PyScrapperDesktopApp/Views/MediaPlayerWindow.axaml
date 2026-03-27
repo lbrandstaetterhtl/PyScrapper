@@ -18,7 +18,7 @@
         <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto">
                 <Grid Grid.Row="0" RowDefinitions="Auto, Auto" Margin="10">
                         <TextBlock Grid.Row="0" Text="{Binding NowPlayingTitle}" Classes="UILabel"/>
-                        <avalonia:VideoView Grid.Row="1" x:Name="VideoView" MediaPlayer="{Binding MediaPlayer}" Height="200" Margin="10"/>
+                        <avalonia:VideoView Grid.Row="1" x:Name="VideoView"  Height="400" Width="600" IsVisible="{Binding HasVideo}" Margin="10"/>
                 </Grid>
                 
                 <Slider x:Name="SeekSlider" Grid.Row="1" Grid.ColumnSpan="3"

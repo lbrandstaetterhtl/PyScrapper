@@ -90,15 +90,11 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
         
-        List<DownloadedMedia> mediaList =
-        [
-            AppData.DownloadedMedias.FirstOrDefault(m => m.DownloadPath == path) ??
-            new DownloadedMedia("", "", DateTime.Now, path, true, "")
-
-        ];
-
-        //var mediaPlayerWindow = new MediaPlayerWindow(mediaList);
-        //mediaPlayerWindow.Show();
+        var media = new DownloadedMedia("", "", DateTime.Now, path, true, "");
+        media.SetTitle();
+        
+        var mediaPlayerWindow = new MediaPlayerWindow(media: media);
+        mediaPlayerWindow.Show();
     }
 
     /// <summary>

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using LibVLCSharp.Shared;
 
 namespace PyScrapperDesktopApp.Models;
@@ -115,6 +117,8 @@ public class AudioPlayer : IDisposable
 
         _currentMedia = new Media(_libVLC, filePath, FromType.FromPath);
         _currentMedia.AddOption(":file-caching=500");
+        _currentMedia.AddOption(":avcodec-hw=none");
+        _currentMedia.AddOption(":codec=avcodec");
 
         _mediaPlayer.Media = _currentMedia;
         _mediaPlayer.Play();
