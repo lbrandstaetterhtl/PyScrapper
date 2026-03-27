@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -29,6 +31,12 @@ public abstract class DatabaseOperations
     {
         try
         {
+            if (!File.Exists(DatabaseFilePath))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(DatabaseFilePath));
+                File.Create(DatabaseFilePath).Close();
+            }
+            
             Connection.Open();
         
             var create = Connection.CreateCommand();
@@ -138,51 +146,67 @@ public abstract class DatabaseOperations
     /// <returns name="downloadedMedias"></returns>
     public static async Task<ObservableCollection<DownloadedMedia>> LoadDownloadedMediasNoDuplicates()
     {
-        var downloadedMedias = new ObservableCollection<DownloadedMedia>();
-        
-        Connection.Open();
-        
-        var create = Connection.CreateCommand();
-        
-        create.CommandText =
-            """
-            CREATE TABLE IF NOT EXISTS DownloadedMedias (
-                Id INTEGER PRIMARY KEY,
-                Identifier TEXT,
-                Url TEXT,
-                MediaType TEXT,
-                DownloadedAt TEXT,
-                DownloadPath TEXT,
-                IsPlayable INTEGER
-            )STRICT;
-            """;
-        
-        create.ExecuteNonQuery();
-        
-        var select = Connection.CreateCommand();
-        select.CommandText = "SELECT DISTINCT Id, Identifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias GROUP BY Identifier;";
-        
-        await using var reader = await select.ExecuteReaderAsync();
-        while (reader.Read())
+        try
         {
-            var media = new DownloadedMedia(
-                reader.GetString(2), // Url
-                reader.GetString(3), // MediaType
-                DateTime.Parse(reader.GetString(4)), // DownloadedAt
-                reader.GetString(5), // DownloadPath
-                reader.GetBoolean(6), // IsPlayable
-                reader.GetString(1) // Identifier
-            )
+            if (!File.Exists(DatabaseFilePath))
             {
-                Id = reader.GetInt32(0) // Id
-            };
+                Directory.CreateDirectory(Path.GetDirectoryName(DatabaseFilePath));
+                File.Create(DatabaseFilePath).Close();
+            }
             
-            downloadedMedias.Add(media);
-        }
+            var downloadedMedias = new ObservableCollection<DownloadedMedia>();
 
-        Connection.Close();
-        
-        return downloadedMedias;
+            Connection.Open();
+
+            var create = Connection.CreateCommand();
+
+            create.CommandText =
+                """
+                CREATE TABLE IF NOT EXISTS DownloadedMedias (
+                    Id INTEGER PRIMARY KEY,
+                    Identifier TEXT,
+                    Url TEXT,
+                    MediaType TEXT,
+                    DownloadedAt TEXT,
+                    DownloadPath TEXT,
+                    IsPlayable INTEGER
+                )STRICT;
+                """;
+
+            create.ExecuteNonQuery();
+
+            var select = Connection.CreateCommand();
+            select.CommandText =
+                "SELECT DISTINCT Id, Identifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias GROUP BY Identifier;";
+
+            await using var reader = await select.ExecuteReaderAsync();
+            while (reader.Read())
+            {
+                var media = new DownloadedMedia(
+                    reader.GetString(2), // Url
+                    reader.GetString(3), // MediaType
+                    DateTime.Parse(reader.GetString(4)), // DownloadedAt
+                    reader.GetString(5), // DownloadPath
+                    reader.GetBoolean(6), // IsPlayable
+                    reader.GetString(1) // Identifier
+                )
+                {
+                    Id = reader.GetInt32(0) // Id
+                };
+
+                downloadedMedias.Add(media);
+            }
+
+            Connection.Close();
+
+            return downloadedMedias;
+        }
+        catch (Exception exception)
+        {
+            var errorLog = new Massage("Error while loading Medias" + exception.Message, DateTime.Now, "ERROR");
+            Logger.LogNewMassage(errorLog);
+            return null;
+        }
     }
     
     /// <summary>
@@ -191,49 +215,65 @@ public abstract class DatabaseOperations
     /// <returns name="playlists"></returns>
     public static async Task<ObservableCollection<Playlist>> LoadPlaylistsNoDuplicates()
     {
-        var playlists = new ObservableCollection<Playlist>();
-        
-        Connection.Open();
-
-        var createCommand = Connection.CreateCommand();
-
-        createCommand.CommandText =
-            """
-                CREATE TABLE IF NOT EXISTS Playlists (
-                    Id INTEGER PRIMARY KEY,
-                    Name TEXT,
-                    Description TEXT,
-                    MediaIds TEXT,
-                    PlayableMediaIds TEXT
-                )STRICT;
-            """;
-        
-        createCommand.ExecuteNonQuery();
-        
-        var selectCommand = Connection.CreateCommand();
-        
-        selectCommand.CommandText = "SELECT DISTINCT Id, Name, Description, MediaIds, PlayableMediaIds FROM Playlists GROUP BY Name;";
-        
-        await using var reader = await selectCommand.ExecuteReaderAsync();
-
-        while (reader.Read())
+        try
         {
-            var playlist = new Playlist(
-                JsonSerializer.Deserialize<List<int>>(reader.GetString(3)),
-                reader.GetString(1), // Name
-                reader.IsDBNull(2) ? null : reader.GetString(2)
-                )
+            if (!File.Exists(DatabaseFilePath))
             {
-                Id = reader.GetInt32(0),
-                PlayableMediaIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(4))
-            };
+                Directory.CreateDirectory(Path.GetDirectoryName(DatabaseFilePath));
+                File.Create(DatabaseFilePath).Close();
+            }
             
-            playlists.Add(playlist);
+            var playlists = new ObservableCollection<Playlist>();
+
+            Connection.Open();
+
+            var createCommand = Connection.CreateCommand();
+
+            createCommand.CommandText =
+                """
+                    CREATE TABLE IF NOT EXISTS Playlists (
+                        Id INTEGER PRIMARY KEY,
+                        Name TEXT,
+                        Description TEXT,
+                        MediaIds TEXT,
+                        PlayableMediaIds TEXT
+                    )STRICT;
+                """;
+
+            createCommand.ExecuteNonQuery();
+
+            var selectCommand = Connection.CreateCommand();
+
+            selectCommand.CommandText =
+                "SELECT DISTINCT Id, Name, Description, MediaIds, PlayableMediaIds FROM Playlists GROUP BY Name;";
+
+            await using var reader = await selectCommand.ExecuteReaderAsync();
+
+            while (reader.Read())
+            {
+                var playlist = new Playlist(
+                    JsonSerializer.Deserialize<List<int>>(reader.GetString(3)),
+                    reader.GetString(1), // Name
+                    reader.IsDBNull(2) ? null : reader.GetString(2)
+                )
+                {
+                    Id = reader.GetInt32(0),
+                    PlayableMediaIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(4))
+                };
+
+                playlists.Add(playlist);
+            }
+
+            Connection.Close();
+
+            return playlists;
         }
-        
-        Connection.Close();
-        
-        return playlists;
+        catch (Exception exception)
+        {
+            var errorLog = new Massage("Error while loading Playlists" + exception.Message, DateTime.Now, "ERROR");
+            Logger.LogNewMassage(errorLog);
+            return null;
+        }
     }
     
     /// <summary>
@@ -244,6 +284,12 @@ public abstract class DatabaseOperations
     {
         try
         {
+            if (!File.Exists(DatabaseFilePath))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(DatabaseFilePath));
+                File.Create(DatabaseFilePath).Close();
+            }
+            
             Connection.Open();
             
             var createCommand = Connection.CreateCommand();

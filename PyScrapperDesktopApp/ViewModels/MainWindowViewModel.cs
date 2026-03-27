@@ -89,22 +89,8 @@ public partial class MainWindowViewModel : ObservableObject
             await messageBox.ShowDialog(desktop.MainWindow);
             return;
         }
-
-        string outputPath = path;
-        if (!AudioPlayer.IsSupportedCodec(path).Result)
-        {
-            var message = "Unsupported codec. Would you like to convert it to a supported codec H264?";
-            outputPath = CodecConverterWindowViewModel.SetOutputPath(path);
-            var codecConverterWindow = new CodecConverterWindow(message: message, inputPath: path, outputPath: outputPath);
-            bool conversionFinished = await codecConverterWindow.ShowDialogWithResult();
-
-            if (!conversionFinished)
-            {
-                return;
-            }
-        }
         
-        var media = new DownloadedMedia("", "", DateTime.Now, outputPath, true, "");
+        var media = new DownloadedMedia("", "", DateTime.Now, path, true, "");
         media.SetTitle();
         
         var mediaPlayerWindow = new MediaPlayerWindow(media: media);
