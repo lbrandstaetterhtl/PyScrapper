@@ -1,63 +1,40 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'SilentlyContinue'
+
 param(
-    [string]$HostAddr = "127.0.0.1",
+    [string]$HostAddr = '127.0.0.1',
     [int]$Port = 8765
 )
 
-$ErrorActionPreference = "SilentlyContinue"
-
-# --- Verzeichnisse berechnen --------------------------------
-# $PSScriptRoot = ...\PyScrapper\LocalServer\scripts\WinScripts
-$ScriptsDir  = Split-Path -Parent $PSScriptRoot
-# $ScriptsDir  = ...\PyScrapper\LocalServer\scripts
-$LocalServer = Split-Path -Parent $ScriptsDir
-# $LocalServer = ...\PyScrapper\LocalServer
-
-# --- Logging Setup ------------------------------------------
-$LogDir = Join-Path $LocalServer "logs"
-if (-not (Test-Path $LogDir)) {
-  New-Item -ItemType Directory -Path $LogDir | Out-Null
-}
-$LogFile = Join-Path $LogDir "StopServer.log"
-
-function Write-Log {
-  param([string]$Message)
-  $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-  $logEntry = "[$timestamp] $Message"
-  Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
-  Write-Host $logEntry
-}
-
-Write-Log "== Stop Server =="
+. "$PSScriptRoot\Common.ps1"
+Initialize-Log -Name 'StopServer.log' -Prefix 'StopServer'
 
 $baseUrl = "http://$HostAddr`:$Port"
+Write-Log "Stopping server at $baseUrl"
 
-# 1) Graceful shutdown via API
 try {
-  $health = Invoke-RestMethod -Method GET -Uri "$baseUrl/health" -TimeoutSec 2
-  if ($health.ok -eq $true) {
-    Write-Log "Server reachable. Sending quit command..."
-    Invoke-RestMethod -Method POST -Uri "$baseUrl/command" `
-            -ContentType "application/json" `
-            -Body '{"command":"quit"}' `
-            -TimeoutSec 2 | Out-Null
-
-    Start-Sleep -Milliseconds 800
-  }
-} catch {
-  Write-Log "Server not reachable via API (or already down). Falling back to port-kill..."
+    $health = Invoke-RestMethod -Method Get -Uri "$baseUrl/health" -TimeoutSec 2
+    if ($health.ok -eq $true) {
+        Write-Log 'Server is reachable. Sending quit command...'
+        Invoke-RestMethod -Method Post -Uri "$baseUrl/command" -ContentType 'application/json' -Body '{"command":"quit"}' -TimeoutSec 2 | Out-Null
+        Start-Sleep -Milliseconds 1000
+    }
+}
+catch {
+    Write-Log 'Graceful shutdown failed or server is already down. Falling back to process kill.'
 }
 
-# 2) Fallback: Prozess auf dem Port finden und killen
-$connection = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
-if ($connection) {
-  $pidNum = $connection.OwningProcess
-  if ($pidNum) {
-    Write-Log "Killing process on port $Port (PID $pidNum)..."
-    Stop-Process -Id $pidNum -Force -ErrorAction SilentlyContinue
-    Write-Log "Process stopped."
-  } else {
-    Write-Log "Found connection but no PID."
-  }
-} else {
-  Write-Log "No process found listening on port $Port."
+$connections = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+if (-not $connections) {
+    Write-Log "No listening process found on port $Port."
+    exit 0
 }
+
+foreach ($connection in $connections) {
+    if ($connection.OwningProcess) {
+        Write-Log "Stopping PID $($connection.OwningProcess) on port $Port"
+        Stop-Process -Id $connection.OwningProcess -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Write-Log 'Stop sequence finished.'

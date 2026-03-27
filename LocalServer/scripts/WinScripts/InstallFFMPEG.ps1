@@ -1,78 +1,43 @@
 param(
     [switch]$PersistUserPath
 )
-$ErrorActionPreference = "Stop"
 
-# --- Verzeichnisse berechnen --------------------------------
-# $PSScriptRoot = ...\PyScrapper\LocalServer\scripts\WinScripts
-$ScriptsDir  = Split-Path -Parent $PSScriptRoot
-# $ScriptsDir  = ...\PyScrapper\LocalServer\scripts
-$LocalServer = Split-Path -Parent $ScriptsDir
-# $LocalServer = ...\PyScrapper\LocalServer
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
-# --- Logging Setup ------------------------------------------
-$LogDir = Join-Path $LocalServer "logs"
-if (-not (Test-Path $LogDir)) {
-    New-Item -ItemType Directory -Path $LogDir | Out-Null
-}
-$LogFile = Join-Path $LogDir "FFMPEGInstallation.log"
-
-function Write-Log {
-    param([string]$Message)
-    $logEntry = "[InstallFFMPEG] $Message"
-    Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
-    Write-Host $logEntry
-}
+. "$PSScriptRoot\Common.ps1"
+Initialize-Log -Name 'FFMPEGInstallation.log' -Prefix 'InstallFFMPEG'
 
 function Find-FFmpegExe {
-    # 1) Schon im PATH?
     $cmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
-    # 2) WinGet packages durchsuchen (yt-dlp.FFmpeg)
-    $pkgRoot = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"
-    if (Test-Path $pkgRoot) {
-        $hit = Get-ChildItem $pkgRoot -Recurse -Filter ffmpeg.exe -ErrorAction SilentlyContinue |
-                Where-Object { $_.FullName -match "yt-dlp\.FFmpeg" } |
-                Select-Object -First 1
+
+    $pkgRoot = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
+    if (Test-Path -LiteralPath $pkgRoot) {
+        $hit = Get-ChildItem -Path $pkgRoot -Recurse -Filter 'ffmpeg.exe' -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match 'yt-dlp\.FFmpeg' } |
+            Select-Object -First 1
         if ($hit) { return $hit.FullName }
     }
+
     return $null
 }
 
-Write-Log "Checking for ffmpeg..."
+Write-Log 'Checking ffmpeg...'
 $ffmpegExe = Find-FFmpegExe
-
 if (-not $ffmpegExe) {
-    Write-Log "ffmpeg not found. Installing via WinGet..."
-    winget install --id=yt-dlp.FFmpeg -e --source=winget
+    Ensure-Winget
+    Write-Log 'ffmpeg not found. Installing via winget...'
+    Invoke-LoggedCommand -FilePath 'winget' -ArgumentList @('install','-e','--id','yt-dlp.FFmpeg','--accept-package-agreements','--accept-source-agreements')
+    Refresh-Path
     $ffmpegExe = Find-FFmpegExe
 }
 
 if (-not $ffmpegExe) {
-    throw "[InstallFFMPEG] Installation ran, but ffmpeg.exe still not found."
+    throw 'ffmpeg installation finished but ffmpeg.exe was not found.'
 }
 
-$ffbin = Split-Path $ffmpegExe -Parent
-
-# Session-PATH
-if ($env:Path -notmatch [regex]::Escape($ffbin)) {
-    $env:Path = "$ffbin;$env:Path"
-    Write-Log "Added to Session PATH: $ffbin"
-} else {
-    Write-Log "Session PATH already contains: $ffbin"
-}
-
-Write-Log "ffmpeg installed at: $ffmpegExe"
-Write-Log "Testing ffmpeg version..."
-& $ffmpegExe -version | Select-Object -First 1 | Write-Log
-
-# Optional dauerhaft im User-PATH
-if ($PersistUserPath) {
-    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    if ($userPath -notmatch [regex]::Escape($ffbin)) {
-        [Environment]::SetEnvironmentVariable("Path", ($userPath + ";" + $ffbin), "User")
-        Write-Log "Added to User PATH: $ffbin (will take effect in new terminals)"
-    } else {
-        Write-Log "User PATH already contains: $ffbin"
-    }
-}
+$ffmpegDir = Split-Path -Parent $ffmpegExe
+Ensure-CommandInPath -Directory $ffmpegDir -PersistUserPath:$PersistUserPath
+Write-Log "ffmpeg ready: $ffmpegExe"
+Invoke-LoggedCommand -FilePath $ffmpegExe -ArgumentList @('-version') -AllowFailure | Select-Object -First 1 | ForEach-Object { Write-Log $_ }

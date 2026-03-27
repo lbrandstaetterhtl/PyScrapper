@@ -1,232 +1,250 @@
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+param(
+    [switch]$SkipDotnetInstall,
+    [switch]$SkipSqliteInstall,
+    [switch]$SkipAvaloniaTemplates,
+    [switch]$NoRestore,
+    [string]$DotnetChannel = '9.0'
+)
 
-# --- Verzeichnisse berechnen --------------------------------
-# $PSScriptRoot = ...\PyScrapper\LocalServer\scripts\WinScripts
-$ScriptsDir  = Split-Path -Parent $PSScriptRoot
-# $ScriptsDir  = ...\PyScrapper\LocalServer\scripts
-$LocalServer = Split-Path -Parent $ScriptsDir
-# $LocalServer = ...\PyScrapper\LocalServer
-$RepoRoot    = Split-Path -Parent $LocalServer
-# $RepoRoot    = ...\PyScrapper  ← .csproj-Suche hier
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
-# --- Logging Setup ------------------------------------------
-$LogDir = Join-Path $LocalServer "logs"
-if (-not (Test-Path $LogDir)) {
-  New-Item -ItemType Directory -Path $LogDir | Out-Null
-}
-$LogFile = Join-Path $LogDir "RequirementsFrontendInstallation.log"
-
-function Write-Log {
-  param([string]$Message)
-  $logEntry = "[RequirementsFrontendInstallation] $Message"
-  Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
-  Write-Host $logEntry
+# Optional shared helpers
+$commonPath = Join-Path $PSScriptRoot 'Common.ps1'
+if (Test-Path $commonPath) {
+    . $commonPath
+    if (Get-Command Initialize-Log -ErrorAction SilentlyContinue) {
+        Initialize-Log -Name 'InstallRequirementsFrontend.log' -Prefix 'InstallRequirementsFrontend'
+    }
 }
 
-Write-Log "== Install Frontend Requirements =="
+if (-not (Get-Command Write-Log -ErrorAction SilentlyContinue)) {
+    $localServer = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $logDir = Join-Path $localServer 'logs'
+    if (-not (Test-Path $logDir)) {
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    }
+    $script:LogFile = Join-Path $logDir 'InstallRequirementsFrontend.log'
 
-# ─── .NET SDK ─────────────────────────────────────────────────────
-Write-Log "Checking .NET SDK..."
+    function Write-Log {
+        param([Parameter(Mandatory)][string]$Message)
+        $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        $line = "[$ts] [InstallRequirementsFrontend] $Message"
+        Add-Content -Path $script:LogFile -Value $line -Encoding utf8
+        Write-Host $line
+    }
+}
 
-$dotnetCmd = Get-Command dotnet -ErrorAction SilentlyContinue
-if ($dotnetCmd) {
-  $sdkVersion = dotnet --version 2>&1
-  Write-Log ".NET SDK $sdkVersion detected ✓"
-} else {
-  Write-Log ".NET SDK not found — attempting automatic installation..."
+function Refresh-SessionPath {
+    $machinePath = [System.Environment]::GetEnvironmentVariable('Path', 'Machine')
+    $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
+    $env:Path = "$machinePath;$userPath"
+}
 
-  $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
-  if ($wingetCmd) {
-    Write-Log "Installing .NET SDK via winget..."
+function Get-ProjectContext {
+    if (Get-Command Get-ProjectPaths -ErrorAction SilentlyContinue) {
+        return Get-ProjectPaths
+    }
+
+    $scriptsRoot = Split-Path -Parent $PSScriptRoot
+    $localServer = Split-Path -Parent $scriptsRoot
+    $repoRoot = Split-Path -Parent $localServer
+
+    return [pscustomobject]@{
+        ScriptsRoot = $scriptsRoot
+        LocalServer = $localServer
+        RepoRoot    = $repoRoot
+        LogsDir     = Join-Path $localServer 'logs'
+    }
+}
+
+function Test-CommandWorks {
+    param(
+        [Parameter(Mandatory)][string]$CommandPath,
+        [string[]]$ArgumentList = @('--version')
+    )
+
     try {
-      $wingetOutput = winget install --id Microsoft.DotNet.SDK.9 -e --accept-source-agreements --accept-package-agreements 2>&1
-      Write-Log "winget output: $wingetOutput"
-
-      $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-      $userPath    = [Environment]::GetEnvironmentVariable("Path", "User")
-      $env:Path    = "$machinePath;$userPath"
-    } catch {
-      Write-Log "WARNING: winget install failed: $_"
+        & $CommandPath @ArgumentList *> $null
+        return ($LASTEXITCODE -eq 0)
     }
-  }
-
-  $dotnetCmd = Get-Command dotnet -ErrorAction SilentlyContinue
-  if (-not $dotnetCmd) {
-    Write-Log "Falling back to dotnet-install.ps1..."
-    try {
-      $installScript = Join-Path $env:TEMP "dotnet-install.ps1"
-      Invoke-WebRequest -Uri "https://dot.net/v1/dotnet-install.ps1" -OutFile $installScript -UseBasicParsing
-      & $installScript -Channel 9.0 2>&1 | ForEach-Object { Write-Log "  $_" }
-
-      $dotnetDir = Join-Path $env:LOCALAPPDATA "Microsoft\dotnet"
-      if (Test-Path $dotnetDir) {
-        $env:Path = "$dotnetDir;$env:Path"
-        Write-Log "Added $dotnetDir to session PATH"
-      }
-    } catch {
-      Write-Log "ERROR: Failed to download/run dotnet-install.ps1: $_"
+    catch {
+        return $false
     }
-  }
-
-  $dotnetCmd = Get-Command dotnet -ErrorAction SilentlyContinue
-  if ($dotnetCmd) {
-    $sdkVersion = dotnet --version 2>&1
-    Write-Log ".NET SDK $sdkVersion installed ✓"
-  } else {
-    Write-Log "ERROR: .NET SDK could not be installed. Please install manually from https://dot.net"
-    exit 1
-  }
 }
 
-# ─── Avalonia Templates ───────────────────────────────────────────
-Write-Log "Checking Avalonia templates..."
+function Get-UsableCommand {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [string[]]$ArgumentList = @('--version'),
+        [string[]]$RejectPathPatterns = @()
+    )
 
-$avaloniaTemplates = dotnet new list 2>&1 | Select-String -Pattern "avalonia" -SimpleMatch
-if ($avaloniaTemplates) {
-  Write-Log "Avalonia templates already installed ✓"
-} else {
-  Write-Log "Avalonia templates not found, installing Avalonia.Templates..."
-  try {
-    $templateOutput = dotnet new install Avalonia.Templates 2>&1
-    if ($LASTEXITCODE -ne 0) {
-      Write-Log "WARNING: Failed to install Avalonia.Templates: $templateOutput"
-    } else {
-      Write-Log "Avalonia.Templates installed ✓"
-    }
-  } catch {
-    Write-Log "WARNING: Failed to install Avalonia.Templates: $_"
-  }
-}
+    $candidates = @(Get-Command $Name -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
+    foreach ($candidate in $candidates) {
+        if (-not $candidate) { continue }
 
-# ─── SQLite ───────────────────────────────────────────────────────
-Write-Log "Checking SQLite..."
-
-$sqliteCmd = Get-Command sqlite3 -ErrorAction SilentlyContinue
-if ($sqliteCmd) {
-  $sqliteVersion = sqlite3 --version 2>&1
-  Write-Log "SQLite $sqliteVersion detected ✓"
-} else {
-  Write-Log "SQLite not found — installing via winget..."
-  try {
-    $sqliteOutput = winget install --id SQLite.SQLite -e --accept-source-agreements --accept-package-agreements 2>&1
-    Write-Log "winget output: $sqliteOutput"
-
-    # PATH für aktuelle Session aktualisieren
-    $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-    $userPath    = [Environment]::GetEnvironmentVariable("Path", "User")
-    $env:Path    = "$machinePath;$userPath"
-
-    $sqliteCmd = Get-Command sqlite3 -ErrorAction SilentlyContinue
-    if ($sqliteCmd) {
-      Write-Log "SQLite installed ✓"
-    } else {
-      Write-Log "ERROR: SQLite could not be installed. Please install manually from https://sqlite.org"
-      exit 1
-    }
-  } catch {
-    Write-Log "ERROR: winget install for SQLite failed: $_"
-    exit 1
-  }
-}
-
-# ─── NuGet Packages aus .csproj ──────────────────────────────────
-Write-Log "Repo root: $RepoRoot"
-
-$csprojFiles = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.csproj" |
-  Where-Object { $_.FullName -notmatch '\\bin\\|\\obj\\' }
-
-if ($csprojFiles.Count -eq 0) {
-  Write-Log "ERROR: No .csproj files found under $RepoRoot"
-  exit 1
-}
-
-$requiredPackages = @()
-
-foreach ($csproj in $csprojFiles) {
-  Write-Log "Reading $($csproj.FullName)"
-  [xml]$xml = Get-Content $csproj.FullName -Encoding utf8
-
-  foreach ($itemGroup in $xml.Project.ItemGroup) {
-    foreach ($pkg in $itemGroup.PackageReference) {
-      if ($pkg -and $pkg.Include -and $pkg.Version) {
-        $requiredPackages += [PSCustomObject]@{
-          Name    = $pkg.Include
-          Version = $pkg.Version
-          Csproj  = $csproj.FullName
+        $reject = $false
+        foreach ($pattern in $RejectPathPatterns) {
+            if ($candidate -like $pattern) {
+                $reject = $true
+                break
+            }
         }
-      }
+        if ($reject) { continue }
+
+        if (Test-CommandWorks -CommandPath $candidate -ArgumentList $ArgumentList) {
+            return $candidate
+        }
     }
-  }
+
+    return $null
 }
 
-$requiredPackages = $requiredPackages | Sort-Object Name, Version -Unique
-
-Write-Log "Found $($requiredPackages.Count) required package(s)"
-
-# NuGet Cache Pfad
-$nugetCache = $null
-try {
-  $rawOutput  = dotnet nuget locals global-packages --list 2>&1
-  $cacheLine  = ($rawOutput | Out-String) -split "`n" |
-    Where-Object { $_ -match 'global-packages' } |
-    Select-Object -First 1
-  if ($cacheLine) {
-    $nugetCache = ($cacheLine -replace '.*global-packages:\s*', '').Trim()
-  }
-} catch {}
-
-if (-not $nugetCache -or -not (Test-Path $nugetCache)) {
-  $nugetCache = Join-Path $env:USERPROFILE ".nuget\packages"
-}
-
-Write-Log "NuGet cache: $nugetCache"
-
-$alreadyInstalled = 0
-$newlyInstalled   = 0
-$failed           = 0
-
-foreach ($pkg in $requiredPackages) {
-  $pkgDir = Join-Path $nugetCache ($pkg.Name.ToLower()) | Join-Path -ChildPath $pkg.Version
-
-  if (Test-Path $pkgDir) {
-    Write-Log "$($pkg.Name) $($pkg.Version) — already installed ✓"
-    $alreadyInstalled++
-  } else {
-    Write-Log "$($pkg.Name) $($pkg.Version) — not cached, installing..."
-    try {
-      $output = dotnet add $pkg.Csproj package $pkg.Name --version $pkg.Version 2>&1
-      if ($LASTEXITCODE -ne 0) {
-        Write-Log "ERROR installing $($pkg.Name) $($pkg.Version): $output"
-        $failed++
-      } else {
-        Write-Log "$($pkg.Name) $($pkg.Version) — newly installed ✓"
-        $newlyInstalled++
-      }
-    } catch {
-      Write-Log "ERROR installing $($pkg.Name) $($pkg.Version): $_"
-      $failed++
+function Ensure-Winget {
+    $winget = Get-UsableCommand -Name 'winget' -ArgumentList @('--version')
+    if (-not $winget) {
+        throw 'winget wurde nicht gefunden. Installiere App Installer / winget oder installiere die Abhaengigkeiten manuell.'
     }
-  }
+    return $winget
 }
 
-Write-Log "Running dotnet restore..."
-foreach ($csproj in $csprojFiles) {
-  $restoreOutput = dotnet restore $csproj.FullName 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    Write-Log "WARNING: dotnet restore failed for $($csproj.Name): $restoreOutput"
-  } else {
-    Write-Log "dotnet restore succeeded for $($csproj.Name)"
-  }
+function Ensure-Dotnet {
+    param([string]$Channel = '9.0')
+
+    $dotnet = Get-UsableCommand -Name 'dotnet' -ArgumentList @('--version')
+    if ($dotnet) {
+        $version = (& $dotnet --version | Out-String).Trim()
+        Write-Log ".NET SDK detected: $version"
+        return $dotnet
+    }
+
+    if ($SkipDotnetInstall) {
+        throw '.NET SDK wurde nicht gefunden und -SkipDotnetInstall wurde gesetzt.'
+    }
+
+    $winget = Ensure-Winget
+    Write-Log ".NET SDK not found. Installing via winget..."
+    & $winget install --id Microsoft.DotNet.SDK.9 -e --accept-source-agreements --accept-package-agreements
+    if ($LASTEXITCODE -ne 0) {
+        throw ("winget konnte .NET SDK nicht installieren. ExitCode: {0}" -f $LASTEXITCODE)
+    }
+
+    Refresh-SessionPath
+    $dotnet = Get-UsableCommand -Name 'dotnet' -ArgumentList @('--version')
+    if (-not $dotnet) {
+        throw '.NET SDK scheint installiert worden zu sein, ist aber in dieser Session nicht verfuegbar.'
+    }
+
+    $version = (& $dotnet --version | Out-String).Trim()
+    Write-Log ".NET SDK installed: $version"
+    return $dotnet
 }
 
-Write-Log "========================================="
-Write-Log "  Summary"
-Write-Log "========================================="
-Write-Log "  Total required:      $($requiredPackages.Count)"
-Write-Log "  Already installed:   $alreadyInstalled"
-Write-Log "  Newly installed:     $newlyInstalled"
-if ($failed -gt 0) {
-  Write-Log "  Failed:              $failed"
+function Ensure-Sqlite {
+    $sqlite = Get-UsableCommand -Name 'sqlite3' -ArgumentList @('--version')
+    if ($sqlite) {
+        $version = (& $sqlite --version | Out-String).Trim()
+        Write-Log "SQLite detected: $version"
+        return $sqlite
+    }
+
+    if ($SkipSqliteInstall) {
+        throw 'sqlite3 wurde nicht gefunden und -SkipSqliteInstall wurde gesetzt.'
+    }
+
+    $winget = Ensure-Winget
+    Write-Log 'SQLite not found. Installing via winget...'
+    & $winget install --id SQLite.SQLite -e --accept-source-agreements --accept-package-agreements
+    if ($LASTEXITCODE -ne 0) {
+        throw ("winget konnte SQLite nicht installieren. ExitCode: {0}" -f $LASTEXITCODE)
+    }
+
+    Refresh-SessionPath
+    $sqlite = Get-UsableCommand -Name 'sqlite3' -ArgumentList @('--version')
+    if (-not $sqlite) {
+        throw 'SQLite scheint installiert worden zu sein, ist aber in dieser Session nicht verfuegbar.'
+    }
+
+    $version = (& $sqlite --version | Out-String).Trim()
+    Write-Log "SQLite installed: $version"
+    return $sqlite
 }
-Write-Log "========================================="
-Write-Log "== Done =="
+
+function Ensure-AvaloniaTemplates {
+    param([Parameter(Mandatory)][string]$Dotnet)
+
+    if ($SkipAvaloniaTemplates) {
+        Write-Log 'Skipping Avalonia templates check.'
+        return
+    }
+
+    $templateList = (& $Dotnet new list 2>&1 | Out-String)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'dotnet new list ist fehlgeschlagen.'
+    }
+
+    if ($templateList -match '(?i)avalonia') {
+        Write-Log 'Avalonia templates already installed.'
+        return
+    }
+
+    Write-Log 'Avalonia templates not found. Installing Avalonia.Templates...'
+    & $Dotnet new install Avalonia.Templates
+    if ($LASTEXITCODE -ne 0) {
+        throw 'dotnet new install Avalonia.Templates ist fehlgeschlagen.'
+    }
+
+    Write-Log 'Avalonia templates installed.'
+}
+
+function Get-CsprojFiles {
+    param([Parameter(Mandatory)][string]$RepoRoot)
+
+    $files = Get-ChildItem -Path $RepoRoot -Recurse -Filter '*.csproj' -File |
+            Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' }
+
+    if (-not $files) {
+        throw "Keine .csproj-Dateien unter '$RepoRoot' gefunden."
+    }
+
+    return @($files)
+}
+
+function Invoke-DotnetRestore {
+    param(
+        [Parameter(Mandatory)][string]$Dotnet,
+        [Parameter(Mandatory)][System.IO.FileInfo[]]$ProjectFiles
+    )
+
+    $restored = 0
+    foreach ($project in $ProjectFiles) {
+        Write-Log "Restoring $($project.FullName)"
+        & $Dotnet restore $project.FullName
+        if ($LASTEXITCODE -ne 0) {
+            throw ("dotnet restore failed for '{0}' with exit code {1}." -f $project.FullName, $LASTEXITCODE)
+        }
+        $restored++
+    }
+
+    Write-Log "dotnet restore finished for $restored project(s)."
+}
+
+$ctx = Get-ProjectContext
+Write-Log '== Install Frontend Requirements =='
+Write-Log "Repo root: $($ctx.RepoRoot)"
+
+$dotnet = Ensure-Dotnet -Channel $DotnetChannel
+Ensure-AvaloniaTemplates -Dotnet $dotnet
+$sqlite = Ensure-Sqlite
+$csprojFiles = Get-CsprojFiles -RepoRoot $ctx.RepoRoot
+Write-Log ("Found {0} .csproj file(s)." -f $csprojFiles.Count)
+
+if (-not $NoRestore) {
+    Invoke-DotnetRestore -Dotnet $dotnet -ProjectFiles $csprojFiles
+}
+else {
+    Write-Log 'Skipping dotnet restore.'
+}
+
+Write-Log 'Frontend requirements are ready.'

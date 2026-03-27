@@ -1,49 +1,35 @@
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
-# --- Verzeichnisse berechnen --------------------------------
-# $PSScriptRoot = ...\PyScrapper\LocalServer\scripts\WinScripts
-$ScriptsDir  = Split-Path -Parent $PSScriptRoot
-# $ScriptsDir  = ...\PyScrapper\LocalServer\scripts
-$LocalServer = Split-Path -Parent $ScriptsDir
-# $LocalServer = ...\PyScrapper\LocalServer
+. "$PSScriptRoot\Common.ps1"
+Initialize-Log -Name 'RequirementsBackendInstallation.log' -Prefix 'InstallRequirementsBackend'
 
-# --- Logging Setup ------------------------------------------
-$LogDir = Join-Path $LocalServer "logs"
-if (-not (Test-Path $LogDir)) {
-  New-Item -ItemType Directory -Path $LogDir | Out-Null
-}
-$LogFile = Join-Path $LogDir "RequirementsBackendInstallation.log"
+$paths = Get-ProjectPaths
+$python = Ensure-Venv
+$requirementsFile = Join-Path $paths.LocalServer 'requirements.txt'
 
-function Write-Log {
-  param([string]$Message)
-  $logEntry = "[RequirementsBackendInstallation] $Message"
-  Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
-  Write-Host $logEntry
+if (-not (Test-Path -LiteralPath $requirementsFile)) {
+    throw "requirements.txt not found: $requirementsFile"
 }
 
-Write-Log "== Install Backend Requirements =="
+Push-Location $paths.LocalServer
+try {
+    Write-Log 'Upgrading pip...'
+    Invoke-LoggedCommand -FilePath $python -ArgumentList @('-m','pip','install','--upgrade','pip')
 
-# requirements.txt liegt direkt unter LocalServer\
-Set-Location -Path $LocalServer
+    Write-Log 'Installing backend requirements...'
+    Invoke-LoggedCommand -FilePath $python -ArgumentList @('-m','pip','install','-r',$requirementsFile)
 
-Write-Log "Upgrading pip..."
-python -m pip install --upgrade pip 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
-if ($LASTEXITCODE -ne 0) {
-  Write-Log "Error upgrading pip. Please check the log file for details."
-  exit $LASTEXITCODE
-} else {
-  Write-Log "Pip upgraded successfully."
+    Write-Log 'Installing Playwright browsers...'
+    $env:NODE_NO_WARNINGS = '1'
+    try {
+        Invoke-LoggedCommand -FilePath $python -ArgumentList @('-m','playwright','install')
+    } finally {
+        Remove-Item Env:\NODE_NO_WARNINGS -ErrorAction SilentlyContinue
+    }
+
+    Write-Log 'Backend requirements installed successfully.'
 }
-
-Write-Log "Installing requirements..."
-$RequirementsFile = Join-Path $LocalServer "requirements.txt"
-pip install -r $RequirementsFile 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
-if ($LASTEXITCODE -ne 0) {
-  Write-Log "Error installing requirements. Please check the log file for details."
-  exit $LASTEXITCODE
-} else {
-  $env:NODE_NO_WARNINGS = "1"
-  playwright install 2>&1 | Out-File -Append -FilePath $LogFile -Encoding UTF8
-  Remove-Item Env:\NODE_NO_WARNINGS
-  Write-Log "Requirements installed successfully."
+finally {
+    Pop-Location
 }

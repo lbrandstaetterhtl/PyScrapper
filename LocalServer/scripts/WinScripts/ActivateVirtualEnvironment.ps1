@@ -1,40 +1,17 @@
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
-# --- Verzeichnisse berechnen --------------------------------
-# $PSScriptRoot = ...\PyScrapper\LocalServer\scripts\WinScripts
-$ScriptsDir  = Split-Path -Parent $PSScriptRoot
-# $ScriptsDir  = ...\PyScrapper\LocalServer\scripts
-$LocalServer = Split-Path -Parent $ScriptsDir
-# $LocalServer = ...\PyScrapper\LocalServer
+. "$PSScriptRoot\Common.ps1"
+Initialize-Log -Name 'VirtualEnvironmentActivation.log' -Prefix 'ActivateVirtualEnvironment'
 
-# --- Logging Setup ------------------------------------------
-$LogDir = Join-Path $LocalServer "logs"
-if (-not (Test-Path $LogDir)) {
-  New-Item -ItemType Directory -Path $LogDir | Out-Null
-}
-$LogFile = Join-Path $LogDir "VirtualEnvironmentActivation.log"
+$paths = Get-ProjectPaths
+$python = Ensure-Venv
+Write-Log "Using python: $python"
 
-function Write-Log {
-  param([string]$Message)
-  $logEntry = "[VirtualEnvironmentActivation] $Message"
-  Add-Content -Path $LogFile -Value $logEntry -Encoding utf8
-  Write-Host $logEntry
+if (-not (Test-Path -LiteralPath $paths.ActivatePs1)) {
+    throw "Activate.ps1 not found: $($paths.ActivatePs1)"
 }
 
-Write-Log "== Activate Virtual Environment =="
-
-# .venv liegt unter scripts\
-$VenvPath = Join-Path $ScriptsDir ".venv"
-
-Set-Location -Path $ScriptsDir
-
-if (!(Test-Path $VenvPath)) {
-  Write-Log "Creating virtual environment..."
-  python -m venv $VenvPath 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
-} else {
-  Write-Log "Virtual environment already exists."
-}
-
-Write-Log "Activating virtual environment..."
-& "$VenvPath\Scripts\Activate.ps1" 2>&1 | Out-File -Append -FilePath $LogFile -Encoding utf8
-Write-Log "Virtual environment activated."
+Write-Log 'Activating virtual environment in current shell...'
+. $paths.ActivatePs1
+Write-Log 'Virtual environment activated.'
