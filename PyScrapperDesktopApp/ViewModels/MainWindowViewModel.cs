@@ -89,8 +89,22 @@ public partial class MainWindowViewModel : ObservableObject
             await messageBox.ShowDialog(desktop.MainWindow);
             return;
         }
+
+        string outputPath = path;
+        if (!AudioPlayer.IsSupportedCodec(path).Result)
+        {
+            var message = "Unsupported codec. Would you like to convert it to a supported codec H264?";
+            outputPath = CodecConverterWindowViewModel.SetOutputPath(path);
+            var codecConverterWindow = new CodecConverterWindow(message: message, inputPath: path, outputPath: outputPath);
+            bool conversionFinished = await codecConverterWindow.ShowDialogWithResult();
+
+            if (!conversionFinished)
+            {
+                return;
+            }
+        }
         
-        var media = new DownloadedMedia("", "", DateTime.Now, path, true, "");
+        var media = new DownloadedMedia("", "", DateTime.Now, outputPath, true, "");
         media.SetTitle();
         
         var mediaPlayerWindow = new MediaPlayerWindow(media: media);
@@ -203,5 +217,32 @@ public partial class MainWindowViewModel : ObservableObject
         {
             AppData.DownloadedMedias.Add(media);
         }
+    }
+
+    [RelayCommand]
+    private async Task ConvertCodec()
+    {
+        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            return;
+        
+        var inputWindow = new InputWindow("Enter a file to convert:");
+        var inputPath = await inputWindow.ShowDialog<string>(desktop.MainWindow);
+        
+        if (inputPath == null)
+        {
+            return;
+        }
+        
+        if (!File.Exists(inputPath))
+        {
+            var messageBox = new MessageBox("File does not exist. Please check the path and try again.");
+            await messageBox.ShowDialog(desktop.MainWindow);
+            return;
+        }
+        
+        var message = "Would you like to convert it to a supported codec H264?";
+        var outputPath = CodecConverterWindowViewModel.SetOutputPath(inputPath);
+        var codecConverterWindow = new CodecConverterWindow(message: message, inputPath: inputPath, outputPath: outputPath);
+        await codecConverterWindow.ShowDialogWithResult();
     }
 }

@@ -110,11 +110,6 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         };
     }
     
-    public string FormatTime(double seconds)
-    {
-        return TimeSpan.FromSeconds(seconds).ToString(@"mm\:ss");
-    }
-    
     public void OnVideoViewReady(Window mediaPlayerWindow)
     {
         _mediaPlayerWindow = mediaPlayerWindow;
@@ -164,36 +159,6 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     {
         Volume = Math.Max(0, Volume - 5);
         _audioPlayer.MediaPlayer.Volume = Volume;
-    }
-
-    [RelayCommand]
-    private async Task OpenFiles()
-    {
-        if (_mediaPlayerWindow is null) return;
-
-        var files = await _mediaPlayerWindow.StorageProvider.OpenFilePickerAsync(
-            new FilePickerOpenOptions
-            {
-                Title = "Open Media Files",
-                AllowMultiple = false,
-                FileTypeFilter =
-                [
-                    new FilePickerFileType("Audio/Video")
-                    {
-                        Patterns = ["*.mp3", "*.mp4", "*.avi", "*.mkv", "*.flac", "*.wav"]
-                    }
-                ]
-            }
-        );
-
-        if (files.Count <= 0)
-        {
-            var messageBox = new MessageBox("No file selected.");
-            await messageBox.ShowDialog(_mediaPlayerWindow);
-            return;
-        }
-        
-        _audioPlayer.PlayFile(files.Select(f => f.Path.LocalPath).First());
     }
     
     public void LoadPlaylist(Playlist playlist)

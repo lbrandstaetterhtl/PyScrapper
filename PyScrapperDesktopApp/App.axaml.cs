@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Avalonia;
@@ -117,6 +118,21 @@ public partial class App : Application
                         $"Media with id {mediaToRemove.Id} removed from the list because it does not exist",
                         DateTime.Now, "WARNING");
                     _logger.LogNewMassage(log);
+                }
+
+                foreach (var media in medias)
+                {
+                    var isSupported = await AudioPlayer.IsSupportedCodec(media.DownloadPath);
+                    
+                    if (!isSupported && media.MediaType == ".mp4")
+                    {
+                        media.IsPlayable = false;
+
+                        log = new Massage(
+                            $"Media with id {media.Id} has an unsupported codec and will be set to not playable",
+                            DateTime.Now, "WARNING");
+                        _logger.LogNewMassage(log);
+                    }
                 }
 
                 foreach (var media in medias)

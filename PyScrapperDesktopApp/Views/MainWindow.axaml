@@ -40,6 +40,7 @@
                 <MenuItem Header="Create Playlist" Command="{Binding CreatePlaylistCommand}"/>
                 <MenuItem Header="Show Playlists" Click="ShowPlaylistsClick"/>
             </MenuItem>
+            <MenuItem Header="Convert Media codec" Command="{Binding ConvertCodecCommand}"/>
             <MenuItem Header="Server">
                 <MenuItem Header="Get Health" Command="{Binding GetHealthCommand}"/>
             </MenuItem>

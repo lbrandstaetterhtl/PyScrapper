@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Converters;
 using LibVLCSharp.Shared;
+using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.Models;
 
@@ -31,7 +34,7 @@ public class AudioPlayer : IDisposable
     public event EventHandler<bool> VideoAvailableChanged;
     
     private Media? _currentMedia;
-    private readonly AppLogger _logger = new();
+    private static readonly AppLogger _logger = new();
 
     public AudioPlayer()
     {
@@ -109,8 +112,28 @@ public class AudioPlayer : IDisposable
         PlayFile(_playlistTracks[_currentIndex].DownloadPath);
     }
 
-    public void PlayFile(string filePath)
+    public async Task PlayFile(string filePath)
     {    
+        var isSupported = await IsSupportedCodec(filePath);
+
+        if (!isSupported)
+        {
+            if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
+            
+            string message = $"The video codec for the file '{filePath}' is not supported. Would you like to convert the file to the supported format H264.";
+            string outputPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(filePath) ?? "", System.IO.Path.GetFileNameWithoutExtension(filePath) + "_converted.mp4");
+            
+            var converterWindow = new CodecConverterWindow(message: message, inputPath: filePath, outputPath: outputPath);
+            bool finished = await converterWindow.ShowDialogWithResult();
+
+            if (!finished)
+            {
+                var logg = new Massage($"User canceled the codec conversion for file '{filePath}'", DateTime.Now, "INFO");
+                _logger.LogNewMassage(logg);
+                return;
+            }
+        }
+        
         CurrentFile = filePath;
 
         _currentMedia?.Dispose();
@@ -184,5 +207,59 @@ public class AudioPlayer : IDisposable
         _mediaPlayer.Stop();
         _mediaPlayer.Dispose();
         _libVLC.Dispose();
+    }
+
+    public static async Task<bool> IsSupportedCodec(string path)
+    {
+        var codec = await GetVideoCodec(path);
+        
+        if (string.IsNullOrEmpty(codec))
+        {
+            return false;
+        }
+        else
+        {
+            var supportedCodecs = new[] { "h264"};
+            return supportedCodecs.Contains(codec);
+        }
+    }
+
+    private static async Task<string?> GetVideoCodec(string path)
+    {
+        var process = new Process();
+
+        process.StartInfo = new ProcessStartInfo
+        {
+            FileName = "ffprobe",
+            Arguments = $"-v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 \"{path}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        
+        process.Start();
+        
+        string output = await process.StandardOutput.ReadToEndAsync();
+        string error = await process.StandardError.ReadToEndAsync() ?? "";
+        
+        await process.WaitForExitAsync();
+
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            var log = new Massage($"Error checking codec for file '{path}': {error}", DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
+            if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+                return "";
+            
+            var messageBox = new MessageBox($"An error occurred while checking the video codec for the file '{path}': {error}");
+            await messageBox.ShowDialog(desktop.MainWindow);
+            return "";
+        }
+        else
+        {
+            return output;
+        }
     }
 }
