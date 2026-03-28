@@ -229,6 +229,12 @@ public partial class MainWindowViewModel : ObservableObject
         var message = "Would you like to convert it to a supported codec H264?";
         var outputPath = CodecConverterWindowViewModel.SetOutputPath(inputPath);
         var codecConverterWindow = new CodecConverterWindow(message: message, inputPath: inputPath, outputPath: outputPath);
-        await codecConverterWindow.ShowDialogWithResult();
+        bool finished = await codecConverterWindow.ShowDialog<bool>(desktop.MainWindow);
+
+        if (!finished)
+        {
+            var log = new Massage($"Codec conversion for file '{inputPath}' was cancelled by user.", DateTime.Now, "WARNING");
+            new AppLogger().LogNewMassage(log);
+        }
     }
 }

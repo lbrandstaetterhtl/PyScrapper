@@ -128,7 +128,7 @@ public class AudioPlayer : IDisposable
             string outputPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(filePath) ?? "", System.IO.Path.GetFileNameWithoutExtension(filePath) + "_converted.mp4");
             
             var converterWindow = new CodecConverterWindow(message: message, inputPath: filePath, outputPath: outputPath);
-            bool finished = await converterWindow.ShowDialogWithResult();
+            bool finished = await converterWindow.ShowDialog<bool>(desktop.MainWindow);
 
             if (!finished)
             {

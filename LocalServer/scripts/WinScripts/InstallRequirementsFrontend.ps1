@@ -155,20 +155,28 @@ function Ensure-Sqlite {
 
     $winget = Ensure-Winget
     Write-Log 'SQLite not found. Installing via winget...'
+
     & $winget install --id SQLite.SQLite -e --accept-source-agreements --accept-package-agreements
-    if ($LASTEXITCODE -ne 0) {
-        throw ("winget konnte SQLite nicht installieren. ExitCode: {0}" -f $LASTEXITCODE)
-    }
+    $wingetExit = $LASTEXITCODE
 
     Refresh-SessionPath
     $sqlite = Get-UsableCommand -Name 'sqlite3' -ArgumentList @('--version')
-    if (-not $sqlite) {
-        throw 'SQLite scheint installiert worden zu sein, ist aber in dieser Session nicht verfuegbar.'
+
+    if ($sqlite) {
+        $version = (& $sqlite --version | Out-String).Trim()
+        Write-Log "SQLite available after winget: $version"
+        return $sqlite
     }
 
-    $version = (& $sqlite --version | Out-String).Trim()
-    Write-Log "SQLite installed: $version"
-    return $sqlite
+    if ($wingetExit -eq -1978335189) {
+        throw "winget meldet 'No applicable update found' und sqlite3 ist weiterhin nicht verfuegbar."
+    }
+
+    if ($wingetExit -ne 0) {
+        throw ("winget konnte SQLite nicht installieren. ExitCode: {0}" -f $wingetExit)
+    }
+
+    throw 'winget lief ohne harten Fehler, aber sqlite3 wurde danach nicht gefunden.'
 }
 
 function Ensure-AvaloniaTemplates {

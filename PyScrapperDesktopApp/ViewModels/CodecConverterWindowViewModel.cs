@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -25,7 +27,11 @@ public partial class CodecConverterWindowViewModel : ObservableObject
 
     public bool StartButtonEnabled => !Started;
     
+    private readonly Window _window;
+    
     private Process? _process;
+    
+    private readonly AppLogger _logger = new();
 
     public event Action? CloseRequested;
 
@@ -39,12 +45,11 @@ public partial class CodecConverterWindowViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            var logger = new AppLogger();
             var log = new Massage("Error while killing process: " + e.Message, DateTime.Now, "ERROR");
-            logger.LogNewMassage(log);
+            _logger.LogNewMassage(log);
             StatusMessage = "Error while killing process: " + e.Message;
         }
-        CloseRequested?.Invoke();
+        _window.Close(false);
     }
 
     [RelayCommand]
@@ -52,90 +57,115 @@ public partial class CodecConverterWindowViewModel : ObservableObject
     {
         try
         {
-            var process = new Process();
-            process.EnableRaisingEvents = true;
+            Started = true;
+            StatusMessage = "Starting conversion...";
+            ProgressValue = 0;
 
-            process.StartInfo = new ProcessStartInfo()
-            {
-                FileName = "ffmpeg",
-                Arguments =
-                    $"-y -i \"{_inputFilePath}\" -c:v libx264 -c:a aac -progress pipe:1 -nostats \"{OutputFilePath}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            process.Start();
-            
-            _process = process;
-
-            double duration = 0;
-
+            double duration;
             try
             {
                 duration = await GetDuration(_inputFilePath);
             }
             catch (Exception e)
             {
-                var logger = new AppLogger();
-                var log = new Massage("Error while getting duration: " + e.Message, DateTime.Now, "ERROR");
-                logger.LogNewMassage(log);
                 StatusMessage = "Error while getting duration: " + e.Message;
                 return;
             }
+
+            var process = new Process
+            {
+                EnableRaisingEvents = true,
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "ffmpeg",
+                    Arguments = $"-y -i \"{_inputFilePath}\" -c:v libx264 -c:a aac -progress pipe:1 -nostats -loglevel error \"{OutputFilePath}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                } 
+            };
+
+            var ffmpegErrors = new List<string>();
+
+            process.Start();
+            _process = process;
 
             var errorReaderTask = Task.Run(async () =>
             {
                 while (!process.StandardError.EndOfStream)
                 {
                     var errLine = await process.StandardError.ReadLineAsync();
-                    if (errLine != null)
+                    if (!string.IsNullOrWhiteSpace(errLine))
                     {
-                        var logger = new AppLogger();
-                        var log = new Massage("FFmpeg error: " + errLine, DateTime.Now, "ERROR");
-                        logger.LogNewMassage(log);
-
-                        Dispatcher.UIThread.Post(() => { StatusMessage = "FFmpeg error: " + errLine; });
-
-                        _cts.Cancel();
+                        lock (ffmpegErrors)
+                        {
+                            ffmpegErrors.Add(errLine);
+                        }
                     }
                 }
             });
-            
-            errorReaderTask.RunSynchronously();
 
-            while (!process.StandardOutput.EndOfStream && !_cts.Token.IsCancellationRequested)
+            while (!_cts.Token.IsCancellationRequested)
             {
                 var line = await process.StandardOutput.ReadLineAsync();
-                if (line != null)
+                if (line == null)
+                    break;
+
+                if (line.StartsWith("out_time_us="))
                 {
-                    if (line.StartsWith("out_time_ms="))
-                    {
-                        var outTimeMsStr = line.Substring("out_time_ms=".Length);
-                        if (long.TryParse(outTimeMsStr, out var outTimeMs))
+                    var value = line["out_time_us=".Length..];
+                    if (long.TryParse(value, out var outTimeUs))
+                    {  
+                        var progress = duration > 0
+                        ? (outTimeUs / 1_000_000.0) / duration * 100
+                        : 0;
+
+                        await Dispatcher.UIThread.InvokeAsync(() =>
                         {
-                            Dispatcher.UIThread.Post(() =>
-                            {
-                                ProgressValue = duration > 0 ? (outTimeMs / 1000000.0) / duration * 100 : 0;
-                                StatusMessage = $"Converting... {ProgressValue:F2}%";
-                            });
-                        }
+                            ProgressValue = progress;
+                            StatusMessage = $"Converting... {ProgressValue:F2}%";
+                        });
                     }
+                }
+                else if (line.StartsWith("progress="))
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        StatusMessage = line == "progress=end"
+                        ? "Conversion finished."
+                        : "Converting...";
+                    });
                 }
             }
 
             await process.WaitForExitAsync(_cts.Token);
+            await errorReaderTask;
+
+            if (process.ExitCode != 0)
+            {
+                var errorText = string.Join(Environment.NewLine, ffmpegErrors);
+                throw new Exception($"ffmpeg exited with code {process.ExitCode}. {errorText}");
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                ProgressValue = 100;
+                StatusMessage = "Conversion finished.";
+            });
+
+            _window.Close(true);
         }
         catch (Exception e)
         {
-            var logger = new AppLogger();
-            var log = new Massage("Error during conversion: " + e.Message, DateTime.Now, "ERROR");
-            logger.LogNewMassage(log);
             StatusMessage = "Error during conversion: " + e.Message;
+            _window.Close(false);
+        }
+        finally
+        {
+            Started = false;
         }
     }
-
     private async Task<double> GetDuration(string filePath)
     {
         var process = new Process();
@@ -166,5 +196,10 @@ public partial class CodecConverterWindowViewModel : ObservableObject
     {
         return System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path) ?? "",
             System.IO.Path.GetFileNameWithoutExtension(path) + "_converted.mp4");
+    }
+    
+    public CodecConverterWindowViewModel(Window window)
+    {
+        _window = window;
     }
 }
