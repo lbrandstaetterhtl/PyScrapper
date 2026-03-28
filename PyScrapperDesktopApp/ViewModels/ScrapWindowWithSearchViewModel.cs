@@ -24,8 +24,8 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     [ObservableProperty]
     private string _searchQuery;
 
-    [ObservableProperty]
-    private string _searchResultsCount;
+    [ObservableProperty] 
+    private int _searchResultsCount = 5;
 
     [ObservableProperty]
     private List<ApiClient.SearchResultItem> _Items = new();
@@ -102,9 +102,24 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
         foreach (var item in SelectedItems)
         {
-            var inputWindow = new InputWindow($"Enter filename for the video '{item.title}' (without extension):");
-            var filename = await inputWindow.ShowDialog<string>(_ScrapWindow);
+            string filename;
             
+            while (true)
+            {
+                var inputWindow = new InputWindow($"Enter filename for the media '{item.title}' (without extension):");
+                filename = await inputWindow.ShowDialog<string>(_ScrapWindow);
+
+                filename = filename.Trim();
+
+                if (TryValidateFileName(filename, out var error))
+                {
+                    break;
+                }
+
+                var messageBox = new MessageBox(error);
+                await messageBox.ShowDialog(_ScrapWindow);
+            }
+
             requestData = new DownloadRequestData()
             {
                 Provider = _selectedProvider,
@@ -186,7 +201,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         {
             Search = SearchQuery,
             Provider = _selectedProvider,
-            Top = Convert.ToInt32(SearchResultsCount),
+            Top = SearchResultsCount,
         };
         
         var results = await client.SendSearchRequest(requestData, serverUrl);
@@ -232,5 +247,45 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         }
 
         Items = results;
+    }
+    
+    private static readonly HashSet<string> ReservedWindowsNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    };
+
+    private static bool TryValidateFileName(string? fileName, out string errorMessage)
+    {
+        errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            errorMessage = "Filename must not be empty.";
+            return false;
+        }
+
+        fileName = fileName.Trim();
+
+        if (fileName.EndsWith(' ') || fileName.EndsWith('.'))
+        {
+            errorMessage = "Filename must not end with a space or dot.";
+            return false;
+        }
+
+        if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            errorMessage = "Filename contains invalid characters.";
+            return false;
+        }
+
+        if (ReservedWindowsNames.Contains(fileName))
+        {
+            errorMessage = "Filename is a reserved Windows name.";
+            return false;
+        }
+
+        return true;
     }
 }

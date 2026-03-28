@@ -39,7 +39,7 @@
                 
                 <StackPanel Grid.Row="1" Classes="UICell">
                         <TextBlock Text="Search results: " Classes="UILabel"/>
-                        <NumericUpDown Minimum="1" Value="1" Maximum="25" AllowSpin="True" FormatString="0" Text="{Binding SearchResultsCount}"/>
+                        <NumericUpDown Minimum="1" Value="{Binding SearchResultsCount}" Maximum="25" AllowSpin="True" FormatString="0"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Row="2" Classes="UICell" x:Name="MediaTypePanel">
