@@ -9,3 +9,8 @@ fix 1#
 add Archive window
 ffmpeg linux version isnt working
 vlc on linux isnt working
+
+
+https://deepwiki.com/videolan/libvlcsharp/2.3-best-practices-and-common-patterns
+ffmpeg linux version isnt working
+vlc on linux isnt working
