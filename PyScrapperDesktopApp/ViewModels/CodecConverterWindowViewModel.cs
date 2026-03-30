@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
+using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
@@ -154,6 +155,12 @@ public partial class CodecConverterWindowViewModel : ObservableObject
                 StatusMessage = "Conversion finished.";
             });
 
+            var messageBox = new MessageBox("Conversion completed successfully!");
+            await messageBox.ShowDialog(_window);
+            
+            var log = new Massage("Conversion completed successfully!", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            
             _window.Close(true);
         }
         catch (Exception e)

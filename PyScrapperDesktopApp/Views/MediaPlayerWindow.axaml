@@ -27,11 +27,11 @@
                 
                 <StackPanel Grid.Row="2" Orientation="Horizontal" Classes="UICell">
                         <TextBlock Text="{Binding CurrentlyText}" Classes="UILabel"/>
-                        <Button Content="Play Previous" Command="{Binding PlayPreviousCommand}" IsVisible="{Binding IsPlaylistMode}" Classes="primary"/>
+                        <Button Content="Play Previous" Command="{Binding PlayPreviousCommand}" IsEnabled="{Binding HasPrevious}" IsVisible="{Binding IsPlaylistMode}" Classes="primary"/>
                         <Button x:Name="PlayButton" Content="Pause" Classes="primary"/>
                         <Button Content="Stop" x:Name="StopButton" Command="{Binding StopCommand}" Classes="primary"/>
                         <Button Content="Play Next" Command="{Binding PlayNextCommand}" IsVisible="{Binding IsPlaylistMode}" Classes="primary"/>
-                        <CheckBox Content="Shuffle" IsChecked="{Binding IsShuffleEnabled}" IsVisible="{Binding IsPlaylistMode}"/>
+                        <CheckBox Content="Shuffle" IsChecked="{Binding IsShuffleEnabled}" IsVisible="{Binding IsPlaylistMode}" IsEnabled="{Binding HasNext}"/>
                         <TextBlock Text="{Binding DurationText}" Classes="UILabel"/>
                 </StackPanel>
                 

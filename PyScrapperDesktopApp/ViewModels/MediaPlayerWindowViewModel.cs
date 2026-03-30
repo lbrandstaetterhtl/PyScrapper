@@ -38,6 +38,9 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     
     [ObservableProperty]
     private bool _isPlaylistMode;
+
+    public bool HasNext => GetHasNext();
+    public bool HasPrevious => GetHasPrevious();
     
     public bool VolumeSliderMoving { get; set; }
     public bool SeekSliderMoving { get; set; }
@@ -52,6 +55,9 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     private readonly AppLogger _logger = new();
     private bool _volumeInitialized = false;
 
+    /// <summary>
+    /// 
+    /// </summary>
     public MediaPlayerWindowViewModel()
     {
         _audioPlayer.MediaPlayer.Playing += (s, e) =>
@@ -169,5 +175,15 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _audioPlayer.Dispose();
+    }
+    
+    private bool GetHasNext()
+    {
+        return _audioPlayer.HasNext;
+    }
+
+    private bool GetHasPrevious()
+    {
+        return _audioPlayer.HasPrevious;
     }
 }

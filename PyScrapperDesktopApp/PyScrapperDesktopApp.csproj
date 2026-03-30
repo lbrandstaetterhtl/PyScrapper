@@ -46,9 +46,6 @@
       <Compile Update="Views\PlaylistDetailsWindow.axaml.cs">
         <DependentUpon>PlaylistDetailsWindow.axaml</DependentUpon>
       </Compile>
-      <Compile Update="Views\CodecConverterWindow.axaml.cs">
-        <DependentUpon>CodecConvertWindow.axaml</DependentUpon>
-      </Compile>
     </ItemGroup>
 
     <ItemGroup>
