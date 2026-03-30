@@ -7,8 +7,7 @@ Server search responses are inconsistent models
 Next steps:
 fix 1#
 add Archive window
-ffmpeg linux version isnt working
-vlc on linux isnt working
+MediaPlayer: after one file mode and file finished set to beginning is either a deadlock or some sort of crash
 
 
 https://deepwiki.com/videolan/libvlcsharp/2.3-best-practices-and-common-patterns

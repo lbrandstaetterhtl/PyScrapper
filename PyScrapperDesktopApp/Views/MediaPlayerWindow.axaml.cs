@@ -27,11 +27,13 @@ public partial class MediaPlayerWindow : Window
             if (playlist != null)
             {
                 vm.LoadPlaylist(playlist);
+                vm._audioPlayer.PlaylistModeEnabled = true;
                 vm.IsPlaylistMode = true;
             }
             else if (media != null)
             {
                 vm._audioPlayer.PlayFile(media.DownloadPath);
+                vm._audioPlayer.PlaylistModeEnabled = false;
                 vm.IsPlaylistMode = false;
             }
         };

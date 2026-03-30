@@ -14,9 +14,7 @@ namespace PyScrapperDesktopApp.ViewModels;
 
 public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 {
-    public readonly AudioPlayer _audioPlayer = new();
-    
-    private Window? _mediaPlayerWindow;
+    public readonly AudioPlayer _audioPlayer;
 
     [ObservableProperty]
     private int _volume = 70;
@@ -60,6 +58,8 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     /// </summary>
     public MediaPlayerWindowViewModel()
     {
+        _audioPlayer = new AudioPlayer(this);
+        
         _audioPlayer.MediaPlayer.Playing += (s, e) =>
         {
             Dispatcher.UIThread.Post(() =>
@@ -114,11 +114,6 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(DurationText));
             });
         };
-    }
-    
-    public void OnVideoViewReady(Window mediaPlayerWindow)
-    {
-        _mediaPlayerWindow = mediaPlayerWindow;
     }
     
     partial void OnIsShuffleEnabledChanged(bool value)
@@ -185,5 +180,11 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     private bool GetHasPrevious()
     {
         return _audioPlayer.HasPrevious;
+    }
+    
+    public void SetToBeginning()
+    {
+        _audioPlayer.MediaPlayer.Stop();
+        OnPropertyChanged(nameof(CurrentlyText));
     }
 }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Converters;
 using LibVLCSharp.Shared;
+using PyScrapperDesktopApp.ViewModels;
 using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.Models;
@@ -28,6 +29,7 @@ public class AudioPlayer : IDisposable
     
     public bool HasNext => _currentIndex < _playlistTracks.Count - 1;
     public bool HasPrevious => _currentIndex > 0;
+    public bool PlaylistModeEnabled { get; set; }
     
     public event EventHandler<string?> TrackChanged;
     
@@ -36,7 +38,7 @@ public class AudioPlayer : IDisposable
     private Media? _currentMedia;
     private static readonly AppLogger _logger = new();
 
-    public AudioPlayer()
+    public AudioPlayer(MediaPlayerWindowViewModel vm)
     {
         _libVLC = new LibVLC("--verbose=1", "--file-caching=500", "--avcodec-hw=none", "--codec=avcodec");
         
@@ -44,7 +46,14 @@ public class AudioPlayer : IDisposable
 
         _mediaPlayer.EndReached += (s, e) =>
         {
-            System.Threading.ThreadPool.QueueUserWorkItem(_ => PlayNext());
+            if (PlaylistModeEnabled)
+            {
+                System.Threading.ThreadPool.QueueUserWorkItem(_ => PlayNext());
+            }
+            else
+            {
+                vm.SetToBeginning();
+            }
         };
 
         _mediaPlayer.ESAdded += OnEsAdded;
@@ -136,13 +145,17 @@ public class AudioPlayer : IDisposable
                 _logger.LogNewMassage(logg);
                 return;
             }
+            else
+            {
+                filePath = outputPath;
+            }
         }
         
         CurrentFile = filePath;
 
         _currentMedia?.Dispose();
 
-        _currentMedia = new Media(_libVLC, filePath, FromType.FromPath);
+        _currentMedia = new Media(_libVLC, CurrentFile, FromType.FromPath);
         _currentMedia.AddOption(":file-caching=500");
         _currentMedia.AddOption(":avcodec-hw=none");
         _currentMedia.AddOption(":codec=avcodec");
@@ -150,7 +163,7 @@ public class AudioPlayer : IDisposable
         _mediaPlayer.Media = _currentMedia;
         _mediaPlayer.Play();
         
-        var log = new Massage($"Playing file: {filePath}", DateTime.Now, "INFO");
+        var log = new Massage($"Playing file: {CurrentFile}", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
 
         TrackChanged?.Invoke(this, CurrentFile);

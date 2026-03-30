@@ -12,6 +12,7 @@
         CanMaximize="False"
         CanResize="False"
         CanMinimize="False"
+        Topmost="True"
         WindowStartupLocation="CenterOwner"
         Title="PyScrapperDesktopApp">
     
@@ -46,7 +47,7 @@
                         <Button Content="Decrease Volume" Command="{Binding DecreaseVolumeCommand}" Classes="primary"/>
                 </StackPanel>
                 
-                <Button Grid.Row="5" Content="Close" x:Name="CloseButton"/>
+                <Button Classes="primary" Grid.Row="5" Content="Close" x:Name="CloseButton"/>
         </Grid>
         
 </Window>
