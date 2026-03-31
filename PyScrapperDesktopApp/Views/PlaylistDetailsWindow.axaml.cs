@@ -33,8 +33,10 @@ public partial class PlaylistDetailsWindow : Window
                     throw new Exception("Media not found");
                 }
                 
-
-                var mediaPlayerWindow = new MediaPlayerWindow(media: media);
+                List<int> mediaIds = [media.Id];
+                Playlist playlist = new Playlist(mediaIds, "NPLL", "");
+                
+                var mediaPlayerWindow = new MediaPlayerWindow(playlist);
                 mediaPlayerWindow.Show();
             }
         }

@@ -98,7 +98,7 @@
         
         <ScrollViewer Grid.Row="2" IsVisible="False" x:Name="PlaylistsList" HorizontalScrollBarVisibility="Auto">
             <StackPanel>
-            <Button Content="Go back to medias list" Click="ShowDownloadedMediasClick" Classes="primary" HorizontalAlignment="Left"/>
+                <Button Content="Go back to medias list" Click="ShowDownloadedMediasClick" Classes="primary" HorizontalAlignment="Left"/>
             <ItemsControl ItemsSource="{Binding Playlists}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

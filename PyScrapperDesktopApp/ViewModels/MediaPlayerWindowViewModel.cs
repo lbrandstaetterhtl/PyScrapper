@@ -57,14 +57,12 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     private bool _volumeInitialized = false;
 
     private readonly Playlist _playlist;
-    private readonly DownloadedMedia _media;
     
-    public MediaPlayerWindowViewModel(DownloadedMedia media = null, Playlist playlist = null)
+    public MediaPlayerWindowViewModel(Playlist playlist = null)
     {
-        _audioPlayer = new AudioPlayer(this);
+        _audioPlayer = new AudioPlayer();
         
         _playlist = playlist;
-        _media = media;
         
         _audioPlayer.MediaPlayer.Playing += (s, e) =>
         {
@@ -139,16 +137,9 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         if (_playlist != null)
         {
             LoadPlaylist(_playlist);
-            _audioPlayer.PlaylistModeEnabled = true;
-            IsPlaylistMode = true;
             HasNext = _audioPlayer.HasNext;
             HasPrevious = _audioPlayer.HasPrevious;
-        }
-        else if (_media != null)
-        {
-            _audioPlayer.PlayFile(_media.DownloadPath);
-            _audioPlayer.PlaylistModeEnabled = false;
-            IsPlaylistMode = false;
+            IsPlaylistMode = _audioPlayer.PlaylistModeEnabled;
         }
     }
     
@@ -206,11 +197,5 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _audioPlayer.Dispose();
-    }
-    
-    public void SetToBeginning()
-    {
-        _audioPlayer.MediaPlayer.Stop();
-        OnPropertyChanged(nameof(CurrentlyText));
     }
 }

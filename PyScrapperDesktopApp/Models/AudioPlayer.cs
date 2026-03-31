@@ -38,7 +38,7 @@ public class AudioPlayer : IDisposable
     private Media? _currentMedia;
     private static readonly AppLogger _logger = new();
 
-    public AudioPlayer(MediaPlayerWindowViewModel vm)
+    public AudioPlayer()
     {
         _libVLC = new LibVLC("--verbose=1", "--file-caching=500", "--avcodec-hw=none", "--codec=avcodec");
         
@@ -46,14 +46,7 @@ public class AudioPlayer : IDisposable
 
         _mediaPlayer.EndReached += (s, e) =>
         {
-            if (PlaylistModeEnabled)
-            {
-                System.Threading.ThreadPool.QueueUserWorkItem(_ => PlayNext());
-            }
-            else
-            {
-                vm.SetToBeginning();
-            }
+            System.Threading.ThreadPool.QueueUserWorkItem(_ => PlayNext());
         };
 
         _mediaPlayer.ESAdded += OnEsAdded;
@@ -79,23 +72,38 @@ public class AudioPlayer : IDisposable
     
     public void LoadPlaylist(Playlist playlist)
     {
-        var list = AppData.PlayableMedias.Where(m => playlist.MediaIds.Contains(m.Id)).ToList();
-        
-        _originalPlaylistTracks.Clear();
-        _originalPlaylistTracks.AddRange(list);
-        
-        _playlistTracks.Clear();
-        _playlistTracks.AddRange(list);
-        _currentIndex = -1;
-        
-        var log = new Massage($"Loaded playlist '{playlist.Name}' with {_playlistTracks.Count} playable tracks", DateTime.Now, "INFO");
-        _logger.LogNewMassage(log);
-
-        if (IsShuffleEnabled)
+        if (playlist.Count == 1)
         {
-            ShufflePlaylist();
+            PlaylistModeEnabled = false;
+            _playlistTracks.Clear();
+            DownloadedMedia media = AppData.PlayableMedias.First(m => m.Id == playlist.MediaIds[0]);
+
+            if (media == null)  return;
+            _playlistTracks.Add(media);
         }
-        
+        else if (playlist.Count > 1)
+        {
+            PlaylistModeEnabled = true;
+            
+            var list = AppData.PlayableMedias.Where(m => playlist.MediaIds.Contains(m.Id)).ToList();
+
+            _originalPlaylistTracks.Clear();
+            _originalPlaylistTracks.AddRange(list);
+
+            _playlistTracks.Clear();
+            _playlistTracks.AddRange(list);
+            _currentIndex = -1;
+
+            var log = new Massage($"Loaded playlist '{playlist.Name}' with {_playlistTracks.Count} playable tracks",
+                DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            if (IsShuffleEnabled)
+            {
+                ShufflePlaylist();
+            }
+        }
+
         PlayNext();
     }
     
@@ -291,5 +299,10 @@ public class AudioPlayer : IDisposable
         {
             return output;
         }
+    }
+
+    private void SetToBeginning()
+    {
+        
     }
 }

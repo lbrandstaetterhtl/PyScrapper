@@ -37,8 +37,11 @@ public partial class MainWindow : Window
                     media.IsPlayable = false;
                     throw new Exception("Media not found");
                 }
+
+                List<int> mediaIds = [media.Id];
+                Playlist playlist = new Playlist(mediaIds, "NPLL", "");
                 
-                var mediaPlayerWindow = new MediaPlayerWindow(media: media);
+                var mediaPlayerWindow = new MediaPlayerWindow(playlist);
                 mediaPlayerWindow.Show();
             }
         }

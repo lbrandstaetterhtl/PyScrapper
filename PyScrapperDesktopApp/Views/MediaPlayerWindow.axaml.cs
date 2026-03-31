@@ -10,12 +10,12 @@ namespace PyScrapperDesktopApp.Views;
 public partial class MediaPlayerWindow : Window
 {
     private int _playButtonCounter = 0;
-    public MediaPlayerWindow(DownloadedMedia media = null, Playlist playlist = null)
+    public MediaPlayerWindow(Playlist playlist = null)
     {
         
         InitializeComponent();
         
-        var vm = new MediaPlayerWindowViewModel(media: media, playlist: playlist);
+        var vm = new MediaPlayerWindowViewModel(playlist: playlist);
         DataContext = vm;
         
         Opened += (s, e) =>

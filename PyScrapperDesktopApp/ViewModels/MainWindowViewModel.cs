@@ -90,10 +90,19 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
         
-        var media = new DownloadedMedia("", "", DateTime.Now, path, true, "");
-        media.SetTitle();
+        string mediaType = Path.GetExtension(path);
         
-        var mediaPlayerWindow = new MediaPlayerWindow(media: media);
+        var guid = Guid.NewGuid().ToString();
+        var media = new DownloadedMedia("N/A", mediaType, DateTime.Now, path, true, guid);
+        media.SetTitle();
+        media.SetHighestId(AppData.DownloadedMedias);
+        AppData.AddDownloadedMedia(media);
+
+        List<int> mediaIds = [media.Id];
+
+        var playlist = new Playlist(mediaIds, "NPLL", "");
+        
+        var mediaPlayerWindow = new MediaPlayerWindow(playlist);
         mediaPlayerWindow.Show();
     }
 
