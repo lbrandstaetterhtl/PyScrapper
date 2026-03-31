@@ -31,8 +31,8 @@
                         <Button Content="Play Previous" Command="{Binding PlayPreviousCommand}" IsEnabled="{Binding HasPrevious}" IsVisible="{Binding IsPlaylistMode}" Classes="primary"/>
                         <Button x:Name="PlayButton" Content="Pause" Classes="primary"/>
                         <Button Content="Stop" x:Name="StopButton" Command="{Binding StopCommand}" Classes="primary"/>
-                        <Button Content="Play Next" Command="{Binding PlayNextCommand}" IsVisible="{Binding IsPlaylistMode}" Classes="primary"/>
-                        <CheckBox Content="Shuffle" IsChecked="{Binding IsShuffleEnabled}" IsVisible="{Binding IsPlaylistMode}" IsEnabled="{Binding HasNext}"/>
+                        <Button Content="Play Next" Command="{Binding PlayNextCommand}" IsVisible="{Binding IsPlaylistMode}" IsEnabled="{Binding HasNext}" Classes="primary"/>
+                        <CheckBox Content="Shuffle" IsChecked="{Binding IsShuffleEnabled}" IsVisible="{Binding IsPlaylistMode}"/>
                         <TextBlock Text="{Binding DurationText}" Classes="UILabel"/>
                 </StackPanel>
                 

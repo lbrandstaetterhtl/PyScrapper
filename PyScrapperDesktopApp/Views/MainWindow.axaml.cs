@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using PyScrapperDesktopApp.Models;
@@ -36,7 +37,6 @@ public partial class MainWindow : Window
                     media.IsPlayable = false;
                     throw new Exception("Media not found");
                 }
-                
                 
                 var mediaPlayerWindow = new MediaPlayerWindow(media: media);
                 mediaPlayerWindow.Show();
@@ -91,10 +91,15 @@ public partial class MainWindow : Window
         }
     }
     
-    private void DeleteMedia(object sender, RoutedEventArgs e)
+    private async void DeleteMedia(object sender, RoutedEventArgs e)
     {
         if (sender is MenuItem { DataContext: DownloadedMedia media })
         {
+            var confirmationWindow = new ConfirmationWindow("Are you sure you want to remove this media from the list? This action cannot be undone.");
+            var result = await confirmationWindow.ShowDialog<bool>(this);
+
+            if (!result) return;
+                
             AppData.RemoveDownloadedMedia(media);
             
             var log = new Massage("Media removed from the list: " + media.Url, DateTime.Now, "INFO");
@@ -105,13 +110,16 @@ public partial class MainWindow : Window
         }
     }
     
-    private void DeleteFile(object sender, RoutedEventArgs e)
+    private async void DeleteFile(object sender, RoutedEventArgs e)
     {
         if (sender is MenuItem { DataContext: DownloadedMedia media })
         {
             try
             {
-                if (File.Exists(media.DownloadPath))
+                var confirmationWindow = new ConfirmationWindow("Are you sure you want to delete the file? This action cannot be undone.");
+                var result = await confirmationWindow.ShowDialog<bool>(this);
+                
+                if (result && File.Exists(media.DownloadPath))
                 {
                     File.Delete(media.DownloadPath);
                     

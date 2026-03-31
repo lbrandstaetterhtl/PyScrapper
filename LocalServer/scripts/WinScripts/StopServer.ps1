@@ -1,10 +1,10 @@
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'SilentlyContinue'
-
 param(
     [string]$HostAddr = '127.0.0.1',
     [int]$Port = 8765
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'SilentlyContinue'
 
 . "$PSScriptRoot\Common.ps1"
 Initialize-Log -Name 'StopServer.log' -Prefix 'StopServer'

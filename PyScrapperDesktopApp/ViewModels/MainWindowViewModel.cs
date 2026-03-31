@@ -227,8 +227,14 @@ public partial class MainWindowViewModel : ObservableObject
         }
         
         var message = "Would you like to convert it to a supported codec H264?";
+        var confirmationWindow = new ConfirmationWindow(message);
+        var confirmationResult = await confirmationWindow.ShowDialog<bool>(desktop.MainWindow);
+
+        if (!confirmationResult)
+            return;
+        
         var outputPath = CodecConverterWindowViewModel.SetOutputPath(inputPath);
-        var codecConverterWindow = new CodecConverterWindow(message: message, inputPath: inputPath, outputPath: outputPath);
+        var codecConverterWindow = new CodecConverterWindow(inputPath: inputPath, outputPath: outputPath);
         bool finished = await codecConverterWindow.ShowDialog<bool>(desktop.MainWindow);
 
         if (!finished)
@@ -236,5 +242,61 @@ public partial class MainWindowViewModel : ObservableObject
             var log = new Massage($"Codec conversion for file '{inputPath}' was cancelled by user.", DateTime.Now, "WARNING");
             new AppLogger().LogNewMassage(log);
         }
+    }
+
+    [RelayCommand]
+    private async Task ScanFolder()
+    {
+        var inputWindow = new InputWindow("Enter a folder path to scan for media files:");
+        var folderPath = await inputWindow.ShowDialog<string>(App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+        
+        App.ScanFolder(folderPath);
+    }
+    
+    [RelayCommand]
+    private async Task DeleteAllMedias()
+    {
+        var confirmationWindow = new ConfirmationWindow("Are you sure you want to delete all downloaded media? This action cannot be undone.");
+        var result = await confirmationWindow.ShowDialog<bool>(App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+
+        if (!result)
+            return;
+        
+        AppData.DownloadedMedias.Clear();
+    }
+
+    [RelayCommand]
+    private async Task DeleteAllPlaylists()
+    {
+        var confirmationWindow = new ConfirmationWindow("Are you sure you want to delete all playlists? This action cannot be undone.");
+        var result = await confirmationWindow.ShowDialog<bool>(App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+
+        if (!result)
+            return;
+        
+        AppData.Playlists.Clear();
+    }
+
+    [RelayCommand]
+    private async Task EditDownloadsPath()
+    {
+        if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
+        
+        var inputWindow = new InputWindow($"Set a new default download path (Current: {AppData.Settings.DownloadPath}):");
+        var input = await inputWindow.ShowDialog<string>(desktop.MainWindow);
+        
+        if (input == null)
+        {
+            return;
+        }
+
+        if (!Directory.Exists(input) || string.IsNullOrWhiteSpace(input))
+        {
+            var messageBox = new MessageBox("Please select a valid download path.");
+            await messageBox.ShowDialog(desktop.MainWindow);
+            return;
+        }
+        
+        AppData.Settings.DownloadPath = input;
     }
 }

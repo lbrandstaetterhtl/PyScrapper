@@ -336,4 +336,107 @@ public abstract class DatabaseOperations
             Logger.LogNewMassage(log);
         }
     }
+
+    public static async Task<Settings> LoadSettings()
+    {
+        try
+        {
+            if (!File.Exists(DatabaseFilePath))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(DatabaseFilePath));
+                File.Create(DatabaseFilePath).Close();
+            }
+            
+            var settings = new Settings();
+            settings.SetDefaultSettings();
+            
+            Connection.Open();
+            
+            var createCommand = Connection.CreateCommand();
+            
+            createCommand.CommandText = 
+                """
+                    CREATE TABLE IF NOT EXISTS Settings (
+                        Id INTEGER PRIMARY KEY,
+                        DownloadPath TEXT
+                    )STRICT;
+                """;
+            
+            createCommand.ExecuteNonQuery();
+            
+            var selectCommand = Connection.CreateCommand();
+            
+            selectCommand.CommandText = "SELECT DISTINCT Id, DownloadPath FROM Settings LIMIT 1;";
+            
+            await using var reader = await selectCommand.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                var id = reader.GetInt32(0);
+                var downloadPath = reader.GetString(1);
+                settings = new Settings()
+                {
+                    Id = id,
+                    DownloadPath = downloadPath
+                };
+            }
+            
+            Connection.Close();
+            
+            return settings;
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while loading settings: " + e.Message, DateTime.Now, "ERROR");
+            Logger.LogNewMassage(log);
+            Settings settings = new();
+            settings.SetDefaultSettings();
+            return settings;
+        }
+    }
+
+    public static void SaveSettings(Settings settings)
+    {
+        try
+        {
+            if (!File.Exists(DatabaseFilePath))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(DatabaseFilePath));
+                File.Create(DatabaseFilePath).Close();
+            }
+            
+            Connection.Open();
+            
+            var createCommand = Connection.CreateCommand();
+            
+            createCommand.CommandText =
+                """
+                    CREATE TABLE IF NOT EXISTS Settings (
+                        Id INTEGER PRIMARY KEY,
+                        DownloadPath TEXT
+                    )STRICT;
+                """;
+                
+            
+            var deleteCommand  = Connection.CreateCommand();
+            deleteCommand.CommandText =  "DELETE FROM Settings;";
+            deleteCommand.ExecuteNonQuery();
+            
+            var insertCommand = Connection.CreateCommand();
+            insertCommand.CommandText =
+                "INSERT INTO Settings (Id, DownloadPath)" +
+                "VALUES ($id, $downloadPath);";
+            insertCommand.Parameters.AddWithValue("$id", settings.Id);
+            insertCommand.Parameters.AddWithValue("$downloadPath", settings.DownloadPath);
+            
+            insertCommand.ExecuteNonQuery();
+            
+            Connection.Close();
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while saving settings: " + e.Message, DateTime.Now, "ERROR");
+            Logger.LogNewMassage(log);
+        }
+    }
 }

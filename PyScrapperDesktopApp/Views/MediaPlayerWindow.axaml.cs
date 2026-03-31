@@ -15,7 +15,7 @@ public partial class MediaPlayerWindow : Window
         
         InitializeComponent();
         
-        var vm = new MediaPlayerWindowViewModel();
+        var vm = new MediaPlayerWindowViewModel(media: media, playlist: playlist);
         DataContext = vm;
         
         Opened += (s, e) =>
@@ -23,19 +23,8 @@ public partial class MediaPlayerWindow : Window
             if (DataContext is not MediaPlayerWindowViewModel vm) return;
 
             VideoView.MediaPlayer = vm.MediaPlayer;
-
-            if (playlist != null)
-            {
-                vm.LoadPlaylist(playlist);
-                vm._audioPlayer.PlaylistModeEnabled = true;
-                vm.IsPlaylistMode = true;
-            }
-            else if (media != null)
-            {
-                vm._audioPlayer.PlayFile(media.DownloadPath);
-                vm._audioPlayer.PlaylistModeEnabled = false;
-                vm.IsPlaylistMode = false;
-            }
+            
+            vm.VideoViewLoaded();
         };
 
         Closing += OnWindowClosing;
@@ -56,7 +45,7 @@ public partial class MediaPlayerWindow : Window
             (s, e) =>
             {
                 if (DataContext is not MediaPlayerWindowViewModel vm) return;
-                vm._audioPlayer.MediaPlayer.Time = (long)(SeekSlider.Value * 1000);
+                vm.SetSeekValue((long)SeekSlider.Value);
                 vm.SeekSliderMoving = false;
             },
             handledEventsToo: true
@@ -84,7 +73,7 @@ public partial class MediaPlayerWindow : Window
             (s, e) =>
             {
                 if (DataContext is not MediaPlayerWindowViewModel vm) return;
-                vm._audioPlayer.MediaPlayer.Volume = (int)VolumeSlider.Value;
+                vm.SetVolume((int)VolumeSlider.Value);
                 vm.VolumeSliderMoving = false;
             },
             handledEventsToo: true

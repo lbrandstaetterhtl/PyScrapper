@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using LibVLCSharp.Shared;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 using PyScrapperDesktopApp.Views;
@@ -106,10 +107,49 @@ public partial class App : Application
                 log = new Massage("Loading Data...", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
+                var settings = await DatabaseOperations.LoadSettings();
+                var defaultSettings = new Settings();
+                defaultSettings.SetDefaultSettings();
+                
+                AppData.Settings = settings ?? defaultSettings;
+
                 var medias = await DatabaseOperations.LoadDownloadedMediasNoDuplicates();
 
                 var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
+                
+                foreach (var media in medias)
+                {
+                    media.SetTitle();
+                    
+                    bool exists = File.Exists(media.DownloadPath);
+                    bool isSupported = true;
+                    if (exists)
+                    {
+                        isSupported = !media.DownloadPath.EndsWith(".mp4") || await  AudioPlayer.IsSupportedCodec(media.DownloadPath);
+                    }
+                    
+                    if (exists && isSupported)
+                    {
+                        media.IsPlayable = true;
+                    }
+                    else
+                    {
+                        media.IsPlayable = false;
 
+                        if (!exists)
+                        {
+                            mediasToRemove.Add(media);
+                        }
+                        else
+                        {
+                            log = new Massage(
+                                $"Media with id {media.Id} has an unsupported codec and will be set to not playable",
+                                DateTime.Now, "WARNING");
+                            _logger.LogNewMassage(log);
+                        }
+                    }
+                }
+                
                 foreach (var mediaToRemove in mediasToRemove)
                 {
                     medias.Remove(mediaToRemove);
@@ -122,33 +162,6 @@ public partial class App : Application
 
                 foreach (var media in medias)
                 {
-                    var isSupported = await AudioPlayer.IsSupportedCodec(media.DownloadPath);
-                    
-                    if (!isSupported && media.MediaType == ".mp4")
-                    {
-                        media.IsPlayable = false;
-
-                        log = new Massage(
-                            $"Media with id {media.Id} has an unsupported codec and will be set to not playable",
-                            DateTime.Now, "WARNING");
-                        _logger.LogNewMassage(log);
-                    }
-                }
-
-                foreach (var media in medias)
-                {
-                    media.SetTitle();
-                    
-                    if (File.Exists(media.DownloadPath))
-                    {
-                        media.IsPlayable = true;
-                    }
-                    else
-                    {
-                        media.IsPlayable = false;
-                        media.DownloadPath = "Does not exist";
-                    }
-
                     AppData.AddDownloadedMedia(media);
                 }
 
@@ -158,6 +171,8 @@ public partial class App : Application
                 {
                     AppData.AddPlaylist(playlist);
                 }
+                
+                ScanFolder(AppData.Settings.DownloadPath);
 
                 log = new Massage(
                     $"Application started with {AppData.DownloadedMedias.Count} listed medias and {AppData.PlayableMedias.Count} playable medias | deleted {mediasToRemove.Count} medias",
@@ -225,7 +240,7 @@ public partial class App : Application
                 RedirectStandardError  = true
             };
         }
-        else // Linux / macOS
+        else
         {
             var scriptPath = $"{repoRoot}/LocalServer/scripts/LinuxScripts/{scriptFile}.sh";
 
@@ -258,6 +273,7 @@ public partial class App : Application
         
         DatabaseOperations.SaveDownloadedMedias(AppData.DownloadedMedias);
         DatabaseOperations.SavePlaylists(AppData.Playlists);
+        DatabaseOperations.SaveSettings(AppData.Settings);
         
         log = new Massage("Shutting down local server...", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
@@ -266,5 +282,37 @@ public partial class App : Application
         
         log = new Massage("Local server is shutdown", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
+    }
+
+    public static void ScanFolder(string folder)
+    {
+        var extensions = new[]
+        {
+            ".mp3",
+            ".mp4"
+        };
+
+        if (!Directory.Exists(folder))
+            return;
+        
+        var found = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).Where(f => extensions.Contains(Path.GetExtension(f)));
+
+        foreach (var file in found)
+        {
+            var media = new DownloadedMedia(
+                url: "N/A",
+                mediaType: Path.GetExtension(file),
+                downloadedAt: DateTime.Now,
+                downloadPath: file,
+                isPlayable: false,
+                identifier: Guid.NewGuid().ToString()
+            );
+            media.SetTitle();
+            media.SetHighestId(AppData.DownloadedMedias);
+            bool alreadyExists = AppData.AlreadyExists(file);
+            
+            if (!alreadyExists)
+                AppData.AddDownloadedMedia(media);
+        }
     }
 }

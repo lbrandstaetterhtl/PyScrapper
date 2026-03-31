@@ -14,7 +14,7 @@ namespace PyScrapperDesktopApp.ViewModels;
 
 public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 {
-    public readonly AudioPlayer _audioPlayer;
+    private readonly AudioPlayer _audioPlayer;
 
     [ObservableProperty]
     private int _volume = 70;
@@ -37,8 +37,11 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isPlaylistMode;
 
-    public bool HasNext => GetHasNext();
-    public bool HasPrevious => GetHasPrevious();
+    [ObservableProperty] 
+    private bool _hasNext;
+
+    [ObservableProperty]
+    private bool _hasPrevious;
     
     public bool VolumeSliderMoving { get; set; }
     public bool SeekSliderMoving { get; set; }
@@ -53,12 +56,18 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     private readonly AppLogger _logger = new();
     private bool _volumeInitialized = false;
 
+    private Playlist _playlist;
+    private DownloadedMedia _media;
+    
     /// <summary>
     /// 
     /// </summary>
-    public MediaPlayerWindowViewModel()
+    public MediaPlayerWindowViewModel(DownloadedMedia media = null, Playlist playlist = null)
     {
         _audioPlayer = new AudioPlayer(this);
+        
+        _playlist = playlist;
+        _media = media;
         
         _audioPlayer.MediaPlayer.Playing += (s, e) =>
         {
@@ -75,6 +84,8 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
             Dispatcher.UIThread.Post(() =>
             {
                 NowPlayingTitle = title ?? "Unknown Title";
+                HasNext = _audioPlayer.HasNext;
+                HasPrevious = _audioPlayer.HasPrevious;
             });
             
         };
@@ -114,6 +125,34 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(DurationText));
             });
         };
+    }
+
+    public void SetSeekValue(long value)
+    {
+        _audioPlayer.MediaPlayer.Time = (value * 1000);
+    }
+
+    public void SetVolume(double volume)
+    {
+        _audioPlayer.MediaPlayer.Volume = (int)volume;
+    }
+
+    public void VideoViewLoaded()
+    {
+        if (_playlist != null)
+        {
+            LoadPlaylist(_playlist);
+            _audioPlayer.PlaylistModeEnabled = true;
+            IsPlaylistMode = true;
+            HasNext = _audioPlayer.HasNext;
+            HasPrevious = _audioPlayer.HasPrevious;
+        }
+        else if (_media != null)
+        {
+            _audioPlayer.PlayFile(_media.DownloadPath);
+            _audioPlayer.PlaylistModeEnabled = false;
+            IsPlaylistMode = false;
+        }
     }
     
     partial void OnIsShuffleEnabledChanged(bool value)
@@ -170,16 +209,6 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _audioPlayer.Dispose();
-    }
-    
-    private bool GetHasNext()
-    {
-        return _audioPlayer.HasNext;
-    }
-
-    private bool GetHasPrevious()
-    {
-        return _audioPlayer.HasPrevious;
     }
     
     public void SetToBeginning()

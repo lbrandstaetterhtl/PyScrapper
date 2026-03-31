@@ -59,12 +59,13 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
             return;
         }
         
+        _selectedMediaIds.Clear();
         foreach (var media in SelectedMedias)
         {
             _selectedMediaIds.Add(media.Id);
         }
         
-        var newPlaylist = new Playlist(_selectedMediaIds, PlaylistName, Description);
+        var newPlaylist = new Playlist(_selectedMediaIds, PlaylistName, Description ?? "");
         newPlaylist.SetHighestId(AppData.Playlists);
         newPlaylist.SetPlayableMediaIds(AppData.PlayableMedias);
         

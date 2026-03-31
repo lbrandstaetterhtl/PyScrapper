@@ -131,12 +131,24 @@ public class AudioPlayer : IDisposable
 
         if (!isSupported)
         {
+            var media = AppData.DownloadedMedias.FirstOrDefault(m => m.DownloadPath == filePath);
+            
+            if (media != null)
+                media.IsPlayable = false;
+            
+            
             if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
             
             string message = $"The video codec for the file '{filePath}' is not supported. Would you like to convert the file to the supported format H264.";
+            var confirmationWindow = new ConfirmationWindow(message);
+            var result = await confirmationWindow.ShowDialog<bool>(desktop.MainWindow);
+
+            if (!result)
+                return;
+            
             string outputPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(filePath) ?? "", System.IO.Path.GetFileNameWithoutExtension(filePath) + "_converted.mp4");
             
-            var converterWindow = new CodecConverterWindow(message: message, inputPath: filePath, outputPath: outputPath);
+            var converterWindow = new CodecConverterWindow(inputPath: filePath, outputPath: outputPath);
             bool finished = await converterWindow.ShowDialog<bool>(desktop.MainWindow);
 
             if (!finished)
@@ -229,6 +241,7 @@ public class AudioPlayer : IDisposable
     public static async Task<bool> IsSupportedCodec(string path)
     {
         var codec = await GetVideoCodec(path);
+        codec = codec.Trim();
         
         if (string.IsNullOrEmpty(codec))
         {

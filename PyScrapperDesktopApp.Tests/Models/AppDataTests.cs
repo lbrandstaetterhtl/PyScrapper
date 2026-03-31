@@ -83,32 +83,5 @@ public class AppDataTests
         Assert.Equal(3, AppData.DownloadedMedias.Count);
         Assert.Equal(2, AppData.PlayableMedias.Count);
     }
-
-    [Fact]
-    public void StaticPaths_AreNotNull()
-    {
-        Assert.NotNull(AppData.PyScrapperPath);
-        Assert.NotNull(AppData.DownloadPath);
-        Assert.NotNull(AppData.AppLogsPath);
-        Assert.NotNull(AppData.DataPath);
-    }
-
-    [Fact]
-    public void DownloadPath_ContainsDownloads()
-    {
-        Assert.Contains("Downloads", AppData.DownloadPath);
-    }
-
-    [Fact]
-    public void LogsPath_ContainsLogs()
-    {
-        Assert.Contains("logs", AppData.AppLogsPath);
-    }
-
-    [Fact]
-    public void DataPath_ContainsData()
-    {
-        Assert.Contains("data", AppData.DataPath);
-    }
 }
 

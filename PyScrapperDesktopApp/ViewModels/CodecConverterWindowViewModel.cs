@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LibVLCSharp.Shared;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.Views;
 
@@ -79,7 +80,7 @@ public partial class CodecConverterWindowViewModel : ObservableObject
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "ffmpeg",
-                    Arguments = $"-y -i \"{_inputFilePath}\" -c:v libx264 -c:a aac -progress pipe:1 -nostats -loglevel error \"{OutputFilePath}\"",
+                    Arguments = $"-y -i \"{InputFilePath}\" -c:v libx264 -c:a aac -progress pipe:1 -nostats -loglevel error \"{OutputFilePath}\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -160,6 +161,13 @@ public partial class CodecConverterWindowViewModel : ObservableObject
             
             var log = new Massage("Conversion completed successfully!", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
+            
+            var guid = Guid.NewGuid().ToString();
+            
+            var newMedia = new DownloadedMedia("N/A", ".mp4", DateTime.Now, OutputFilePath, true, guid);
+            newMedia.SetHighestId(AppData.DownloadedMedias);
+            newMedia.SetTitle();
+            AppData.AddDownloadedMedia(newMedia);
             
             _window.Close(true);
         }

@@ -126,7 +126,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 Url = item.url,
                 Mediatype = SelectedMediaType,
                 Filename = filename,
-                Download_path = AppData.DownloadPath
+                Download_path = AppData.Settings.DownloadPath
             };
             
             var result = await client.SendScrapRequest(requestData, serverUrl);
@@ -155,7 +155,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     
                     var identifier = item.url.Split('=')[^1];
 
-                    var downloadFilePath = Path.Combine(AppData.DownloadPath, $"{filename}{SelectedMediaType}");
+                    var downloadFilePath = Path.Combine(AppData.Settings.DownloadPath, $"{filename}{SelectedMediaType}");
 
                     Task.Delay(2000).Wait();
                     

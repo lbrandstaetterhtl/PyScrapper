@@ -1,0 +1,28 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="PyScrapperDesktopApp.Views.ConfirmationWindow"
+        x:DataType="vm:ConfirmationWindowViewModel"
+        SizeToContent="WidthAndHeight"
+        CanMaximize="False"
+        CanResize="False"
+        CanMinimize="False"
+        MaxHeight="400"
+        MaxWidth="600"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/PyScrapperLogo.ico"
+        Title="PyScrapperDesktopApp">
+    
+        <Grid RowDefinitions="* , Auto">
+                <TextBlock Text="{Binding Message}" Classes="UILabel" TextWrapping="Wrap" Grid.Row="0"/>
+                
+                <StackPanel Grid.Row="1" Classes="UICell">
+                        <Button Content="Yes" Command="{Binding ConfirmCommand}" Classes="primary"/>
+                        <Button Content="No" Command="{Binding CancelCommand}" Classes="primary"/>
+                </StackPanel>
+        </Grid>
+        
+</Window>

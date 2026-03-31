@@ -13,10 +13,11 @@ public class AppData
     public static ObservableCollection<DownloadedMedia> PlayableMedias = new();
     public static ObservableCollection<Playlist> Playlists = new();
     public static string PyScrapperPath { get;} = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
-    public static string DownloadPath { get;} = Path.Combine(PyScrapperPath, "Downloads");
-    public static string AppLogsPath { get;} = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
-    public static string ServerLogsPath { get;} = Path.Combine(PyScrapperPath, "LocalServer", "logs");
-    public static string DataPath { get;} = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "data");
+    public static string AppLogsPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
+    public static string ServerLogsPath { get; set; } = Path.Combine(PyScrapperPath, "LocalServer", "logs");
+    public static string DataPath { get; set; } =  Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "data");
+    public static Settings Settings = new();
+    
     
     /// <summary>
     /// Adds a downloaded media to the DownloadedMedias collection and, if it's playable, also to the PlayableMedias collection.
@@ -54,6 +55,11 @@ public class AppData
     public static void RemovePlaylist(Playlist playlist)
     {
         Playlists.Remove(playlist);
+    }
+
+    public static bool AlreadyExists(string filePath)
+    {
+        return DownloadedMedias.Any(m => m.DownloadPath == filePath);
     }
 }
 
@@ -170,5 +176,15 @@ public class Playlist(List<int> mediaIds, string name, string description)
             AppData.Playlists.Insert(index, this);
             AppData.Playlists.RemoveAt(index+1);
         }
+    }
+}
+
+public class Settings
+{
+    public int Id { get; set; }
+    public string DownloadPath { get; set; }
+    public void SetDefaultSettings()
+    {
+        DownloadPath = Path.Combine(AppData.PyScrapperPath, "Downloads");
     }
 }

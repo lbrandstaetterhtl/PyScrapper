@@ -7,7 +7,7 @@ namespace PyScrapperDesktopApp.Views;
 
 public partial class CodecConverterWindow : Window
 {
-    public CodecConverterWindow(string inputPath, string outputPath, string message = "")
+    public CodecConverterWindow(string inputPath, string outputPath)
     {
         InitializeComponent();
         
