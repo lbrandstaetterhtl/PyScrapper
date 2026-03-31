@@ -1,0 +1,230 @@
+<!-- note <Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+
+                < ══════════════════════════════════════
+                     DARK MODE — Python Blau
+                ══════════════════════════════════════ >
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="BgPrimary">#0d1117</Color>
+                    <Color x:Key="BgSecondary">#161b27</Color>
+                    <Color x:Key="Surface">#1e2540</Color>
+                    <Color x:Key="BorderColor">#253060</Color>
+                    <Color x:Key="Accent">#3776d4</Color>
+                    <Color x:Key="AccentLight">#5a9ef5</Color>
+                    <Color x:Key="TextPrimary">#e8eaf0</Color>
+                    <Color x:Key="TextSecondary">#7a8aaa</Color>
+                    <Color x:Key="SeparatorMid">#3776d4</Color>
+
+                    <SolidColorBrush x:Key="BgPrimaryBrush"    Color="{StaticResource BgPrimary}"/>
+                    <SolidColorBrush x:Key="SurfaceBrush"      Color="{StaticResource Surface}"/>
+                    <SolidColorBrush x:Key="BorderBrush"       Color="{StaticResource BorderColor}"/>
+                    <SolidColorBrush x:Key="TextPrimaryBrush"  Color="{StaticResource TextPrimary}"/>
+                    <SolidColorBrush x:Key="TextSecondaryBrush"Color="{StaticResource TextSecondary}"/>
+
+                    <LinearGradientBrush x:Key="AccentGradient"
+                                         StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#3776d4" Offset="0"/>
+                        <GradientStop Color="#5a9ef5" Offset="1"/>
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="SurfaceGradient"
+                                         StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#1e2540" Offset="0"/>
+                        <GradientStop Color="#161b27" Offset="1"/>
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="SeparatorBrush"
+                                         StartPoint="0%,50%" EndPoint="100%,50%">
+                        <GradientStop Color="Transparent" Offset="0"/>
+                        <GradientStop Color="#253060"     Offset="0.3"/>
+                        <GradientStop Color="#3776d4"     Offset="0.5"/>
+                        <GradientStop Color="#253060"     Offset="0.7"/>
+                        <GradientStop Color="Transparent" Offset="1"/>
+                    </LinearGradientBrush>
+                </ResourceDictionary>
+
+                < ══════════════════════════════════════
+                     LIGHT MODE — Python Gelb
+                ══════════════════════════════════════ >
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="BgPrimary">#fafaf8</Color>
+                    <Color x:Key="BgSecondary">#f0f0e8</Color>
+                    <Color x:Key="Surface">#ffffff</Color>
+                    <Color x:Key="BorderColor">#ddddc8</Color>
+                    <Color x:Key="Accent">#f7c948</Color>
+                    <Color x:Key="AccentLight">#e6b020</Color>
+                    <Color x:Key="TextPrimary">#1a1a2a</Color>
+                    <Color x:Key="TextSecondary">#5a5a6a</Color>
+                    <Color x:Key="SeparatorMid">#f7c948</Color>
+
+                    <SolidColorBrush x:Key="BgPrimaryBrush"    Color="{StaticResource BgPrimary}"/>
+                    <SolidColorBrush x:Key="SurfaceBrush"      Color="{StaticResource Surface}"/>
+                    <SolidColorBrush x:Key="BorderBrush"       Color="{StaticResource BorderColor}"/>
+                    <SolidColorBrush x:Key="TextPrimaryBrush"  Color="{StaticResource TextPrimary}"/>
+                    <SolidColorBrush x:Key="TextSecondaryBrush"Color="{StaticResource TextSecondary}"/>
+
+                    <LinearGradientBrush x:Key="AccentGradient"
+                                         StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#f7c948" Offset="0"/>
+                        <GradientStop Color="#e6b020" Offset="1"/>
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="SurfaceGradient"
+                                         StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#ffffff" Offset="0"/>
+                        <GradientStop Color="#f0f0e8" Offset="1"/>
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="SeparatorBrush"
+                                         StartPoint="0%,50%" EndPoint="100%,50%">
+                        <GradientStop Color="Transparent" Offset="0"/>
+                        <GradientStop Color="#ddddc8"     Offset="0.3"/>
+                        <GradientStop Color="#f7c948"     Offset="0.5"/>
+                        <GradientStop Color="#ddddc8"     Offset="0.7"/>
+                        <GradientStop Color="Transparent" Offset="1"/>
+                    </LinearGradientBrush>
+                </ResourceDictionary>
+
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    < ══════════════════════════════════════
+         Button.primary
+    ══════════════════════════════════════ >
+    <Style Selector="Button.primary">
+        <Setter Property="Background"          Value="{DynamicResource AccentGradient}"/>
+        <Setter Property="Foreground"          Value="#ffffff"/>
+        <Setter Property="CornerRadius"        Value="8"/>
+        <Setter Property="Padding"             Value="14,8"/>
+        <Setter Property="Margin"              Value="5"/>
+        <Setter Property="FontWeight"          Value="SemiBold"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Cursor"              Value="Hand"/>
+    </Style>
+    <!-- Hover >
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+        <Setter Property="Background">
+            <Setter.Value>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Color="#5a9ef5" Offset="0"/>
+                    <GradientStop Color="#7ab8ff" Offset="1"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Pressed >
+    <Style Selector="Button.primary:pressed /template/ ContentPresenter">
+        <Setter Property="Background">
+            <Setter.Value>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Color="#2255a8" Offset="0"/>
+                    <GradientStop Color="#3a70c0" Offset="1"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    < ══════════════════════════════════════
+         TextBox.UI
+    ══════════════════════════════════════ >
+    <Style Selector="TextBox.UI">
+        <Setter Property="Margin"              Value="5"/>
+        <Setter Property="MinWidth"            Value="200"/>
+        <Setter Property="MaxWidth"            Value="600"/>
+        <Setter Property="CornerRadius"        Value="8"/>
+        <Setter Property="Background"          Value="{DynamicResource SurfaceBrush}"/>
+        <Setter Property="Foreground"          Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    < ══════════════════════════════════════
+         ComboBox
+    ══════════════════════════════════════ >
+    <Style Selector="ComboBox">
+        <Setter Property="Margin"              Value="8"/>
+        <Setter Property="CornerRadius"        Value="8"/>
+        <Setter Property="Background"          Value="{DynamicResource SurfaceBrush}"/>
+        <Setter Property="Foreground"          Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- ══════════════════════════════════════
+         StackPanel.UICell
+    ══════════════════════════════════════ >
+    <Style Selector="StackPanel.UICell">
+        <Setter Property="Margin"              Value="5"/>
+        <Setter Property="Spacing"             Value="7"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Orientation"         Value="Horizontal"/>
+    </Style>
+
+    < ══════════════════════════════════════
+         Border.Seperator  (Tippfehler aus Original beibehalten)
+    ══════════════════════════════════════ >
+    <Style Selector="Border.Seperator">
+        <Setter Property="Background"          Value="{DynamicResource SeparatorBrush}"/>
+        <Setter Property="Height"              Value="1"/>
+        <Setter Property="Margin"              Value="10,5"/>
+    </Style>
+
+    < ══════════════════════════════════════
+         Border.Cell
+    ══════════════════════════════════════ >
+    <Style Selector="Border.Cell">
+        <Setter Property="Background"          Value="{DynamicResource SurfaceGradient}"/>
+        <Setter Property="BorderBrush"         Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness"     Value="1"/>
+        <Setter Property="Padding"             Value="10"/>
+        <Setter Property="CornerRadius"        Value="8"/>
+        <Setter Property="Margin"              Value="5"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    < ══════════════════════════════════════
+         TextBlock.UILabel
+    ══════════════════════════════════════ >
+    <Style Selector="TextBlock.UILabel">
+        <Setter Property="FontWeight"          Value="SemiBold"/>
+        <Setter Property="FontSize"            Value="16"/>
+        <Setter Property="Margin"              Value="5"/>
+        <Setter Property="Foreground"          Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    < ══════════════════════════════════════
+         TextBlock.UIValue
+    ══════════════════════════════════════ >
+    <Style Selector="TextBlock.UIValue">
+        <Setter Property="Margin"              Value="5"/>
+        <Setter Property="Foreground"          Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    < ══════════════════════════════════════
+         ListBox.SelectableItem
+    ══════════════════════════════════════ >
+    <Style Selector="ListBox.SelectableItem">
+        <Setter Property="Margin"              Value="5"/>
+        <Setter Property="Padding"             Value="5"/>
+        <Setter Property="CornerRadius"        Value="8"/>
+        <Setter Property="Background"          Value="{DynamicResource SurfaceBrush}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    < ══════════════════════════════════════
+         CheckBox.IsPlayable
+    ══════════════════════════════════════ >
+    <Style Selector="CheckBox.IsPlayable">
+        <Setter Property="Margin"                   Value="5"/>
+        <Setter Property="HorizontalAlignment"      Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="IsEnabled"                Value="False"/>
+    </Style>
+
+</Styles>
+-->
