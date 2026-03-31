@@ -56,12 +56,9 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     private readonly AppLogger _logger = new();
     private bool _volumeInitialized = false;
 
-    private Playlist _playlist;
-    private DownloadedMedia _media;
+    private readonly Playlist _playlist;
+    private readonly DownloadedMedia _media;
     
-    /// <summary>
-    /// 
-    /// </summary>
     public MediaPlayerWindowViewModel(DownloadedMedia media = null, Playlist playlist = null)
     {
         _audioPlayer = new AudioPlayer(this);
@@ -201,7 +198,7 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _audioPlayer.MediaPlayer.Volume = Volume;
     }
     
-    public void LoadPlaylist(Playlist playlist)
+    private void LoadPlaylist(Playlist playlist)
     {
         _audioPlayer.LoadPlaylist(playlist);
     }
