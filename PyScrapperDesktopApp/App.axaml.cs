@@ -103,7 +103,7 @@ public partial class App : Application
 
                 desktop.MainWindow = new MainWindow
                 {
-                    DataContext = new MainWindowViewModel(),
+                    DataContext = new MainWindowViewModel(desktop.MainWindow),
                 };
 
                 log = new Massage("Loading Data...", DateTime.Now, "INFO");

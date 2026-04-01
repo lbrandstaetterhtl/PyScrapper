@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
@@ -26,14 +27,16 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<DownloadedMedia> DownloadedMediaList => AppData.DownloadedMedias;
     
     public ObservableCollection<Playlist> Playlists => AppData.Playlists;
+    private readonly Window _window;
 
     /// <summary>
     /// Constructor for the MainWindowViewModel, which initializes the view model and sets up the list of downloaded media by fetching it from the AppData.
     /// It also checks if the application is in design mode to avoid executing code that should only run at runtime.
     /// </summary>
-    public MainWindowViewModel()
+    public MainWindowViewModel(Window window)
     {
         if (Design.IsDesignMode) return;
+        _window = window;
     }
     
     /// <summary>
@@ -280,10 +283,31 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task ScanFolder()
     {
-        var inputWindow = new InputWindow("Enter a folder path to scan for media files:");
-        var folderPath = await inputWindow.ShowDialog<string>(App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
-        
-        App.ScanFolder(folderPath);
+        try
+        {
+            var topLevel = TopLevel.GetTopLevel(_window);
+            var storageService = new StorageService(topLevel!);
+            var folders = await storageService.OpenFolderPickerAsync(new FolderPickerOpenOptions()
+            {
+                Title = "Select a folder",
+                AllowMultiple = false
+            });
+
+            if (folders.Count > 0)
+            {
+                string folderPath = folders[0].TryGetLocalPath() ??
+                                    throw new InvalidOperationException(
+                                        "Unable to get local path of the selected folder.");
+                App.ScanFolder(folderPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            var log = new Massage($"Error while scanning folder: {ex.Message}", DateTime.Now, "ERROR");
+            new AppLogger().LogNewMassage(log);
+            var messageBox = new MessageBox($"Error while scanning folder: {ex.Message}");
+            await messageBox.ShowDialog(App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+        }
     }
     
     /// <summary>

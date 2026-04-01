@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
@@ -11,6 +12,9 @@ namespace PyScrapperDesktopApp.Models;
 /// <param name="topLevel"></param>
 public class StorageService(TopLevel topLevel) : Interfaces.IStorageService
 {
+    private TopLevel TopLevel => topLevel 
+                                 ?? throw new InvalidOperationException("TopLevel is null — StorageService was created before the window was attached to the visual tree.");
+    
     /// <summary>
     /// Opens a file picker dialog with the specified options and returns a list of selected storage files.
     /// This method uses the Avalonia platform storage provider to display the file picker and handle user interactions.
@@ -19,7 +23,7 @@ public class StorageService(TopLevel topLevel) : Interfaces.IStorageService
     /// <returns></returns>
     public Task<IReadOnlyList<IStorageFile>> OpenFilePickerAsync(FilePickerOpenOptions options)
     {
-        return topLevel.StorageProvider.OpenFilePickerAsync(options);
+        return TopLevel.StorageProvider.OpenFilePickerAsync(options);
     }
 
     /// <summary>
@@ -30,7 +34,7 @@ public class StorageService(TopLevel topLevel) : Interfaces.IStorageService
     /// <returns></returns>
     public Task<IStorageFile?> SaveFilePickerAsync(FilePickerSaveOptions options)
     {
-        return topLevel.StorageProvider.SaveFilePickerAsync(options);
+        return TopLevel.StorageProvider.SaveFilePickerAsync(options);
     }
     
     /// <summary>
@@ -41,6 +45,6 @@ public class StorageService(TopLevel topLevel) : Interfaces.IStorageService
     /// <returns></returns>
     public Task<IReadOnlyList<IStorageFolder>> OpenFolderPickerAsync(FolderPickerOpenOptions options)
     {
-        return topLevel.StorageProvider.OpenFolderPickerAsync(options);
+        return TopLevel.StorageProvider.OpenFolderPickerAsync(options);
     }
 }

@@ -21,7 +21,7 @@ public partial class MainWindow : Window
         
         InitializeComponent();
 
-        _vm = new MainWindowViewModel();
+        _vm = new MainWindowViewModel(this);
         
         DataContext = _vm;
     }
