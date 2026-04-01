@@ -55,6 +55,7 @@
             </MenuItem>
             <MenuItem Header="Settings">
                 <MenuItem Header="Default Downloads Path" Command="{Binding EditDownloadsPathCommand}"/>
+                <MenuItem Header="Toggle Dark/Light Mode" Command="{Binding ToggleThemeCommand}"/>
             </MenuItem>
         </Menu>
         

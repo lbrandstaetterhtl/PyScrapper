@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using LibVLCSharp.Shared;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
@@ -32,8 +33,9 @@ public partial class App : Application
     {
         try
         {
-
             if (Design.IsDesignMode) return;
+            
+            RequestedThemeVariant = ThemeVariant.Dark;
 
             base.OnFrameworkInitializationCompleted();
 
@@ -314,5 +316,12 @@ public partial class App : Application
             if (!alreadyExists)
                 AppData.AddDownloadedMedia(media);
         }
+    }
+
+    public static void ToggleTheme()
+    {
+        Current!.RequestedThemeVariant = Current.RequestedThemeVariant == ThemeVariant.Dark
+            ? ThemeVariant.Light
+            : ThemeVariant.Dark;
     }
 }

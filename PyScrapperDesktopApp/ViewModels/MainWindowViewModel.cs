@@ -352,4 +352,10 @@ public partial class MainWindowViewModel : ObservableObject
         
         AppData.Settings.DownloadPath = input;
     }
+
+    [RelayCommand]
+    private void ToggleTheme()
+    {
+        App.ToggleTheme();
+    }
 }
