@@ -21,8 +21,6 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     private readonly AppLogger _logger = new();
 
     private CancellationTokenSource _cts;
-
-    private const string ServerUrl = "127.0.0.1:8765";
     
     [ObservableProperty]
     private string _connectionStatus = "Checking server health...";
@@ -89,7 +87,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
                 
                 try
                 {
-                    var health = await _apiClient.GetHealth(ServerUrl, logHealthResponse);
+                    var health = await _apiClient.GetHealth(logHealthResponse);
 
                     if (health != null)
                     {

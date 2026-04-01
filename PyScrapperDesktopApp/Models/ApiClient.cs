@@ -15,7 +15,7 @@ namespace PyScrapperDesktopApp.Models;
 /// Client for communicating with the server API.
 /// It provides methods for sending scrap requests, getting server health, sending search requests, and getting download progress.
 /// </summary>
-public class ApiClient
+public class ApiClient : Interfaces.IApiClient
 {
     private readonly AppLogger _logger = new();
 
@@ -28,7 +28,7 @@ public class ApiClient
     /// <param name="requestData"></param>
     /// <param name="serverUrl"></param>
     /// <returns name="id"></returns>
-    public async Task<string> SendScrapRequest(DownloadRequestData requestData, string serverUrl)
+    public async Task<string> SendScrapRequest(DownloadRequestData requestData)
     {
         HttpClient client = new();
         
@@ -37,7 +37,7 @@ public class ApiClient
         
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync($"http://{serverUrl}/download", content);
+        var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/download", content);
         var responseData = await response.Content.ReadAsStringAsync();
 
         if (response.IsSuccessStatusCode)
@@ -69,11 +69,11 @@ public class ApiClient
     /// <param name="serverUrl"></param>
     /// <param name="loogHealthResponse"></param>
     /// <returns name="health"></returns>
-    public async Task<HealthResponse> GetHealth(string serverUrl, bool loogHealthResponse = true)
+    public async Task<HealthResponse> GetHealth(bool loogHealthResponse = true)
     {
         HttpClient client = new();
 
-        var response = await client.GetAsync($"http://{serverUrl}/health");
+        var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/health");
         var responseData = await response.Content.ReadAsStringAsync();
 
         if (response.IsSuccessStatusCode)
@@ -123,13 +123,13 @@ public class ApiClient
     /// <param name="requestData"></param>
     /// <param name="serverUrl"></param>
     /// <returns name="results"></returns>
-    public async Task<List<SearchResultItem>> SendSearchRequest(SearchRequestData requestData, string serverUrl)
+    public async Task<List<SearchResultItem>> SendSearchRequest(SearchRequestData requestData)
     {
         HttpClient client = new();
 
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync($"http://{serverUrl}/search", content);
+        var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/search", content);
         var responseData = await response.Content.ReadAsStringAsync();
 
         if (response.IsSuccessStatusCode)
@@ -162,11 +162,11 @@ public class ApiClient
     /// <param name="downloadId"></param>
     /// <param name="serverUrl"></param>
     /// <returns name="progressResponse"></returns>
-    public async Task<ProgressSuccessResponse> GetDownloadProgress(string downloadId, string serverUrl)
+    public async Task<ProgressSuccessResponse> GetDownloadProgress(string downloadId)
     {
         HttpClient client = new();
 
-        var response = await client.GetAsync($"http://{serverUrl}/download/progress/{downloadId}");
+        var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/download/progress/{downloadId}");
         var responseData = await response.Content.ReadAsStringAsync();
 
         if (response.IsSuccessStatusCode)

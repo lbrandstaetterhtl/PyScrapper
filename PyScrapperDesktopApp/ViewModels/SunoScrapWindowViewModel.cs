@@ -55,8 +55,6 @@ public partial class SunoScrapWindowViewModel : ObservableObject
     {
             ApiClient client = new();
         
-            string serverUrl = "127.0.0.1:8765";
-        
             var requestData = new DownloadRequestData()
             {
                 Provider = "suno",
@@ -66,7 +64,7 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                 Download_path = AppData.Settings.DownloadPath
             };
         
-            var result = await client.SendScrapRequest(requestData, serverUrl);
+            var result = await client.SendScrapRequest(requestData);
         
             if (result != "-1")
             {

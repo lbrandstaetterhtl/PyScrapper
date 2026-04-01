@@ -68,7 +68,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
 
                         try
                         {
-                            var progressResponse = _apiClient.GetDownloadProgress(id, "127.0.0.1:8765");
+                            var progressResponse = _apiClient.GetDownloadProgress(id);
                             var progressData = progressResponse.Result;
 
                             if (progressData == null) throw new Exception("Failed to get progress data");

@@ -68,7 +68,7 @@ public partial class App : Application
                     try
                     {
                         await Task.Delay(1000);
-                        var healthResponse = await new ApiClient().GetHealth("127.0.0.1:8765");
+                        var healthResponse = await new ApiClient().GetHealth();
 
                         if (healthResponse.Ok)
                         {
@@ -309,7 +309,7 @@ public partial class App : Application
             );
             media.SetTitle();
             media.SetHighestId(AppData.DownloadedMedias);
-            bool alreadyExists = AppData.AlreadyExists(file);
+            bool alreadyExists = AppData.MediaAlreadyExists(file);
             
             if (!alreadyExists)
                 AppData.AddDownloadedMedia(media);
