@@ -14,8 +14,6 @@ public partial class CodecConverterWindow : Window
         var vm = new CodecConverterWindowViewModel(this);
         DataContext = vm;
         
-        vm.CloseRequested += () => Close();
-        
         vm.InputFilePath = inputPath;
         vm.OutputFilePath = outputPath;
     }
