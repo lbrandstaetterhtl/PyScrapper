@@ -9,9 +9,7 @@ public partial class ConfirmationWindow : Window
     {
         InitializeComponent();
         
-        var vm = new ConfirmationWindowViewModel(this);
+        var vm = new ConfirmationWindowViewModel(this, message);
         DataContext = vm;
-        
-        vm.Message = message;
     }
 }

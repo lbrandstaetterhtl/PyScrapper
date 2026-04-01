@@ -12,6 +12,10 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
+/// <summary>
+/// ViewModel for the MediaPlayerWindow, responsible for managing the state and logic of the media player interface. It interacts with the AudioPlayer model to control media playback, update UI elements such as the current track title, playback position, duration, and volume. The ViewModel also handles user interactions through commands for play, pause, stop, next, previous, volume adjustments, and seeking within the media. It raises events when video availability changes to allow the view to respond accordingly.
+/// Additionally, it manages playlist loading and shuffle mode toggling when applicable.
+/// </summary>
 public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 {
     private readonly AudioPlayer _audioPlayer;
@@ -58,6 +62,13 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 
     private readonly Playlist _playlist;
     
+    /// <summary>
+    /// Constructor for the MediaPlayerWindowViewModel, which initializes the view model with an optional playlist.
+    /// It sets up event handlers for media playback events such as playing, track changes, video availability changes, time changes, and length changes.
+    /// The constructor also initializes the AudioPlayer instance and configures it to update the UI elements accordingly when these events occur.
+    /// If a playlist is provided, it will be loaded when the video view is loaded.
+    /// </summary>
+    /// <param name="playlist"></param>
     public MediaPlayerWindowViewModel(Playlist playlist = null)
     {
         _audioPlayer = new AudioPlayer();
@@ -122,16 +133,30 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         };
     }
 
+    /// <summary>
+    /// Sets the current playback position of the media player based on the provided value in seconds.
+    /// The value is converted to milliseconds before being assigned to the MediaPlayer's Time property, allowing for seeking within the media.
+    /// </summary>
+    /// <param name="value"></param>
     public void SetSeekValue(long value)
     {
         _audioPlayer.MediaPlayer.Time = (value * 1000);
     }
 
+    /// <summary>
+    /// Sets the volume of the media player based on the provided value, which is expected to be in the range of 0 to 100.
+    /// The value is cast to an integer and assigned to the MediaPlayer's Volume property, allowing for volume adjustments.
+    /// </summary>
+    /// <param name="volume"></param>
     public void SetVolume(double volume)
     {
         _audioPlayer.MediaPlayer.Volume = (int)volume;
     }
 
+    /// <summary>
+    /// Method to be called when the video view is loaded, which checks if a playlist is available and loads it into the audio player.
+    /// It also updates the HasNext, HasPrevious, and IsPlaylistMode properties based on the state of the audio player after loading the playlist.
+    /// </summary>
     public void VideoViewLoaded()
     {
         if (_playlist != null)
@@ -143,6 +168,10 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         }
     }
     
+    /// <summary>
+    /// Method that is called when the IsShuffleEnabled property changes, which toggles the shuffle mode of the audio player.
+    /// </summary>
+    /// <param name="value"></param>
     partial void OnIsShuffleEnabledChanged(bool value)
     {
         _audioPlayer.ToggleShuffle();
@@ -152,6 +181,10 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
  
     public void Pause() => _audioPlayer.MediaPlayer.Pause();
 
+    /// <summary>
+    /// Stops the media playback and resets the position and duration to zero.
+    /// It also raises property changed notifications for the CurrentlyText and DurationText properties to update the UI accordingly.
+    /// </summary>
     [RelayCommand]
     private void Stop()
     {
@@ -175,6 +208,10 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void MoveBackward() => _audioPlayer.MediaPlayer.Time -= 10_000;
 
+    /// <summary>
+    /// Increases the volume of the media player by 5 units, ensuring that it does not exceed the maximum volume of 100.
+    /// It updates the Volume property and sets the MediaPlayer's Volume accordingly to reflect the change in the UI and the actual audio output.
+    /// </summary>
     [RelayCommand]
     private void IncreaseVolume()
     {
@@ -182,6 +219,10 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _audioPlayer.MediaPlayer.Volume = Volume;
     }
 
+    /// <summary>
+    /// Decreases the volume of the media player by 5 units, ensuring that it does not go below the minimum volume of 0.
+    /// It updates the Volume property and sets the MediaPlayer's Volume accordingly to reflect the change in the UI and the actual audio output.
+    /// </summary>
     [RelayCommand]
     private void DecreaseVolume()
     {
@@ -189,11 +230,19 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
         _audioPlayer.MediaPlayer.Volume = Volume;
     }
     
+    /// <summary>
+    /// Loads a playlist into the audio player, allowing for the playback of multiple media items in a specified order.
+    /// The method takes a Playlist object as a parameter and uses the LoadPlaylist method of the AudioPlayer to set up the playlist for playback.
+    /// </summary>
+    /// <param name="playlist"></param>
     private void LoadPlaylist(Playlist playlist)
     {
         _audioPlayer.LoadPlaylist(playlist);
     }
     
+    /// <summary>
+    /// Disposes of the resources used by the MediaPlayerWindowViewModel, specifically by calling the Dispose method of the AudioPlayer instance to release any unmanaged resources and clean up the media player properly when the view model is no longer needed.
+    /// </summary>
     public void Dispose()
     {
         _audioPlayer.Dispose();

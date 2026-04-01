@@ -337,6 +337,11 @@ public abstract class DatabaseOperations
         }
     }
 
+    /// <summary>
+    /// Loads the application settings from the SQLite database, creating the necessary table if it doesn't exist and retrieving the distinct record to populate a Settings object.
+    /// If any errors occur during this process, they are logged using the AppLogger class, and a default Settings object is returned.
+    /// </summary>
+    /// <returns></returns>
     public static async Task<Settings> LoadSettings()
     {
         try
@@ -395,6 +400,12 @@ public abstract class DatabaseOperations
         }
     }
 
+    /// <summary>
+    /// Saves the provided settings to the SQLite database.
+    /// It creates the necessary table if it doesn't exist, clears existing records, and inserts the new settings data.
+    /// If any errors occur during this process, they are logged using the AppLogger class.
+    /// </summary>
+    /// <param name="settings"></param>
     public static void SaveSettings(Settings settings)
     {
         try

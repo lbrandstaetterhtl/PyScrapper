@@ -95,8 +95,6 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     private async Task Scrap()
     {
         var client = new ApiClient();
-        
-        string serverUrl = "127.0.0.1:8765";
 
         var requestData = new DownloadRequestData();
 
@@ -129,7 +127,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 Download_path = AppData.Settings.DownloadPath
             };
             
-            var result = await client.SendScrapRequest(requestData, serverUrl);
+            var result = await client.SendScrapRequest(requestData);
         
             if (result != "-1")
             { 
@@ -195,8 +193,6 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     {
         var client = new ApiClient();
 
-        string serverUrl = "127.0.0.1:8765";
-
         var requestData = new SearchRequestData()
         {
             Search = SearchQuery,
@@ -204,7 +200,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             Top = SearchResultsCount,
         };
         
-        var results = await client.SendSearchRequest(requestData, serverUrl);
+        var results = await client.SendSearchRequest(requestData);
 
         var log = new Massage("", DateTime.Now, "Init");
         
@@ -256,6 +252,12 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
     };
 
+    /// <summary>
+    /// Tries to validate the provided file name by checking if it is not empty, does not end with a space or dot, does not contain invalid characters, and is not a reserved Windows name. If the file name is valid, it returns true; otherwise, it returns false and provides an appropriate error message indicating the reason for the validation failure.
+    /// </summary>
+    /// <param name="fileName"></param>
+    /// <param name="errorMessage"></param>
+    /// <returns></returns>
     private static bool TryValidateFileName(string? fileName, out string errorMessage)
     {
         errorMessage = string.Empty;

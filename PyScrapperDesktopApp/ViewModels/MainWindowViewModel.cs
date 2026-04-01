@@ -181,6 +181,11 @@ public partial class MainWindowViewModel : ObservableObject
         createPlaylistWindow.ShowDialog(desktop.MainWindow);
     }
     
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to sort the downloaded media by name.
+    /// It sorts the DownloadedMedias collection in AppData by the Title property of each media item, clears the existing collection, and then repopulates it with the sorted list.
+    /// This allows the user to easily organize and view their downloaded media in alphabetical order based on the media titles, enhancing the usability and navigation of the media library within the application.
+    /// </summary>
     [RelayCommand]
     private void SortByName()
     {
@@ -192,6 +197,11 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
     
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to sort the downloaded media by date.
+    /// It sorts the DownloadedMedias collection in AppData by the DownloadedAt property of each media item, clears the existing collection, and then repopulates it with the sorted list.
+    /// This allows the user to easily organize and view their downloaded media in chronological order based on the date they were downloaded, enhancing the usability and navigation of the media library within the application by providing a clear timeline of when each media item was added to the collection.
+    /// </summary>
     [RelayCommand]
     private void SortByDate()
     {
@@ -203,6 +213,12 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
     
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to sort the downloaded media by ID.
+    /// It sorts the DownloadedMedias collection in AppData by the Id property of each media item, clears the existing collection, and then repopulates it with the sorted list.
+    /// This allows the user to easily organize and view their downloaded media in order of their unique identifiers, which can be useful for tracking and managing media items based on their assigned IDs within the application.
+    /// Sorting by ID can provide a consistent and straightforward way to view media items in the order they were added to the collection, especially if the IDs are assigned sequentially as new media items are added.
+    /// </summary>
     [RelayCommand]
     private void SortById()
     {
@@ -214,6 +230,10 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to convert a media file to a supported codec (e.g., H264).
+    /// It prompts the user to enter a file path for the media file they want to convert, checks if the file exists, and then asks for confirmation to proceed with the conversion.
+    /// </summary>
     [RelayCommand]
     private async Task ConvertCodec()
     {
@@ -253,6 +273,10 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to scan a folder for media files.
+    /// It prompts the user to enter a folder path, and then calls the App.ScanFolder method with the provided path to scan for media files within that folder.
+    /// </summary>
     [RelayCommand]
     private async Task ScanFolder()
     {
@@ -262,6 +286,12 @@ public partial class MainWindowViewModel : ObservableObject
         App.ScanFolder(folderPath);
     }
     
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to delete all downloaded media from the list.
+    /// It prompts the user with a confirmation dialog to ensure they want to proceed with deleting all media items, as this action cannot be undone.
+    /// If the user confirms, it clears the DownloadedMedias collection in AppData, effectively removing all media items from the list and allowing the user to start fresh with a new set of downloaded media.
+    /// This functionality provides a convenient way for users to manage their media library and maintain a clean slate when needed, while also ensuring that they are aware of the consequences of their action through the confirmation dialog.
+    /// </summary>
     [RelayCommand]
     private async Task DeleteAllMedias()
     {
@@ -274,6 +304,12 @@ public partial class MainWindowViewModel : ObservableObject
         AppData.DownloadedMedias.Clear();
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to delete all playlists from the list.
+    /// It prompts the user with a confirmation dialog to ensure they want to proceed with deleting all playlists, as this action cannot be undone.
+    /// If the user confirms, it clears the Playlists collection in AppData, effectively removing all playlists from the list and allowing the user to start fresh with a new set of playlists.
+    /// This functionality provides a convenient way for users to manage their playlists and maintain a clean slate when needed, while also ensuring that they are aware of the consequences of their action through the confirmation dialog.
+    /// </summary>
     [RelayCommand]
     private async Task DeleteAllPlaylists()
     {
@@ -286,6 +322,14 @@ public partial class MainWindowViewModel : ObservableObject
         AppData.Playlists.Clear();
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to edit the default download path for media files.
+    /// It prompts the user to enter a new download path, displaying the current path for reference.
+    /// If the user provides a new path, it checks if the path is valid (i.e., it exists and is not empty).
+    /// If the path is valid, it updates the DownloadPath property in AppData.Settings with the new path.
+    /// If the path is invalid, it shows a message box informing the user to select a valid download path and try again.
+    /// This functionality allows users to customize where their downloaded media files are stored, providing flexibility and control over their file organization while ensuring that the application can access the specified location for saving media files.
+    /// </summary>
     [RelayCommand]
     private async Task EditDownloadsPath()
     {

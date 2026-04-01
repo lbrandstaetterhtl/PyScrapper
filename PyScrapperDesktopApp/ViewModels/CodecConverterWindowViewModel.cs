@@ -13,6 +13,14 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
+/// <summary>
+/// ViewModel for the CodecConverterWindow, responsible for handling the logic of converting media files using ffmpeg.
+/// It manages the input and output file paths, conversion status, progress, and cancellation.
+/// The ViewModel interacts with the ffmpeg process to perform the conversion and updates the UI accordingly.
+/// It also handles errors that may occur during the conversion process and logs relevant messages using the AppLogger.
+/// Upon successful conversion, it adds the converted media to the AppData and closes the window.
+/// If any errors occur, it displays an error message and closes the window without adding the media to the AppData.
+/// </summary>
 public partial class CodecConverterWindowViewModel : ObservableObject
 {
     [ObservableProperty] private string _inputFilePath = string.Empty;
@@ -23,7 +31,7 @@ public partial class CodecConverterWindowViewModel : ObservableObject
 
     [ObservableProperty] private double _progressValue = 0;
 
-    public readonly CancellationTokenSource _cts = new();
+    private readonly CancellationTokenSource _cts = new();
 
     [ObservableProperty] private bool _started = false;
 
@@ -35,8 +43,12 @@ public partial class CodecConverterWindowViewModel : ObservableObject
     
     private readonly AppLogger _logger = new();
 
-    public event Action? CloseRequested;
-
+    /// <summary>
+    /// CancelConversion method that is executed when the user clicks the cancel button during the conversion process.
+    /// It cancels the ongoing conversion by signaling the cancellation token and attempts to kill the ffmpeg process if it is still running.
+    /// If an error occurs while killing the process, it logs the error message and updates the status message accordingly.
+    /// Finally, it closes the window without adding the media to the AppData, indicating that the conversion was not successful.
+    /// </summary>
     [RelayCommand]
     private void CancelConversion()
     {
@@ -54,6 +66,12 @@ public partial class CodecConverterWindowViewModel : ObservableObject
         _window.Close(false);
     }
 
+    /// <summary>
+    /// StartConversion method that is executed when the user clicks the start button to initiate the conversion process.
+    /// It starts by setting the status message and progress value, then retrieves the duration of the input media file using ffprobe.
+    /// It then starts the ffmpeg process to perform the conversion, redirecting the standard output and error to capture progress and any errors that may occur.
+    /// </summary>
+    /// <exception cref="Exception"></exception>
     [RelayCommand]
     private async Task StartConversion()
     {
@@ -181,6 +199,14 @@ public partial class CodecConverterWindowViewModel : ObservableObject
             Started = false;
         }
     }
+    
+    
+    /// <summary>
+    /// GetDuration method that uses ffprobe to retrieve the duration of the input media file.
+    /// </summary>
+    /// <param name="filePath"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
     private async Task<double> GetDuration(string filePath)
     {
         var process = new Process();
@@ -207,12 +233,21 @@ public partial class CodecConverterWindowViewModel : ObservableObject
         throw new Exception("Could not parse duration from ffprobe output: " + output);
     }
 
+    /// <summary>
+    /// SetOutputPath method that generates the output file path based on the input file path by appending "_converted" to the file name and changing the extension to .mp4.
+    /// </summary>
+    /// <param name="path"></param>
+    /// <returns></returns>
     public static string SetOutputPath(string path)
     {
         return System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path) ?? "",
             System.IO.Path.GetFileNameWithoutExtension(path) + "_converted.mp4");
     }
     
+    /// <summary>
+    /// Constructor for the CodecConverterWindowViewModel that takes a Window as a parameter and initializes the _window field with the provided window instance.
+    /// </summary>
+    /// <param name="window"></param>
     public CodecConverterWindowViewModel(Window window)
     {
         _window = window;

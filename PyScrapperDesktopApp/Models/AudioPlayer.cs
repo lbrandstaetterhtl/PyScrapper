@@ -11,6 +11,10 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.Models;
 
+/// <summary>
+/// Manages audio playback using LibVLCSharp, including playlist handling, shuffle functionality, and codec support checking.
+/// It also raises events for track changes and video availability, and logs significant actions and errors.
+/// </summary>
 public class AudioPlayer : IDisposable
 {
     private readonly LibVLC _libVLC;
@@ -38,6 +42,10 @@ public class AudioPlayer : IDisposable
     private Media? _currentMedia;
     private static readonly AppLogger _logger = new();
 
+    /// <summary>
+    /// Initializes the AudioPlayer by setting up the LibVLC instance with specific options, creating a MediaPlayer, and subscribing to relevant events for handling track changes and video availability.
+    /// The constructor also configures the MediaPlayer to play the next track when the current one ends, and to log significant actions and errors throughout the playback process.
+    /// </summary>
     public AudioPlayer()
     {
         _libVLC = new LibVLC("--verbose=1", "--file-caching=500", "--avcodec-hw=none", "--codec=avcodec");
@@ -53,6 +61,12 @@ public class AudioPlayer : IDisposable
         _mediaPlayer.ESDeleted += OnEsDeleted;
     }
     
+    /// <summary>
+    /// Event handler for when a new elementary stream (ES) is added to the MediaPlayer.
+    /// It checks if the added stream is a video track and raises the VideoAvailableChanged event accordingly to notify subscribers about the availability of video content in the current media.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     private void OnEsAdded(object? sender, MediaPlayerESAddedEventArgs e)
     {
         if (e.Type == TrackType.Video)
@@ -61,6 +75,12 @@ public class AudioPlayer : IDisposable
         }
     }
     
+    /// <summary>
+    /// Event handler for when an elementary stream (ES) is deleted from the MediaPlayer.
+    /// It checks if the deleted stream is a video track and raises the VideoAvailableChanged event accordingly to notify subscribers about the unavailability of video content in the current media, allowing the application to update its UI or functionality based on the presence of video tracks in the media being played.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     private void OnEsDeleted(object? sender, MediaPlayerESDeletedEventArgs e)
     {
         if (e.Type == TrackType.Video)
@@ -69,7 +89,12 @@ public class AudioPlayer : IDisposable
         }
     }
     
-    
+    /// <summary>
+    /// Loads a playlist into the AudioPlayer, determining whether to enable playlist mode based on the number of tracks in the playlist.
+    /// If the playlist contains only one track, it disables playlist mode and sets that track as the current media.
+    /// If the playlist contains multiple tracks, it enables playlist mode, populates the playlist with the corresponding media items, and optionally shuffles the playlist if shuffle mode is enabled. Finally, it starts playing the first track in the playlist and logs the action of loading the playlist with its name and the number of playable tracks it contains. This method allows the AudioPlayer to manage and play a collection of media items as a cohesive unit, providing functionality for navigating through the tracks and maintaining the state of the playlist.
+    /// </summary>
+    /// <param name="playlist"></param>
     public void LoadPlaylist(Playlist playlist)
     {
         if (playlist.Count == 1)
@@ -107,6 +132,12 @@ public class AudioPlayer : IDisposable
         PlayNext();
     }
     
+    /// <summary>
+    /// Plays the next track in the playlist. If the playlist is empty, it does nothing.
+    /// It increments the current index and checks if it exceeds the bounds of the playlist, wrapping around to the beginning if necessary.
+    /// Then it calls the PlayFile method with the download path of the next track to start playback.
+    /// This method allows for seamless navigation through the tracks in a playlist, ensuring that playback continues smoothly from one track to the next, and handles edge cases such as reaching the end of the playlist by looping back to the start.
+    /// </summary>
     public void PlayNext()
     {
         if (_playlistTracks.Count == 0) return;
@@ -118,6 +149,12 @@ public class AudioPlayer : IDisposable
         PlayFile(_playlistTracks[_currentIndex].DownloadPath);
     }
 
+    /// <summary>
+    /// Plays the previous track in the playlist. If the playlist is empty, it does nothing.
+    /// It decrements the current index and checks if it goes below zero, wrapping around to the end of the playlist if necessary.
+    /// Then it calls the PlayFile method with the download path of the previous track to start playback.
+    /// This method allows for seamless navigation through the tracks in a playlist in reverse order, ensuring that playback continues smoothly from one track to the previous one, and handles edge cases such as reaching the beginning of the playlist by looping back to the end.
+    /// </summary>
     public void PlayPrevious()
     {
         if (_playlistTracks.Count == 0) return;
@@ -129,7 +166,13 @@ public class AudioPlayer : IDisposable
         PlayFile(_playlistTracks[_currentIndex].DownloadPath);
     }
 
-    public async Task PlayFile(string filePath)
+    /// <summary>
+    /// Plays a media file specified by its file path. It first checks if the file is an MP4 video and if its codec is supported. If the codec is not supported, it prompts the user to convert the file to a supported format (H264) using FFmpeg.
+    /// If the user agrees to convert the file, it opens a codec converter window and waits for the conversion to finish before proceeding to play the converted file.
+    /// If the user cancels the conversion or if any errors occur during the codec check or conversion process, it logs the appropriate messages and does not attempt to play the unsupported file. Finally, if the file is playable, it sets it as the current media in the MediaPlayer and starts playback, while also logging the action of playing the file and raising the TrackChanged event to notify subscribers about the change in track.
+    /// </summary>
+    /// <param name="filePath"></param>
+    private async Task PlayFile(string filePath)
     {
         bool isSupported = true;
         if (filePath.EndsWith(".mp4"))
@@ -189,6 +232,10 @@ public class AudioPlayer : IDisposable
         TrackChanged?.Invoke(this, CurrentFile);
     }
 
+    /// <summary>
+    /// Toggles the shuffle mode for the playlist.
+    /// When shuffle mode is enabled, it randomizes the order of the tracks in the playlist while keeping track of the original order to allow toggling back to it when shuffle mode is disabled.
+    /// </summary>
     public void ToggleShuffle()
     {
         IsShuffleEnabled = !IsShuffleEnabled;
@@ -212,6 +259,11 @@ public class AudioPlayer : IDisposable
         if (_currentIndex < 0) _currentIndex = 0;
     }
     
+    /// <summary>
+    /// Shuffles the playlist using the Fisher-Yates algorithm to randomize the order of the tracks in the playlist.
+    /// It creates a new instance of the Random class to generate random indices for swapping tracks in the list.
+    /// After shuffling, it logs the action of shuffling the playlist with an informational message.
+    /// </summary>
     private void ShufflePlaylist()
     {
         var rng = new Random();
@@ -226,12 +278,20 @@ public class AudioPlayer : IDisposable
         _logger.LogNewMassage(log);
     }
 
+    /// <summary>
+    /// Stops the playback of the current media and resets the current index to -1, effectively clearing the current track selection and stopping any ongoing playback in the MediaPlayer.
+    /// This method allows for a clean stop of the audio player, ensuring that any resources associated with the current media are released and that the player is ready for a new track to be loaded and played without any residual state from the previous playback.
+    /// </summary>
     public void Stop()
     {
         _currentIndex = -1;
         _mediaPlayer.Stop();
     }
 
+    /// <summary>
+    /// Disposes of the resources used by the AudioPlayer, including the MediaPlayer and LibVLC instances, and unsubscribes from any events to prevent memory leaks.
+    /// It also sets a flag to indicate that the object has been disposed to avoid multiple disposals.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed) return;
@@ -246,6 +306,14 @@ public class AudioPlayer : IDisposable
         _libVLC.Dispose();
     }
 
+    /// <summary>
+    /// Checks if the video codec of the specified file is supported by the application. It uses FFprobe to analyze the video file and extract the codec information.
+    /// If the codec is not supported, it returns false, indicating that the file cannot be played directly and may require conversion to a supported format.
+    /// If the codec is supported, it returns true, allowing the application to proceed with playing the file without any issues.
+    /// This method is crucial for ensuring that the application can handle the media files correctly and provide a smooth playback experience for the user by identifying any potential compatibility issues with the video codecs used in the media files.
+    /// </summary>
+    /// <param name="path"></param>
+    /// <returns></returns>
     public static async Task<bool> IsSupportedCodec(string path)
     {
         var codec = await GetVideoCodec(path);
@@ -262,6 +330,15 @@ public class AudioPlayer : IDisposable
         }
     }
 
+    /// <summary>
+    /// Retrieves the video codec of a given media file using FFprobe. It executes a command-line process to analyze the media file and extract the codec information for the video stream.
+    /// The method captures the standard output and error streams from the FFprobe process to determine the codec used in the video file.
+    /// If an error occurs during the execution of FFprobe, it logs the error message and displays a message box to inform the user about the issue.
+    /// If the codec information is successfully retrieved, it returns the codec name as a string, allowing the application to determine if the video file is compatible with the supported codecs for playback.
+    /// This method is essential for ensuring that the application can handle media files correctly by identifying the codecs used in the video streams and providing appropriate feedback to the user in case of unsupported codecs or errors during the analysis process.
+    /// </summary>
+    /// <param name="path"></param>
+    /// <returns></returns>
     private static async Task<string?> GetVideoCodec(string path)
     {
         var process = new Process();
@@ -299,10 +376,5 @@ public class AudioPlayer : IDisposable
         {
             return output;
         }
-    }
-
-    private void SetToBeginning()
-    {
-        
     }
 }
