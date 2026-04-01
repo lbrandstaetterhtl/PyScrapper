@@ -8,7 +8,7 @@ namespace PyScrapperDesktopApp.Models;
 /// Logger class responsible for logging messages to a file in the application's logs directory.
 /// It ensures that the logs directory exists before writing log entries, and formats log entries with a timestamp, message type, and message text.
 /// </summary>
-public class AppLogger
+public class AppLogger : Interfaces.IAppLogger
 {
     /// <summary>
     /// Logs a new message to the app.log file in the application's logs directory. If the logs directory does not exist, it creates it before writing the log entry.
@@ -32,6 +32,11 @@ public class AppLogger
         }
     }
 
+    /// <summary>
+    /// Logs a new debug message to the console and also to the app.log file using the LogNewMassage method.
+    /// The log entry is formatted with a timestamp, message type, and message text, and is printed to the console for real-time debugging purposes.
+    /// </summary>
+    /// <param name="massage"></param>
     public void LogDebugMessage(Massage massage)
     {
         var logger = new AppLogger();
