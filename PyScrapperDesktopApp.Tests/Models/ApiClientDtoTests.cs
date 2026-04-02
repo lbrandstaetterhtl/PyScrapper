@@ -251,7 +251,7 @@ public class ApiClientDtoTests
             "query": "test query",
             "results": [
                 {
-                    "videoId": "abc123",
+                    "identifier": "abc123",
                     "url": "https://youtube.com/watch?v=abc123",
                     "thumbnail": "https://img.youtube.com/vi/abc123/0.jpg",
                     "title": "Test Video"
@@ -299,13 +299,13 @@ public class ApiClientDtoTests
             "query": "music",
             "results": [
                 {
-                    "videoId": "id1",
+                    "identifier": "id1",
                     "url": "https://youtube.com/watch?v=id1",
                     "thumbnail": "https://img.youtube.com/vi/id1/0.jpg",
                     "title": "Song 1"
                 },
                 {
-                    "videoId": "id2",
+                    "identifier": "id2",
                     "url": "https://youtube.com/watch?v=id2",
                     "thumbnail": "https://img.youtube.com/vi/id2/0.jpg",
                     "title": "Song 2"

@@ -27,16 +27,15 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<DownloadedMedia> DownloadedMediaList => AppData.DownloadedMedias;
     
     public ObservableCollection<Playlist> Playlists => AppData.Playlists;
-    private readonly Window _window;
+    private Window _window;
 
     /// <summary>
     /// Constructor for the MainWindowViewModel, which initializes the view model and sets up the list of downloaded media by fetching it from the AppData.
     /// It also checks if the application is in design mode to avoid executing code that should only run at runtime.
     /// </summary>
-    public MainWindowViewModel(Window window)
+    public MainWindowViewModel()
     {
         if (Design.IsDesignMode) return;
-        _window = window;
     }
     
     /// <summary>
@@ -46,11 +45,9 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenSunoScrapWindow()
     {
-        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-            return;
         
         var sunoScrapWindow = new Views.SunoScrapWindow();
-        await sunoScrapWindow.ShowDialog(desktop.MainWindow);
+        await sunoScrapWindow.ShowDialog(_window);
     }
     
     /// <summary>
@@ -76,20 +73,25 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenMediaPlayerWindow()
     {
-        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-            return;
 
-        var path = await new InputWindow("Enter a valid file path (.mp3)").ShowDialog<string>(desktop.MainWindow);
-
-        if (path == null)
+        var topLevel = TopLevel.GetTopLevel(_window);
+        var storageService = new StorageService(topLevel!);
+        var files = await storageService.OpenFilePickerAsync(new FilePickerOpenOptions()
         {
-            return;
-        }
+            Title = "Select a media file",
+            AllowMultiple = false,
+            FileTypeFilter = AppData.FileTypes
+        });
+        
+        if (files == null) return;
+        if (files.Count <= 0) return;
+        
+        string path = files[0].Path.LocalPath;
         
         if (!File.Exists(path))
         {
             var messageBox = new MessageBox("File does not exist. Please check the path and try again.");
-            await messageBox.ShowDialog(desktop.MainWindow);
+            await messageBox.ShowDialog(_window);
             return;
         }
         
@@ -103,6 +105,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         List<int> mediaIds = [media.Id];
 
+        // "NPLL" = No Playlist
         var playlist = new Playlist(mediaIds, "NPLL", "");
         
         var mediaPlayerWindow = new MediaPlayerWindow(playlist);
@@ -116,11 +119,9 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenYoutubeScrapWindow()
     {
-        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-            return;
         
         var youtubeScrapWindow = new ScrapWindowWithSearch("youtube");
-        await youtubeScrapWindow.ShowDialog(desktop.MainWindow);
+        await youtubeScrapWindow.ShowDialog(_window);
     }
 
     /// <summary>
@@ -130,11 +131,8 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenBandcampScrapWindow()
     {
-        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-            return;
-
         var bandcampScrapWindow = new ScrapWindowWithSearch("bandcamp");
-        await bandcampScrapWindow.ShowDialog(desktop.MainWindow);
+        await bandcampScrapWindow.ShowDialog(_window);
     }
     
     /// <summary>
@@ -177,11 +175,9 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void CreatePlaylist()
     {
-        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-            return;
 
         var createPlaylistWindow = new CreatePlaylistWindow();
-        createPlaylistWindow.ShowDialog(desktop.MainWindow);
+        createPlaylistWindow.ShowDialog(_window);
     }
     
     /// <summary>
@@ -240,11 +236,9 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task ConvertCodec()
     {
-        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-            return;
         
         var inputWindow = new InputWindow("Enter a file to convert:");
-        var inputPath = await inputWindow.ShowDialog<string>(desktop.MainWindow);
+        var inputPath = await inputWindow.ShowDialog<string>(_window);
         
         if (inputPath == null)
         {
@@ -254,20 +248,20 @@ public partial class MainWindowViewModel : ObservableObject
         if (!File.Exists(inputPath))
         {
             var messageBox = new MessageBox("File does not exist. Please check the path and try again.");
-            await messageBox.ShowDialog(desktop.MainWindow);
+            await messageBox.ShowDialog(_window);
             return;
         }
         
         var message = "Would you like to convert it to a supported codec H264?";
         var confirmationWindow = new ConfirmationWindow(message);
-        var confirmationResult = await confirmationWindow.ShowDialog<bool>(desktop.MainWindow);
+        var confirmationResult = await confirmationWindow.ShowDialog<bool>(_window);
 
         if (!confirmationResult)
             return;
         
         var outputPath = CodecConverterWindowViewModel.SetOutputPath(inputPath);
         var codecConverterWindow = new CodecConverterWindow(inputPath: inputPath, outputPath: outputPath);
-        bool finished = await codecConverterWindow.ShowDialog<bool>(desktop.MainWindow);
+        bool finished = await codecConverterWindow.ShowDialog<bool>(_window);
 
         if (!finished)
         {
@@ -298,7 +292,9 @@ public partial class MainWindowViewModel : ObservableObject
                 string folderPath = folders[0].TryGetLocalPath() ??
                                     throw new InvalidOperationException(
                                         "Unable to get local path of the selected folder.");
-                App.ScanFolder(folderPath);
+                App.ScanFolder(folderPath, out var diff);
+                
+                var messageBox = new MessageBox($"Scan completed. {diff} new media items were added to the list.");
             }
         }
         catch (Exception ex)
@@ -306,7 +302,7 @@ public partial class MainWindowViewModel : ObservableObject
             var log = new Massage($"Error while scanning folder: {ex.Message}", DateTime.Now, "ERROR");
             new AppLogger().LogNewMassage(log);
             var messageBox = new MessageBox($"Error while scanning folder: {ex.Message}");
-            await messageBox.ShowDialog(App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+            await messageBox.ShowDialog(_window);
         }
     }
     
@@ -320,7 +316,7 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task DeleteAllMedias()
     {
         var confirmationWindow = new ConfirmationWindow("Are you sure you want to delete all downloaded media? This action cannot be undone.");
-        var result = await confirmationWindow.ShowDialog<bool>(App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+        var result = await confirmationWindow.ShowDialog<bool>(_window);
 
         if (!result)
             return;
@@ -338,7 +334,7 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task DeleteAllPlaylists()
     {
         var confirmationWindow = new ConfirmationWindow("Are you sure you want to delete all playlists? This action cannot be undone.");
-        var result = await confirmationWindow.ShowDialog<bool>(App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+        var result = await confirmationWindow.ShowDialog<bool>(_window);
 
         if (!result)
             return;
@@ -357,29 +353,45 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task EditDownloadsPath()
     {
-        if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
-        
-        var inputWindow = new InputWindow($"Set a new default download path (Current: {AppData.Settings.DownloadPath}):");
-        var input = await inputWindow.ShowDialog<string>(desktop.MainWindow);
-        
-        if (input == null)
-        {
-            return;
-        }
+        var toplevel =  TopLevel.GetTopLevel(_window);
+        var storageService = new StorageService(toplevel!);
+        var folders = await storageService.OpenFolderPickerAsync(new FolderPickerOpenOptions()
+        {   Title = "Select a download folder",
+            AllowMultiple = false
+        });
 
-        if (!Directory.Exists(input) || string.IsNullOrWhiteSpace(input))
+        if (folders.Count <= 0) return;
+        
+        var path = folders[0].TryGetLocalPath();
+
+        if (!Directory.Exists(path) || string.IsNullOrWhiteSpace(path))
         {
             var messageBox = new MessageBox("Please select a valid download path.");
-            await messageBox.ShowDialog(desktop.MainWindow);
+            await messageBox.ShowDialog(_window);
             return;
         }
         
-        AppData.Settings.DownloadPath = input;
+        AppData.Settings.DownloadPath = path;
     }
-
+    
+    
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to toggle the application theme between light and dark modes.
+    /// It calls the ToggleTheme method in the App class, which handles the logic for switching the application's theme and updating the UI accordingly.
+    /// This functionality allows users to customize the appearance of the application based on their preferences, providing a more personalized and comfortable user experience while using the application in different lighting conditions or according to their aesthetic preferences.
+    /// </summary>
     [RelayCommand]
     private void ToggleTheme()
     {
         App.ToggleTheme();
+    }
+
+    /// <summary>
+    /// Method that is called when the main window is ready, which sets the reference to the window in the view model. This allows the view model to interact with the window (e.g., showing dialogs) and ensures that the necessary context is available for executing commands that require access to the window.
+    /// </summary>
+    /// <param name="window"></param>
+    public void OnWindowReady(Window window)
+    {
+        _window = window;
     }
 }

@@ -63,7 +63,7 @@
             <ItemsControl ItemsSource="{Binding DownloadedMediaList}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border DoubleTapped="MediaDoubleClick" Classes="Cell" HorizontalAlignment="Left">
+                        <Border DoubleTapped="MediaDoubleClick" Classes="CellInteractive" HorizontalAlignment="Left">
                             <Border.ContextFlyout>
                                 <MenuFlyout>
                                     <MenuItem Header="Add To Playlist">
@@ -103,7 +103,7 @@
             <ItemsControl ItemsSource="{Binding Playlists}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Classes="Cell" HorizontalAlignment="Left" DoubleTapped="PlaylistDoubleClick">
+                        <Border Classes="CellInteractive" HorizontalAlignment="Left" DoubleTapped="PlaylistDoubleClick">
                             <Border.ContextFlyout>
                                 <MenuFlyout>
                                     <MenuItem Header="Delete Playlist" Click="DeletePlaylist"/>

@@ -28,7 +28,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     private int _searchResultsCount = 5;
 
     [ObservableProperty]
-    private List<ApiClient.SearchResultItem> _Items = new();
+    private List<ApiClient.SearchResultItem> _items = new();
     
     [ObservableProperty]
     private List<ApiClient.SearchResultItem> _selectedItems = new();
@@ -39,11 +39,10 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     [ObservableProperty]
     private string _selectedMediaType = ".mp3";
     
-    [ObservableProperty]
-    private Window _ScrapWindow;
+    private readonly Window _scrapWindow;
     
     private readonly List<string> _providers = ["youtube", "suno", "bandcamp", "youtube.com", "suno.com", "bandcamp.com"];
-    private string _selectedProvider;
+    private readonly string _selectedProvider;
     
     public RelayCommand CancelCommand { get; set; }
     
@@ -63,7 +62,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         {
             if (Design.IsDesignMode) return;
 
-            _ScrapWindow = scrapWindow;
+            _scrapWindow = scrapWindow;
             
             if (!_providers.Contains(provider)) throw new Exception("Provider not found");
                 
@@ -80,7 +79,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 return;
             
             var messageBox = new MessageBox("An error occurred: " + ex.Message);
-            messageBox.ShowDialog(desktop.MainWindow);
+            messageBox.ShowDialog(desktop.MainWindow!);
             
             RequestClose?.Invoke();
         }
@@ -96,8 +95,6 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     {
         var client = new ApiClient();
 
-        var requestData = new DownloadRequestData();
-
         foreach (var item in SelectedItems)
         {
             string filename;
@@ -105,7 +102,12 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             while (true)
             {
                 var inputWindow = new InputWindow($"Enter filename for the media '{item.title}' (without extension):");
-                filename = await inputWindow.ShowDialog<string>(_ScrapWindow);
+                filename = await inputWindow.ShowDialog<string>(_scrapWindow);
+
+                if (filename == null)
+                {
+                    return;
+                }
 
                 filename = filename.Trim();
 
@@ -115,16 +117,16 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 }
 
                 var messageBox = new MessageBox(error);
-                await messageBox.ShowDialog(_ScrapWindow);
+                await messageBox.ShowDialog(_scrapWindow);
             }
 
-            requestData = new DownloadRequestData()
+            var requestData = new DownloadRequestData()
             {
                 Provider = _selectedProvider,
                 Url = item.url,
                 Mediatype = SelectedMediaType,
                 Filename = filename,
-                Download_path = AppData.Settings.DownloadPath
+                Download_path = AppData.Settings.DownloadPath!
             };
             
             var result = await client.SendScrapRequest(requestData);
@@ -141,7 +143,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 if (vm == null)
                 {
                     var messageBox = new MessageBox("ProgressBar ViewModel not found");
-                    await messageBox.ShowDialog(_ScrapWindow);
+                    await messageBox.ShowDialog(_scrapWindow);
                     continue;
                 }
 
@@ -153,7 +155,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     
                     var identifier = item.url.Split('=')[^1];
 
-                    var downloadFilePath = Path.Combine(AppData.Settings.DownloadPath, $"{filename}{SelectedMediaType}");
+                    var downloadFilePath = Path.Combine(AppData.Settings.DownloadPath!, $"{filename}{SelectedMediaType}");
 
                     Task.Delay(2000).Wait();
                     
@@ -169,7 +171,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 else
                 {
                     var massageBox = new MessageBox("Download failed, check logs for more details");
-                    await massageBox.ShowDialog(_ScrapWindow);
+                    await massageBox.ShowDialog(_scrapWindow);
                 }
                 
                 Task.Delay(1000).Wait();
@@ -207,7 +209,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         if (results.Count == 0)
         {
             var massageBox = new MessageBox($"No results found for query: {SearchQuery}. Please try a different query.");
-            await massageBox.ShowDialog(_ScrapWindow);
+            await massageBox.ShowDialog(_scrapWindow);
             
             log = new Massage("No results found for query: " + SearchQuery, DateTime.Now, "INFO");
             new AppLogger().LogNewMassage(log);
@@ -215,11 +217,12 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             return;
         }
 
+        var httpClient = new HttpClient();
+        
         if (_selectedProvider == _providers[0] || _selectedProvider == _providers[3])
         {
             foreach (var item in results)
             {
-                using var httpClient = new HttpClient();
                 var thumbnailUrl = $"https://i.ytimg.com/vi/{item.identifier}/hqdefault.jpg";
 
                 var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
@@ -232,7 +235,6 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         {
             foreach (var item in results)
             {
-                using var httpClient = new HttpClient();
                 var thumbnailUrl = item.thumbnail;
 
                 var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
@@ -241,6 +243,8 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 item.ThumbnailBitmap = new Bitmap(stream);
             }
         }
+        
+        httpClient.Dispose();
 
         Items = results;
     }
@@ -253,7 +257,8 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     };
 
     /// <summary>
-    /// Tries to validate the provided file name by checking if it is not empty, does not end with a space or dot, does not contain invalid characters, and is not a reserved Windows name. If the file name is valid, it returns true; otherwise, it returns false and provides an appropriate error message indicating the reason for the validation failure.
+    /// Tries to validate the provided file name by checking if it is not empty, does not end with a space or dot, does not contain invalid characters, and is not a reserved Windows name.
+    /// If the file name is valid, it returns true; otherwise, it returns false and provides an appropriate error message indicating the reason for the validation failure.
     /// </summary>
     /// <param name="fileName"></param>
     /// <param name="errorMessage"></param>

@@ -34,8 +34,6 @@ public partial class App : Application
         try
         {
             if (Design.IsDesignMode) return;
-            
-            RequestedThemeVariant = ThemeVariant.Dark;
 
             base.OnFrameworkInitializationCompleted();
 
@@ -101,10 +99,7 @@ public partial class App : Application
 
                 desktop.Exit += OnExit;
 
-                desktop.MainWindow = new MainWindow
-                {
-                    DataContext = new MainWindowViewModel(desktop.MainWindow),
-                };
+                desktop.MainWindow = new MainWindow();
 
                 log = new Massage("Loading Data...", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
@@ -114,6 +109,8 @@ public partial class App : Application
                 defaultSettings.SetDefaultSettings();
                 
                 AppData.Settings = settings ?? defaultSettings;
+                
+                RequestedThemeVariant = AppData.Settings.DarkModeEnabled ? ThemeVariant.Dark : ThemeVariant.Light;
 
                 var medias = await DatabaseOperations.LoadDownloadedMediasNoDuplicates();
 
@@ -174,7 +171,10 @@ public partial class App : Application
                     AppData.AddPlaylist(playlist);
                 }
                 
-                ScanFolder(AppData.Settings.DownloadPath);
+                ScanFolder(AppData.Settings.DownloadPath, out var diff);
+                
+                log = new Massage($"Scanned download folder for new media, found {diff} new media items", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
 
                 log = new Massage(
                     $"Application started with {AppData.DownloadedMedias.Count} listed medias and {AppData.PlayableMedias.Count} playable medias | deleted {mediasToRemove.Count} medias",
@@ -286,42 +286,59 @@ public partial class App : Application
         _logger.LogNewMassage(log);
     }
 
-    public static void ScanFolder(string folder)
+    public static void ScanFolder(string folder, out int diff)
     {
-        var extensions = new[]
-        {
-            ".mp3",
-            ".mp4"
-        };
-
-        if (!Directory.Exists(folder))
-            return;
+        diff = 0;
+        if (Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
         
-        var found = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).Where(f => extensions.Contains(Path.GetExtension(f)));
-
-        foreach (var file in found)
+        try
         {
-            var media = new DownloadedMedia(
-                url: "N/A",
-                mediaType: Path.GetExtension(file),
-                downloadedAt: DateTime.Now,
-                downloadPath: file,
-                isPlayable: false,
-                identifier: Guid.NewGuid().ToString()
-            );
-            media.SetTitle();
-            media.SetHighestId(AppData.DownloadedMedias);
-            bool alreadyExists = AppData.MediaAlreadyExists(file);
-            
-            if (!alreadyExists)
-                AppData.AddDownloadedMedia(media);
+            var extensions = new[]
+            {
+                ".mp3",
+                ".mp4"
+            };
+
+            if (!Directory.Exists(folder))
+                return;
+
+            var found = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+                .Where(f => extensions.Contains(Path.GetExtension(f)));
+
+            foreach (var file in found)
+            {
+                var media = new DownloadedMedia(
+                    url: "N/A",
+                    mediaType: Path.GetExtension(file),
+                    downloadedAt: DateTime.Now,
+                    downloadPath: file,
+                    isPlayable: false,
+                    identifier: Guid.NewGuid().ToString()
+                );
+                media.SetTitle();
+                media.SetHighestId(AppData.DownloadedMedias);
+                bool alreadyExists = AppData.MediaAlreadyExists(file);
+
+                int originalMediaCount = AppData.DownloadedMedias.Count;
+
+                if (!alreadyExists)
+                    AppData.AddDownloadedMedia(media);
+
+                diff = AppData.DownloadedMedias.Count - originalMediaCount;
+            }
+        }
+        catch (Exception ex)
+        {
+            var log = new Massage("An error occurred while scanning the folder: " + ex.Message, DateTime.Now, "ERROR");
+            new AppLogger().LogNewMassage(log);
         }
     }
 
     public static void ToggleTheme()
     {
-        Current!.RequestedThemeVariant = Current.RequestedThemeVariant == ThemeVariant.Dark
-            ? ThemeVariant.Light
-            : ThemeVariant.Dark;
+        AppData.Settings.DarkModeEnabled = !AppData.Settings.DarkModeEnabled;
+        Current!.RequestedThemeVariant = AppData.Settings.DarkModeEnabled
+            ? ThemeVariant.Dark
+            : ThemeVariant.Light;
     }
 }

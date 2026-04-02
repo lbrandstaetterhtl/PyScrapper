@@ -47,7 +47,7 @@
                         <Button Content="Decrease Volume" Command="{Binding DecreaseVolumeCommand}" Classes="primary"/>
                 </StackPanel>
                 
-                <Button Classes="primary" Grid.Row="5" Content="Close" x:Name="CloseButton"/>
+                <Button Classes="primary" IsDefault="True" Grid.Row="5" Content="Close" x:Name="CloseButton"/>
         </Grid>
         
 </Window>

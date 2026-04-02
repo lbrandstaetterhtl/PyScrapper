@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace PyScrapperDesktopApp.Models;
@@ -20,9 +21,16 @@ public static class AppData
     public static string AppLogsPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
     public static string ServerLogsPath { get; set; } = Path.Combine(PyScrapperPath, "LocalServer", "logs");
     public static string DataPath { get; set; } =  Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "data");
+    public static string AssetPath { get; set; } = Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets");
     public static Settings Settings = new();
-    public static List<string> FileTypes = ["*.mp3", "*.mp4", "*.wav"];
-    
+    public static List<FilePickerFileType> FileTypes = [new FilePickerFileType("Media Files")
+    {
+        Patterns = [
+            "*.mp4",
+            "*.mp3",
+            "*.wav"
+        ]
+    }];
     
     /// <summary>
     /// Adds a downloaded media to the DownloadedMedias collection and, if it's playable, also to the PlayableMedias collection.
@@ -227,8 +235,10 @@ public class Settings
     public int Id = 1;
     public string? DownloadPath { get; set; }
     public string ServerUrl => "http://127.0.0.1:8765";
+    public bool DarkModeEnabled { get; set; }
     public void SetDefaultSettings()
     {
         DownloadPath = Path.Combine(AppData.PyScrapperPath, "Downloads");
+        DarkModeEnabled = true;
     }
 }

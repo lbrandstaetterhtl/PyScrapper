@@ -23,7 +23,7 @@
                 <TextBlock x:Name="Massage" Grid.Row="0" Classes="UIValue" TextWrapping="Wrap"/>
                 
                 <StackPanel Grid.Row="1" Classes="UICell">
-                        <Button x:Name="OkButton" Classes="primary" Content="OK"/>
+                        <Button x:Name="OkButton" IsDefault="True" Classes="primary" Content="OK"/>
                 </StackPanel>
         </Grid>
         </ScrollViewer>

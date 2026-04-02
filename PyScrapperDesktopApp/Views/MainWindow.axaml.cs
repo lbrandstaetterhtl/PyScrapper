@@ -21,9 +21,14 @@ public partial class MainWindow : Window
         
         InitializeComponent();
 
-        _vm = new MainWindowViewModel(this);
+        _vm = new MainWindowViewModel();
         
         DataContext = _vm;
+
+        Opened += (s, e) =>
+        {
+            _vm.OnWindowReady(this);
+        };
     }
 
     private async void MediaDoubleClick(object? sender, RoutedEventArgs e)
@@ -96,41 +101,55 @@ public partial class MainWindow : Window
     
     private async void DeleteMedia(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem { DataContext: DownloadedMedia media })
+        try
         {
-            var confirmationWindow = new ConfirmationWindow("Are you sure you want to remove this media from the list? This action cannot be undone.");
-            var result = await confirmationWindow.ShowDialog<bool>(this);
+            if (sender is MenuItem { DataContext: DownloadedMedia media })
+            {
+                var confirmationWindow =
+                    new ConfirmationWindow(
+                        "Are you sure you want to remove this media from the list? This action cannot be undone.");
+                var result = await confirmationWindow.ShowDialog<bool>(this);
 
-            if (!result) return;
-                
-            AppData.RemoveDownloadedMedia(media);
+                if (!result) return;
+
+                AppData.RemoveDownloadedMedia(media);
+
+                var log = new Massage("Media removed from the list: " + media.Url, DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+
+                var messageBox = new MessageBox("Media removed from the list: " + media.Url);
+                await messageBox.ShowDialog(this);
+            }
+        }
+        catch (Exception ex)
+        {
+            var lag = new Massage("An error occurred while trying to remove the media from the list: " + ex.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(lag);
             
-            var log = new Massage("Media removed from the list: " + media.Url, DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-            
-            var messageBox = new MessageBox("Media removed from the list: " + media.Url);
-            messageBox.ShowDialog(this);
+            var messageBox = new MessageBox("An error occurred while trying to remove the media from the list: " + ex.Message);
+            await messageBox.ShowDialog(this);
         }
     }
     
     private async void DeleteFile(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem { DataContext: DownloadedMedia media })
+        try
         {
-            try
+            if (sender is MenuItem { DataContext: DownloadedMedia media })
             {
-                var confirmationWindow = new ConfirmationWindow("Are you sure you want to delete the file? This action cannot be undone.");
+                var confirmationWindow =
+                    new ConfirmationWindow("Are you sure you want to delete the file? This action cannot be undone.");
                 var result = await confirmationWindow.ShowDialog<bool>(this);
-                
+
                 if (result && File.Exists(media.DownloadPath))
                 {
                     File.Delete(media.DownloadPath);
-                    
+
                     media.IsPlayable = false;
-                    
+
                     var log = new Massage("File deleted successfully: " + media.DownloadPath, DateTime.Now, "INFO");
                     _logger.LogNewMassage(log);
-                    
+
                     var messageBox = new MessageBox("File deleted successfully: " + media.DownloadPath);
                     messageBox.ShowDialog(this);
                 }
@@ -139,14 +158,14 @@ public partial class MainWindow : Window
                     throw new Exception("File not found");
                 }
             }
-            catch (Exception ex)
-            {
-                var log = new Massage("An error occurred while trying to delete the file: " + ex.Message, DateTime.Now, "ERROR");
-                _logger.LogNewMassage(log);
+        }
+        catch (Exception ex)
+        {
+            var log = new Massage("An error occurred while trying to delete the file: " + ex.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
                 
-                var messageBox = new MessageBox("An error occurred while trying to delete the file: " + ex.Message);
-                messageBox.ShowDialog(this);
-            }
+            var messageBox = new MessageBox("An error occurred while trying to delete the file: " + ex.Message);
+            await messageBox.ShowDialog(this);
         }
     }
     

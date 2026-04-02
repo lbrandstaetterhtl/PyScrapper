@@ -20,7 +20,7 @@
                 <TextBlock Text="{Binding Message}" Classes="UILabel" TextWrapping="Wrap" Grid.Row="0"/>
                 
                 <StackPanel Grid.Row="1" Classes="UICell">
-                        <Button Content="Yes" Command="{Binding ConfirmCommand}" Classes="primary"/>
+                        <Button Content="Yes" IsDefault="True" Command="{Binding ConfirmCommand}" Classes="primary"/>
                         <Button Content="No" Command="{Binding CancelCommand}" Classes="primary"/>
                 </StackPanel>
         </Grid>

@@ -85,5 +85,45 @@ public class DownloadedMediaTests
         Assert.False(media.IsPlayable);
         Assert.Equal("new-id", media.Identifier);
     }
+
+    [Fact]
+    public void SetTitle_ExtractsFileNameWithoutExtension()
+    {
+        var media = new DownloadedMedia("url", ".mp3", DateTime.Now, @"C:\Downloads\my-song.mp3", true, "id");
+
+        media.SetTitle();
+
+        Assert.Equal("my-song", media.Title);
+    }
+
+    [Fact]
+    public void SetTitle_HandlesPathWithMultipleDots()
+    {
+        var media = new DownloadedMedia("url", ".mp3", DateTime.Now, @"C:\Downloads\my.cool.song.mp3", true, "id");
+
+        media.SetTitle();
+
+        Assert.Equal("my.cool.song", media.Title);
+    }
+
+    [Fact]
+    public void SetTitle_WindowsPath()
+    {
+        var media = new DownloadedMedia("url", ".mp4", DateTime.Now, @"C:\Users\Documents\video.mp4", true, "id");
+
+        media.SetTitle();
+
+        Assert.Equal("video", media.Title);
+    }
+
+    [Fact]
+    public void SetTitle_ComplexPath()
+    {
+        var media = new DownloadedMedia("url", ".wav", DateTime.Now, @"C:\Music\Genre\Subfolder\audio-file.wav", true, "id");
+
+        media.SetTitle();
+
+        Assert.Equal("audio-file", media.Title);
+    }
 }
 

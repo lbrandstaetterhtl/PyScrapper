@@ -21,7 +21,7 @@
                 <TextBox Text="{Binding InputText, Mode=TwoWay}" Classes="UI"/>
                 
                 <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                     <Button Classes="primary" Content="OK" Command="{Binding OkCommand}"/>
+                     <Button Classes="primary" IsDefault="True" Content="OK" Command="{Binding OkCommand}"/>
                      <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
                 

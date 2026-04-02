@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -53,7 +54,12 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     private string _lastHealthCheckTime = "N/A";
     
     [ObservableProperty]
-    private IBrush _statusColor = Brushes.Gray;
+    private Image _serverStatusIcon = new Image
+    {
+        Source = new Avalonia.Media.Imaging.Bitmap(Path.Combine(AppData.AssetPath, "cross.png")),
+        Width = 16,
+        Height = 16
+    };
     
     public event Action? CloseRequested;
     
@@ -91,17 +97,25 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
 
                     if (health != null)
                     {
-                        ConnectionStatus = health.Ok ? "Server is reachable" : "Server is not reachable";
-                        StatusColor = health.Ok ? Brushes.LightGreen : Brushes.LightCoral;
-                        UptimeFormatted = TimeSpan.FromSeconds(health.UptimeSeconds).ToString(@"dd\.hh\:mm\:ss");
-                        MemoryFormatted = $"{health.MemoryMb} MB";
-                        Pid = health.Pid;
-                        Processes = new ObservableCollection<ApiClient.ServerProcess>(health.Processes);
-                        DownloadJobs = new ObservableCollection<ApiClient.DownloadJobItem>(health.ActiveDownloads);
-                        DownloadsCount = health.ActiveDownloads.Count;
-                        ErrorMessages = new ObservableCollection<string>(health.ErrorMessages);
-                        ErrorsCount = health.ErrorMessages.Count;
-                        LastHealthCheckTime = "Last check: " + DateTime.Now.ToString("HH:mm:ss");
+                        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                        {
+                            ServerStatusIcon = new Image
+                            {
+                                Source = health.Ok ? new Avalonia.Media.Imaging.Bitmap(Path.Combine(AppData.AssetPath, "check.png")) : new Avalonia.Media.Imaging.Bitmap(Path.Combine(AppData.AssetPath, "cross.png")),
+                                Width = 16,
+                                Height = 16
+                            };
+                            ConnectionStatus = health.Ok ? "Server is reachable" : "Server is not reachable";
+                            UptimeFormatted = TimeSpan.FromSeconds(health.UptimeSeconds).ToString(@"dd\.hh\:mm\:ss");
+                            MemoryFormatted = $"{health.MemoryMb} MB";
+                            Pid = health.Pid;
+                            Processes = new ObservableCollection<ApiClient.ServerProcess>(health.Processes);
+                            DownloadJobs = new ObservableCollection<ApiClient.DownloadJobItem>(health.ActiveDownloads);
+                            DownloadsCount = health.ActiveDownloads.Count;
+                            ErrorMessages = new ObservableCollection<string>(health.ErrorMessages);
+                            ErrorsCount = health.ErrorMessages.Count;
+                            LastHealthCheckTime = "Last check: " + DateTime.Now.ToString("HH:mm:ss");
+                        });
                     }
                     else
                     {
@@ -129,7 +143,12 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     /// </summary>
     private void SetOffline()
     {
-        StatusColor = Brushes.LightCoral;
+        ServerStatusIcon = new Image
+        {
+            Source = new Avalonia.Media.Imaging.Bitmap(Path.Combine(AppData.AssetPath, "cross.png")),
+            Width = 16,
+            Height = 16
+        };
         ConnectionStatus = "Server is not reachable";
         UptimeFormatted = "N/A";
         MemoryFormatted = "N/A";

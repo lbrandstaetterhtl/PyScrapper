@@ -4,14 +4,19 @@
     <!-- THIS IS AI GENERATED, HAS TO BE IMPROVED AND REFACTORED, BUT IT'S A GOOD STARTING POINT FOR A CONSISTENT DESIGN -->
     
     <Style Selector="Button.primary">
-        <Setter Property="Background"          Value="{DynamicResource AccentGradient}"/>
-        <Setter Property="Foreground"          Value="#ffffff"/>
+        <Setter Property="Background"          Value="{DynamicResource SurfaceGradient}"/>
+        <Setter Property="Foreground"          Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="CornerRadius"        Value="8"/>
         <Setter Property="Padding"             Value="14,8"/>
         <Setter Property="Margin"              Value="5"/>
         <Setter Property="FontWeight"          Value="SemiBold"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="Cursor"              Value="Hand"/>
+    </Style>
+    
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SurfaceGradientPointerOver}"/>
+        <Setter Property="CornerRadius" Value="8"/>
     </Style>
 
     <Style Selector="TextBox.UI">
@@ -24,12 +29,20 @@
         <Setter Property="HorizontalAlignment" Value="Center"/>
     </Style>
     
+    <Style Selector="TextBox.UI:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrushPointerOver}"/>
+    </Style>
+    
     <Style Selector="ComboBox.UI">
         <Setter Property="Margin"              Value="8"/>
         <Setter Property="CornerRadius"        Value="8"/>
         <Setter Property="Background"          Value="{DynamicResource SurfaceBrush}"/>
         <Setter Property="Foreground"          Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    
+    <Style Selector="ComboBox.UI:pointerover /template/ Border#Background">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrushPointerOver}"/>
     </Style>
 
     <Style Selector="StackPanel.UICell">
@@ -45,6 +58,20 @@
         <Setter Property="Margin"              Value="10,5"/>
     </Style>
 
+    <Style Selector="Border.CellInteractive">
+        <Setter Property="Background"          Value="{DynamicResource SurfaceGradient}"/>
+        <Setter Property="BorderBrush"         Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness"     Value="1"/>
+        <Setter Property="Padding"             Value="10"/>
+        <Setter Property="CornerRadius"        Value="8"/>
+        <Setter Property="Margin"              Value="5"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    
+    <Style Selector="Border.CellInteractive:pointerover">
+        <Setter Property="Background" Value="{DynamicResource SurfaceGradientPointerOver}"/>
+    </Style>
+    
     <Style Selector="Border.Cell">
         <Setter Property="Background"          Value="{DynamicResource SurfaceGradient}"/>
         <Setter Property="BorderBrush"         Value="{DynamicResource BorderBrush}"/>
@@ -83,6 +110,53 @@
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
         <Setter Property="IsEnabled"                Value="False"/>
     </Style>
+    
+    <Style Selector="ProgressBar:horizontal /template/ Border#ProgressBarTrack">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    
+    <Style Selector="ProgressBar:horizontal /template/ Border#PART_Indicator">
+        <Setter Property="Background" Value="{DynamicResource AccentGradient}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    
+    <Style Selector="ProgressBar:horizontal /template/ Border#IndeterminateProgressBarIndicator">
+        <Setter Property="Background" Value="{DynamicResource AccentGradient}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    
+    <Style Selector="ProgressBar:horizontal /template/ Border#IndeterminateProgressBarIndicator2">
+        <Setter Property="Background" Value="{DynamicResource AccentGradient}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    
+    <Style Selector="Slider:horizontal /template/ Thumb#thumb /template/ Ellipse#SliderInnerThumb">
+        <Setter Property="Fill" Value="{DynamicResource AccentGradient}"/>
+    </Style>
+    
+    <Style Selector="Slider:horizontal /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="Background" Value="{DynamicResource SliderIncrease}"/>
+    </Style>
+    
+    
+    <Style Selector="Slider:horizontal /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource SliderDecrease}"/>
+    </Style>
+    
+    <Style Selector="Slider">
+        <Setter Property="Margin" Value="5"/>
+    </Style>
+    
+    <Style Selector="NumericUpDown /template/ TextBox#PART_TextBox.spinRight /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+    </Style>
+    
+    <Style Selector="NumericUpDown /template/ TextBox#PART_TextBox.spinRight /template/ TextPresenter#PART_TextPresenter">
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
         
     <Styles.Resources>
         <ResourceDictionary>
@@ -98,25 +172,40 @@
                     <Color x:Key="TextPrimary">#e8eaf0</Color>
                     <Color x:Key="TextSecondary">#7a8aaa</Color>
                     <Color x:Key="SeparatorMid">#3776d4</Color>
+                    <Color x:Key="SliderIncrease">#a7dbef</Color>
+                    <Color x:Key="SliderDecrease">#0b4db7</Color>
+                    <Color x:Key="SurfacePointerOver">#2e323e</Color>
 
                     <SolidColorBrush x:Key="BgPrimaryBrush"    Color="{StaticResource BgPrimary}"/>
                     <SolidColorBrush x:Key="SurfaceBrush"      Color="{StaticResource Surface}"/>
                     <SolidColorBrush x:Key="BorderBrush"       Color="{StaticResource BorderColor}"/>
                     <SolidColorBrush x:Key="TextPrimaryBrush"  Color="{StaticResource TextPrimary}"/>
                     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}"/>
+                    <SolidColorBrush x:Key="SliderIncreaseBrush" Color="{StaticResource SliderIncrease}"/>
+                    <SolidColorBrush x:Key="SliderDecreaseBrush" Color="{StaticResource SliderDecrease}"/>
+                    <SolidColorBrush x:Key="SurfaceBrushPointerOver" Color="{StaticResource SurfacePointerOver}"/>
 
                     <LinearGradientBrush x:Key="AccentGradient"
-                                         StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Color="#3776d4" Offset="0"/>
-                        <GradientStop Color="#5a9ef5" Offset="1"/>
+                                         StartPoint="0%,43%"
+                                         EndPoint="53%,100%">
+                        <GradientStop Color="#2061c3" Offset="0.15"/>
+                        <GradientStop Color="#0f3261" Offset="0.75"/>
                     </LinearGradientBrush>
 
                     <LinearGradientBrush x:Key="SurfaceGradient"
-                                         StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#1e2540" Offset="0"/>
-                        <GradientStop Color="#161b27" Offset="1"/>
+                                         StartPoint="50%,0%"
+                                         EndPoint="50%,100%">
+                        <GradientStop Color="#1f4b8d" Offset="0.15"/>
+                        <GradientStop Color="#031c3c" Offset="0.75"/>
                     </LinearGradientBrush>
-
+                    
+                    <LinearGradientBrush x:Key="SurfaceGradientPointerOver" 
+                                         StartPoint="50%,0%"
+                                         EndPoint="50%,100%">
+                        <GradientStop Color="#49658e" Offset="0"/>
+                        <GradientStop Color="#223144" Offset="1"/>
+                    </LinearGradientBrush>
+                    
                     <LinearGradientBrush x:Key="SeparatorBrush"
                                          StartPoint="0%,50%" EndPoint="100%,50%">
                         <GradientStop Color="Transparent" Offset="0"/>
@@ -137,23 +226,38 @@
                     <Color x:Key="TextPrimary">#1a1a2a</Color>
                     <Color x:Key="TextSecondary">#5a5a6a</Color>
                     <Color x:Key="SeparatorMid">#f7c948</Color>
+                    <Color x:Key="SliderIncrease">#e1f0b2</Color>
+                    <Color x:Key="SliderDecrease">#f3c307</Color>
+                    <Color x:Key="SurfacePointerOver">#939393</Color>
 
                     <SolidColorBrush x:Key="BgPrimaryBrush"    Color="{StaticResource BgPrimary}"/>
                     <SolidColorBrush x:Key="SurfaceBrush"      Color="{StaticResource Surface}"/>
                     <SolidColorBrush x:Key="BorderBrush"       Color="{StaticResource BorderColor}"/>
                     <SolidColorBrush x:Key="TextPrimaryBrush"  Color="{StaticResource TextPrimary}"/>
                     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}"/>
+                    <SolidColorBrush x:Key="SliderIncreaseBrush" Color="{StaticResource SliderIncrease}"/>
+                    <SolidColorBrush x:Key="SliderDecreaseBrush" Color="{StaticResource SliderDecrease}"/>
+                    <SolidColorBrush x:Key="SurfaceBrushPointerOver" Color="{StaticResource SurfacePointerOver}"/>
 
                     <LinearGradientBrush x:Key="AccentGradient"
-                                         StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Color="#f7c948" Offset="0"/>
-                        <GradientStop Color="#e6b020" Offset="1"/>
+                                         StartPoint="0%,43%"
+                                         EndPoint="53%,100%">
+                        <GradientStop Color="#b4da43" Offset="0.15"/>
+                        <GradientStop Color="#5c7f17" Offset="0.75"/>
                     </LinearGradientBrush>
 
                     <LinearGradientBrush x:Key="SurfaceGradient"
-                                         StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#ffffff" Offset="0"/>
-                        <GradientStop Color="#f0f0e8" Offset="1"/>
+                                         StartPoint="50%,0%"
+                                         EndPoint="50%,100%">
+                        <GradientStop Color="#e1f0b2" Offset="0.15"/>
+                        <GradientStop Color="#f3c307" Offset="0.75"/>
+                    </LinearGradientBrush>
+                    
+                    <LinearGradientBrush x:Key="SurfaceGradientPointerOver"  
+                                         StartPoint="50%,0%"
+                                         EndPoint="50%,100%">
+                        <GradientStop Color="#e7ebdb" Offset="0.15"/>
+                        <GradientStop Color="#efd877" Offset="0.75"/>
                     </LinearGradientBrush>
 
                     <LinearGradientBrush x:Key="SeparatorBrush"
@@ -169,5 +273,5 @@
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </Styles.Resources>
-         
+    
 </Styles>

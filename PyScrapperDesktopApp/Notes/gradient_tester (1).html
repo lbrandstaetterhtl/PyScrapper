@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avalonia Gradient Tester</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #09090f; --surface: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.08);
+  --text: rgba(255,255,255,0.85); --muted: rgba(255,255,255,0.3); --mono: 'DM Mono', monospace;
+}
+body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; padding: 28px 24px 60px; }
+h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: .15em; text-transform: uppercase; color: rgba(255,255,255,0.12); margin-bottom: 24px; }
+.layout { display: grid; grid-template-columns: 1fr 390px; gap: 18px; max-width: 1100px; }
+.col { display: flex; flex-direction: column; gap: 18px; }
+
+/* cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+.ct { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+
+/* sliders */
+.row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.row label { font-size: 11px; color: var(--muted); min-width: 20px; }
+.row input[type=range] { flex: 1; -webkit-appearance: none; height: 3px; border-radius: 99px; background: rgba(255,255,255,0.1); outline: none; cursor: pointer; }
+.row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,0.3); cursor: pointer; }
+.val { font-size: 11px; font-weight: 500; min-width: 38px; text-align: right; color: var(--text); }
+.sec { font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin: 14px 0 8px; }
+
+/* canvases */
+#dirCanvas { display: block; width: 100%; height: 155px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 14px; }
+#offCanvas { display: block; width: 100%; height: 68px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; }
+
+/* stops */
+.stop-row { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.swatch { width: 24px; height: 24px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.15); cursor: pointer; flex-shrink: 0; transition: transform .1s; }
+.swatch:hover { transform: scale(1.1); }
+.stop-lbl { font-size: 10px; color: var(--muted); min-width: 44px; }
+.hex-input {
+  width: 82px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 11px;
+  padding: 4px 8px; outline: none; flex-shrink: 0;
+}
+.hex-input:focus { border-color: rgba(255,255,255,0.3); }
+.hex-input.invalid { border-color: rgba(226,75,74,0.6); color: #f09595; }
+.off-val { font-size: 11px; color: var(--text); min-width: 30px; text-align: right; }
+.btn-row { display: flex; gap: 8px; margin-top: 6px; }
+.btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 6px; color: var(--muted); font-family: var(--mono); font-size: 10px; letter-spacing: .08em; padding: 5px 11px; cursor: pointer; transition: all .15s; }
+.btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.btn.danger:hover { background: rgba(226,75,74,0.18); border-color: rgba(226,75,74,0.4); color: #f09595; }
+
+/* preview */
+#preview-rect { width: 100%; height: 110px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 14px; }
+
+/* xaml box */
+.xaml-box { background: rgba(0,0,0,0.35); border: 1px solid var(--border); border-radius: 10px; padding: 13px 15px; font-size: 11.5px; line-height: 1.9; white-space: pre-wrap; word-break: break-word; }
+.xt { color: #5a9fd4; } .xa { color: #c68642; } .xv { color: #6dbf7a; }
+
+/* buttons */
+.action-btn { width: 100%; margin-top: 10px; border-radius: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; padding: 9px; cursor: pointer; text-transform: uppercase; transition: all .15s; }
+.btn-blue { background: rgba(55,118,212,0.13); border: 1px solid rgba(55,118,212,0.32); color: #5a9ef5; }
+.btn-blue:hover { background: rgba(55,118,212,0.22); }
+.btn-yellow { background: rgba(247,201,72,0.09); border: 1px solid rgba(247,201,72,0.28); color: #f7c948; }
+.btn-yellow:hover { background: rgba(247,201,72,0.18); }
+.ok-state { background: rgba(29,158,117,0.18) !important; border-color: rgba(29,158,117,0.38) !important; color: #5dcaa5 !important; }
+.err-state { background: rgba(226,75,74,0.15) !important; border-color: rgba(226,75,74,0.35) !important; color: #f09595 !important; }
+
+/* import */
+.import-ta { width: 100%; height: 100px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; font-family: var(--mono); font-size: 11px; color: var(--text); resize: vertical; outline: none; line-height: 1.7; }
+.import-ta:focus { border-color: rgba(255,255,255,0.2); }
+.import-ta::placeholder { color: var(--muted); }
+
+/* picker popup */
+.picker-popup { display: none; position: fixed; z-index: 200; background: #12121e; border: 1px solid rgba(255,255,255,0.13); border-radius: 14px; padding: 14px; width: 250px; box-shadow: 0 20px 60px rgba(0,0,0,0.7); }
+.picker-popup.open { display: block; }
+.pc-wrap { width: 100%; height: 150px; border-radius: 8px; overflow: hidden; cursor: crosshair; position: relative; margin-bottom: 9px; }
+#pcCanvas { display: block; width: 100%; height: 100%; }
+.pc-cross { position: absolute; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.5); transform: translate(-50%,-50%); pointer-events: none; }
+.hue-bar { height: 11px; border-radius: 99px; background: linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); position: relative; cursor: pointer; margin-bottom: 10px; }
+.hue-thumb { position: absolute; top: 50%; width: 15px; height: 15px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,0.2); box-shadow: 0 2px 6px rgba(0,0,0,0.5); transform: translate(-50%,-50%); pointer-events: none; }
+.pc-bottom { display: flex; align-items: center; gap: 9px; }
+.pc-swatch { width: 30px; height: 30px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+.pc-hex-input { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-family: var(--mono); font-size: 13px; font-weight: 500; padding: 5px 8px; outline: none; }
+.pc-hex-input:focus { border-color: rgba(255,255,255,0.3); }
+.pc-ok { background: rgba(55,118,212,0.2); border: 1px solid rgba(55,118,212,0.4); border-radius: 6px; color: #5a9ef5; font-family: var(--mono); font-size: 10px; padding: 6px 11px; cursor: pointer; flex-shrink: 0; }
+.pc-ok:hover { background: rgba(55,118,212,0.35); }
+</style>
+</head>
+<body>
+<h1>Avalonia · LinearGradientBrush Tester</h1>
+<div class="layout">
+
+  <!-- LEFT -->
+  <div class="col">
+    <div class="card">
+      <div class="ct">Gradient Direction — StartPoint / EndPoint</div>
+      <canvas id="dirCanvas"></canvas>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 22px">
+        <div>
+          <div class="sec">StartPoint</div>
+          <div class="row"><label>X</label><input type="range" id="sx" min="0" max="100" value="0" step="1"><span class="val" id="sx-v">0%</span></div>
+          <div class="row"><label>Y</label><input type="range" id="sy" min="0" max="100" value="0" step="1"><span class="val" id="sy-v">0%</span></div>
+        </div>
+        <div>
+          <div class="sec">EndPoint</div>
+          <div class="row"><label>X</label><input type="range" id="ex" min="0" max="100" value="0" step="1"><span class="val" id="ex-v">0%</span></div>
+          <div class="row"><label>Y</label><input type="range" id="ey" min="0" max="100" value="100" step="1"><span class="val" id="ey-v">100%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ct">Gradient Stops — Farbe &amp; Offset</div>
+      <canvas id="offCanvas"></canvas>
+      <div id="stopsContainer"></div>
+      <div class="btn-row">
+        <button class="btn" onclick="addStop()">+ Stop hinzufügen</button>
+        <button class="btn danger" onclick="removeStop()">− Letzten entfernen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="col">
+    <div class="card">
+      <div class="ct">XAML Import</div>
+      <textarea class="import-ta" id="xamlImport" placeholder="<LinearGradientBrush StartPoint=&quot;0%,0%&quot; EndPoint=&quot;0%,100%&quot;>
+    <GradientStop Color=&quot;#3776d4&quot; Offset=&quot;0&quot;/>
+    <GradientStop Color=&quot;#5a9ef5&quot; Offset=&quot;1&quot;/>
+</LinearGradientBrush>"></textarea>
+      <button class="action-btn btn-yellow" id="parseBtn" onclick="parseXaml()">Einlesen</button>
+    </div>
+
+    <div class="card">
+      <div class="ct">Live Preview</div>
+      <div id="preview-rect"></div>
+      <div class="ct" style="margin-bottom:8px">XAML Output</div>
+      <div class="xaml-box" id="xamlOut"></div>
+      <button class="action-btn btn-blue" id="copyBtn" onclick="copyXaml()">XAML kopieren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Color Picker Popup -->
+<div class="picker-popup" id="pickerPopup">
+  <div class="pc-wrap" id="pcWrap">
+    <canvas id="pcCanvas"></canvas>
+    <div class="pc-cross" id="pcCross"></div>
+  </div>
+  <div class="hue-bar" id="hueBar"><div class="hue-thumb" id="hueThumb"></div></div>
+  <div class="pc-bottom">
+    <div class="pc-swatch" id="pcSwatch"></div>
+    <input class="pc-hex-input" id="pcHexInput" maxlength="7" spellcheck="false">
+    <button class="pc-ok" onclick="confirmColor()">OK</button>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────
+let stops = [{ color: '#3776d4', offset: 0 }, { color: '#5a9ef5', offset: 1 }];
+let activeStopIdx = 0;
+let pickerHue = 213, pickerX = 0.7, pickerY = 0.3, pickerTarget = 0;
+let pcDragging = false, hueDragging = false;
+
+// ── Direction canvas ───────────────────────────────────────────
+const dirCv = document.getElementById('dirCanvas');
+const dirCtx = dirCv.getContext('2d');
+
+function drawDir() {
+  const W = dirCv.width = dirCv.clientWidth;
+  const H = dirCv.height = dirCv.clientHeight;
+  const sx = +document.getElementById('sx').value / 100;
+  const sy = +document.getElementById('sy').value / 100;
+  const ex = +document.getElementById('ex').value / 100;
+  const ey = +document.getElementById('ey').value / 100;
+  const x1 = sx*W, y1 = sy*H, x2 = ex*W, y2 = ey*H;
+
+  const g = dirCtx.createLinearGradient(x1, y1, x2, y2);
+  stops.forEach(s => { try { g.addColorStop(s.offset, s.color); } catch(e){} });
+  dirCtx.fillStyle = g;
+  dirCtx.beginPath(); dirCtx.roundRect(0,0,W,H,10); dirCtx.fill();
+
+  const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+  if (len > 2) {
+    const nx=dx/len, ny=dy/len, ext=Math.max(W,H)*1.5;
+    dirCtx.save();
+    dirCtx.strokeStyle='rgba(255,255,255,0.22)'; dirCtx.lineWidth=1; dirCtx.setLineDash([5,4]);
+    dirCtx.beginPath(); dirCtx.moveTo(x1-nx*ext, y1-ny*ext); dirCtx.lineTo(x1+nx*ext, y1+ny*ext); dirCtx.stroke();
+    dirCtx.restore();
+  }
+  [[x1,y1,'Start'],[x2,y2,'End']].forEach(([x,y,lbl]) => {
+    dirCtx.save();
+    dirCtx.fillStyle='rgba(0,0,0,0.45)'; dirCtx.beginPath(); dirCtx.arc(x,y,9,0,Math.PI*2); dirCtx.fill();
+    dirCtx.fillStyle='#fff'; dirCtx.beginPath(); dirCtx.arc(x,y,7,0,Math.PI*2); dirCtx.fill();
+    dirCtx.fillStyle='rgba(255,255,255,0.9)'; dirCtx.font='500 11px DM Mono,monospace';
+    dirCtx.textAlign=x>W*0.8?'right':'left'; dirCtx.textBaseline=y<20?'top':'bottom';
+    dirCtx.fillText(lbl, x+(x>W*0.8?-14:14), y+(y<20?4:-4));
+    dirCtx.restore();
+  });
+}
+
+// ── Offset canvas ──────────────────────────────────────────────
+const offCv = document.getElementById('offCanvas');
+const offCtx = offCv.getContext('2d');
+
+function drawOff() {
+  const W = offCv.width = offCv.clientWidth;
+  const H = offCv.height = offCv.clientHeight;
+  offCtx.clearRect(0,0,W,H);
+  const g = offCtx.createLinearGradient(0,0,W,0);
+  stops.forEach(s => { try { g.addColorStop(s.offset, s.color); } catch(e){} });
+  offCtx.fillStyle = g; offCtx.beginPath(); offCtx.roundRect(0,0,W,H,8); offCtx.fill();
+  stops.forEach((s,i) => {
+    const x = s.offset * W;
+    offCtx.save();
+    offCtx.strokeStyle='rgba(255,255,255,0.6)'; offCtx.lineWidth=1.5; offCtx.setLineDash([3,3]);
+    offCtx.beginPath(); offCtx.moveTo(x,0); offCtx.lineTo(x,H); offCtx.stroke();
+    offCtx.fillStyle=s.color; offCtx.strokeStyle=i===activeStopIdx?'#fff':'rgba(255,255,255,0.4)';
+    offCtx.lineWidth=i===activeStopIdx?2.5:1.5; offCtx.setLineDash([]);
+    offCtx.shadowColor='rgba(0,0,0,0.4)'; offCtx.shadowBlur=4;
+    offCtx.beginPath(); offCtx.arc(x,H/2,8,0,Math.PI*2); offCtx.fill(); offCtx.stroke();
+    offCtx.restore();
+  });
+}
+
+// ── Stops UI ──────────────────────────────────────────────────
+function renderStops() {
+  const c = document.getElementById('stopsContainer');
+  c.innerHTML = '';
+  stops.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'stop-row';
+
+    // Swatch
+    const swatch = document.createElement('div');
+    swatch.className = 'swatch';
+    swatch.style.background = s.color;
+    swatch.title = 'Farbe im Picker wählen';
+    swatch.onclick = () => openPicker(i, swatch);
+
+    // Label
+    const lbl = document.createElement('span');
+    lbl.className = 'stop-lbl';
+    lbl.textContent = `Stop ${i+1}`;
+
+    // Hex input
+    const hexIn = document.createElement('input');
+    hexIn.className = 'hex-input';
+    hexIn.type = 'text';
+    hexIn.value = s.color;
+    hexIn.maxLength = 7;
+    hexIn.spellcheck = false;
+    hexIn.addEventListener('input', () => {
+      const v = hexIn.value.startsWith('#') ? hexIn.value : '#' + hexIn.value;
+      if (/^#[0-9a-f]{6}$/i.test(v)) {
+        hexIn.classList.remove('invalid');
+        stops[i].color = v.toLowerCase();
+        swatch.style.background = v;
+        updateAll();
+      } else {
+        hexIn.classList.add('invalid');
+      }
+    });
+    hexIn.addEventListener('blur', () => {
+      // Korrigiere bei Verlassen des Feldes
+      let v = hexIn.value.trim();
+      if (!v.startsWith('#')) v = '#' + v;
+      if (/^#[0-9a-f]{6}$/i.test(v)) {
+        hexIn.value = v.toLowerCase();
+        hexIn.classList.remove('invalid');
+      } else {
+        hexIn.value = stops[i].color;
+        hexIn.classList.remove('invalid');
+      }
+    });
+
+    // Offset slider
+    const offSlider = document.createElement('input');
+    offSlider.type = 'range'; offSlider.min = 0; offSlider.max = 100; offSlider.step = 1;
+    offSlider.value = Math.round(s.offset * 100);
+    offSlider.style.cssText = 'flex:1;-webkit-appearance:none;height:3px;border-radius:99px;background:rgba(255,255,255,0.1);outline:none;cursor:pointer';
+    offSlider.addEventListener('input', () => {
+      stops[i].offset = offSlider.value / 100;
+      offVal.textContent = fmtOff(stops[i].offset);
+      updateAll();
+    });
+    offSlider.addEventListener('focus', () => { activeStopIdx = i; drawOff(); });
+
+    // Offset value
+    const offVal = document.createElement('span');
+    offVal.className = 'off-val';
+    offVal.textContent = fmtOff(s.offset);
+
+    row.append(swatch, lbl, hexIn, offSlider, offVal);
+    c.appendChild(row);
+  });
+}
+
+function fmtOff(v) {
+  return v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '') || '0';
+}
+
+function addStop() {
+  const last = stops[stops.length-1];
+  stops.push({ color: '#ffffff', offset: Math.min(1, last.offset + 0.2) });
+  updateAll();
+}
+function removeStop() {
+  if (stops.length <= 2) return;
+  stops.pop();
+  if (activeStopIdx >= stops.length) activeStopIdx = stops.length - 1;
+  updateAll();
+}
+
+// ── XAML build ─────────────────────────────────────────────────
+function buildXamlHtml() {
+  const sx = document.getElementById('sx').value, sy = document.getElementById('sy').value;
+  const ex = document.getElementById('ex').value, ey = document.getElementById('ey').value;
+  const s = stops.map(s => `    <span class="xt">&lt;GradientStop</span> <span class="xa">Color</span>=<span class="xv">"${s.color}"</span> <span class="xa">Offset</span>=<span class="xv">"${fmtOff(s.offset)}"</span><span class="xt">/&gt;</span>`).join('\n');
+  return `<span class="xt">&lt;LinearGradientBrush</span>\n  <span class="xa">StartPoint</span>=<span class="xv">"${sx}%,${sy}%"</span>\n  <span class="xa">EndPoint</span>=<span class="xv">"${ex}%,${ey}%"</span><span class="xt">&gt;</span>\n${s}\n<span class="xt">&lt;/LinearGradientBrush&gt;</span>`;
+}
+
+function buildXamlPlain() {
+  const sx = document.getElementById('sx').value, sy = document.getElementById('sy').value;
+  const ex = document.getElementById('ex').value, ey = document.getElementById('ey').value;
+  const s = stops.map(s => `    <GradientStop Color="${s.color}" Offset="${fmtOff(s.offset)}"/>`).join('\n');
+  return `<LinearGradientBrush\n  StartPoint="${sx}%,${sy}%"\n  EndPoint="${ex}%,${ey}%">\n${s}\n</LinearGradientBrush>`;
+}
+
+function buildPreview() {
+  const sx = +document.getElementById('sx').value, sy = +document.getElementById('sy').value;
+  const ex = +document.getElementById('ex').value, ey = +document.getElementById('ey').value;
+  const cs = stops.map(s => `${s.color} ${Math.round(s.offset*100)}%`).join(', ');
+  const deg = Math.round(Math.atan2(ex-sx, -(ey-sy)) * 180 / Math.PI);
+  return `linear-gradient(${deg}deg, ${cs})`;
+}
+
+// ── updateAll ──────────────────────────────────────────────────
+function updateAll() {
+  renderStops(); drawDir(); drawOff();
+  document.getElementById('preview-rect').style.background = buildPreview();
+  document.getElementById('xamlOut').innerHTML = buildXamlHtml();
+  ['sx','sy','ex','ey'].forEach(id => {
+    document.getElementById(id+'-v').textContent = document.getElementById(id).value + '%';
+  });
+}
+['sx','sy','ex','ey'].forEach(id => document.getElementById(id).addEventListener('input', updateAll));
+
+// ── Copy ───────────────────────────────────────────────────────
+function copyXaml() {
+  const btn = document.getElementById('copyBtn');
+  const plain = buildXamlPlain();
+  const done = () => {
+    btn.textContent = 'Kopiert!'; btn.classList.add('ok-state');
+    setTimeout(() => { btn.textContent = 'XAML kopieren'; btn.classList.remove('ok-state'); }, 1500);
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(plain).then(done).catch(() => fallbackCopy(plain, done));
+  } else { fallbackCopy(plain, done); }
+}
+function fallbackCopy(text, cb) {
+  const ta = Object.assign(document.createElement('textarea'), { value: text });
+  Object.assign(ta.style, { position:'fixed', opacity:'0' });
+  document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+  document.body.removeChild(ta); cb();
+}
+
+// ── XAML Import ────────────────────────────────────────────────
+function parseXaml() {
+  const btn = document.getElementById('parseBtn');
+  const raw = document.getElementById('xamlImport').value.trim();
+
+  const fail = msg => {
+    btn.textContent = msg; btn.classList.add('err-state');
+    setTimeout(() => { btn.textContent = 'Einlesen'; btn.classList.remove('err-state'); }, 2000);
+  };
+
+  const spM = raw.match(/StartPoint\s*=\s*["']([^"']+)["']/i);
+  const epM = raw.match(/EndPoint\s*=\s*["']([^"']+)["']/i);
+  if (!spM || !epM) return fail('StartPoint/EndPoint fehlt');
+
+  const parsePoint = str => {
+    const parts = str.split(',').map(s => s.trim().replace('%',''));
+    if (parts.length !== 2) return null;
+    const x = parseFloat(parts[0]), y = parseFloat(parts[1]);
+    if (isNaN(x) || isNaN(y)) return null;
+    const scale = str.includes('%') ? 1 : 100;
+    return { x: Math.round(x*scale), y: Math.round(y*scale) };
+  };
+
+  const sp = parsePoint(spM[1]), ep = parsePoint(epM[1]);
+  if (!sp || !ep) return fail('Ungültige Koordinaten');
+
+  const parsed = [];
+  const re = /GradientStop[^>]*/gi; let m;
+  while ((m = re.exec(raw)) !== null) {
+    const cM = m[0].match(/Color\s*=\s*["']([^"']+)["']/i);
+    const oM = m[0].match(/Offset\s*=\s*["']([^"']+)["']/i);
+    if (cM && oM) {
+      const color = cM[1].trim(), offset = parseFloat(oM[1]);
+      if (!isNaN(offset) && /^#[0-9a-f]{3,8}$/i.test(color))
+        parsed.push({ color: color.toLowerCase(), offset });
+    }
+  }
+  if (parsed.length < 2) return fail('Mind. 2 GradientStops');
+
+  document.getElementById('sx').value = sp.x; document.getElementById('sy').value = sp.y;
+  document.getElementById('ex').value = ep.x; document.getElementById('ey').value = ep.y;
+  stops = parsed; activeStopIdx = 0;
+
+  btn.textContent = 'Eingelesen!'; btn.classList.add('ok-state');
+  setTimeout(() => { btn.textContent = 'Einlesen'; btn.classList.remove('ok-state'); }, 1500);
+  updateAll();
+}
+
+// ── Color Picker ───────────────────────────────────────────────
+const popup = document.getElementById('pickerPopup');
+const pcCv = document.getElementById('pcCanvas');
+const pcCtx = pcCv.getContext('2d');
+
+function openPicker(idx, anchor) {
+  pickerTarget = idx; activeStopIdx = idx;
+  const rect = anchor.getBoundingClientRect();
+  popup.style.top  = Math.min(rect.bottom + 8, window.innerHeight - 320) + 'px';
+  popup.style.left = Math.min(rect.left, window.innerWidth - 268) + 'px';
+  popup.classList.add('open');
+  const hsv = rgbToHsv(...Object.values(hexToRgb(stops[idx].color)));
+  pickerHue = hsv.h; pickerX = hsv.s; pickerY = 1 - hsv.v;
+  drawPicker();
+}
+
+function drawPicker() {
+  const W = pcCv.width = document.getElementById('pcWrap').clientWidth;
+  const H = pcCv.height = document.getElementById('pcWrap').clientHeight;
+  const hueStr = `hsl(${pickerHue},100%,50%)`;
+  const gX = pcCtx.createLinearGradient(0,0,W,0);
+  gX.addColorStop(0,'#fff'); gX.addColorStop(1, hueStr);
+  pcCtx.fillStyle = gX; pcCtx.fillRect(0,0,W,H);
+  const gY = pcCtx.createLinearGradient(0,0,0,H);
+  gY.addColorStop(0,'rgba(0,0,0,0)'); gY.addColorStop(1,'#000');
+  pcCtx.fillStyle = gY; pcCtx.fillRect(0,0,W,H);
+
+  const cx = pickerX*W, cy = pickerY*H;
+  document.getElementById('pcCross').style.left = cx + 'px';
+  document.getElementById('pcCross').style.top  = cy + 'px';
+  document.getElementById('hueThumb').style.left = (pickerHue/360*100) + '%';
+
+  const px = pcCtx.getImageData(Math.round(cx), Math.round(cy), 1, 1).data;
+  const hex = '#' + [px[0],px[1],px[2]].map(v => v.toString(16).padStart(2,'0')).join('');
+  document.getElementById('pcSwatch').style.background = hex;
+  document.getElementById('pcHexInput').value = hex;
+}
+
+// Hex input im Picker
+document.getElementById('pcHexInput').addEventListener('input', e => {
+  let v = e.target.value.trim();
+  if (!v.startsWith('#')) v = '#' + v;
+  if (/^#[0-9a-f]{6}$/i.test(v)) {
+    document.getElementById('pcSwatch').style.background = v;
+    const hsv = rgbToHsv(...Object.values(hexToRgb(v)));
+    pickerHue = hsv.h; pickerX = hsv.s; pickerY = 1 - hsv.v;
+    drawPicker();
+  }
+});
+
+function confirmColor() {
+  let hex = document.getElementById('pcHexInput').value.trim();
+  if (!hex.startsWith('#')) hex = '#' + hex;
+  if (/^#[0-9a-f]{6}$/i.test(hex)) {
+    stops[pickerTarget].color = hex.toLowerCase();
+  }
+  popup.classList.remove('open');
+  updateAll();
+}
+
+document.getElementById('pcWrap').addEventListener('mousedown', e => { pcDragging = true; movePicker(e); });
+window.addEventListener('mousemove', e => { if (pcDragging) movePicker(e); if (hueDragging) moveHue(e); });
+window.addEventListener('mouseup', () => { pcDragging = false; hueDragging = false; });
+function movePicker(e) {
+  const r = document.getElementById('pcWrap').getBoundingClientRect();
+  pickerX = Math.max(0, Math.min(1, (e.clientX-r.left)/r.width));
+  pickerY = Math.max(0, Math.min(1, (e.clientY-r.top)/r.height));
+  drawPicker();
+}
+document.getElementById('hueBar').addEventListener('mousedown', e => { hueDragging = true; moveHue(e); });
+function moveHue(e) {
+  const r = document.getElementById('hueBar').getBoundingClientRect();
+  pickerHue = Math.round(Math.max(0, Math.min(1, (e.clientX-r.left)/r.width)) * 360);
+  drawPicker();
+}
+window.addEventListener('mousedown', e => {
+  if (!popup.contains(e.target) && !e.target.closest('.swatch') && e.target.id !== 'xamlImport')
+    popup.classList.remove('open');
+});
+
+// ── Color utils ────────────────────────────────────────────────
+function hexToRgb(hex) {
+  return { r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16) };
+}
+function rgbToHsv(r,g,b) {
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+  let h=0;
+  if (d) { if(max===r) h=((g-b)/d)%6; else if(max===g) h=(b-r)/d+2; else h=(r-g)/d+4; h=Math.round(h*60); if(h<0)h+=360; }
+  return { h, s: max?d/max:0, v: max };
+}
+
+// ── Init ───────────────────────────────────────────────────────
+updateAll();
+window.addEventListener('resize', updateAll);
+</script>
+</body>
+</html>

@@ -38,7 +38,7 @@
                 </ScrollViewer>
                 
                 <StackPanel Grid.Row="3" Classes="UICell">
-                        <Button Classes="primary" Content="Create Playlist" Command="{Binding CreatePlaylistCommand}"/>
+                        <Button Classes="primary" IsDefault="True" Content="Create Playlist" Command="{Binding CreatePlaylistCommand}"/>
                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
         </Grid>

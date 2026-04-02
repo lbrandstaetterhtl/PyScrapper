@@ -83,5 +83,52 @@ public class AppDataTests
         Assert.Equal(3, AppData.DownloadedMedias.Count);
         Assert.Equal(2, AppData.PlayableMedias.Count);
     }
+
+    [Fact]
+    public void MediaAlreadyExists_ExistingFilePath_ReturnsTrue()
+    {
+        var media = new DownloadedMedia("url", ".mp3", DateTime.Now, "C:\\Downloads\\test.mp3", true, "id1");
+        AppData.AddDownloadedMedia(media);
+
+        var exists = AppData.MediaAlreadyExists("C:\\Downloads\\test.mp3");
+
+        Assert.True(exists);
+    }
+
+    [Fact]
+    public void MediaAlreadyExists_NonExistentFilePath_ReturnsFalse()
+    {
+        var media = new DownloadedMedia("url", ".mp3", DateTime.Now, "C:\\Downloads\\test.mp3", true, "id1");
+        AppData.AddDownloadedMedia(media);
+
+        var exists = AppData.MediaAlreadyExists("C:\\Downloads\\nonexistent.mp3");
+
+        Assert.False(exists);
+    }
+
+    [Fact]
+    public void MediaAlreadyExists_EmptyCollection_ReturnsFalse()
+    {
+        var exists = AppData.MediaAlreadyExists("C:\\Downloads\\test.mp3");
+
+        Assert.False(exists);
+    }
+
+    [Fact]
+    public void MediaAlreadyExists_MultipleMedias_CorrectlyIdentifies()
+    {
+        var m1 = new DownloadedMedia("url1", ".mp3", DateTime.Now, "C:\\Downloads\\song1.mp3", true, "id1");
+        var m2 = new DownloadedMedia("url2", ".mp4", DateTime.Now, "C:\\Downloads\\video.mp4", false, "id2");
+        var m3 = new DownloadedMedia("url3", ".mp3", DateTime.Now, "C:\\Downloads\\song2.mp3", true, "id3");
+
+        AppData.AddDownloadedMedia(m1);
+        AppData.AddDownloadedMedia(m2);
+        AppData.AddDownloadedMedia(m3);
+
+        Assert.True(AppData.MediaAlreadyExists("C:\\Downloads\\song1.mp3"));
+        Assert.True(AppData.MediaAlreadyExists("C:\\Downloads\\video.mp4"));
+        Assert.True(AppData.MediaAlreadyExists("C:\\Downloads\\song2.mp3"));
+        Assert.False(AppData.MediaAlreadyExists("C:\\Downloads\\nonexistent.mp3"));
+    }
 }
 
