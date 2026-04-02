@@ -113,6 +113,12 @@ public partial class MainWindow : Window
                 if (!result) return;
 
                 AppData.RemoveDownloadedMedia(media);
+                var playlistContained = AppData.Playlists.Where(p => p.MediaIds.Contains(media.Id)).ToList();
+
+                foreach (var playlist in playlistContained)
+                {
+                    playlist.RemoveMedia(media.Id);
+                }
 
                 var log = new Massage("Media removed from the list: " + media.Url, DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);

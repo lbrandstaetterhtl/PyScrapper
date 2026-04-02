@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using Avalonia.Platform.Storage;
@@ -23,14 +24,17 @@ public static class AppData
     public static string DataPath { get; set; } =  Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "data");
     public static string AssetPath { get; set; } = Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets");
     public static Settings Settings = new();
-    public static List<FilePickerFileType> FileTypes = [new FilePickerFileType("Media Files")
-    {
-        Patterns = [
-            "*.mp4",
-            "*.mp3",
-            "*.wav"
-        ]
-    }];
+    public static readonly List<FilePickerFileType> FileTypes = 
+    [
+        new ("Media Files") 
+        { 
+            Patterns = ["*.mp4", "*.mp3", "*.wav"] 
+        },
+        new ("Video Files")
+        {
+            Patterns = ["*.mp4"] 
+        }
+    ];
     
     /// <summary>
     /// Adds a downloaded media to the DownloadedMedias collection and, if it's playable, also to the PlayableMedias collection.
@@ -102,16 +106,31 @@ public static class AppData
 /// <param name="downloadPath"></param>
 /// <param name="isPlayable"></param>
 /// <param name="identifier"></param>
-public class DownloadedMedia(string url, string mediaType, DateTime downloadedAt, string downloadPath, bool isPlayable, string identifier)
+public partial class DownloadedMedia(string url, string mediaType, DateTime downloadedAt, string downloadPath, bool isPlayable, string identifier) : ObservableObject
 {
-    public int Id { get; set; }
-    public string Identifier { get; set; } = identifier;
-    public string Title { get; set; } = string.Empty;
-    public string Url { get; set; } = url;
-    public string MediaType { get; set; } = mediaType;
-    public DateTime DownloadedAt { get; set; } = downloadedAt;
-    public string DownloadPath { get; set; } = downloadPath;
-    public bool IsPlayable { get; set; } = isPlayable;
+    [ObservableProperty]
+    private int _id;
+    
+    [ObservableProperty]
+    private string _identifier = identifier;
+    
+    [ObservableProperty]
+    private string _title = string.Empty;
+    
+    [ObservableProperty]
+    private string _url = url;
+    
+    [ObservableProperty]
+    private string _mediaType = mediaType;
+    
+    [ObservableProperty]
+    private DateTime _downloadedAt = downloadedAt;
+    
+    [ObservableProperty]
+    private string _downloadPath = downloadPath;
+
+    [ObservableProperty]
+    private bool _isPlayable = isPlayable;
 
     private static readonly AppLogger _logger = new();
     
@@ -152,7 +171,7 @@ public class Playlist(List<int> mediaIds, string name, string description)
     public string? Description { get; set; } = description;
     public List<int> MediaIds { get; set; } = mediaIds;
     public List<int> PlayableMediaIds { get; set; } = new();
-    public int Count { get; set; } = mediaIds.Count;
+    public int Count => MediaIds.Count;
     
     /// <summary>
     /// Sets the id property to the highest existing id in the provided collection of playlists plus one, ensuring a unique identifier for each playlist item.
@@ -199,7 +218,6 @@ public class Playlist(List<int> mediaIds, string name, string description)
             var index = AppData.Playlists.IndexOf(this);
             
             MediaIds.Add(mediaId);
-            Count = MediaIds.Count;
             
             AppData.Playlists.Insert(index, this);
             AppData.Playlists.RemoveAt(index+1);
@@ -219,7 +237,6 @@ public class Playlist(List<int> mediaIds, string name, string description)
             var index = AppData.Playlists.IndexOf(this);
             
             MediaIds.Remove(mediaId);
-            Count = MediaIds.Count;
             
             AppData.Playlists.Insert(index, this);
             AppData.Playlists.RemoveAt(index+1);

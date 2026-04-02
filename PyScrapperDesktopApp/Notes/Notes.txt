@@ -5,32 +5,3 @@ Next steps:
 add Archive window
 
 https://deepwiki.com/videolan/libvlcsharp/2.3-best-practices-and-common-patterns
-ffmpeg linux version isnt working
-vlc on linux isnt working
-------------------------------------------------------------------------------------------------
-!!!!!!!!!!!!!!!!!!!learn and research for FilePicker und FolderPicker in avalonia!!!!!!!!!!!!!!! 
-------------------------------------------------------------------------------------------------
-
-
-design idea:     <Hover >
-                 <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
-                     <Setter Property="Background">
-                         <Setter.Value>
-                             <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                                 <GradientStop Color="#5a9ef5" Offset="0"/>
-                                 <GradientStop Color="#7ab8ff" Offset="1"/>
-                             </LinearGradientBrush>
-                         </Setter.Value>
-                     </Setter>
-                 </Style>
-                 <Pressed >
-                 <Style Selector="Button.primary:pressed /template/ ContentPresenter">
-                     <Setter Property="Background">
-                         <Setter.Value>
-                             <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                                 <GradientStop Color="#2255a8" Offset="0"/>
-                                 <GradientStop Color="#3a70c0" Offset="1"/>
-                             </LinearGradientBrush>
-                         </Setter.Value>
-                     </Setter>
-                 </Style> 

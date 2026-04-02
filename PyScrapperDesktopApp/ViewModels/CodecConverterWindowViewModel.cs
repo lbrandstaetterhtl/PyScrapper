@@ -173,9 +173,6 @@ public partial class CodecConverterWindowViewModel : ObservableObject
                 ProgressValue = 100;
                 StatusMessage = "Conversion finished.";
             });
-
-            var messageBox = new MessageBox("Conversion completed successfully!");
-            await messageBox.ShowDialog(_window);
             
             var log = new Massage("Conversion completed successfully!", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);

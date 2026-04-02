@@ -21,7 +21,9 @@
                                 <StackPanel Classes="UICell" Width="400" Height="50">
                                         <TextBlock Text="Server Health Status: " Classes="UILabel"/>
                                         <TextBlock Text="{Binding ConnectionStatus}" Classes="UIValue"/>
-                                        <Button Content="{Binding ServerStatusIcon}" IsEnabled="False" Background="Transparent"/>
+                                        <Grid RowDefinitions="25"  ColumnDefinitions="25">
+                                                <Image Source="{Binding ServerStatusIcon}"/>
+                                        </Grid>
                                 </StackPanel>
                         </Border>
                         

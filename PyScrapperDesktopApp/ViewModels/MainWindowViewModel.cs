@@ -237,15 +237,24 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task ConvertCodec()
     {
         
-        var inputWindow = new InputWindow("Enter a file to convert:");
-        var inputPath = await inputWindow.ShowDialog<string>(_window);
+        var toplevel = TopLevel.GetTopLevel(_window);
+        var storageService = new StorageService(toplevel!);
+        var files = await storageService.OpenFilePickerAsync(new FilePickerOpenOptions()
+        {   
+            Title = "Select a media file to convert",
+            AllowMultiple = false,
+            FileTypeFilter = AppData.FileTypes.Where(ft => ft.Name == "Video Files").ToList()
+        });
+        if (files.Count < 0) return;
+
+        string path = files[0].Path.LocalPath;
         
-        if (inputPath == null)
+        if (path == null)
         {
             return;
         }
         
-        if (!File.Exists(inputPath))
+        if (!File.Exists(path))
         {
             var messageBox = new MessageBox("File does not exist. Please check the path and try again.");
             await messageBox.ShowDialog(_window);
@@ -259,14 +268,19 @@ public partial class MainWindowViewModel : ObservableObject
         if (!confirmationResult)
             return;
         
-        var outputPath = CodecConverterWindowViewModel.SetOutputPath(inputPath);
-        var codecConverterWindow = new CodecConverterWindow(inputPath: inputPath, outputPath: outputPath);
+        var outputPath = CodecConverterWindowViewModel.SetOutputPath(path);
+        var codecConverterWindow = new CodecConverterWindow(inputPath: path, outputPath: outputPath);
         bool finished = await codecConverterWindow.ShowDialog<bool>(_window);
 
         if (!finished)
         {
-            var log = new Massage($"Codec conversion for file '{inputPath}' was cancelled by user.", DateTime.Now, "WARNING");
+            var log = new Massage($"Codec conversion for file '{path}' was cancelled.", DateTime.Now, "WARNING");
             new AppLogger().LogNewMassage(log);
+        }
+        else
+        {
+            var messageBox = new MessageBox("Conversion completed successfully. The converted file has been added to the media list.");
+            await messageBox.ShowDialog(_window);
         }
     }
 
@@ -295,6 +309,7 @@ public partial class MainWindowViewModel : ObservableObject
                 App.ScanFolder(folderPath, out var diff);
                 
                 var messageBox = new MessageBox($"Scan completed. {diff} new media items were added to the list.");
+                await  messageBox.ShowDialog(_window);
             }
         }
         catch (Exception ex)

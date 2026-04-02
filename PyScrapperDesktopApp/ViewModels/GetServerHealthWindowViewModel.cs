@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
@@ -52,14 +53,9 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     
     [ObservableProperty]
     private string _lastHealthCheckTime = "N/A";
-    
+
     [ObservableProperty]
-    private Image _serverStatusIcon = new Image
-    {
-        Source = new Avalonia.Media.Imaging.Bitmap(Path.Combine(AppData.AssetPath, "cross.png")),
-        Width = 16,
-        Height = 16
-    };
+    private Bitmap _serverStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, "load.png"));
     
     public event Action? CloseRequested;
     
@@ -99,12 +95,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
                     {
                         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                         {
-                            ServerStatusIcon = new Image
-                            {
-                                Source = health.Ok ? new Avalonia.Media.Imaging.Bitmap(Path.Combine(AppData.AssetPath, "check.png")) : new Avalonia.Media.Imaging.Bitmap(Path.Combine(AppData.AssetPath, "cross.png")),
-                                Width = 16,
-                                Height = 16
-                            };
+                            ServerStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, health.Ok ? "check.png" : "cross.png"));
                             ConnectionStatus = health.Ok ? "Server is reachable" : "Server is not reachable";
                             UptimeFormatted = TimeSpan.FromSeconds(health.UptimeSeconds).ToString(@"dd\.hh\:mm\:ss");
                             MemoryFormatted = $"{health.MemoryMb} MB";
@@ -143,12 +134,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     /// </summary>
     private void SetOffline()
     {
-        ServerStatusIcon = new Image
-        {
-            Source = new Avalonia.Media.Imaging.Bitmap(Path.Combine(AppData.AssetPath, "cross.png")),
-            Width = 16,
-            Height = 16
-        };
+        ServerStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, "cross.png"));
         ConnectionStatus = "Server is not reachable";
         UptimeFormatted = "N/A";
         MemoryFormatted = "N/A";
