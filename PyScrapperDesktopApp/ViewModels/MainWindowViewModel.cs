@@ -245,7 +245,8 @@ public partial class MainWindowViewModel : ObservableObject
             AllowMultiple = false,
             FileTypeFilter = AppData.FileTypes.Where(ft => ft.Name == "Video Files").ToList()
         });
-        if (files.Count < 0) return;
+        
+        if (files.Count <= 0) return;
 
         string path = files[0].Path.LocalPath;
         
