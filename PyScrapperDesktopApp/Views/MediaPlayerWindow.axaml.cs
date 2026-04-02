@@ -92,23 +92,15 @@ public partial class MediaPlayerWindow : Window
             if (_playButtonCounter == 0)
             {
                 vm.Pause();
-                PlayButton.Content = "Play";
+                PlayButton.Content = vm.PlayIcon;
                 _playButtonCounter++;
             }
             else
             {
                 vm.Play();
-                PlayButton.Content = "Pause";
+                PlayButton.Content = vm.PauseIcon;
                 _playButtonCounter--;
             }
-        };
-        
-        StopButton.Click += (s, e) =>
-        {
-            if (DataContext is not MediaPlayerWindowViewModel vm) return;
-            vm.Pause();
-            PlayButton.Content = "Play";
-            _playButtonCounter = 1;
         };
     }
     

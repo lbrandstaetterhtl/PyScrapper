@@ -1,7 +1,9 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -46,6 +48,40 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _hasPrevious;
+
+    [ObservableProperty] 
+    private Bitmap _volumeIcon = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "volume.png"));
+    
+    [ObservableProperty]
+    private Bitmap _songIcon = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "sound-wave.png"));
+
+    [ObservableProperty] private Image _playIcon = new Image
+    {
+        Source = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "play-button.png"))
+    };
+
+    [ObservableProperty] private Image _forwardIcon = new Image
+    {
+        Source = new Bitmap(
+            Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "forward-button.png"))
+    };
+
+    [ObservableProperty] private Image _backIcon = new Image
+    {
+        Source = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "rewind-button.png"))
+    };
+
+    [ObservableProperty] private Image _pauseIcon = new Image
+    {
+        Source = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "pause.png"))
+    };
+
+    [ObservableProperty] private Image _shuffleIcon = new Image
+    {
+        Source = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "shuffle.png")),
+        Width = 30,
+        Height = 30
+    };
     
     public bool VolumeSliderMoving { get; set; }
     public bool SeekSliderMoving { get; set; }

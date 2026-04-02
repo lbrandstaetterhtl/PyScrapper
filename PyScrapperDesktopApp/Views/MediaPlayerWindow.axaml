@@ -22,25 +22,31 @@
                         <avalonia:VideoView Grid.Row="1" x:Name="VideoView"  Height="400" Width="600" IsVisible="{Binding HasVideo}" Margin="10"/>
                 </Grid>
                 
-                <Slider x:Name="SeekSlider" Grid.Row="1" Grid.ColumnSpan="3"
-                        Minimum="0" Maximum="{Binding DurationSeconds}" 
-                        Value="{Binding PositionSeconds, Mode=OneWay}"/>
+                <StackPanel Grid.Row="1" Classes="UICell">
+                        <Image Source="{Binding SongIcon}" Classes="Icon"/>
+                        
+                        <Slider x:Name="SeekSlider"
+                                Minimum="0" Maximum="{Binding DurationSeconds}" 
+                                Value="{Binding PositionSeconds, Mode=OneWay}" Classes="MediaPlayer"/>
+                </StackPanel>
                 
                 <StackPanel Grid.Row="2" Orientation="Horizontal" Classes="UICell">
                         <TextBlock Text="{Binding CurrentlyText}" Classes="UILabel"/>
-                        <Button Content="Play Previous" Command="{Binding PlayPreviousCommand}" IsEnabled="{Binding HasPrevious}" IsVisible="{Binding IsPlaylistMode}" Classes="primary"/>
-                        <Button x:Name="PlayButton" Content="Pause" Classes="primary"/>
-                        <Button Content="Stop" x:Name="StopButton" Command="{Binding StopCommand}" Classes="primary"/>
-                        <Button Content="Play Next" Command="{Binding PlayNextCommand}" IsVisible="{Binding IsPlaylistMode}" IsEnabled="{Binding HasNext}" Classes="primary"/>
-                        <CheckBox Content="Shuffle" IsChecked="{Binding IsShuffleEnabled}" IsVisible="{Binding IsPlaylistMode}"/>
+                        <Button Content="{Binding BackIcon}" Command="{Binding PlayPreviousCommand}" IsEnabled="{Binding HasPrevious}" IsVisible="{Binding IsPlaylistMode}" Classes="Icon"/>
+                        <Button x:Name="PlayButton" Content="{Binding PauseIcon}" Classes="Icon"/>
+                        <Button Content="{Binding ForwardIcon}" Command="{Binding PlayNextCommand}" IsVisible="{Binding IsPlaylistMode}" IsEnabled="{Binding HasNext}" Classes="Icon"/>
+                        <CheckBox Content="{Binding ShuffleIcon}" IsChecked="{Binding IsShuffleEnabled}" IsVisible="{Binding IsPlaylistMode}"/>
                         <TextBlock Text="{Binding DurationText}" Classes="UILabel"/>
                 </StackPanel>
                 
-                
-                <Slider Grid.Row="3" x:Name="VolumeSlider"
-                        Minimum="0" Maximum="100"
-                        Value="{Binding Volume, Mode=TwoWay}"
-                        VerticalAlignment="Center"/>
+                <StackPanel Grid.Row="3" Classes="UICell">
+                        <Image Source="{Binding VolumeIcon}" Classes="Icon"/>
+                        
+                        <Slider x:Name="VolumeSlider"
+                                Minimum="0" Maximum="100"
+                                Value="{Binding Volume, Mode=TwoWay}"
+                                VerticalAlignment="Center" Classes="MediaPlayer"/>
+                </StackPanel>
                 
                 <StackPanel Grid.Row="4" Classes="UICell">
                         <Button Content="Increase Volume" Command="{Binding IncreaseVolumeCommand}" Classes="primary"/>

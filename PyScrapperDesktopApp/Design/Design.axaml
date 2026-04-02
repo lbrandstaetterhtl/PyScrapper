@@ -14,6 +14,30 @@
         <Setter Property="Cursor"              Value="Hand"/>
     </Style>
     
+    <Style Selector="Button.Icon">
+        <Setter Property="Background"          Value="Transparent"/>
+        <Setter Property="BorderBrush"         Value="Transparent"/>
+        <Setter Property="BorderThickness"     Value="0"/>
+        <Setter Property="Padding"             Value="5"/>
+        <Setter Property="Margin"              Value="5"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Cursor"              Value="Hand"/>
+        <Setter Property="MaxHeight" Value="30"/>
+        <Setter Property="MaxWidth" Value="30"/>
+    </Style>
+    
+    <Style Selector="CheckBox.Icon">
+        <Setter Property="Background"          Value="Transparent"/>
+        <Setter Property="BorderBrush"         Value="Transparent"/>
+        <Setter Property="BorderThickness"     Value="0"/>
+        <Setter Property="Padding"             Value="5"/>
+        <Setter Property="Margin"              Value="5"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Cursor"              Value="Hand"/>
+        <Setter Property="MaxHeight" Value="30"/>
+        <Setter Property="MaxWidth" Value="30"/>
+    </Style>
+    
     <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource SurfaceGradientPointerOver}"/>
         <Setter Property="CornerRadius" Value="8"/>
@@ -178,6 +202,17 @@
     
     <Style Selector="ScrollViewer.RootScrollViewer">
         <Setter Property="Background" Value="{DynamicResource BackgroundGradient}"/>
+    </Style>
+    
+    <Style Selector="Image.Icon">
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Margin" Value="5"/>
+    </Style>
+    
+    <Style Selector="Slider.MediaPlayer">
+        <Setter Property="Margin" Value="5"/>
+        <Setter Property="Width" Value="400"/>
     </Style>
         
     <Styles.Resources>
