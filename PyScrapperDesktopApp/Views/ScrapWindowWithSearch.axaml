@@ -17,7 +17,7 @@
         MaxHeight="600"
         Title="PyScrapperDesktopApp">
         
-        <Grid>
+        <Grid Classes="RootGrid">
     
                 <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>  

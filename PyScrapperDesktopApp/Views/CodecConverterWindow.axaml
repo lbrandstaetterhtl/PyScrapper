@@ -11,7 +11,7 @@
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
         
-        <Grid RowDefinitions="Auto, Auto, Auto">
+        <Grid RowDefinitions="Auto, Auto, Auto" Classes="RootGrid">
             <StackPanel Grid.Row="0" Classes="UICell">
                 <TextBlock Text="{Binding InputFilePath}" Classes="UILabel"/>
                 <TextBlock Text="{Binding StatusMessage}" Classes="UILabel"/>

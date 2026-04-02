@@ -16,7 +16,7 @@
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
     
-        <Grid RowDefinitions="* , Auto">
+        <Grid RowDefinitions="* , Auto" Classes="RootGrid">
                 <TextBlock Text="{Binding Message}" Classes="UILabel" TextWrapping="Wrap" Grid.Row="0"/>
                 
                 <StackPanel Grid.Row="1" Classes="UICell">

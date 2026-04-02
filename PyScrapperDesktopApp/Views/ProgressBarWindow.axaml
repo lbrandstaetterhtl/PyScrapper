@@ -15,7 +15,7 @@
         SizeToContent="WidthAndHeight"
         Title="PyScrapperDesktopApp">
         
-        <StackPanel Margin="20" Spacing="12">
+        <StackPanel Margin="20" Spacing="12" Classes="RootPanel">
 
                 <TextBlock Text="{Binding Status}" Classes="UILabel"/>
 

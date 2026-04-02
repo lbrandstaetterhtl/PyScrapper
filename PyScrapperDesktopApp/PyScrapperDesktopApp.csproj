@@ -38,17 +38,4 @@
     <ItemGroup>
       <Folder Include="logs\" />
     </ItemGroup>
-
-    <ItemGroup>
-      <Compile Update="Views\GetServerHealthWindow.axaml.cs">
-        <DependentUpon>GetServerHealthWindow.axaml</DependentUpon>
-      </Compile>
-      <Compile Update="Views\PlaylistDetailsWindow.axaml.cs">
-        <DependentUpon>PlaylistDetailsWindow.axaml</DependentUpon>
-      </Compile>
-    </ItemGroup>
-
-    <ItemGroup>
-      <AvaloniaXaml Remove="Views\CodecConverter.axaml" />
-    </ItemGroup>
 </Project>

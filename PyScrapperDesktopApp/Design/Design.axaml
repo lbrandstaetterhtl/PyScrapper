@@ -33,6 +33,10 @@
         <Setter Property="Background" Value="{DynamicResource SurfaceBrushPointerOver}"/>
     </Style>
     
+    <Style Selector="TextBox.UI:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrushPointerOver}"/>
+    </Style>
+    
     <Style Selector="ComboBox.UI">
         <Setter Property="Margin"              Value="8"/>
         <Setter Property="CornerRadius"        Value="8"/>
@@ -163,6 +167,18 @@
     <Style Selector="NumericUpDown /template/ TextBox#PART_TextBox.spinRight /template/ TextPresenter#PART_TextPresenter">
         <Setter Property="TextElement.Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
+    
+    <Style Selector="Grid.RootGrid">
+        <Setter Property="Background" Value="{DynamicResource BackgroundGradient}"/>
+    </Style>
+    
+    <Style Selector="StackPanel.RootPanel">
+        <Setter Property="Background" Value="{DynamicResource BackgroundGradient}"/>
+    </Style>
+    
+    <Style Selector="ScrollViewer.RootScrollViewer">
+        <Setter Property="Background" Value="{DynamicResource BackgroundGradient}"/>
+    </Style>
         
     <Styles.Resources>
         <ResourceDictionary>
@@ -220,6 +236,13 @@
                         <GradientStop Color="#253060"     Offset="0.7"/>
                         <GradientStop Color="Transparent" Offset="1"/>
                     </LinearGradientBrush>
+                    
+                    <LinearGradientBrush x:Key="BackgroundGradient"
+                                         StartPoint="100%,0%"
+                                         EndPoint="0%,100%">
+                        <GradientStop Color="#03061c" Offset="0.3"/>
+                        <GradientStop Color="#091a2d" Offset="0.7"/>
+                    </LinearGradientBrush>
                 </ResourceDictionary>
                 
                 <ResourceDictionary x:Key="Light">
@@ -273,6 +296,13 @@
                         <GradientStop Color="#f7c948"     Offset="0.5"/>
                         <GradientStop Color="#ddddc8"     Offset="0.7"/>
                         <GradientStop Color="Transparent" Offset="1"/>
+                    </LinearGradientBrush>
+                    
+                    <LinearGradientBrush x:Key="BackgroundGradient"
+                        StartPoint="100%,0%"
+                        EndPoint="0%,100%">
+                        <GradientStop Color="#bbcf0e" Offset="0.3"/>
+                        <GradientStop Color="#687303" Offset="0.7"/>
                     </LinearGradientBrush>
                 </ResourceDictionary>
 

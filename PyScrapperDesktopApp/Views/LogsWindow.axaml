@@ -12,7 +12,7 @@
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/PyScrapperLogo.ico">
         
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Classes="RootScrollViewer">
         
         <Grid RowDefinitions="Auto, Auto, *" Margin="10">
             

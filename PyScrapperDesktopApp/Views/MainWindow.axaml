@@ -15,7 +15,7 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <Grid>
+    <Grid Classes="RootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -85,11 +85,11 @@
                             </Border.ContextFlyout>
                             
                             <StackPanel Classes="UICell">
-                            <TextBlock Text="{Binding Id}" Classes="UIValue"/>
-                            <TextBlock Text="{Binding Title}" Classes="UIValue"/>
-                            <TextBlock Text="{Binding MediaType}" Classes="UIValue"/>
-                            <TextBlock Text="{Binding DownloadedAt}" Classes="UIValue"/>
-                            <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}" Classes="IsPlayable"/>
+                            <TextBlock Text="{Binding Id}" Classes="UILabel"/>
+                            <TextBlock Text="{Binding Title}" Classes="UILabel"/>
+                            <TextBlock Text="{Binding MediaType}" Classes="UILabel"/>
+                            <TextBlock Text="{Binding DownloadedAt}" Classes="UILabel"/>
+                            <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}" Classes="UILabel"/>
                         </StackPanel>
                         </Border>
                     </DataTemplate>
@@ -112,9 +112,9 @@
                             </Border.ContextFlyout>
                             
                             <StackPanel Classes="UICell">
-                                <TextBlock Text="{Binding Name}" Classes="UIValue"/>
-                                <TextBlock Text="{Binding Description}" Classes="UIValue"/>
-                                <TextBlock Text="{Binding Count}" Classes="UIValue"/>
+                                <TextBlock Text="{Binding Name}" Classes="UILabel"/>
+                                <TextBlock Text="{Binding Description}" Classes="UILabel"/>
+                                <TextBlock Text="{Binding Count}" Classes="UILabel"/>
                             </StackPanel>
                         </Border>
                     </DataTemplate>

@@ -13,7 +13,7 @@
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
         
-        <StackPanel>
+        <StackPanel Classes="RootPanel" Spacing="10">
                 
                 <StackPanel Orientation="Horizontal">
                 <StackPanel Orientation="Horizontal" Classes="UICell">

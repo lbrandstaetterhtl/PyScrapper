@@ -13,7 +13,7 @@
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
         
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Classes="RootScrollViewer">
                 <StackPanel Margin="20" Spacing="10">
                         <Border Classes="Seperator"/>
                         
