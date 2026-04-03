@@ -7,9 +7,9 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.LogsWindow"
         x:DataType="vm:GetServerHealthWindowViewModel"
-        SizeToContent="WidthAndHeight"
-        MaxHeight="400"
-        MaxWidth="600"
+        SizeToContent="Manual"
+        Height="500"
+        Width="800"
         WindowStartupLocation="CenterOwner"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
@@ -17,22 +17,23 @@
         Icon="/Assets/PyScrapperLogo.ico">
         
         <Grid RowDefinitions="35,*">
-        
                 <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
-        
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Classes="RootScrollViewer">
-        
-        <Grid RowDefinitions="Auto, Auto, *" Margin="10">
-            
-                <TextBlock Grid.Row="0" x:Name="Label" HorizontalAlignment="Left" Classes="UILabel"/>
                 
-                <Border Grid.Row="1" Classes="Seperator"/>
+                <Grid Grid.Row="1" RowDefinitions="Auto, *" Classes="RootGrid">
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="10">
+                                
+                                <Grid RowDefinitions="Auto, Auto, *" Margin="10">
+                                        <TextBlock Grid.Row="0" x:Name="Label" HorizontalAlignment="Left" Classes="UILabel"/>
                 
-                <TextBlock Grid.Row="2" x:Name="Logs" TextWrapping="Wrap" Classes="UIValue"/>
-                
-        </Grid>
-                
-        </ScrollViewer>
+                                        <Border Grid.Row="1" Classes="Seperator"/>
+                                        
+                                        <Border Grid.Row="2" Classes="SolidCard">
+                        
+                                                <TextBlock x:Name="Logs" TextWrapping="Wrap" Classes="UIValue"/>
+                                        </Border>
+                                </Grid>
+                        </ScrollViewer>
+                </Grid>
         </Grid>
 
 </Window>

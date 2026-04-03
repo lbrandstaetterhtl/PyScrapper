@@ -23,7 +23,7 @@
         
         <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
         
-    <Grid Grid.Row="1" RowDefinitions="Auto, Auto, Auto" Margin="10" Classes="RootGrid">
+    <Grid Grid.Row="1" RowDefinitions="Auto, Auto, Auto" Classes="RootGrid">
                 <TextBlock Grid.Row="0" Text="{Binding Massage}" Classes="UILabel"/>
                 
                 <TextBox Grid.Row="1" Text="{Binding InputText, Mode=TwoWay}" Classes="UI"/>

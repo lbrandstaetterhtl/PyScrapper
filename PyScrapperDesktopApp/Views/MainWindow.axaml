@@ -110,7 +110,7 @@
                             <TextBlock Text="{Binding Title}" Classes="UILabel" HorizontalAlignment="Stretch" Width="450" MaxWidth="450"/>
                             <TextBlock Text="{Binding MediaType}" Classes="UILabel" HorizontalAlignment="Stretch" Width="70" MaxWidth="70"/>
                             <TextBlock Text="{Binding DownloadedAt}" Classes="UILabel" HorizontalAlignment="Stretch" Width="200" MaxWidth="200"/>
-                            <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}" Classes="UILabel" HorizontalAlignment="Stretch" Width="130" MaxWidth="130"/>
+                            <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}" Classes="IsPlayable" HorizontalAlignment="Stretch" Width="130" MaxWidth="130"/>
                             </StackPanel>
                         </Border>
                     </DataTemplate>

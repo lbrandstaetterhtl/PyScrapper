@@ -14,6 +14,9 @@
         MaxHeight="400"
         MaxWidth="600"
         WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
     

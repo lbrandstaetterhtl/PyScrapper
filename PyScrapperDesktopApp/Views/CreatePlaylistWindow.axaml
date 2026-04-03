@@ -37,8 +37,8 @@
                         <ListBox.ItemTemplate>
                                 <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Title}" Classes="UIValue"/>
-                                                <TextBlock Text="{Binding DownloadPath}" Classes="UIValue"/>
+                                                <TextBlock Text="{Binding Title}" Classes="UILabel"/>
+                                                <TextBlock Text="{Binding DownloadPath}" Classes="UILabel"/>
                                         </StackPanel>
                                 </DataTemplate>
                         </ListBox.ItemTemplate>
