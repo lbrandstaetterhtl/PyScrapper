@@ -10,6 +10,7 @@ public partial class SunoScrapWindow : Window
         if (Design.IsDesignMode) return;
         
         InitializeComponent();
+        TitleBar.Initialize(this);
         
         var vm = new SunoScrapWindowViewModel(this);
         

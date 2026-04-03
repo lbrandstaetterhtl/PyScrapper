@@ -1,0 +1,35 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PyScrapperDesktopApp.Views.Controls.TitleBarControl">
+
+    <Grid Height="35">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Orientation="Horizontal" 
+                    VerticalAlignment="Center" Margin="10">
+            <Image Source="/Assets/PyScrapperLogo.ico" Width="16" Height="16"/>
+            <TextBlock Text="PyScrapper" Margin="8,0,0,0"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+        </StackPanel>
+
+        <Panel Grid.Column="1" Background="Transparent"
+               PointerPressed="TitleBarDrag"/>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10">
+            <Button Click="MinimizeClick" Classes="TitleBarBtn">
+                <Image x:Name="MinimizeIcon" Width="14" Height="14"/>
+            </Button>
+            <Button Click="MaximizeClick" Classes="TitleBarBtn">
+                <Image x:Name="MaximizeIcon" Width="14" Height="14"/>
+            </Button>
+            <Button Click="CloseClick"    Classes="TitleBarBtn TitleBarClose">
+                <Image x:Name="CloseIcon" Width="14" Height="14"/>
+            </Button>
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -3,15 +3,23 @@
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.CodecConverterWindow"
         x:DataType="vm:CodecConverterWindowViewModel"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
+    
+    <Grid RowDefinitions="35,*">
         
-        <Grid RowDefinitions="Auto, Auto, Auto" Classes="RootGrid">
+        <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+        
+    <Grid Grid.Row="1" RowDefinitions="Auto, Auto, Auto" Classes="RootGrid">
             <StackPanel Grid.Row="0" Classes="UICell">
                 <TextBlock Text="{Binding InputFilePath}" Classes="UILabel"/>
                 <TextBlock Text="{Binding StatusMessage}" Classes="UILabel"/>
@@ -24,6 +32,6 @@
                 <Button Classes="primary" IsDefault="True" Content="Start Conversion" Command="{Binding StartConversionCommand}" IsEnabled="{Binding StartButtonEnabled}"/>
                 <Button Classes="primary" Content="Cancel" Command="{Binding CancelConversionCommand}"/>
             </StackPanel>
-        </Grid>
-              
+    </Grid>
+    </Grid>
 </Window>

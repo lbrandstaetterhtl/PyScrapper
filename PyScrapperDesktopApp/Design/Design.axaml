@@ -1,7 +1,5 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-        
-    <!-- THIS IS AI GENERATED, HAS TO BE IMPROVED AND REFACTORED, BUT IT'S A GOOD STARTING POINT FOR A CONSISTENT DESIGN -->
     
     <Style Selector="Button.primary">
         <Setter Property="Background"          Value="{DynamicResource SurfaceGradient}"/>
@@ -12,6 +10,13 @@
         <Setter Property="FontWeight"          Value="SemiBold"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="Cursor"              Value="Hand"/>
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter.Value>
+        </Setter>
     </Style>
     
     <Style Selector="Button.Icon">
@@ -94,8 +99,16 @@
         <Setter Property="CornerRadius"        Value="8"/>
         <Setter Property="Margin"              Value="5"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="Opacity" Value="0.8"/>
+        <Setter Property="Opacity" Value="1"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter.Value>
+        </Setter>
     </Style>
     
     <Style Selector="MenuItem">
@@ -104,6 +117,7 @@
     
     <Style Selector="Border.CellInteractive:pointerover">
         <Setter Property="Background" Value="{DynamicResource SurfaceGradientPointerOver}"/>
+        <Setter Property="Opacity" Value="0.8"/>
     </Style>
     
     <Style Selector="Border.Cell">
@@ -205,14 +219,36 @@
     </Style>
     
     <Style Selector="Image.Icon">
-        <Setter Property="Width" Value="32"/>
-        <Setter Property="Height" Value="32"/>
+        <Setter Property="Width" Value="30"/>
+        <Setter Property="Height" Value="30"/>
         <Setter Property="Margin" Value="5"/>
     </Style>
     
     <Style Selector="Slider.MediaPlayer">
         <Setter Property="Margin" Value="5"/>
         <Setter Property="Width" Value="400"/>
+    </Style>
+    
+    <Style Selector="Button.TitleBarBtn">
+        <Setter Property="Background"      Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground"      Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="Width"           Value="46"/>
+        <Setter Property="Height"          Value="32"/>
+        <Setter Property="CornerRadius"    Value="0"/>
+        <Setter Property="FontSize"        Value="12"/>
+        <Setter Property="Padding"         Value="0"/>
+        <Setter Property="Cursor"          Value="Hand"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Button.TitleBarBtn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="rgba(255,255,255,0.1)"/>
+    </Style>
+
+    <Style Selector="Button.TitleBarClose:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#e81123"/>
     </Style>
         
     <Styles.Resources>
@@ -223,7 +259,7 @@
                     <Color x:Key="BgPrimary">#0d1117</Color>
                     <Color x:Key="BgSecondary">#161b27</Color>
                     <Color x:Key="Surface">#1e2540</Color>
-                    <Color x:Key="BorderColor">#253060</Color>
+                    <Color x:Key="BorderColor">#3b4fa8</Color>
                     <Color x:Key="Accent">#3776d4</Color>
                     <Color x:Key="AccentLight">#5a9ef5</Color>
                     <Color x:Key="TextPrimary">#e8eaf0</Color>
@@ -243,8 +279,8 @@
                     <SolidColorBrush x:Key="SurfaceBrushPointerOver" Color="{StaticResource SurfacePointerOver}"/>
 
                     <LinearGradientBrush x:Key="AccentGradient"
-                                         StartPoint="0%,43%"
-                                         EndPoint="53%,100%">
+                                         StartPoint="0%,0%"
+                                         EndPoint="100%,100%">
                         <GradientStop Color="#2061c3" Offset="0.15"/>
                         <GradientStop Color="#0f3261" Offset="0.75"/>
                     </LinearGradientBrush>
@@ -276,7 +312,14 @@
                                          StartPoint="100%,0%"
                                          EndPoint="0%,100%">
                         <GradientStop Color="#03061c" Offset="0.3"/>
-                        <GradientStop Color="#091a2d" Offset="0.7"/>
+                        <GradientStop Color="#0a294c" Offset="0.7"/>
+                    </LinearGradientBrush>
+                    
+                    <LinearGradientBrush x:Key="TitleBarGradient"
+                                         StartPoint="100%,0%"
+                                         EndPoint="0%,100%">
+                        <GradientStop Color="#0a294c" Offset="0.3"/>
+                        <GradientStop Color="#03061c" Offset="0.7"/>
                     </LinearGradientBrush>
                 </ResourceDictionary>
                 
@@ -284,7 +327,7 @@
                     <Color x:Key="BgPrimary">#fafaf8</Color>
                     <Color x:Key="BgSecondary">#f0f0e8</Color>
                     <Color x:Key="Surface">#ffffff</Color>
-                    <Color x:Key="BorderColor">#ddddc8</Color>
+                    <Color x:Key="BorderColor">#c4ba7e</Color>
                     <Color x:Key="Accent">#f7c948</Color>
                     <Color x:Key="AccentLight">#e6b020</Color>
                     <Color x:Key="TextPrimary">#1a1a2a</Color>
@@ -304,10 +347,10 @@
                     <SolidColorBrush x:Key="SurfaceBrushPointerOver" Color="{StaticResource SurfacePointerOver}"/>
 
                     <LinearGradientBrush x:Key="AccentGradient"
-                                         StartPoint="0%,43%"
-                                         EndPoint="53%,100%">
-                        <GradientStop Color="#b4da43" Offset="0.15"/>
-                        <GradientStop Color="#5c7f17" Offset="0.75"/>
+                                         StartPoint="0%,0%"
+                                         EndPoint="100%,100%">
+                        <GradientStop Color="#f9ea06" Offset="0.15"/>
+                        <GradientStop Color="#bc7407" Offset="0.75"/>
                     </LinearGradientBrush>
 
                     <LinearGradientBrush x:Key="SurfaceGradient"
@@ -334,10 +377,17 @@
                     </LinearGradientBrush>
                     
                     <LinearGradientBrush x:Key="BackgroundGradient"
-                        StartPoint="100%,0%"
-                        EndPoint="0%,100%">
-                        <GradientStop Color="#bbcf0e" Offset="0.3"/>
-                        <GradientStop Color="#687303" Offset="0.7"/>
+                                         StartPoint="100%,0%"
+                                         EndPoint="0%,100%">
+                        <GradientStop Color="#f7db6e" Offset="0.3"/>
+                        <GradientStop Color="#d77308" Offset="0.7"/>
+                    </LinearGradientBrush>
+                    
+                    <LinearGradientBrush x:Key="TitleBarGradient"
+                                         StartPoint="100%,0%"
+                                         EndPoint="0%,100%">
+                        <GradientStop Color="#d77308" Offset="0.3"/>
+                        <GradientStop Color="#f7db6e" Offset="0.7"/>
                     </LinearGradientBrush>
                 </ResourceDictionary>
 

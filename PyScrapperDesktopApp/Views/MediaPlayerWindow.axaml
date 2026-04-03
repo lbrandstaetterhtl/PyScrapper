@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:avalonia="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
         xmlns:vm="clr-namespace:PyScrapperDesktopApp.ViewModels"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.MediaPlayerWindow"
         x:DataType="vm:MediaPlayerWindowViewModel"
@@ -14,16 +15,23 @@
         CanMinimize="False"
         Topmost="True"
         WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
         Title="PyScrapperDesktopApp">
+        
+        <Grid RowDefinitions="35,*">
+        
+                <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
     
-        <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto" Classes="RootGrid">
+        <Grid Grid.Row="1" RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto" Classes="RootGrid">
                 <Grid Grid.Row="0" RowDefinitions="Auto, Auto" Margin="10">
                         <TextBlock Grid.Row="0" Text="{Binding NowPlayingTitle}" Classes="UILabel"/>
                         <avalonia:VideoView Grid.Row="1" x:Name="VideoView"  Height="400" Width="600" IsVisible="{Binding HasVideo}" Margin="10"/>
                 </Grid>
                 
                 <StackPanel Grid.Row="1" Classes="UICell">
-                        <Image Source="{Binding SongIcon}" Classes="Icon"/>
+                        <Image x:Name="SongIcon" Classes="Icon"/>
                         
                         <Slider x:Name="SeekSlider"
                                 Minimum="0" Maximum="{Binding DurationSeconds}" 
@@ -32,15 +40,15 @@
                 
                 <StackPanel Grid.Row="2" Orientation="Horizontal" Classes="UICell">
                         <TextBlock Text="{Binding CurrentlyText}" Classes="UILabel"/>
-                        <Button Content="{Binding BackIcon}" Command="{Binding PlayPreviousCommand}" IsEnabled="{Binding HasPrevious}" IsVisible="{Binding IsPlaylistMode}" Classes="Icon"/>
-                        <Button x:Name="PlayButton" Content="{Binding PauseIcon}" Classes="Icon"/>
-                        <Button Content="{Binding ForwardIcon}" Command="{Binding PlayNextCommand}" IsVisible="{Binding IsPlaylistMode}" IsEnabled="{Binding HasNext}" Classes="Icon"/>
-                        <CheckBox Content="{Binding ShuffleIcon}" IsChecked="{Binding IsShuffleEnabled}" IsVisible="{Binding IsPlaylistMode}"/>
+                        <Button x:Name="PreviousButton" Command="{Binding PlayPreviousCommand}" IsEnabled="{Binding HasPrevious}" IsVisible="{Binding IsPlaylistMode}" Classes="Icon"/>
+                        <Button x:Name="PlayButton" Classes="Icon"/>
+                        <Button x:Name="NextButton" Command="{Binding PlayNextCommand}" IsVisible="{Binding IsPlaylistMode}" IsEnabled="{Binding HasNext}" Classes="Icon"/>
+                        <CheckBox x:Name="ShuffleCheckbox" IsChecked="{Binding IsShuffleEnabled}" IsVisible="{Binding IsPlaylistMode}" Classes="Icon"/>
                         <TextBlock Text="{Binding DurationText}" Classes="UILabel"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Row="3" Classes="UICell">
-                        <Image Source="{Binding VolumeIcon}" Classes="Icon"/>
+                        <Image x:Name="VolumeIcon" Classes="Icon"/>
                         
                         <Slider x:Name="VolumeSlider"
                                 Minimum="0" Maximum="100"
@@ -55,5 +63,5 @@
                 
                 <Button Classes="primary" IsDefault="True" Grid.Row="5" Content="Close" x:Name="CloseButton"/>
         </Grid>
-        
+        </Grid>
 </Window>

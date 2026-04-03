@@ -20,6 +20,7 @@ public partial class MainWindow : Window
         if (Design.IsDesignMode) return;
         
         InitializeComponent();
+        TitleBar.Initialize(this);
 
         _vm = new MainWindowViewModel();
         

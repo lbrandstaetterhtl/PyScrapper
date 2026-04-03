@@ -10,6 +10,7 @@ public partial class CodecConverterWindow : Window
     public CodecConverterWindow(string inputPath, string outputPath)
     {
         InitializeComponent();
+        TitleBar.Initialize(this);
         
         var vm = new CodecConverterWindowViewModel(this);
         DataContext = vm;

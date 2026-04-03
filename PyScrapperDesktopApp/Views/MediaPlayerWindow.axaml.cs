@@ -14,9 +14,14 @@ public partial class MediaPlayerWindow : Window
     {
         
         InitializeComponent();
+        TitleBar.Initialize(this);
         
         var vm = new MediaPlayerWindowViewModel(playlist: playlist);
         DataContext = vm;
+        
+        SetNavigationButtons();
+        SetPlayButton(1);
+        SetImageIcons();
         
         Opened += (s, e) =>
         {
@@ -92,15 +97,23 @@ public partial class MediaPlayerWindow : Window
             if (_playButtonCounter == 0)
             {
                 vm.Pause();
-                PlayButton.Content = vm.PlayIcon;
+                SetPlayButton(_playButtonCounter);
                 _playButtonCounter++;
             }
             else
             {
                 vm.Play();
-                PlayButton.Content = vm.PauseIcon;
+                SetPlayButton(_playButtonCounter);
                 _playButtonCounter--;
             }
+        };
+        
+        App.Current.ActualThemeVariantChanged += (s, e) =>
+        {
+            int counter = _playButtonCounter == 0 ? 1 : 0;
+            SetNavigationButtons();
+            SetPlayButton(counter);
+            SetImageIcons();
         };
     }
     
@@ -117,5 +130,29 @@ public partial class MediaPlayerWindow : Window
         {
             disposable.Dispose();
         }
+    }
+    
+    private void SetNavigationButtons()
+    {
+        if (DataContext is not MediaPlayerWindowViewModel vm) return;
+        PreviousButton.Content = vm.BackIcon;
+        NextButton.Content = vm.ForwardIcon;
+        ShuffleCheckbox.Content = vm.ShuffleIcon;
+    }
+
+    private void SetPlayButton(int counter)
+    {
+        if (DataContext is not MediaPlayerWindowViewModel vm) return;
+        if (counter == 0)
+            PlayButton.Content = vm.PlayIcon;
+        else
+            PlayButton.Content = vm.PauseIcon;
+    }
+
+    private void SetImageIcons()
+    {
+        if (DataContext is not MediaPlayerWindowViewModel vm) return;
+        SongIcon.Source = vm.SongIcon;
+        VolumeIcon.Source = vm.VolumeIcon;
     }
 }

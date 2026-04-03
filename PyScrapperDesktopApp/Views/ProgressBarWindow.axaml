@@ -3,6 +3,7 @@
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.ProgressBarWindow"
         x:DataType="vm:ProgressBarWindowViewModel"
@@ -13,9 +14,16 @@
         CanMaximize="False"
         CanMinimize="False"
         SizeToContent="WidthAndHeight"
-        Title="PyScrapperDesktopApp">
+        Title="PyScrapperDesktopApp"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
+    
+    <Grid RowDefinitions="35,*">
         
-        <StackPanel Spacing="12" Classes="RootPanel">
+        <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+        
+    <StackPanel Grid.Row="1" Spacing="12" Classes="RootPanel">
 
                 <TextBlock Text="{Binding Status}" Classes="UILabel"/>
 
@@ -27,6 +35,6 @@
                              Height="24"/>
                 
                 <Button IsDefault="True" Content="Close" Command="{Binding CloseCommand}"/>
-        </StackPanel>
-        
+    </StackPanel>
+    </Grid>
 </Window>

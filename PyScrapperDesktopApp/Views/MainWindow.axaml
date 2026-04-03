@@ -4,18 +4,26 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:models="clr-namespace:PyScrapperDesktopApp.Models"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         WindowState="Maximized"
         Icon="/Assets/PyScrapperLogo.ico"
-        Title="PyScrapperDesktopApp">
+        Title="PyScrapperDesktopApp"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <Grid Classes="RootGrid">
+    <Grid RowDefinitions="35,*">
+        
+        <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+    
+    <Grid Grid.Row="1" Classes="RootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -24,7 +32,7 @@
         
         <Grid.ColumnDefinitions>*</Grid.ColumnDefinitions>
         
-        <Menu Grid.Row="0">
+        <Menu Grid.Row="0" Margin="5,0">
             <MenuItem Header="Sort">
                 <MenuItem Header="By Title" Command="{Binding SortByNameCommand}"/>
                 <MenuItem Header="By Date" Command="{Binding SortByDateCommand}"/>
@@ -60,10 +68,23 @@
         </Menu>
         
         <ScrollViewer x:Name="DownloadedMediasList" Grid.Row="1" HorizontalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding DownloadedMediaList}">
+            <Grid RowDefinitions="Auto, Auto, *" ColumnDefinitions="1000">
+            <Border Grid.Row="0" Classes="Cell" HorizontalAlignment="Left" Width="1000" MaxWidth="1000">
+                <StackPanel Classes="UICell" Width="800" MaxWidth="800" HorizontalAlignment="Left">
+                    <TextBlock Text="ID" Classes="UILabel" Width="70"/>
+                    <TextBlock Text="Title" Classes="UILabel" Width="450"/>
+                    <TextBlock Text="Type" Classes="UILabel" Width="70"/>
+                    <TextBlock Text="Downloaded At" Classes="UILabel" Width="200"/>
+                    <TextBlock Text="Is Playable" Classes="UILabel" Width="130"/>
+                </StackPanel>
+            </Border>
+            
+                <Border Grid.Row="1" Classes="Seperator" Width="1000"/>
+            
+            <ItemsControl Grid.Row="2" ItemsSource="{Binding DownloadedMediaList}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border DoubleTapped="MediaDoubleClick" Classes="CellInteractive" HorizontalAlignment="Left">
+                        <Border DoubleTapped="MediaDoubleClick" Classes="CellInteractive" HorizontalAlignment="Left" Width="1000" MaxWidth="1000">
                             <Border.ContextFlyout>
                                 <MenuFlyout>
                                     <MenuItem Header="Add To Playlist">
@@ -84,17 +105,18 @@
                                 </MenuFlyout>
                             </Border.ContextFlyout>
                             
-                            <StackPanel Classes="UICell">
-                            <TextBlock Text="{Binding Id}" Classes="UILabel"/>
-                            <TextBlock Text="{Binding Title}" Classes="UILabel"/>
-                            <TextBlock Text="{Binding MediaType}" Classes="UILabel"/>
-                            <TextBlock Text="{Binding DownloadedAt}" Classes="UILabel"/>
-                            <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}" Classes="UILabel"/>
-                        </StackPanel>
+                            <StackPanel Classes="UICell" Width="800" MaxWidth="800" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding Id}" Classes="UILabel" HorizontalAlignment="Stretch" Width="70" MaxWidth="70"/>
+                            <TextBlock Text="{Binding Title}" Classes="UILabel" HorizontalAlignment="Stretch" Width="450" MaxWidth="450"/>
+                            <TextBlock Text="{Binding MediaType}" Classes="UILabel" HorizontalAlignment="Stretch" Width="70" MaxWidth="70"/>
+                            <TextBlock Text="{Binding DownloadedAt}" Classes="UILabel" HorizontalAlignment="Stretch" Width="200" MaxWidth="200"/>
+                            <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}" Classes="UILabel" HorizontalAlignment="Stretch" Width="130" MaxWidth="130"/>
+                            </StackPanel>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </Grid>
         </ScrollViewer>
         
         <ScrollViewer Grid.Row="2" IsVisible="False" x:Name="PlaylistsList" HorizontalScrollBarVisibility="Auto">
@@ -122,6 +144,7 @@
             </ItemsControl>
             </StackPanel>
         </ScrollViewer>
+    </Grid>
     </Grid>
 
 </Window>

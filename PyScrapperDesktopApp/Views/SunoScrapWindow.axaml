@@ -3,6 +3,7 @@
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.SunoScrapWindow"
         x:DataType="vm:SunoScrapWindowViewModel"
@@ -12,9 +13,16 @@
         CanResize="False"
         CanMinimize="False"
         SizeToContent="WidthAndHeight"
-        Title="PyScrapperDesktopApp">
+        Title="PyScrapperDesktopApp"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
         
-        <Grid Classes="RootGrid">
+        <Grid RowDefinitions="35,*">
+        
+                <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+        
+        <Grid Grid.Row="1" Classes="RootGrid">
                 <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"></RowDefinition>
                         <RowDefinition Height="Auto"></RowDefinition>
@@ -42,5 +50,5 @@
                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
         </Grid>
-        
+        </Grid>
 </Window>

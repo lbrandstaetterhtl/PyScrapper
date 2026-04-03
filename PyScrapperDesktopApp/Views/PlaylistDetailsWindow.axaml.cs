@@ -13,6 +13,7 @@ public partial class PlaylistDetailsWindow : Window
     public PlaylistDetailsWindow(Playlist playlist)
     {
         InitializeComponent();
+        TitleBar.Initialize(this);
 
         var vm = new PlaylistDetailsWindowViewModel(playlist);
         

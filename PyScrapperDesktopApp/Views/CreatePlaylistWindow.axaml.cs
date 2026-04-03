@@ -8,6 +8,7 @@ public partial class CreatePlaylistWindow : Window
     public CreatePlaylistWindow()
     {
         InitializeComponent();
+        TitleBar.Initialize(this);
         
         var vm = new CreatePlaylistWindowViewModel(this);
         

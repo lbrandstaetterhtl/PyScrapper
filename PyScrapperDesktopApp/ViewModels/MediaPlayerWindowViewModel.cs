@@ -48,39 +48,50 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _hasPrevious;
-
-    [ObservableProperty] 
-    private Bitmap _volumeIcon = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "volume.png"));
     
-    [ObservableProperty]
-    private Bitmap _songIcon = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "sound-wave.png"));
+    private static bool DarkMode => AppData.Settings.DarkModeEnabled;
 
-    [ObservableProperty] private Image _playIcon = new Image
+    public Bitmap VolumeIcon => DarkMode
+        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "volume-darkmode.png")) 
+        : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "volume-lightmode.png"));
+    
+    public Bitmap SongIcon => DarkMode 
+        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "song-darkmode.png"))
+        : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "song-lightmode.png"));
+
+    public Image PlayIcon => new Image
     {
-        Source = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "play-button.png"))
+        Source = DarkMode 
+            ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "play-darkmode.png"))
+            : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "play-lightmode.png"))
     };
 
-    [ObservableProperty] private Image _forwardIcon = new Image
+    public Image ForwardIcon => new Image
     {
-        Source = new Bitmap(
-            Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "forward-button.png"))
+        Source = DarkMode 
+            ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "forward-darkmode.png"))
+            : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "forward-lightmode.png"))
     };
 
-    [ObservableProperty] private Image _backIcon = new Image
+    public Image BackIcon => new Image
     {
-        Source = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "rewind-button.png"))
+        Source = DarkMode 
+            ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "backward-darkmode.png"))
+            : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "backward-lightmode.png"))
+    };
+    
+    public Image PauseIcon => new Image
+    {
+        Source = DarkMode 
+            ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "pause-darkmode.png"))
+            : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "pause-lightmode.png"))
     };
 
-    [ObservableProperty] private Image _pauseIcon = new Image
+    public Image ShuffleIcon => new Image
     {
-        Source = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "pause.png"))
-    };
-
-    [ObservableProperty] private Image _shuffleIcon = new Image
-    {
-        Source = new Bitmap(Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets", "shuffle.png")),
-        Width = 30,
-        Height = 30
+        Source = DarkMode 
+            ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "shuffle-darkmode.png"))
+            : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "shuffle-lightmode.png")),
     };
     
     public bool VolumeSliderMoving { get; set; }
@@ -119,12 +130,13 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
             });
         };
         
-        _audioPlayer.TrackChanged += (s, title) =>
+        _audioPlayer.TrackChanged += (s, path) =>
         {
             _volumeInitialized = false;
             
             Dispatcher.UIThread.Post(() =>
             {
+                var title = Path.GetFileNameWithoutExtension(path);
                 NowPlayingTitle = title ?? "Unknown Title";
                 HasNext = _audioPlayer.HasNext;
                 HasPrevious = _audioPlayer.HasPrevious;

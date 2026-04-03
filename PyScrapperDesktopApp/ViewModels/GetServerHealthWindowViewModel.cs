@@ -55,7 +55,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     private string _lastHealthCheckTime = "N/A";
 
     [ObservableProperty]
-    private Bitmap _serverStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, "load.png"));
+    private Bitmap _serverStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, "GetHealth", "load.png"));
     
     public event Action? CloseRequested;
     
@@ -63,7 +63,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     
     /// <summary>
     /// Starts the health check process by creating a cancellation token and running a loop that periodically fetches the server's health status from the API. The loop updates the connection status, uptime, memory usage, active processes, download jobs, and error messages based on the response from the server. If an error occurs during the health check, it sets the status to offline and logs the error message. T
-    /// he health check runs every 5 seconds until it is canceled when the window is closed.
+    /// the health check runs every 5 seconds until it is canceled when the window is closed.
     /// </summary>
     /// <exception cref="Exception"></exception>
     public void StartHealthCheck()
@@ -95,7 +95,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
                     {
                         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                         {
-                            ServerStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, health.Ok ? "check.png" : "cross.png"));
+                            ServerStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, "GetHealth", health.Ok ? "check.png" : "cross.png"));
                             ConnectionStatus = health.Ok ? "Server is reachable" : "Server is not reachable";
                             UptimeFormatted = TimeSpan.FromSeconds(health.UptimeSeconds).ToString(@"dd\.hh\:mm\:ss");
                             MemoryFormatted = $"{health.MemoryMb} MB";
@@ -134,7 +134,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     /// </summary>
     private void SetOffline()
     {
-        ServerStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, "cross.png"));
+        ServerStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, "GetHealth", "cross.png"));
         ConnectionStatus = "Server is not reachable";
         UptimeFormatted = "N/A";
         MemoryFormatted = "N/A";

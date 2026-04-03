@@ -10,6 +10,7 @@ public partial class ScrapWindowWithSearch : Window
         if (Design.IsDesignMode) return;
         
         InitializeComponent();
+        TitleBar.Initialize(this);
         
        var vm = new ScrapWindowWithSearchViewModel(this, provider);
         

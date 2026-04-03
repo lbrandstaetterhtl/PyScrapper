@@ -3,6 +3,7 @@
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.CreatePlaylistWindow"
         x:DataType="vm:CreatePlaylistWindowViewModel"
@@ -10,10 +11,17 @@
         MaxHeight="600"
         MaxWidth="600"
         WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
         
-        <Grid RowDefinitions="Auto, Auto, Auto, *" Classes="RootGrid">
+        <Grid RowDefinitions="35,*">
+        
+                <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+        
+        <Grid Grid.Row="1" RowDefinitions="Auto, Auto, Auto, *" Classes="RootGrid">
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Classes="UICell">
                         <TextBlock Text="Playlist Name: " Classes="UILabel"/>
                         <TextBox Text="{Binding PlaylistName}" Classes="UI"/>
@@ -41,5 +49,6 @@
                         <Button Classes="primary" IsDefault="True" Content="Create Playlist" Command="{Binding CreatePlaylistCommand}"/>
                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
+        </Grid>
         </Grid>
 </Window>

@@ -10,6 +10,7 @@ public partial class InputWindow : Window
         if (Design.IsDesignMode) return;
         
         InitializeComponent();
+        TitleBar.Initialize(this);
         
         var vm = new InputWindowViewModel(this, massage);
         DataContext = vm;

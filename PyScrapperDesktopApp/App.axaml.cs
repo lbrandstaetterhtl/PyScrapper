@@ -99,8 +99,6 @@ public partial class App : Application
 
                 desktop.Exit += OnExit;
 
-                desktop.MainWindow = new MainWindow();
-
                 log = new Massage("Loading Data...", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
@@ -184,6 +182,8 @@ public partial class App : Application
                 log = new Massage($"Application started with {AppData.Playlists.Count} playlists", DateTime.Now,
                     "INFO");
                 _logger.LogNewMassage(log);
+                
+                desktop.MainWindow = new MainWindow();
 
                 desktop.MainWindow.Show();
             }

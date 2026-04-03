@@ -10,6 +10,7 @@ public partial class MessageBox : Window
         if (Design.IsDesignMode) return;
         
         InitializeComponent();
+        TitleBar.Initialize(this);
         Massage.Text = message;
         
         OkButton.Click += (_, _) => Close();

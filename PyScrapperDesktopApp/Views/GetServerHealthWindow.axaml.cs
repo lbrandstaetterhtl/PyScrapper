@@ -10,6 +10,7 @@ public partial class GetServerHealthWindow : Window
         if (Design.IsDesignMode) return;
         
         InitializeComponent();
+        TitleBar.Initialize(this);
         
         var vm = new GetServerHealthWindowViewModel();
         DataContext = vm;

@@ -3,6 +3,7 @@
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.GetServerHealthWindow"
         x:DataType="vm:GetServerHealthWindowViewModel"
@@ -10,10 +11,17 @@
         MaxHeight="400"
         MaxWidth="600"
         WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp">
         
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Classes="RootScrollViewer">
+        <Grid RowDefinitions="35,*">
+        
+                <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+        
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Classes="RootScrollViewer">
                 <StackPanel Margin="20" Spacing="10">
                         <Border Classes="Seperator"/>
                         
@@ -152,5 +160,5 @@
                         <Button Classes="primary" IsDefault="True" Content="Close" Command="{Binding CloseCommand}" HorizontalAlignment="Center"/>
                 </StackPanel>
         </ScrollViewer>
-        
+        </Grid>
 </Window>

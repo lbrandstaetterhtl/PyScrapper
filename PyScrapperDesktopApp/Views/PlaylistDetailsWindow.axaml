@@ -3,6 +3,7 @@
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PyScrapperDesktopApp.Views.PlaylistDetailsWindow"
         x:DataType="vm:PlaylistDetailsWindowViewModel"
@@ -11,9 +12,16 @@
         MaxWidth="600"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/PyScrapperLogo.ico"
-        Title="PyScrapperDesktopApp">
+        Title="PyScrapperDesktopApp"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
         
-        <StackPanel Classes="RootPanel" Spacing="10">
+        <Grid RowDefinitions="35,*">
+        
+                <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+        
+        <StackPanel Grid.Row="1" Spacing="10" Classes="RootPanel">
                 
                 <StackPanel Orientation="Horizontal">
                 <StackPanel Orientation="Horizontal" Classes="UICell">
@@ -39,7 +47,7 @@
                 <ItemsControl ItemsSource="{Binding Medias}">
                         <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                        <Border Classes="Cell" HorizontalAlignment="Left" DoubleTapped="DoubleClickMedia">
+                                        <Border Classes="CellInteractive" HorizontalAlignment="Left" DoubleTapped="DoubleClickMedia">
                                                 
                                                 <Border.ContextFlyout>
                                                         <MenuFlyout>
@@ -48,7 +56,7 @@
                                                         </MenuFlyout>
                                                 </Border.ContextFlyout>
                                                 
-                                                <StackPanel Orientation="Horizontal">
+                                                <StackPanel Classes="UICell">
                                                         <TextBlock Text="{Binding Title}" Classes="UIValue"/>
                                                         <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}" Classes="IsPlayable"/>
                                                 </StackPanel>
@@ -64,5 +72,5 @@
                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
         </StackPanel>
-        
+        </Grid>
 </Window>
