@@ -2,7 +2,6 @@
 
 
 Next steps:
-MediaPlayerWindow background adjustment
 add Archive window
 
 https://deepwiki.com/videolan/libvlcsharp/2.3-best-practices-and-common-patterns
