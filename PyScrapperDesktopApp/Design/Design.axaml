@@ -326,16 +326,16 @@
                 <ResourceDictionary x:Key="Light">
                     <Color x:Key="BgPrimary">#fafaf8</Color>
                     <Color x:Key="BgSecondary">#f0f0e8</Color>
-                    <Color x:Key="Surface">#ffffff</Color>
-                    <Color x:Key="BorderColor">#c4ba7e</Color>
-                    <Color x:Key="Accent">#f7c948</Color>
-                    <Color x:Key="AccentLight">#e6b020</Color>
+                    <Color x:Key="Surface">#6acef9</Color>
+                    <Color x:Key="BorderColor">#63e1db</Color>
+                    <Color x:Key="Accent">#2588b2</Color>
+                    <Color x:Key="AccentLight">#4792b3</Color>
                     <Color x:Key="TextPrimary">#1a1a2a</Color>
                     <Color x:Key="TextSecondary">#5a5a6a</Color>
-                    <Color x:Key="SeparatorMid">#f7c948</Color>
-                    <Color x:Key="SliderIncrease">#e1f0b2</Color>
-                    <Color x:Key="SliderDecrease">#f3c307</Color>
-                    <Color x:Key="SurfacePointerOver">#939393</Color>
+                    <Color x:Key="SeparatorMid">#22c8c0</Color>
+                    <Color x:Key="SliderIncrease">#87dadc</Color>
+                    <Color x:Key="SliderDecrease">#0dd2c8</Color>
+                    <Color x:Key="SurfacePointerOver">#6ecaf1</Color>
 
                     <SolidColorBrush x:Key="BgPrimaryBrush"    Color="{StaticResource BgPrimary}"/>
                     <SolidColorBrush x:Key="SurfaceBrush"      Color="{StaticResource Surface}"/>
@@ -349,45 +349,45 @@
                     <LinearGradientBrush x:Key="AccentGradient"
                                          StartPoint="0%,0%"
                                          EndPoint="100%,100%">
-                        <GradientStop Color="#f9ea06" Offset="0.15"/>
-                        <GradientStop Color="#bc7407" Offset="0.75"/>
+                        <GradientStop Color="#1989b8" Offset="0.15"/>
+                        <GradientStop Color="#0e597a" Offset="0.75"/>
                     </LinearGradientBrush>
 
                     <LinearGradientBrush x:Key="SurfaceGradient"
                                          StartPoint="50%,0%"
                                          EndPoint="50%,100%">
-                        <GradientStop Color="#e1f0b2" Offset="0.15"/>
-                        <GradientStop Color="#f3c307" Offset="0.75"/>
+                        <GradientStop Color="#2d7ead" Offset="0.15"/>
+                        <GradientStop Color="#135981" Offset="0.75"/>
                     </LinearGradientBrush>
                     
                     <LinearGradientBrush x:Key="SurfaceGradientPointerOver"  
                                          StartPoint="50%,0%"
                                          EndPoint="50%,100%">
-                        <GradientStop Color="#e7ebdb" Offset="0.15"/>
-                        <GradientStop Color="#efd877" Offset="0.75"/>
+                        <GradientStop Color="#a6dfe0" Offset="0.15"/>
+                        <GradientStop Color="#5a8caa" Offset="0.75"/>
                     </LinearGradientBrush>
 
                     <LinearGradientBrush x:Key="SeparatorBrush"
                                          StartPoint="0%,50%" EndPoint="100%,50%">
                         <GradientStop Color="Transparent" Offset="0"/>
-                        <GradientStop Color="#ddddc8"     Offset="0.3"/>
-                        <GradientStop Color="#f7c948"     Offset="0.5"/>
-                        <GradientStop Color="#ddddc8"     Offset="0.7"/>
+                        <GradientStop Color="#87dadc"     Offset="0.3"/>
+                        <GradientStop Color="#219d97"     Offset="0.5"/>
+                        <GradientStop Color="#87dadc"     Offset="0.7"/>
                         <GradientStop Color="Transparent" Offset="1"/>
                     </LinearGradientBrush>
                     
                     <LinearGradientBrush x:Key="BackgroundGradient"
                                          StartPoint="100%,0%"
                                          EndPoint="0%,100%">
-                        <GradientStop Color="#f7db6e" Offset="0.3"/>
-                        <GradientStop Color="#d77308" Offset="0.7"/>
+                        <GradientStop Color="#87dadc" Offset="0.3"/>
+                        <GradientStop Color="#0dd2c8" Offset="0.7"/>
                     </LinearGradientBrush>
                     
                     <LinearGradientBrush x:Key="TitleBarGradient"
                                          StartPoint="100%,0%"
                                          EndPoint="0%,100%">
-                        <GradientStop Color="#d77308" Offset="0.3"/>
-                        <GradientStop Color="#f7db6e" Offset="0.7"/>
+                        <GradientStop Color="#0dd2c8" Offset="0.3"/>
+                        <GradientStop Color="#87dadc" Offset="0.7"/>
                     </LinearGradientBrush>
                 </ResourceDictionary>
 
