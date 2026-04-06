@@ -60,6 +60,7 @@ public partial class App : Application
                         case LauncherResult.Cancelled:
                             log = new Massage("Launcher was cancelled by the user", DateTime.Now, "INFO");
                             _logger.LogNewMassage(log);
+                            StopServer();
                             desktop.Shutdown(0);
                             break;
 
@@ -67,6 +68,7 @@ public partial class App : Application
                         default:
                             log = new Massage("Launcher failed with an error", DateTime.Now, "ERROR");
                             _logger.LogNewMassage(log);
+                            StopServer();
                             desktop.Shutdown(1);
                             break;
                     }
@@ -180,7 +182,6 @@ public partial class App : Application
             desktop.MainWindow = mainWindow;
             mainWindow.Show();
 
-            // From now on, close app when main window closes
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
         }
         catch (Exception e)
@@ -203,18 +204,7 @@ public partial class App : Application
         log = new Massage("Shutting down local server...", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
         
-        try
-        {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
-            http.PostAsync(
-                "http://127.0.0.1:8765/command",
-                new StringContent("{\"command\":\"quit\"}", Encoding.UTF8, "application/json")
-            ).Wait();
-        }
-        catch
-        {
-            // Server was already stopped or unreachable
-        }
+        StopServer();
         
         log = new Massage("Local server is shutdown", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
@@ -274,5 +264,21 @@ public partial class App : Application
         Current!.RequestedThemeVariant = AppData.Settings.DarkModeEnabled
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
+    }
+
+    public static void StopServer()
+    {
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+            http.PostAsync(
+                "http://127.0.0.1:8765/command",
+                new StringContent("{\"command\":\"quit\"}", Encoding.UTF8, "application/json")
+            ).Wait();
+        }
+        catch
+        {
+            // Server was already stopped or unreachable
+        }
     }
 }
