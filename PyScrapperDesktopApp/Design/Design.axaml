@@ -260,6 +260,53 @@
     <Style Selector="Button.TitleBarClose:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="#e81123"/>
     </Style>
+    
+    <Style Selector="Grid.LauncherContent">
+        <Setter Property="Background"          Value="{DynamicResource BackgroundGradient}"/>
+        <Setter Property="VerticalAlignment"   Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    
+    <Style Selector="Image.LauncherLogo">
+        <Setter Property="Width"               Value="64"/>
+        <Setter Property="Height"              Value="64"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Margin"              Value="0,0,0,4"/>
+    </Style>
+    
+    <Style Selector="TextBlock.LauncherTitle">
+        <Setter Property="FontSize"            Value="24"/>
+        <Setter Property="FontWeight"          Value="Bold"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Foreground"          Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="Margin"              Value="0,0,0,8"/>
+    </Style>
+    
+    <Style Selector="TextBlock.LauncherStatus">
+        <Setter Property="FontSize"            Value="13"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Foreground"          Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="Margin"              Value="5"/>
+    </Style>
+    
+    <Style Selector="ProgressBar.LauncherProgress">
+        <Setter Property="Height"              Value="4"/>
+        <Setter Property="Margin"              Value="20,4"/>
+    </Style>
+    
+    <Style Selector="Border.ErrorPanel">
+        <Setter Property="Background"          Value="{DynamicResource ErrorPanelBrush}"/>
+        <Setter Property="CornerRadius"        Value="8"/>
+        <Setter Property="Padding"             Value="16,12"/>
+        <Setter Property="Margin"              Value="0,4,0,0"/>
+    </Style>
+    
+    <Style Selector="TextBlock.ErrorText">
+        <Setter Property="FontSize"            Value="12"/>
+        <Setter Property="TextWrapping"        Value="Wrap"/>
+        <Setter Property="Foreground"          Value="{DynamicResource ErrorTextBrush}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
         
     <Styles.Resources>
         <ResourceDictionary>
@@ -279,6 +326,8 @@
                     <Color x:Key="SliderDecrease">#0b4db7</Color>
                     <Color x:Key="SurfacePointerOver">#2e323e</Color>
                     <Color x:Key="CardBackground">#142745</Color>
+                    <Color x:Key="ErrorPanel">#28FF4444</Color>
+                    <Color x:Key="ErrorText">#FF6B6B</Color>
 
                     <SolidColorBrush x:Key="BgPrimaryBrush"    Color="{StaticResource BgPrimary}"/>
                     <SolidColorBrush x:Key="SurfaceBrush"      Color="{StaticResource Surface}"/>
@@ -289,6 +338,8 @@
                     <SolidColorBrush x:Key="SliderDecreaseBrush" Color="{StaticResource SliderDecrease}"/>
                     <SolidColorBrush x:Key="SurfaceBrushPointerOver" Color="{StaticResource SurfacePointerOver}"/>
                     <SolidColorBrush x:Key="SolidCardBackgroundBrush" Color="{StaticResource CardBackground}"/>
+                    <SolidColorBrush x:Key="ErrorPanelBrush"   Color="{StaticResource ErrorPanel}"/>
+                    <SolidColorBrush x:Key="ErrorTextBrush"    Color="{StaticResource ErrorText}"/>
 
                     <LinearGradientBrush x:Key="AccentGradient"
                                          StartPoint="0%,0%"
@@ -349,6 +400,8 @@
                     <Color x:Key="SliderDecrease">#249ffe</Color>
                     <Color x:Key="SurfacePointerOver">#6ecaf1</Color>
                     <Color x:Key="CardBackground">#2b4469</Color>
+                    <Color x:Key="ErrorPanel">#30CC3333</Color>
+                    <Color x:Key="ErrorText">#CC2222</Color>
 
                     <SolidColorBrush x:Key="BgPrimaryBrush"    Color="{StaticResource BgPrimary}"/>
                     <SolidColorBrush x:Key="SurfaceBrush"      Color="{StaticResource Surface}"/>
@@ -359,6 +412,8 @@
                     <SolidColorBrush x:Key="SliderDecreaseBrush" Color="{StaticResource SliderDecrease}"/>
                     <SolidColorBrush x:Key="SurfaceBrushPointerOver" Color="{StaticResource SurfacePointerOver}"/>
                     <SolidColorBrush x:Key="SolidCardBackgroundBrush" Color="{StaticResource CardBackground}"/>
+                    <SolidColorBrush x:Key="ErrorPanelBrush"   Color="{StaticResource ErrorPanel}"/>
+                    <SolidColorBrush x:Key="ErrorTextBrush"    Color="{StaticResource ErrorText}"/>
 
                     <LinearGradientBrush x:Key="AccentGradient"
                                          StartPoint="0%,0%"

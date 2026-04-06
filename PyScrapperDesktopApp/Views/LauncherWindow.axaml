@@ -1,0 +1,63 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
+        mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="340"
+        x:Class="PyScrapperDesktopApp.Views.LauncherWindow"
+        x:DataType="vm:LauncherWindowViewModel"
+        Title="PyScrapper"
+        Width="480"
+        Height="340"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Assets/PyScrapperLogo.ico"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Design.DataContext>
+        <vm:LauncherWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="35"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+
+    <Grid Grid.Row="1" Classes="RootGrid">
+        
+        <StackPanel Margin="20" Spacing="12" HorizontalAlignment="Center" Width="380">
+
+            <StackPanel HorizontalAlignment="Center" Spacing="6">
+                <Image Source="/Assets/PyScrapperLogo.ico" Classes="LauncherLogo"/>
+                <TextBlock Text="PyScrapper" Classes="LauncherTitle"/>
+            </StackPanel>
+            
+            <TextBlock Text="{Binding StatusText}" Classes="LauncherStatus"/>
+
+            <ProgressBar IsIndeterminate="True"
+                         IsVisible="{Binding IsLoading}"
+                         Classes="LauncherProgress"/>
+
+            <Border IsVisible="{Binding HasError}" Classes="ErrorPanel">
+                <TextBlock Text="{Binding ErrorMessage}" Classes="ErrorText"/>
+            </Border>
+            
+            <Button Content="Close"
+                    IsVisible="{Binding HasError}"
+                    Command="{Binding CloseWindowCommand}"
+                    HorizontalAlignment="Center"
+                    Classes="primary"
+                    Padding="28,10"
+                    Margin="0,4,0,0"/>
+
+        </StackPanel>
+    </Grid>
+    </Grid>
+
+</Window>

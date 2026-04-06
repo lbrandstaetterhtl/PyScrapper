@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -8,6 +7,7 @@ using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
@@ -29,7 +29,7 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
-    public override async void OnFrameworkInitializationCompleted()
+    public override void OnFrameworkInitializationCompleted()
     {
         try
         {
@@ -42,150 +42,37 @@ public partial class App : Application
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                DisableAvaloniaDataAnnotationValidation();
+                desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-                log = new Massage("Installing frontend requirements", DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
+                var launcher = new LauncherWindow();
 
-                RunScript("InstallRequirementsFrontend", wait: true);
-
-                log = new Massage("Frontend requirements installation completed", DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
-
-                log = new Massage("Starting local server and installing requirements for backend", DateTime.Now,
-                    "INFO");
-                _logger.LogNewMassage(log);
-
-                RunScript("StartServer");
-
-
-                int maxTries = 30;
-                int tries = 0;
-                bool serverStarted = false;
-
-                do
+                launcher.Closed += async (sender, args) =>
                 {
-                    try
+                    switch (launcher.Result)
                     {
-                        await Task.Delay(1000);
-                        var healthResponse = await new ApiClient().GetHealth();
-
-                        if (healthResponse.Ok)
-                        {
-                            serverStarted = true;
-                        }
-
-                    }
-                    catch (Exception e)
-                    {
-                        log = new Massage("Waiting for local server to start...", DateTime.Now, "INFO");
-                        _logger.LogNewMassage(log);
-                    }
-
-                    tries++;
-                } while (!serverStarted && tries < maxTries);
-
-                if (!serverStarted)
-                {
-                    log = new Massage("Failed to start local server after multiple attempts", DateTime.Now, "ERROR");
-                    _logger.LogNewMassage(log);
-                    desktop.Shutdown(1);
-                    return;
-                }
-
-                log = new Massage("Local server started and backend requirements installation complete", DateTime.Now,
-                    "INFO");
-                _logger.LogNewMassage(log);
-
-                desktop.Exit += OnExit;
-
-                log = new Massage("Loading Data...", DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
-
-                var settings = await DatabaseOperations.LoadSettings();
-                var defaultSettings = new Settings();
-                defaultSettings.SetDefaultSettings();
-                
-                AppData.Settings = settings ?? defaultSettings;
-                
-                RequestedThemeVariant = AppData.Settings.DarkModeEnabled ? ThemeVariant.Dark : ThemeVariant.Light;
-
-                var medias = await DatabaseOperations.LoadDownloadedMediasNoDuplicates();
-
-                var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
-                
-                foreach (var media in medias)
-                {
-                    media.SetTitle();
-                    
-                    bool exists = File.Exists(media.DownloadPath);
-                    bool isSupported = true;
-                    if (exists)
-                    {
-                        isSupported = !media.DownloadPath.EndsWith(".mp4") || await  AudioPlayer.IsSupportedCodec(media.DownloadPath);
-                    }
-                    
-                    if (exists && isSupported)
-                    {
-                        media.IsPlayable = true;
-                    }
-                    else
-                    {
-                        media.IsPlayable = false;
-
-                        if (!exists)
-                        {
-                            mediasToRemove.Add(media);
-                        }
-                        else
-                        {
-                            log = new Massage(
-                                $"Media with id {media.Id} has an unsupported codec and will be set to not playable",
-                                DateTime.Now, "WARNING");
+                        case LauncherResult.Success:
+                            log = new Massage("Launcher completed successfully, loading application data...", DateTime.Now, "INFO");
                             _logger.LogNewMassage(log);
-                        }
+
+                            await LoadApplicationData(desktop);
+                            break;
+
+                        case LauncherResult.Cancelled:
+                            log = new Massage("Launcher was cancelled by the user", DateTime.Now, "INFO");
+                            _logger.LogNewMassage(log);
+                            desktop.Shutdown(0);
+                            break;
+
+                        case LauncherResult.Error:
+                        default:
+                            log = new Massage("Launcher failed with an error", DateTime.Now, "ERROR");
+                            _logger.LogNewMassage(log);
+                            desktop.Shutdown(1);
+                            break;
                     }
-                }
-                
-                foreach (var mediaToRemove in mediasToRemove)
-                {
-                    medias.Remove(mediaToRemove);
+                };
 
-                    log = new Massage(
-                        $"Media with id {mediaToRemove.Id} removed from the list because it does not exist",
-                        DateTime.Now, "WARNING");
-                    _logger.LogNewMassage(log);
-                }
-
-                foreach (var media in medias)
-                {
-                    AppData.AddDownloadedMedia(media);
-                }
-
-                var playlists = await DatabaseOperations.LoadPlaylistsNoDuplicates();
-
-                foreach (var playlist in playlists)
-                {
-                    AppData.AddPlaylist(playlist);
-                }
-                
-                ScanFolder(AppData.Settings.DownloadPath, out var diff);
-                
-                log = new Massage($"Scanned download folder for new media, found {diff} new media items", DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
-
-                log = new Massage(
-                    $"Application started with {AppData.DownloadedMedias.Count} listed medias and {AppData.PlayableMedias.Count} playable medias | deleted {mediasToRemove.Count} medias",
-                    DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
-
-                log = new Massage($"Application started with {AppData.Playlists.Count} playlists", DateTime.Now,
-                    "INFO");
-                _logger.LogNewMassage(log);
-                
-                desktop.MainWindow = new MainWindow();
-
-                desktop.MainWindow.Show();
+                desktop.MainWindow = launcher;
             }
         }
         catch (Exception e)
@@ -199,73 +86,109 @@ public partial class App : Application
         }
     }
 
-    private void DisableAvaloniaDataAnnotationValidation()
+    private async Task LoadApplicationData(IClassicDesktopStyleApplicationLifetime desktop)
     {
-        var dataValidationPluginsToRemove =
-            BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
-
-        foreach (var plugin in dataValidationPluginsToRemove)
+        try
         {
-            BindingPlugins.DataValidators.Remove(plugin);
-        }
-    }
-    
-    private static string FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            if (Directory.Exists(Path.Combine(dir.FullName, "LocalServer")))
-                return dir.FullName;
-            dir = dir.Parent;
-        }
-        throw new DirectoryNotFoundException(
-            "Could not locate repo root (no 'LocalServer' folder found in any parent directory).");
-    }
+            desktop.Exit += OnExit;
 
-    private void RunScript(string scriptFile, bool wait = false)
-    {
-        var repoRoot = FindRepoRoot();
+            var log = new Massage("Loading Data...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
 
-        ProcessStartInfo psi;
+            var settings = await DatabaseOperations.LoadSettings();
+            var defaultSettings = new Settings();
+            defaultSettings.SetDefaultSettings();
 
-        if (OperatingSystem.IsWindows())
-        {
-            psi = new ProcessStartInfo
+            AppData.Settings = settings ?? defaultSettings;
+
+            RequestedThemeVariant = AppData.Settings.DarkModeEnabled ? ThemeVariant.Dark : ThemeVariant.Light;
+
+            var medias = await DatabaseOperations.LoadDownloadedMediasNoDuplicates();
+
+            var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
+
+            foreach (var media in medias)
             {
-                FileName  = "powershell.exe",
-                Arguments = $"-ExecutionPolicy Bypass -File \"{repoRoot}\\LocalServer\\scripts\\WinScripts\\{scriptFile}.ps1\"",
-                WorkingDirectory      = repoRoot,
-                UseShellExecute       = false,
-                CreateNoWindow        = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError  = true
-            };
-        }
-        else
-        {
-            var scriptPath = $"{repoRoot}/LocalServer/scripts/LinuxScripts/{scriptFile}.sh";
+                media.SetTitle();
 
-            psi = new ProcessStartInfo
+                bool exists = File.Exists(media.DownloadPath);
+                bool isSupported = true;
+                if (exists)
+                {
+                    isSupported = !media.DownloadPath.EndsWith(".mp4") || await AudioPlayer.IsSupportedCodec(media.DownloadPath);
+                }
+
+                if (exists && isSupported)
+                {
+                    media.IsPlayable = true;
+                }
+                else
+                {
+                    media.IsPlayable = false;
+
+                    if (!exists)
+                    {
+                        mediasToRemove.Add(media);
+                    }
+                    else
+                    {
+                        log = new Massage(
+                            $"Media with id {media.Id} has an unsupported codec and will be set to not playable",
+                            DateTime.Now, "WARNING");
+                        _logger.LogNewMassage(log);
+                    }
+                }
+            }
+
+            foreach (var mediaToRemove in mediasToRemove)
             {
-                FileName  = "bash",
-                Arguments = $"\"{scriptPath}\"",
-                WorkingDirectory      = repoRoot,
-                UseShellExecute       = false,
-                CreateNoWindow        = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError  = true
-            };
+                medias.Remove(mediaToRemove);
+
+                log = new Massage(
+                    $"Media with id {mediaToRemove.Id} removed from the list because it does not exist",
+                    DateTime.Now, "WARNING");
+                _logger.LogNewMassage(log);
+            }
+
+            foreach (var media in medias)
+            {
+                AppData.AddDownloadedMedia(media);
+            }
+
+            var playlists = await DatabaseOperations.LoadPlaylistsNoDuplicates();
+
+            foreach (var playlist in playlists)
+            {
+                AppData.AddPlaylist(playlist);
+            }
+
+            ScanFolder(AppData.Settings.DownloadPath, out var diff);
+
+            log = new Massage($"Scanned download folder for new media, found {diff} new media items", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            log = new Massage(
+                $"Application started with {AppData.DownloadedMedias.Count} listed medias and {AppData.PlayableMedias.Count} playable medias | deleted {mediasToRemove.Count} medias",
+                DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            log = new Massage($"Application started with {AppData.Playlists.Count} playlists", DateTime.Now,
+                "INFO");
+            _logger.LogNewMassage(log);
+
+            var mainWindow = new MainWindow();
+            desktop.MainWindow = mainWindow;
+            mainWindow.Show();
+
+            // From now on, close app when main window closes
+            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
         }
-
-        var p = new Process { StartInfo = psi };
-        p.Start();
-
-        p.BeginOutputReadLine();
-        p.BeginErrorReadLine();
-
-        if (wait)
-            p.WaitForExit();
+        catch (Exception e)
+        {
+            var log = new Massage($"Application failed to load data: {e.Message}", DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            desktop.Shutdown(1);
+        }
     }
 
     private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
@@ -280,7 +203,18 @@ public partial class App : Application
         log = new Massage("Shutting down local server...", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
         
-        RunScript("StopServer");
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+            http.PostAsync(
+                "http://127.0.0.1:8765/command",
+                new StringContent("{\"command\":\"quit\"}", Encoding.UTF8, "application/json")
+            ).Wait();
+        }
+        catch
+        {
+            // Server was already stopped or unreachable
+        }
         
         log = new Massage("Local server is shutdown", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);

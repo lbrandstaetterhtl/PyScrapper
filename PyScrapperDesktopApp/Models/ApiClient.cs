@@ -26,7 +26,6 @@ public class ApiClient : Interfaces.IApiClient
     /// Also logs the response from the server and shows a message box if there was an error.
     /// </summary>
     /// <param name="requestData"></param>
-    /// <param name="serverUrl"></param>
     /// <returns name="id"></returns>
     public async Task<string> SendScrapRequest(DownloadRequestData requestData)
     {
@@ -66,7 +65,6 @@ public class ApiClient : Interfaces.IApiClient
     /// Gets the health of the server by sending a GET request to the /health endpoint. If successful, it logs the health information and returns a HealthResponse object.
     /// If there is an error, it logs the error and shows a message box with the error detail, then returns null.
     /// </summary>
-    /// <param name="serverUrl"></param>
     /// <param name="loogHealthResponse"></param>
     /// <returns name="health"></returns>
     public async Task<HealthResponse> GetHealth(bool loogHealthResponse = true)
@@ -121,7 +119,6 @@ public class ApiClient : Interfaces.IApiClient
     /// The thumbnail is also downloaded as a Bitmap and stored in the Thumbnail
     /// </summary>
     /// <param name="requestData"></param>
-    /// <param name="serverUrl"></param>
     /// <returns name="results"></returns>
     public async Task<List<SearchResultItem>> SendSearchRequest(SearchRequestData requestData)
     {
@@ -160,7 +157,6 @@ public class ApiClient : Interfaces.IApiClient
     /// This information can be used to update the UI with the current progress of the download.
     /// </summary>
     /// <param name="downloadId"></param>
-    /// <param name="serverUrl"></param>
     /// <returns name="progressResponse"></returns>
     public async Task<ProgressSuccessResponse> GetDownloadProgress(string downloadId)
     {
