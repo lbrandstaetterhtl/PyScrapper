@@ -4,7 +4,7 @@ using Xunit;
 
 namespace PyScrapperDesktopApp.Tests.ViewModels;
 
-public class MediaPlayerWindowViewModelTests
+public class MediaPlayerControlViewModelTests
 {
     [Fact]
     public void FormatTime_ZeroSeconds_ReturnsZeroZero()

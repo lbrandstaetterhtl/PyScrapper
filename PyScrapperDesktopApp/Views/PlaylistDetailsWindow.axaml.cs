@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
@@ -10,10 +11,14 @@ namespace PyScrapperDesktopApp.Views;
 
 public partial class PlaylistDetailsWindow : Window
 {
+    private readonly Window _mainWindow;
+    
     public PlaylistDetailsWindow(Playlist playlist)
     {
         InitializeComponent();
         TitleBar.Initialize(this);
+        
+        _mainWindow = App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null;
 
         var vm = new PlaylistDetailsWindowViewModel(playlist);
         
@@ -36,9 +41,11 @@ public partial class PlaylistDetailsWindow : Window
                 
                 List<int> mediaIds = [media.Id];
                 Playlist playlist = new Playlist(mediaIds, "NPLL", "");
-                
-                var mediaPlayerWindow = new MediaPlayerWindow(playlist);
-                mediaPlayerWindow.Show();
+
+                if (_mainWindow is MainWindow mainWindow)
+                {
+                    mainWindow.MediaPlayer.LoadAndPlay(playlist);
+                }
             }
         }
         catch (Exception ex)

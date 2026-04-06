@@ -47,8 +47,7 @@ public partial class MainWindow : Window
                 List<int> mediaIds = [media.Id];
                 Playlist playlist = new Playlist(mediaIds, "NPLL", "");
                 
-                var mediaPlayerWindow = new MediaPlayerWindow(playlist);
-                mediaPlayerWindow.Show();
+                MediaPlayer.LoadAndPlay(playlist);
             }
         }
         catch (Exception ex)

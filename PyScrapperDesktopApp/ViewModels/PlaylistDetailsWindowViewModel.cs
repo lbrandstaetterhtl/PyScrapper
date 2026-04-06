@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -31,6 +32,7 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     private int _playlistId;
     
     public readonly Playlist _playlist;
+    private readonly IClassicDesktopStyleApplicationLifetime _desktop;
     
     /// <summary>
     /// Constructor for the PlaylistDetailsWindowViewModel class, which initializes the view model with the details of a given playlist. It sets the playlist name, description, and media items based on the provided playlist object.
@@ -44,6 +46,8 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
         PlaylistId = playlist.Id;
         Medias = AppData.DownloadedMedias.Where(m => playlist.MediaIds.Contains(m.Id)).ToList();
         _playlist = playlist;
+        
+        _desktop = App.Current.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
     }
     
     public void RefreshMedias()
@@ -85,8 +89,10 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
             messageBox.ShowDialog(desktop.MainWindow);
             return;
         }
-        
-        var mediaPlayerWindow = new MediaPlayerWindow(playlist: _playlist);
-        mediaPlayerWindow.Show();
+
+        if (_desktop.MainWindow is MainWindow mainWindow)
+        {
+            mainWindow.MediaPlayer.LoadAndPlay(_playlist);
+        }
     }
 }

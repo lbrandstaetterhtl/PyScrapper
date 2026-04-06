@@ -18,9 +18,9 @@ namespace PyScrapperDesktopApp.ViewModels;
 /// ViewModel for the MediaPlayerWindow, responsible for managing the state and logic of the media player interface. It interacts with the AudioPlayer model to control media playback, update UI elements such as the current track title, playback position, duration, and volume. The ViewModel also handles user interactions through commands for play, pause, stop, next, previous, volume adjustments, and seeking within the media. It raises events when video availability changes to allow the view to respond accordingly.
 /// Additionally, it manages playlist loading and shuffle mode toggling when applicable.
 /// </summary>
-public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
+public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
 {
-    private readonly AudioPlayer _audioPlayer;
+    private AudioPlayer _audioPlayer = null;
 
     [ObservableProperty]
     private int _volume = 70;
@@ -107,7 +107,7 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     private readonly AppLogger _logger = new();
     private bool _volumeInitialized = false;
 
-    private readonly Playlist _playlist;
+    private  Playlist _playlist;
     
     /// <summary>
     /// Constructor for the MediaPlayerWindowViewModel, which initializes the view model with an optional playlist.
@@ -116,11 +116,51 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     /// If a playlist is provided, it will be loaded when the video view is loaded.
     /// </summary>
     /// <param name="playlist"></param>
-    public MediaPlayerWindowViewModel(Playlist playlist = null)
+    public MediaPlayerControlViewModel()
     {
-        _audioPlayer = new AudioPlayer();
+       SetAudioPlayer();
+    }
+
+    /// <summary>
+    /// Sets the current playback position of the media player based on the provided value in seconds.
+    /// The value is converted to milliseconds before being assigned to the MediaPlayer's Time property, allowing for seeking within the media.
+    /// </summary>
+    /// <param name="value"></param>
+    public void SetSeekValue(long value)
+    {
+        _audioPlayer.MediaPlayer.Time = (value * 1000);
+    }
+
+    /// <summary>
+    /// Sets the volume of the media player based on the provided value, which is expected to be in the range of 0 to 100.
+    /// The value is cast to an integer and assigned to the MediaPlayer's Volume property, allowing for volume adjustments.
+    /// </summary>
+    /// <param name="volume"></param>
+    public void SetVolume(double volume)
+    {
+        _audioPlayer.MediaPlayer.Volume = (int)volume;
+    }
+
+    /// <summary>
+    /// Method to be called when the video view is loaded, which checks if a playlist is available and loads it into the audio player.
+    /// It also updates the HasNext, HasPrevious, and IsPlaylistMode properties based on the state of the audio player after loading the playlist.
+    /// </summary>
+    public void VideoViewLoaded()
+    {
+        if (_playlist != null)
+        {
+            LoadPlaylist(_playlist);
+            HasNext = _audioPlayer.HasNext;
+            HasPrevious = _audioPlayer.HasPrevious;
+            IsPlaylistMode = _audioPlayer.PlaylistModeEnabled;
+        }
+    }
+
+    private void SetAudioPlayer()
+    {
+        if (_audioPlayer != null) _audioPlayer?.Dispose();
         
-        _playlist = playlist;
+        _audioPlayer = new AudioPlayer();
         
         _audioPlayer.MediaPlayer.Playing += (s, e) =>
         {
@@ -179,41 +219,6 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(DurationText));
             });
         };
-    }
-
-    /// <summary>
-    /// Sets the current playback position of the media player based on the provided value in seconds.
-    /// The value is converted to milliseconds before being assigned to the MediaPlayer's Time property, allowing for seeking within the media.
-    /// </summary>
-    /// <param name="value"></param>
-    public void SetSeekValue(long value)
-    {
-        _audioPlayer.MediaPlayer.Time = (value * 1000);
-    }
-
-    /// <summary>
-    /// Sets the volume of the media player based on the provided value, which is expected to be in the range of 0 to 100.
-    /// The value is cast to an integer and assigned to the MediaPlayer's Volume property, allowing for volume adjustments.
-    /// </summary>
-    /// <param name="volume"></param>
-    public void SetVolume(double volume)
-    {
-        _audioPlayer.MediaPlayer.Volume = (int)volume;
-    }
-
-    /// <summary>
-    /// Method to be called when the video view is loaded, which checks if a playlist is available and loads it into the audio player.
-    /// It also updates the HasNext, HasPrevious, and IsPlaylistMode properties based on the state of the audio player after loading the playlist.
-    /// </summary>
-    public void VideoViewLoaded()
-    {
-        if (_playlist != null)
-        {
-            LoadPlaylist(_playlist);
-            HasNext = _audioPlayer.HasNext;
-            HasPrevious = _audioPlayer.HasPrevious;
-            IsPlaylistMode = _audioPlayer.PlaylistModeEnabled;
-        }
     }
     
     /// <summary>
@@ -283,9 +288,11 @@ public partial class MediaPlayerWindowViewModel : ObservableObject, IDisposable
     /// The method takes a Playlist object as a parameter and uses the LoadPlaylist method of the AudioPlayer to set up the playlist for playback.
     /// </summary>
     /// <param name="playlist"></param>
-    private void LoadPlaylist(Playlist playlist)
+    public void LoadPlaylist(Playlist playlist)
     {
+        SetAudioPlayer();
         _audioPlayer.LoadPlaylist(playlist);
+        IsPlaylistMode = _audioPlayer.PlaylistModeEnabled;
     }
     
     /// <summary>

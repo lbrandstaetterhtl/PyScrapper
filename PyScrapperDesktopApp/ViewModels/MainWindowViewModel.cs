@@ -45,7 +45,6 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenSunoScrapWindow()
     {
-        
         var sunoScrapWindow = new Views.SunoScrapWindow();
         await sunoScrapWindow.ShowDialog(_window);
     }
@@ -107,9 +106,11 @@ public partial class MainWindowViewModel : ObservableObject
 
         // "NPLL" = No Playlist
         var playlist = new Playlist(mediaIds, "NPLL", "");
-        
-        var mediaPlayerWindow = new MediaPlayerWindow(playlist);
-        mediaPlayerWindow.Show();
+
+        if (_window is MainWindow mainWindow)
+        {
+            mainWindow.MediaPlayer.LoadAndPlay(playlist);
+        }
     }
 
     /// <summary>
