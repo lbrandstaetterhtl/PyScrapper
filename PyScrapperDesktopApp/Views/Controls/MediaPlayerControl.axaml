@@ -8,7 +8,7 @@
              x:Class="PyScrapperDesktopApp.Views.Controls.MediaPlayerControl"
              x:DataType="vm:MediaPlayerControlViewModel">
     
-            <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto">
+            <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto" Margin="10">
                 <Grid Grid.Row="0" RowDefinitions="Auto, Auto" Margin="15">
                         <TextBlock Grid.Row="0" Text="{Binding NowPlayingTitle}" Classes="UILabel"/>
                         <avalonia:VideoView Grid.Row="1" x:Name="VideoView"  Height="400" Width="600" IsVisible="{Binding HasVideo}" Margin="10"/>

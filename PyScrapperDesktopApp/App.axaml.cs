@@ -29,7 +29,7 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
-    public override void OnFrameworkInitializationCompleted()
+    public override async void OnFrameworkInitializationCompleted()
     {
         try
         {
@@ -43,6 +43,14 @@ public partial class App : Application
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                
+                var settings = await DatabaseOperations.LoadSettings();
+                var defaultSettings = new Settings();
+                defaultSettings.SetDefaultSettings();
+
+                AppData.Settings = settings ?? defaultSettings;
+
+                RequestedThemeVariant = AppData.Settings.DarkModeEnabled ? ThemeVariant.Dark : ThemeVariant.Light;
 
                 var launcher = new LauncherWindow();
 
@@ -96,14 +104,6 @@ public partial class App : Application
 
             var log = new Massage("Loading Data...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
-
-            var settings = await DatabaseOperations.LoadSettings();
-            var defaultSettings = new Settings();
-            defaultSettings.SetDefaultSettings();
-
-            AppData.Settings = settings ?? defaultSettings;
-
-            RequestedThemeVariant = AppData.Settings.DarkModeEnabled ? ThemeVariant.Dark : ThemeVariant.Light;
 
             var medias = await DatabaseOperations.LoadDownloadedMediasNoDuplicates();
 

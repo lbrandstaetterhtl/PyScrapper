@@ -8,6 +8,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LibVLCSharp.Avalonia;
 using LibVLCSharp.Shared;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.Views;
@@ -100,8 +101,8 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
     public string CurrentlyText => TimeSpan.FromSeconds(PositionSeconds).ToString(@"mm\:ss");
 
     public string DurationText => TimeSpan.FromSeconds(DurationSeconds).ToString(@"mm\:ss");
-    
-    public MediaPlayer MediaPlayer => _audioPlayer.MediaPlayer;
+
+    public MediaPlayer MediaPlayer;
     
     public event EventHandler<bool>? VideoAvailableChanged;
     private readonly AppLogger _logger = new();
@@ -145,14 +146,17 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
     /// Method to be called when the video view is loaded, which checks if a playlist is available and loads it into the audio player.
     /// It also updates the HasNext, HasPrevious, and IsPlaylistMode properties based on the state of the audio player after loading the playlist.
     /// </summary>
-    public void VideoViewLoaded()
+    public void VideoViewLoaded(Playlist playlist = null)
     {
+        _playlist = playlist;
+        
         if (_playlist != null)
         {
             LoadPlaylist(_playlist);
             HasNext = _audioPlayer.HasNext;
             HasPrevious = _audioPlayer.HasPrevious;
             IsPlaylistMode = _audioPlayer.PlaylistModeEnabled;
+            MediaPlayer = _audioPlayer.MediaPlayer;
         }
     }
 
@@ -219,6 +223,8 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(DurationText));
             });
         };
+
+        MediaPlayer = _audioPlayer.MediaPlayer;
     }
     
     /// <summary>

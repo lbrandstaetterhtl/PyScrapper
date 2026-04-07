@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+﻿using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Interactivity;
 using LibVLCSharp.Avalonia;
 using PyScrapperDesktopApp.Models;
@@ -17,7 +18,6 @@ public partial class MediaPlayerControl : UserControl
         _vm = new MediaPlayerControlViewModel();
         DataContext = _vm;
         
-        SetupVideoView();
         SetNavigationButtons();
         SetPlayButton(1);
         SetImageIcons();
@@ -111,8 +111,14 @@ public partial class MediaPlayerControl : UserControl
     /// <param name="playlist"></param>
     public void LoadAndPlay(Playlist playlist)
     {
-        _vm.LoadPlaylist(playlist);
-        SetupVideoView();
+        if (VideoView.IsInitialized)
+        {
+            VideoView.MediaPlayer = null;
+            _vm.VideoViewLoaded(playlist);
+            VideoView.MediaPlayer = _vm.MediaPlayer;
+        }
+
+        Task.Delay(5000).Wait();
     }
 
     /// <summary>
@@ -120,24 +126,7 @@ public partial class MediaPlayerControl : UserControl
     /// Call this when the MainWindow is closing.
     /// </summary>
     public void Dispose() => _vm?.Dispose();
-
-
-    private void SetupVideoView()
-    {
-        var videoView = this.FindControl<VideoView>("VideoView");
-        if (videoView == null || _vm == null) return;
-
-        videoView.Loaded += (_, _) =>
-        {
-            videoView.MediaPlayer = _vm.MediaPlayer;
-            _vm.VideoViewLoaded();
-        };
-
-        _vm.VideoAvailableChanged += (_, hasVideo) =>
-        {
-            videoView.IsVisible = hasVideo;
-        };
-    }
+    
     private void SetNavigationButtons()
     {
         if (DataContext is not MediaPlayerControlViewModel vm) return;
