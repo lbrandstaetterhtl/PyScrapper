@@ -207,18 +207,6 @@ public partial class MainWindow : Window
         }
     }
     
-    private void ShowPlaylistsClick(object? sender, RoutedEventArgs e)
-    {
-        DownloadedMediasList.IsVisible = false;
-        PlaylistsList.IsVisible = true;
-    }
-    
-    private void ShowDownloadedMediasClick(object? sender, RoutedEventArgs e)
-    {
-        PlaylistsList.IsVisible = false;
-        DownloadedMediasList.IsVisible = true;
-    }
-    
     private void AddToPlaylistClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not ListBox { SelectedItem: Playlist playlist } listBox) return;

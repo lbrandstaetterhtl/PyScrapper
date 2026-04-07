@@ -118,7 +118,7 @@ public partial class MediaPlayerControl : UserControl
             VideoView.MediaPlayer = _vm.MediaPlayer;
         }
 
-        Task.Delay(5000).Wait();
+        Task.Delay(2000).Wait();
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -23,7 +23,7 @@
         
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Classes="RootScrollViewer">
                 <StackPanel Margin="20" Spacing="10">
-                        <Border Classes="Seperator"/>
+                        <Border Classes="SeparatorHorizontal"/>
                         
                         <Border Classes="Cell">
                                 <StackPanel Classes="UICell" Width="400" Height="50">
@@ -33,7 +33,7 @@
                                 </StackPanel>
                         </Border>
                         
-                        <Border Classes="Seperator"/>
+                        <Border Classes="SeparatorHorizontal"/>
                         
                         <Border Classes="Cell">
                                 <StackPanel Classes="UICell" Width="400" Height="50">
@@ -41,7 +41,7 @@
                                 </StackPanel>
                         </Border>
                         
-                        <Border Classes="Seperator"/>
+                        <Border Classes="SeparatorHorizontal"/>
                         
                         <Border Classes="Cell">
                                 <StackPanel Classes="UICell" Width="400" Height="50">
@@ -50,7 +50,7 @@
                                 </StackPanel>
                         </Border>
                         
-                        <Border Classes="Seperator"/>
+                        <Border Classes="SeparatorHorizontal"/>
 
                         <Border Classes="Cell">
                                 <StackPanel Classes="UICell" Width="400" Height="50">
@@ -59,7 +59,7 @@
                                 </StackPanel>
                         </Border>
                         
-                        <Border Classes="Seperator"/>
+                        <Border Classes="SeparatorHorizontal"/>
                         
                         <Border Classes="Cell">
                                 <StackPanel Classes="UICell" Width="400" Height="50">
@@ -68,18 +68,18 @@
                                 </StackPanel>
                         </Border>
                         
-                        <Border Classes="Seperator"/>
+                        <Border Classes="SeparatorHorizontal"/>
 
                         <Border Classes="Cell">
                                 <StackPanel Classes="UICell" MaxWidth="400" Width="400" MaxHeight="150">
                                         <TextBlock Text="Processes: " Classes="UILabel"/>
-                                        <Border Classes="Seperator"/>
+                                        <Border Classes="SeparatorHorizontal"/>
                                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding Processes}">
                                                 <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
                                                                 <StackPanel>
-                                                                        <Border Classes="Seperator"/>
+                                                                        <Border Classes="SeparatorHorizontal"/>
                                                                                 <StackPanel Classes="UICell">
                                                                                         <TextBlock Text="PID: " Classes="UIValue"/>
                                                                                         <TextBlock Text="{Binding Pid}" Classes="UIValue"/>
@@ -89,7 +89,7 @@
                                                                                         <TextBlock Text="Name: " Classes="UIValue"/>
                                                                                         <TextBlock Text="{Binding Name}" Classes="UIValue"/>
                                                                                 </StackPanel>
-                                                                        <Border Classes="Seperator"/>
+                                                                        <Border Classes="SeparatorHorizontal"/>
                                                                 </StackPanel>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -98,19 +98,19 @@
                                 </StackPanel>
                         </Border>
                         
-                        <Border Classes="Seperator"/>
+                        <Border Classes="SeparatorHorizontal"/>
                         
                         <Border Classes="Cell">
                                 <StackPanel Classes="UICell" MaxWidth="400" Width="400" MaxHeight="150">
                                         <TextBlock Text="Active Downloads: " Classes="UILabel"/>
                                         <TextBlock Text="{Binding DownloadsCount}" Classes="UILabel"/>
-                                        <Border Classes="Seperator"/>
+                                        <Border Classes="SeparatorHorizontal"/>
                                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding DownloadJobs}">
                                                 <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
                                                                 <StackPanel>
-                                                                        <Border Classes="Seperator"/>
+                                                                        <Border Classes="SeparatorHorizontal"/>
                                                                                 <StackPanel Classes="UICell">
                                                                                         <TextBlock Text="Download Job ID: " Classes="UIValue"/>
                                                                                         <TextBlock Text="{Binding Id}" Classes="UIValue"/>
@@ -125,7 +125,7 @@
                                                                                         <TextBlock Text="Status: " Classes="UIValue"/>
                                                                                         <TextBlock Text="{Binding  Status}" Classes="UIValue"/>
                                                                                 </StackPanel>
-                                                                        <Border Classes="Seperator"/>
+                                                                        <Border Classes="SeparatorHorizontal"/>
                                                                 </StackPanel>
                                                         </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -134,13 +134,13 @@
                                 </StackPanel>
                         </Border>
                         
-                        <Border Classes="Seperator"/>
+                        <Border Classes="SeparatorHorizontal"/>
                         
                         <Border Classes="Cell">
                                 <StackPanel Classes="UICell" Width="400" MaxWidth="400" MaxHeight="150">
                                         <TextBlock Text="Recent Errors: " Classes="UILabel"/>
                                         <TextBlock Text="{Binding ErrorsCount}" Classes="UILabel"/>
-                                        <Border Classes="Seperator"/>
+                                        <Border Classes="SeparatorHorizontal"/>
                                         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding ErrorMessages}">
                                                 <ItemsControl.ItemTemplate>
@@ -155,7 +155,7 @@
                                 </StackPanel>
                         </Border>
                         
-                        <Border Classes="Seperator"/>
+                        <Border Classes="SeparatorHorizontal"/>
                         
                         <Button Classes="primary" IsDefault="True" Content="Close" Command="{Binding CloseCommand}" HorizontalAlignment="Center"/>
                 </StackPanel>

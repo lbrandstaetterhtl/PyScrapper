@@ -85,10 +85,16 @@
         <Setter Property="Orientation"         Value="Horizontal"/>
     </Style>
 
-    <Style Selector="Border.Seperator">
+    <Style Selector="Border.SeparatorHorizontal">
         <Setter Property="Background"          Value="{DynamicResource SeparatorBrush}"/>
         <Setter Property="Height"              Value="1"/>
         <Setter Property="Margin"              Value="10,5"/>
+    </Style>
+    
+    <Style Selector="Border.SeperatorVertical">
+        <Setter Property="Background" Value="{DynamicResource SeparatorBrush}"/>
+        <Setter Property="Width"      Value="1"/>
+        <Setter Property="Margin"     Value="5,10,20,50"/>
     </Style>
 
     <Style Selector="Border.CellInteractive">

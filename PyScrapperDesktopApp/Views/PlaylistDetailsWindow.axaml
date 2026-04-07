@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -31,7 +31,7 @@
                         </Grid>
                 </StackPanel>
                         
-                        <Border Classes="Seperator"/>
+                        <Border Classes="SeparatorHorizontal"/>
                 
                 <StackPanel Orientation="Horizontal" Classes="UICell">
                         <TextBlock Text="Playlist description: " Classes="UILabel"/>
@@ -41,7 +41,7 @@
                 </StackPanel>
                 </StackPanel>
                 
-                <Border Classes="Seperator"/>
+                <Border Classes="SeparatorHorizontal"/>
                 
                 <ScrollViewer MaxHeight="250" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Medias}">

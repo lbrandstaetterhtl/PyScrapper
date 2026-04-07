@@ -31,11 +31,13 @@
             </Grid.RowDefinitions>
 
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="585"/>
+                <ColumnDefinition Width="1"/>
+                <ColumnDefinition Width="600"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Menu Grid.ColumnSpan="2" Grid.Column="0" Grid.Row="0" Margin="5,0">
+            <Menu Grid.ColumnSpan="3" Grid.Column="0" Grid.Row="0" Margin="5,0">
                 <MenuItem Header="Sort">
                     <MenuItem Header="By Title" Command="{Binding SortByNameCommand}"/>
                     <MenuItem Header="By Date" Command="{Binding SortByDateCommand}"/>
@@ -49,7 +51,6 @@
                 <MenuItem Header="Open Media Player" Command="{Binding OpenMediaPlayerWindowCommand}"/>
                 <MenuItem Header="Playlists">
                     <MenuItem Header="Create Playlist" Command="{Binding CreatePlaylistCommand}"/>
-                    <MenuItem Header="Show Playlists" Click="ShowPlaylistsClick"/>
                     <MenuItem Header="Delete All Playlists" Command="{Binding DeleteAllPlaylistsCommand}"/>
                 </MenuItem>
                 <MenuItem Header="Medias">
@@ -70,15 +71,13 @@
                 </MenuItem>
             </Menu>
 
-            <controls:MediaPlayerControl Grid.Row="1" Grid.Column="1" x:Name="MediaPlayer"/>
-
-            <ScrollViewer Grid.Column="0" x:Name="DownloadedMediasList"
-                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+            <ScrollViewer Grid.Column="2" x:Name="DownloadedMediasList"
+                          HorizontalAlignment="Left" VerticalAlignment="Stretch"
                           Grid.Row="1" HorizontalScrollBarVisibility="Auto">
-                <Grid RowDefinitions="Auto, Auto, *">
-
+                <Grid RowDefinitions="Auto, Auto, *" ColumnDefinitions="Auto">
+                    
                     <!-- Header -->
-                    <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
+                    <DockPanel Grid.Row="0" HorizontalAlignment="Stretch" >
                         <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -95,11 +94,11 @@
                                 <TextBlock Grid.Column="4" Text="Is Playable" Classes="UILabel"/>
                             </Grid>
                         </Border>
-                        <Border Classes="Seperator" DockPanel.Dock="Top" HorizontalAlignment="Left" Width="800"/>
+                        <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Left" Width="575"/>
                     </DockPanel>
 
                     <!-- Items -->
-                    <ItemsControl Grid.Row="2" ItemsSource="{Binding DownloadedMediaList}">
+                    <ItemsControl Grid.Row="2" ItemsSource="{Binding DownloadedMediaList}" >
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border DoubleTapped="MediaDoubleClick" Classes="CellInteractive"
@@ -133,12 +132,12 @@
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="ColPlayable"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Id}" Classes="UILabel"/>
-                                        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" MaxWidth="400">
-                                        <TextBlock Text="{Binding Title}" Classes="UILabel" HorizontalAlignment="Left"/>
+                                        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" Width="200" MaxWidth="200">
+                                        <TextBlock Text="{Binding Title}" Classes="UILabel" HorizontalAlignment="Left" />
                                         </ScrollViewer>
                                         <TextBlock Grid.Column="2" Text="{Binding MediaType}" Classes="UILabel"/>
                                         <TextBlock Grid.Column="3" Text="{Binding DownloadedAt}" Classes="UILabel"/>
-                                        <CheckBox Grid.Column="4" IsChecked="{Binding IsPlayable}" HorizontalContentAlignment="Center" Classes="IsPlayable"/>
+                                        <CheckBox Grid.Column="4" IsChecked="{Binding IsPlayable}" VerticalAlignment="Center" HorizontalContentAlignment="Center" Classes="IsPlayable"/>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -147,30 +146,31 @@
 
                 </Grid>
             </ScrollViewer>
+            
+            <Border Grid.Row="1" Grid.Column="1" Grid.RowSpan="2" Classes="SeperatorVertical" HorizontalAlignment="Center"/>
 
             <!-- Playlists View -->
-            <ScrollViewer Grid.Column="0" Grid.Row="1" IsVisible="False"
+            <ScrollViewer Grid.Column="0" Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Stretch"
                 x:Name="PlaylistsList" HorizontalScrollBarVisibility="Auto"
                 Grid.IsSharedSizeScope="True">
                 <StackPanel>
-                    <Button Content="Go back to medias list" Click="ShowDownloadedMediasClick"
-                        Classes="primary" HorizontalAlignment="Left"/>
-
                     <!-- Header -->
                     <DockPanel HorizontalAlignment="Stretch">
-                        <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" Width="900">
+                        <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900">
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
                                     <ColumnDefinition Width="*" SharedSizeGroup="ColName"/>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="ColDesc"/>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="ColCount"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Name" Classes="UILabel"/>
-                                <TextBlock Grid.Column="1" Text="Description" Classes="UILabel"/>
-                                <TextBlock Grid.Column="2" Text="Song Count" Classes="UILabel"/>
+                                <TextBlock Grid.Column="0" Text="Id" Classes="UILabel" HorizontalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="Name" Classes="UILabel" HorizontalAlignment="Left" />
+                                <TextBlock Grid.Column="2" Text="Description" Classes="UILabel" HorizontalAlignment="Left" />
+                                <TextBlock Grid.Column="3" Text="Song Count" Classes="UILabel" HorizontalAlignment="Left" />
                             </Grid>
                         </Border>
-                        <Border Classes="Seperator" DockPanel.Dock="Top" HorizontalAlignment="Left" Width="800"/>
+                        <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Left" Width="550"/>
                     </DockPanel>
 
                     <!-- Items -->
@@ -178,7 +178,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Classes="CellInteractive" HorizontalAlignment="Left"
-                                    DoubleTapped="PlaylistDoubleClick" Width="900">
+                                    DoubleTapped="PlaylistDoubleClick" MaxWidth="900">
                                     <Border.ContextFlyout>
                                         <MenuFlyout>
                                             <MenuItem Header="Delete Playlist" Click="DeletePlaylist"/>
@@ -188,13 +188,19 @@
 
                                     <Grid>
                                          <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" SharedSizeGroup="ColName"/>
+                                             <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
+                                             <ColumnDefinition Width="*" SharedSizeGroup="ColName"/>
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="ColDesc"/>
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="ColCount"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="UILabel"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Description}" Classes="UILabel"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Count}" Classes="UILabel"/>
+                                        <TextBlock Grid.Column="0" Text="{Binding Id}" Classes="UILabel" HorizontalAlignment="Center"/>
+                                        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" Width="200" MaxWidth="200">
+                                            <TextBlock Text="{Binding Name}" Classes="UILabel" HorizontalAlignment="Left"/>
+                                        </ScrollViewer>
+                                        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" Width="200" MaxWidth="200">
+                                            <TextBlock Text="{Binding Description}" Classes="UILabel" HorizontalAlignment="Left"/>
+                                        </ScrollViewer>
+                                        <TextBlock Grid.Column="3" Text="{Binding Count}" Classes="UILabel" HorizontalAlignment="Center" />
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -202,6 +208,8 @@
                     </ItemsControl>
                 </StackPanel>
             </ScrollViewer>
+            
+            <controls:MediaPlayerControl Grid.Row="1" Grid.Column="3" Grid.RowSpan="2" x:Name="MediaPlayer"/>
         </Grid>
     </Grid>
 </Window>
