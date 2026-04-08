@@ -94,7 +94,13 @@
     <Style Selector="Border.SeperatorVertical">
         <Setter Property="Background" Value="{DynamicResource SeparatorBrush}"/>
         <Setter Property="Width"      Value="1"/>
-        <Setter Property="Margin"     Value="5,10,20,50"/>
+        <Setter Property="Margin"     Value="10,10,10,50"/>
+    </Style>
+    
+    <Style Selector="GridSplitter.SeperatorVertical">
+        <Setter Property="Background" Value="{DynamicResource SeparatorBrush}"/>
+        <Setter Property="Width" Value="1"/>
+        <Setter Property="Cursor" Value="SizeWestEast"/>
     </Style>
 
     <Style Selector="Border.CellInteractive">
@@ -143,6 +149,14 @@
         <Setter Property="Padding"             Value="10"/>
         <Setter Property="CornerRadius"        Value="8"/>
         <Setter Property="Margin"              Value="5"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    
+    <Style Selector="TextBlock.UIHeader">
+        <Setter Property="FontWeight"          Value="Bold"/>
+        <Setter Property="FontSize"            Value="18"/>
+        <Setter Property="Margin"              Value="15"/>
+        <Setter Property="Foreground"          Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
     </Style>
 
@@ -295,6 +309,11 @@
         <Setter Property="Margin"              Value="5"/>
     </Style>
     
+    <Style Selector="ScrollViewer.List">
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+    </Style>
+    
     <Style Selector="ProgressBar.LauncherProgress">
         <Setter Property="Height"              Value="4"/>
         <Setter Property="Margin"              Value="20,4"/>
@@ -320,149 +339,135 @@
             
                 <ResourceDictionary x:Key="Dark">
                     <Color x:Key="BgPrimary">#0d1117</Color>
-                    <Color x:Key="BgSecondary">#161b27</Color>
-                    <Color x:Key="Surface">#1e2540</Color>
-                    <Color x:Key="BorderColor">#3b4fa8</Color>
+                    <Color x:Key="BgSecondary">#111827</Color>
+                    <Color x:Key="Surface">#1e2a3a</Color>
+                    <Color x:Key="BorderColor">#2d4a7a</Color>
                     <Color x:Key="Accent">#3776d4</Color>
                     <Color x:Key="AccentLight">#5a9ef5</Color>
-                    <Color x:Key="TextPrimary">#e8eaf0</Color>
-                    <Color x:Key="TextSecondary">#b1b2b4</Color>
-                    <Color x:Key="SeparatorMid">#3776d4</Color>
+                    <Color x:Key="TextPrimary">#e8edf5</Color>
+                    <Color x:Key="TextSecondary">#7a8fa8</Color>
                     <Color x:Key="SliderIncrease">#a7dbef</Color>
-                    <Color x:Key="SliderDecrease">#0b4db7</Color>
-                    <Color x:Key="SurfacePointerOver">#2e323e</Color>
-                    <Color x:Key="CardBackground">#142745</Color>
+                    <Color x:Key="SliderDecrease">#1a4d99</Color>
+                    <Color x:Key="SurfacePointerOver">#253347</Color>
+                    <Color x:Key="CardBackground">#0f1e33</Color>
                     <Color x:Key="ErrorPanel">#28FF4444</Color>
                     <Color x:Key="ErrorText">#FF6B6B</Color>
 
-                    <SolidColorBrush x:Key="BgPrimaryBrush"    Color="{StaticResource BgPrimary}"/>
-                    <SolidColorBrush x:Key="SurfaceBrush"      Color="{StaticResource Surface}"/>
-                    <SolidColorBrush x:Key="BorderBrush"       Color="{StaticResource BorderColor}"/>
-                    <SolidColorBrush x:Key="TextPrimaryBrush"  Color="{StaticResource TextPrimary}"/>
-                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}"/>
-                    <SolidColorBrush x:Key="SliderIncreaseBrush" Color="{StaticResource SliderIncrease}"/>
-                    <SolidColorBrush x:Key="SliderDecreaseBrush" Color="{StaticResource SliderDecrease}"/>
+                    <SolidColorBrush x:Key="BgPrimaryBrush"         Color="{StaticResource BgPrimary}"/>
+                    <SolidColorBrush x:Key="SurfaceBrush"            Color="{StaticResource Surface}"/>
+                    <SolidColorBrush x:Key="BorderBrush"             Color="{StaticResource BorderColor}"/>
+                    <SolidColorBrush x:Key="TextPrimaryBrush"        Color="{StaticResource TextPrimary}"/>
+                    <SolidColorBrush x:Key="TextSecondaryBrush"      Color="{StaticResource TextSecondary}"/>
+                    <SolidColorBrush x:Key="SliderIncreaseBrush"     Color="{StaticResource SliderIncrease}"/>
+                    <SolidColorBrush x:Key="SliderDecreaseBrush"     Color="{StaticResource SliderDecrease}"/>
                     <SolidColorBrush x:Key="SurfaceBrushPointerOver" Color="{StaticResource SurfacePointerOver}"/>
                     <SolidColorBrush x:Key="SolidCardBackgroundBrush" Color="{StaticResource CardBackground}"/>
-                    <SolidColorBrush x:Key="ErrorPanelBrush"   Color="{StaticResource ErrorPanel}"/>
-                    <SolidColorBrush x:Key="ErrorTextBrush"    Color="{StaticResource ErrorText}"/>
+                    <SolidColorBrush x:Key="ErrorPanelBrush"         Color="{StaticResource ErrorPanel}"/>
+                    <SolidColorBrush x:Key="ErrorTextBrush"          Color="{StaticResource ErrorText}"/>
 
-                    <LinearGradientBrush x:Key="AccentGradient"
-                                         StartPoint="0%,0%"
-                                         EndPoint="100%,100%">
-                        <GradientStop Color="#2061c3" Offset="0.15"/>
-                        <GradientStop Color="#0f3261" Offset="0.75"/>
+                    <LinearGradientBrush x:Key="AccentGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#2061c3" Offset="0"/>
+                        <GradientStop Color="#0f3261" Offset="1"/>
                     </LinearGradientBrush>
 
-                    <LinearGradientBrush x:Key="SurfaceGradient"
-                                         StartPoint="50%,0%"
-                                         EndPoint="50%,100%">
-                        <GradientStop Color="#1f4b8d" Offset="0.15"/>
-                        <GradientStop Color="#031c3c" Offset="0.75"/>
-                    </LinearGradientBrush>
-                    
-                    <LinearGradientBrush x:Key="SurfaceGradientPointerOver" 
-                                         StartPoint="50%,0%"
-                                         EndPoint="50%,100%">
-                        <GradientStop Color="#49658e" Offset="0"/>
-                        <GradientStop Color="#223144" Offset="1"/>
-                    </LinearGradientBrush>
-                    
-                    <LinearGradientBrush x:Key="SeparatorBrush"
-                                         StartPoint="0%,50%" EndPoint="100%,50%">
+                    <LinearGradientBrush x:Key="SeparatorBrush" StartPoint="0%,50%" EndPoint="100%,50%">
                         <GradientStop Color="Transparent" Offset="0"/>
-                        <GradientStop Color="#253060"     Offset="0.3"/>
+                        <GradientStop Color="#1a3a6a"     Offset="0.3"/>
                         <GradientStop Color="#3776d4"     Offset="0.5"/>
-                        <GradientStop Color="#253060"     Offset="0.7"/>
+                        <GradientStop Color="#1a3a6a"     Offset="0.7"/>
                         <GradientStop Color="Transparent" Offset="1"/>
                     </LinearGradientBrush>
-                    
-                    <LinearGradientBrush x:Key="BackgroundGradient"
-                                         StartPoint="100%,0%"
-                                         EndPoint="0%,100%">
-                        <GradientStop Color="#03061c" Offset="0.3"/>
-                        <GradientStop Color="#0a294c" Offset="0.7"/>
+
+                    <LinearGradientBrush x:Key="BackgroundGradient" StartPoint="100%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#020408" Offset="0"/>
+                        <GradientStop Color="#0a1f4a" Offset="1"/>
                     </LinearGradientBrush>
-                    
-                    <LinearGradientBrush x:Key="TitleBarGradient"
-                                         StartPoint="100%,0%"
-                                         EndPoint="0%,100%">
-                        <GradientStop Color="#0a294c" Offset="0.3"/>
-                        <GradientStop Color="#03061c" Offset="0.7"/>
+
+                    <LinearGradientBrush x:Key="SurfaceGradient" StartPoint="50%,0%" EndPoint="50%,100%">
+                        <GradientStop Color="#0f2a5c" Offset="0"/>
+                        <GradientStop Color="#060e1f" Offset="1"/>
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="SurfaceGradientPointerOver" StartPoint="50%,0%" EndPoint="50%,100%">
+                        <GradientStop Color="#1a3d75" Offset="0"/>
+                        <GradientStop Color="#0a1a38" Offset="1"/>
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="ListBackground" StartPoint="100%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#060d20" Offset="0"/>
+                        <GradientStop Color="#0f2545" Offset="1"/>
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="TitleBarGradient" StartPoint="0%,50%" EndPoint="100%,50%">
+                        <GradientStop Color="#020408" Offset="0"/>
+                        <GradientStop Color="#0f2a5c" Offset="1"/>
                     </LinearGradientBrush>
                 </ResourceDictionary>
-                
-                <ResourceDictionary x:Key="Light">
-                    <Color x:Key="BgPrimary">#fafaf8</Color>
-                    <Color x:Key="BgSecondary">#f0f0e8</Color>
-                    <Color x:Key="Surface">#548fe8</Color>
-                    <Color x:Key="BorderColor">#63e1db</Color>
-                    <Color x:Key="Accent">#2588b2</Color>
-                    <Color x:Key="AccentLight">#4792b3</Color>
-                    <Color x:Key="TextPrimary">#1a1a2a</Color>
-                    <Color x:Key="TextSecondary">#b1b2b4</Color>
-                    <Color x:Key="SeparatorMid">#22c8c0</Color>
-                    <Color x:Key="SliderIncrease">#95b9c5</Color>
-                    <Color x:Key="SliderDecrease">#249ffe</Color>
-                    <Color x:Key="SurfacePointerOver">#6ecaf1</Color>
-                    <Color x:Key="CardBackground">#2b4469</Color>
-                    <Color x:Key="ErrorPanel">#30CC3333</Color>
-                    <Color x:Key="ErrorText">#CC2222</Color>
 
-                    <SolidColorBrush x:Key="BgPrimaryBrush"    Color="{StaticResource BgPrimary}"/>
-                    <SolidColorBrush x:Key="SurfaceBrush"      Color="{StaticResource Surface}"/>
-                    <SolidColorBrush x:Key="BorderBrush"       Color="{StaticResource BorderColor}"/>
-                    <SolidColorBrush x:Key="TextPrimaryBrush"  Color="{StaticResource TextPrimary}"/>
-                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}"/>
-                    <SolidColorBrush x:Key="SliderIncreaseBrush" Color="{StaticResource SliderIncrease}"/>
-                    <SolidColorBrush x:Key="SliderDecreaseBrush" Color="{StaticResource SliderDecrease}"/>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="BgPrimary">#f4f7fc</Color>
+                    <Color x:Key="BgSecondary">#eaf0fa</Color>
+                    <Color x:Key="Surface">#ddeaf8</Color>
+                    <Color x:Key="BorderColor">#93b8e8</Color>
+                    <Color x:Key="Accent">#1a5fba</Color>
+                    <Color x:Key="AccentLight">#2e7ad4</Color>
+                    <Color x:Key="TextPrimary">#0f1c2e</Color>
+                    <Color x:Key="TextSecondary">#4a6080</Color>
+                    <Color x:Key="SliderIncrease">#b8d4f0</Color>
+                    <Color x:Key="SliderDecrease">#1a5fba</Color>
+                    <Color x:Key="SurfacePointerOver">#c8ddf5</Color>
+                    <Color x:Key="CardBackground">#ffffff</Color>
+                    <Color x:Key="ErrorPanel">#30CC3333</Color>
+                    <Color x:Key="ErrorText">#b91c1c</Color>
+
+                    <SolidColorBrush x:Key="BgPrimaryBrush"         Color="{StaticResource BgPrimary}"/>
+                    <SolidColorBrush x:Key="SurfaceBrush"            Color="{StaticResource Surface}"/>
+                    <SolidColorBrush x:Key="BorderBrush"             Color="{StaticResource BorderColor}"/>
+                    <SolidColorBrush x:Key="TextPrimaryBrush"        Color="{StaticResource TextPrimary}"/>
+                    <SolidColorBrush x:Key="TextSecondaryBrush"      Color="{StaticResource TextSecondary}"/>
+                    <SolidColorBrush x:Key="SliderIncreaseBrush"     Color="{StaticResource SliderIncrease}"/>
+                    <SolidColorBrush x:Key="SliderDecreaseBrush"     Color="{StaticResource SliderDecrease}"/>
                     <SolidColorBrush x:Key="SurfaceBrushPointerOver" Color="{StaticResource SurfacePointerOver}"/>
                     <SolidColorBrush x:Key="SolidCardBackgroundBrush" Color="{StaticResource CardBackground}"/>
-                    <SolidColorBrush x:Key="ErrorPanelBrush"   Color="{StaticResource ErrorPanel}"/>
-                    <SolidColorBrush x:Key="ErrorTextBrush"    Color="{StaticResource ErrorText}"/>
+                    <SolidColorBrush x:Key="ErrorPanelBrush"         Color="{StaticResource ErrorPanel}"/>
+                    <SolidColorBrush x:Key="ErrorTextBrush"          Color="{StaticResource ErrorText}"/>
 
-                    <LinearGradientBrush x:Key="AccentGradient"
-                                         StartPoint="0%,0%"
-                                         EndPoint="100%,100%">
-                        <GradientStop Color="#1989b8" Offset="0.15"/>
-                        <GradientStop Color="#0e597a" Offset="0.75"/>
+                    <LinearGradientBrush x:Key="AccentGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#1a5fba" Offset="0"/>
+                        <GradientStop Color="#0d3d80" Offset="1"/>
                     </LinearGradientBrush>
 
-                    <LinearGradientBrush x:Key="SurfaceGradient"
-                                         StartPoint="50%,0%"
-                                         EndPoint="50%,100%">
-                        <GradientStop Color="#a3bee6" Offset="0.15"/>
-                        <GradientStop Color="#478bf1" Offset="0.75"/>
-                    </LinearGradientBrush>
-                    
-                    <LinearGradientBrush x:Key="SurfaceGradientPointerOver"  
-                                         StartPoint="50%,0%"
-                                         EndPoint="50%,100%">
-                        <GradientStop Color="#88afeb" Offset="0.15"/>
-                        <GradientStop Color="#6fa3f1" Offset="0.75"/>
-                    </LinearGradientBrush>
-
-                    <LinearGradientBrush x:Key="SeparatorBrush"
-                                         StartPoint="0%,50%" EndPoint="100%,50%">
+                    <LinearGradientBrush x:Key="SeparatorBrush" StartPoint="0%,50%" EndPoint="100%,50%">
                         <GradientStop Color="Transparent" Offset="0"/>
-                        <GradientStop Color="#76c2e3"     Offset="0.3"/>
-                        <GradientStop Color="#0cabef"     Offset="0.5"/>
-                        <GradientStop Color="#76c2e3"     Offset="0.7"/>
+                        <GradientStop Color="#93b8e8"     Offset="0.3"/>
+                        <GradientStop Color="#1a5fba"     Offset="0.5"/>
+                        <GradientStop Color="#93b8e8"     Offset="0.7"/>
                         <GradientStop Color="Transparent" Offset="1"/>
                     </LinearGradientBrush>
-                    
-                    <LinearGradientBrush x:Key="BackgroundGradient"
-                                         StartPoint="100%,0%"
-                                         EndPoint="0%,100%">
-                        <GradientStop Color="#87dadc" Offset="0.3"/>
-                        <GradientStop Color="#0e7acd" Offset="0.7"/>
+
+                    <LinearGradientBrush x:Key="BackgroundGradient" StartPoint="100%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#ffffff" Offset="0"/>
+                        <GradientStop Color="#a8ccf0" Offset="1"/>
                     </LinearGradientBrush>
-                    
-                    <LinearGradientBrush x:Key="TitleBarGradient"
-                                         StartPoint="100%,0%"
-                                         EndPoint="0%,100%">
-                        <GradientStop Color="#0e7acd" Offset="0.3"/>
-                        <GradientStop Color="#87dadc" Offset="0.7"/>
+
+                    <LinearGradientBrush x:Key="SurfaceGradient" StartPoint="50%,0%" EndPoint="50%,100%">
+                        <GradientStop Color="#e8f3fd" Offset="0"/>
+                        <GradientStop Color="#93bce8" Offset="1"/>
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="SurfaceGradientPointerOver" StartPoint="50%,0%" EndPoint="50%,100%">
+                        <GradientStop Color="#d4e8f8" Offset="0"/>
+                        <GradientStop Color="#7aaee0" Offset="1"/>
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="ListBackground" StartPoint="100%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#f0f7ff" Offset="0"/>
+                        <GradientStop Color="#b8d8f5" Offset="1"/>
+                    </LinearGradientBrush>
+
+                    <LinearGradientBrush x:Key="TitleBarGradient" StartPoint="0%,50%" EndPoint="100%,50%">
+                        <GradientStop Color="#ffffff" Offset="0"/>
+                        <GradientStop Color="#a8ccf0" Offset="1"/>
                     </LinearGradientBrush>
                 </ResourceDictionary>
 

@@ -44,7 +44,8 @@
                 <Border Classes="SeparatorHorizontal"/>
                 
                 <ScrollViewer MaxHeight="250" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding Medias}">
+                        <StackPanel>
+                        <ItemsControl ItemsSource="{Binding Medias}">
                         <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                         <Border Classes="CellInteractive" HorizontalAlignment="Left" DoubleTapped="DoubleClickMedia">
@@ -64,13 +65,14 @@
                                         </Border>
                                 </DataTemplate>
                         </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                        </ItemsControl>
+                        
+                        <StackPanel Classes="UICell">
+                                <Button Classes="primary" Content="Play Playlist" IsDefault="True" Command="{Binding PlayPlaylistCommand}"/>
+                                <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
+                        </StackPanel>
+                        </StackPanel>
                 </ScrollViewer>
-                
-                <StackPanel Classes="UICell">
-                        <Button Classes="primary" Content="Play Playlist" IsDefault="True" Command="{Binding PlayPlaylistCommand}"/>
-                        <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
-                </StackPanel>
         </StackPanel>
         </Grid>
 </Window>

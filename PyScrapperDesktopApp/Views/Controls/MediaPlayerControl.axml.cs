@@ -127,6 +127,9 @@ public partial class MediaPlayerControl : UserControl
     /// </summary>
     public void Dispose() => _vm?.Dispose();
     
+    /// <summary>
+    /// Sets the icons for the navigation buttons (previous, next, shuffle) based on the current theme.
+    /// </summary>
     private void SetNavigationButtons()
     {
         if (DataContext is not MediaPlayerControlViewModel vm) return;
@@ -135,6 +138,10 @@ public partial class MediaPlayerControl : UserControl
         ShuffleCheckbox.Content = vm.ShuffleIcon;
     }
 
+    /// <summary>
+    /// Sets the icon for the play/pause button based on the current theme and play state.
+    /// </summary>
+    /// <param name="counter"></param>
     private void SetPlayButton(int counter)
     {
         if (DataContext is not MediaPlayerControlViewModel vm) return;
@@ -144,6 +151,9 @@ public partial class MediaPlayerControl : UserControl
             PlayButton.Content = vm.PauseIcon;
     }
 
+    /// <summary>
+    /// Sets the icons for the song and volume based on the current theme.
+    /// </summary>
     private void SetImageIcons()
     {
         if (DataContext is not MediaPlayerControlViewModel vm) return;

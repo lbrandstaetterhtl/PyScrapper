@@ -9,9 +9,9 @@
              x:DataType="vm:MediaPlayerControlViewModel">
     
             <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto" Margin="10">
-                <Grid Grid.Row="0" RowDefinitions="Auto, Auto" Margin="15">
+                <Grid Grid.Row="0" RowDefinitions="Auto, *" Margin="15">
                         <TextBlock Grid.Row="0" Text="{Binding NowPlayingTitle}" Classes="UILabel"/>
-                        <avalonia:VideoView Grid.Row="1" x:Name="VideoView"  Height="400" Width="600" IsVisible="{Binding HasVideo}" Margin="10"/>
+                        <avalonia:VideoView Grid.Row="1" x:Name="VideoView" Height="300" Width="450" MaxWidth="600" MinHeight="150" MaxHeight="500" IsVisible="{Binding HasVideo}" Margin="10"/>
                 </Grid>
                 
                 <StackPanel Grid.Row="1" Classes="UICell" Margin="15">

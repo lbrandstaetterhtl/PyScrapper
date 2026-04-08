@@ -30,6 +30,11 @@ public partial class MainWindow : Window
         {
             _vm.OnWindowReady(this);
         };
+        
+        App.Current.ActualThemeVariantChanged += (s, e) =>
+        {
+            SetHideIcons();
+        };
     }
 
     private async void MediaDoubleClick(object? sender, RoutedEventArgs e)
@@ -220,5 +225,11 @@ public partial class MainWindow : Window
     
         var log = new Massage($"Added {media.Title} to {playlist.Name}", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
+    }
+
+    private void SetHideIcons()
+    {
+        DownloadedMediasHideIcon.Content = _vm.HideIcon;
+        PlaylistHideIcon.Content = _vm.HideIcon;
     }
 }

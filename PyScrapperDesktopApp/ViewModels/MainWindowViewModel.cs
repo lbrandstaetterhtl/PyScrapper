@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -29,6 +30,15 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<Playlist> Playlists => AppData.Playlists;
     private Window _window;
 
+    private static bool darkMode = AppData.Settings.DarkModeEnabled;
+
+    [ObservableProperty] private Image _hideIcon = new Image
+    {
+        Source = darkMode
+            ? new Bitmap(Path.Combine(AppData.AssetPath, "DarkMode", "left-arrow-darkmode.png"))
+            : new Bitmap(Path.Combine(AppData.AssetPath, "LightMode", "left-arrow-lightmode.png"))
+    };
+
     /// <summary>
     /// Constructor for the MainWindowViewModel, which initializes the view model and sets up the list of downloaded media by fetching it from the AppData.
     /// It also checks if the application is in design mode to avoid executing code that should only run at runtime.
@@ -36,6 +46,11 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel()
     {
         if (Design.IsDesignMode) return;
+
+        App.Current.ActualThemeVariantChanged += (s, e) =>
+        {
+            
+        };
     }
     
     /// <summary>
