@@ -25,6 +25,8 @@ public partial class MainWindow : Window
         _vm = new MainWindowViewModel();
         
         DataContext = _vm;
+        
+        SetHideIcons();
 
         Opened += (s, e) =>
         {
@@ -229,7 +231,7 @@ public partial class MainWindow : Window
 
     private void SetHideIcons()
     {
-        DownloadedMediasHideIcon.Content = _vm.HideIcon;
-        PlaylistHideIcon.Content = _vm.HideIcon;
+        DownloadedMediasHideIcon.Content = _vm.MediasHideIcon;
+        PlaylistHideIcon.Content = _vm.PlaylistHideIcon;
     }
 }

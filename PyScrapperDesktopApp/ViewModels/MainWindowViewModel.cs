@@ -32,7 +32,14 @@ public partial class MainWindowViewModel : ObservableObject
 
     private static bool darkMode = AppData.Settings.DarkModeEnabled;
 
-    [ObservableProperty] private Image _hideIcon = new Image
+    [ObservableProperty] private Image _mediasHideIcon = new Image
+    {
+        Source = darkMode
+            ? new Bitmap(Path.Combine(AppData.AssetPath, "DarkMode", "left-arrow-darkmode.png"))
+            : new Bitmap(Path.Combine(AppData.AssetPath, "LightMode", "left-arrow-lightmode.png"))
+    };
+    
+    [ObservableProperty] private Image _playlistHideIcon = new Image
     {
         Source = darkMode
             ? new Bitmap(Path.Combine(AppData.AssetPath, "DarkMode", "left-arrow-darkmode.png"))
