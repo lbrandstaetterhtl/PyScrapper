@@ -42,6 +42,12 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     public PlaylistDetailsWindowViewModel(Playlist playlist)
     {
         PlaylistName = playlist.Name;
+
+        if (!string.IsNullOrEmpty(playlist.Description) && playlist.Description.Length > 20) 
+        {
+            Description = playlist.Description.Split();
+        }
+
         Description = playlist.Description;
         PlaylistId = playlist.Id;
         Medias = AppData.DownloadedMedias.Where(m => playlist.MediaIds.Contains(m.Id)).ToList();
