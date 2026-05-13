@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -101,15 +102,22 @@ public class AudioPlayer : IDisposable
         {
             PlaylistModeEnabled = false;
             _playlistTracks.Clear();
-            DownloadedMedia media = AppData.PlayableMedias.First(m => m.Id == playlist.MediaIds[0]);
 
-            if (media == null)  return;
+            var media = AppData.PlayableMedias.FirstOrDefault(m => m.Id == playlist.MediaIds[0]);
+
+            if (media == null)
+            {
+                var log = new Massage($"Playlist media with id {playlist.MediaIds[0]} is not playable or does not exist", DateTime.Now, "WARN");
+                _logger.LogNewMassage(log);
+                return;
+            }
+
             _playlistTracks.Add(media);
         }
         else if (playlist.Count > 1)
         {
             PlaylistModeEnabled = true;
-            
+
             var list = AppData.PlayableMedias.Where(m => playlist.MediaIds.Contains(m.Id)).ToList();
 
             _originalPlaylistTracks.Clear();
@@ -339,42 +347,85 @@ public class AudioPlayer : IDisposable
     /// </summary>
     /// <param name="path"></param>
     /// <returns></returns>
-    private static async Task<string?> GetVideoCodec(string path)
+private static async Task<string?> GetVideoCodec(string path)
+{
+    var ffprobe = FindFfprobe() ?? "ffprobe";
+
+    var process = new Process();
+
+    process.StartInfo = new ProcessStartInfo
     {
-        var process = new Process();
+        FileName               = ffprobe,
+        Arguments              = $"-v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 \"{path}\"",
+        RedirectStandardOutput = true,
+        RedirectStandardError  = true,
+        UseShellExecute        = false,
+        CreateNoWindow         = true
+    };
 
-        process.StartInfo = new ProcessStartInfo
-        {
-            FileName = "ffprobe",
-            Arguments = $"-v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 \"{path}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        
-        process.Start();
-        
-        string output = await process.StandardOutput.ReadToEndAsync();
-        string error = await process.StandardError.ReadToEndAsync() ?? "";
-        
-        await process.WaitForExitAsync();
+    process.Start();
 
-        if (!string.IsNullOrWhiteSpace(error))
-        {
-            var log = new Massage($"Error checking codec for file '{path}': {error}", DateTime.Now, "ERROR");
-            _logger.LogNewMassage(log);
-            
-            if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-                return "";
-            
-            var messageBox = new MessageBox($"An error occurred while checking the video codec for the file '{path}': {error}");
-            await messageBox.ShowDialog(desktop.MainWindow);
+    string output = await process.StandardOutput.ReadToEndAsync();
+    string error  = await process.StandardError.ReadToEndAsync() ?? "";
+
+    await process.WaitForExitAsync();
+
+    if (!string.IsNullOrWhiteSpace(error))
+    {
+        var log = new Massage($"Error checking codec for file '{path}': {error}", DateTime.Now, "ERROR");
+        _logger.LogNewMassage(log);
+
+        if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return "";
-        }
-        else
+
+        var messageBox = new MessageBox($"An error occurred while checking the video codec for the file '{path}': {error}");
+        await messageBox.ShowDialog(desktop.MainWindow);
+        return "";
+    }
+    else
+    {
+        return output;
+    }
+}
+
+/// <summary>
+/// Locates the ffprobe executable by checking PATH first, then the WinGet yt-dlp.FFmpeg package
+/// directory, and finally the local ffmpeg folder placed by the launcher. This mirrors the lookup
+/// logic of the Python find_ffmpeg() function so both sides of the application agree on the location.
+/// Returns the full path to ffprobe.exe, or null if it cannot be found.
+/// </summary>
+    private static string? FindFfprobe()
+    {
+        // 1) PATH
+        var where = Process.Start(new ProcessStartInfo
         {
-            return output;
+            FileName               = "where",
+            Arguments              = "ffprobe",
+            RedirectStandardOutput = true,
+            RedirectStandardError  = true,
+            UseShellExecute        = false,
+            CreateNoWindow         = true,
+        })!;
+        var result = where.StandardOutput.ReadToEnd().Trim();
+        where.WaitForExit();
+        if (where.ExitCode == 0 && !string.IsNullOrEmpty(result))
+            return result.Split('\n')[0].Trim();
+
+        // 2) WinGet yt-dlp.FFmpeg package directory
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var pkgRoot = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");
+        if (Directory.Exists(pkgRoot))
+        {
+            var hit = Directory
+                .EnumerateFiles(pkgRoot, "ffprobe.exe", SearchOption.AllDirectories)
+                .FirstOrDefault(f => f.Contains("yt-dlp.FFmpeg"));
+            if (hit != null) return hit;
         }
+
+        // 3) Lokal neben der venv — vom Launcher installiert
+        var localFfprobe = Path.Combine(AppData.PyScrapperPath, "LocalServer", "ffmpeg", "bin", "ffprobe.exe");
+        if (File.Exists(localFfprobe)) return localFfprobe;
+
+        return null;
     }
 }

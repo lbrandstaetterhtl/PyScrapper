@@ -255,20 +255,6 @@ public partial class LauncherWindowViewModel : ObservableObject
 
         _serverProcess = new Process { StartInfo = psi };
 
-        _serverProcess.OutputDataReceived += (_, e) =>
-        {
-            if (e.Data is null) return;
-            var log = new Massage($"[uvicorn] {e.Data}", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-        };
-
-        _serverProcess.ErrorDataReceived += (_, e) =>
-        {
-            if (e.Data is null) return;
-            var log = new Massage($"[uvicorn] {e.Data}", DateTime.Now, "ERROR");
-            _logger.LogNewMassage(log);
-        };
-
         _serverProcess.Start();
         _serverProcess.BeginOutputReadLine();
         _serverProcess.BeginErrorReadLine();
