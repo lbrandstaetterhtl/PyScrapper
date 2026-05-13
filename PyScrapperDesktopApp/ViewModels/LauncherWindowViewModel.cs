@@ -16,10 +16,10 @@ namespace PyScrapperDesktopApp.ViewModels;
 /// <summary>
 /// Class responsible for managing the state and logic of the LauncherWindow, which serves as the automatic
 /// startup window of the application. It handles checking the Python environment, installing dependencies
-/// (backend packages, Playwright browsers, .NET packages), starting the Python backend server, and verifying
-/// that the server is responsive. Once all steps have completed successfully, the window closes itself with
-/// a Success result. If an error occurs at any point, the error is logged and displayed in the UI, and a
-/// Close button becomes visible for the user to dismiss the window.
+/// (Visual C++ Redistributable, ffmpeg, backend packages, Playwright browsers, .NET packages), starting
+/// the Python backend server, and verifying that the server is responsive. Once all steps have completed
+/// successfully, the window closes itself with a Success result. If an error occurs at any point, the error
+/// is logged and displayed in the UI, and a Close button becomes visible for the user to dismiss the window.
 /// </summary>
 public partial class LauncherWindowViewModel : ObservableObject
 {
@@ -56,10 +56,12 @@ public partial class LauncherWindowViewModel : ObservableObject
 
     /// <summary>
     /// Method that is called when the launcher window is ready, which sets the window reference and starts
-    /// the automatic launch sequence. The sequence checks if the server is already running, creates the
-    /// Python virtual environment and installs dependencies if needed, restores .NET packages, starts the
-    /// server, waits for a successful health check, and then closes the window with a Success result.
-    /// If any step fails, the error is logged and displayed in the UI with a Close button.
+    /// the automatic launch sequence. The sequence checks if the server is already running, then always
+    /// verifies the full environment (Visual C++ Redistributable, ffmpeg, Python installation and version,
+    /// pip, virtual environment, requirements, Playwright browsers) regardless of whether components already
+    /// exist, restores .NET packages, starts the server, waits for a successful health check, and then
+    /// closes the window with a Success result. If any step fails, the error is logged and displayed in
+    /// the UI with a Close button.
     /// </summary>
     /// <param name="window"></param>
     public async void OnWindowReady(Window window)
@@ -83,36 +85,54 @@ public partial class LauncherWindowViewModel : ObservableObject
                 return;
             }
 
-            if (!File.Exists(VenvPython))
-            {
-                StatusText = "Creating Python environment...";
+            StatusText = "Checking Visual C++ Redistributable...";
 
-                log = new Massage("Creating Python virtual environment...", DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
+            log = new Massage("Checking Visual C++ Redistributable...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
 
-                await Task.Run(() => EnsureVenv());
+            await Task.Run(() => EnsureVcRedist());
 
-                StatusText = "Upgrading pip...";
+            StatusText = "Checking ffmpeg...";
 
-                log = new Massage("Upgrading pip...", DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
+            log = new Massage("Checking ffmpeg...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
 
-                await RunProcess(VenvPython, "-m pip install --upgrade pip", LocalServer);
+            await Task.Run(() => EnsureFfmpeg());
 
-                StatusText = "Installing Python packages...";
+            StatusText = "Checking Python installation...";
 
-                log = new Massage("Installing Python requirements...", DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
+            log = new Massage("Checking Python installation...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
 
-                await RunProcess(VenvPython, $"-m pip install -r \"{Requirements}\"", LocalServer);
+            await Task.Run(() => EnsurePython());
 
-                StatusText = "Installing Playwright browsers...";
+            StatusText = "Checking virtual environment...";
 
-                log = new Massage("Installing Playwright browsers...", DateTime.Now, "INFO");
-                _logger.LogNewMassage(log);
+            log = new Massage("Checking Python virtual environment...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
 
-                await RunProcess(VenvPython, "-m playwright install", LocalServer);
-            }
+            await Task.Run(() => EnsureVenv());
+
+            StatusText = "Upgrading pip...";
+
+            log = new Massage("Upgrading pip...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            await RunProcess(VenvPython, "-m pip install --upgrade pip", LocalServer);
+
+            StatusText = "Checking Python packages...";
+
+            log = new Massage("Checking and installing Python requirements...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            await RunProcess(VenvPython, $"-m pip install -r \"{Requirements}\"", LocalServer);
+
+            StatusText = "Checking Playwright browsers...";
+
+            log = new Massage("Checking and installing Playwright browsers...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            await RunProcess(VenvPython, "-m playwright install", LocalServer);
 
             StatusText = "Restoring .NET packages...";
 
@@ -223,7 +243,7 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// <summary>
     /// Starts the Python uvicorn server as a background process. The process is kept alive and referenced
     /// by the _serverProcess field so it can be cleaned up if needed. Output and error streams are redirected
-    /// but not displayed in the UI since this is an automatic launcher without a log view.
+    /// and logged so that server startup errors are visible in the application log.
     /// </summary>
     private void StartServerProcess()
     {
@@ -234,6 +254,21 @@ public partial class LauncherWindowViewModel : ObservableObject
         );
 
         _serverProcess = new Process { StartInfo = psi };
+
+        _serverProcess.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data is null) return;
+            var log = new Massage($"[uvicorn] {e.Data}", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+        };
+
+        _serverProcess.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data is null) return;
+            var log = new Massage($"[uvicorn] {e.Data}", DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+        };
+
         _serverProcess.Start();
         _serverProcess.BeginOutputReadLine();
         _serverProcess.BeginErrorReadLine();
@@ -291,18 +326,193 @@ public partial class LauncherWindowViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Checks if the Microsoft Visual C++ 2015-2022 Redistributable (x64) is installed by looking for
+    /// VCRUNTIME140.dll in the System32 directory. If it is not found, downloads the installer from
+    /// Microsoft and runs it silently. This is required for Python C-extensions such as greenlet and
+    /// playwright to load correctly on Windows. On non-Windows platforms this check is skipped entirely.
+    /// </summary>
+    private void EnsureVcRedist()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        var dll = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "VCRUNTIME140.dll");
+
+        if (File.Exists(dll))
+        {
+            var log = new Massage("VCRUNTIME140.dll found, skipping Visual C++ Redistributable install", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            return;
+        }
+
+        var warnLog = new Massage("VCRUNTIME140.dll not found, downloading Visual C++ Redistributable...", DateTime.Now, "WARN");
+        _logger.LogNewMassage(warnLog);
+
+        Dispatcher.UIThread.Post(() => StatusText = "Downloading Visual C++ Redistributable...");
+
+        var installer = Path.Combine(Path.GetTempPath(), "vc_redist.x64.exe");
+
+        using var http = new System.Net.WebClient();
+        http.DownloadFile("https://aka.ms/vs/17/release/vc_redist.x64.exe", installer);
+
+        Dispatcher.UIThread.Post(() => StatusText = "Installing Visual C++ Redistributable...");
+
+        var p = Process.Start(new ProcessStartInfo
+        {
+            FileName        = installer,
+            Arguments       = "/install /quiet /norestart",
+            UseShellExecute = true,
+        })!;
+        p.WaitForExit();
+
+        try { File.Delete(installer); } catch { }
+
+        if (!File.Exists(dll))
+            throw new Exception(
+                "Visual C++ Redistributable could not be installed automatically.\n" +
+                "Please install it manually: https://aka.ms/vs/17/release/vc_redist.x64.exe\n" +
+                "Note: installation may require administrator privileges."
+            );
+
+        var doneLog = new Massage("Visual C++ Redistributable installed successfully", DateTime.Now, "INFO");
+        _logger.LogNewMassage(doneLog);
+    }
+
+    /// <summary>
+    /// Checks if ffmpeg is available either on PATH or in the WinGet yt-dlp.FFmpeg package directory,
+    /// matching the same lookup logic used by the Python find_ffmpeg() function. If ffmpeg is not found,
+    /// installs it silently via WinGet using the yt-dlp.FFmpeg package, which requires no admin privileges
+    /// and places ffmpeg in the LocalAppData WinGet packages directory where find_ffmpeg() will locate it.
+    /// On non-Windows platforms this check is skipped entirely.
+    /// </summary>
+    private void EnsureFfmpeg()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        if (IsFfmpegAvailable())
+        {
+            var log = new Massage("ffmpeg found, skipping install", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            return;
+        }
+
+        var warnLog = new Massage("ffmpeg not found, installing via WinGet (yt-dlp.FFmpeg)...", DateTime.Now, "WARN");
+        _logger.LogNewMassage(warnLog);
+
+        Dispatcher.UIThread.Post(() => StatusText = "Installing ffmpeg...");
+
+        var p = Process.Start(new ProcessStartInfo
+        {
+            FileName               = "winget",
+            Arguments              = "install --id yt-dlp.FFmpeg --silent --accept-package-agreements --accept-source-agreements",
+            RedirectStandardOutput = true,
+            RedirectStandardError  = true,
+            UseShellExecute        = false,
+            CreateNoWindow         = true,
+        })!;
+        p.WaitForExit();
+
+        if (!IsFfmpegAvailable())
+            throw new Exception(
+                "ffmpeg could not be installed automatically via WinGet.\n" +
+                "Please install it manually: winget install yt-dlp.FFmpeg"
+            );
+
+        var doneLog = new Massage("ffmpeg installed successfully via WinGet", DateTime.Now, "INFO");
+        _logger.LogNewMassage(doneLog);
+    }
+
+    /// <summary>
+    /// Checks if ffmpeg is available by first looking on PATH via the where command, then searching
+    /// the WinGet packages directory for the yt-dlp.FFmpeg package. This mirrors the lookup logic of the
+    /// Python find_ffmpeg() function so that both the launcher check and the Python code agree on availability.
+    /// </summary>
+    /// <returns></returns>
+    private static bool IsFfmpegAvailable()
+    {
+        // 1) PATH check
+        var where = Process.Start(new ProcessStartInfo
+        {
+            FileName               = "where",
+            Arguments              = "ffmpeg",
+            RedirectStandardOutput = true,
+            RedirectStandardError  = true,
+            UseShellExecute        = false,
+            CreateNoWindow         = true,
+        })!;
+        where.WaitForExit();
+        if (where.ExitCode == 0) return true;
+
+        // 2) WinGet yt-dlp.FFmpeg package directory — mirrors Python find_ffmpeg()
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var pkgRoot = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");
+
+        if (!Directory.Exists(pkgRoot)) return false;
+
+        return Directory
+            .EnumerateFiles(pkgRoot, "ffmpeg.exe", SearchOption.AllDirectories)
+            .Any(f => f.Contains("yt-dlp.FFmpeg"));
+    }
+
+    /// <summary>
+    /// Verifies that a compatible Python executable (3.12 or lower) is available on the system.
+    /// Python 3.13 and above are rejected because key dependencies such as greenlet and playwright
+    /// do not yet provide binary wheels for those versions, which causes DLL load failures at runtime.
+    /// If no compatible Python is found or the version is too new, an exception is thrown with
+    /// instructions for the user.
+    /// </summary>
+    private void EnsurePython()
+    {
+        var python = FindPython() ?? throw new Exception("Python not found. Please install Python 3.12 and try again.");
+
+        var versionProcess = Process.Start(new ProcessStartInfo
+        {
+            FileName               = python.Split(' ')[0],
+            Arguments              = python.Contains(' ') ? python.Split(' ', 2)[1] + " --version" : "--version",
+            RedirectStandardOutput = true,
+            RedirectStandardError  = true,
+            UseShellExecute        = false,
+            CreateNoWindow         = true,
+        })!;
+
+        var versionOutput = versionProcess.StandardOutput.ReadToEnd().Trim();
+        versionProcess.WaitForExit();
+
+        var versionString = versionOutput.Replace("Python ", "").Trim();
+
+        if (Version.TryParse(versionString, out var version) && version.Minor >= 13)
+            throw new Exception(
+                $"Python {versionString} is not supported. Please install Python 3.12.\n" +
+                "Packages such as greenlet and playwright do not yet support Python 3.13+.\n" +
+                "If Python 3.12 is already installed, delete LocalServer\\.venv and restart."
+            );
+
+        var log = new Massage($"Python found: {python} ({versionOutput})", DateTime.Now, "INFO");
+        _logger.LogNewMassage(log);
+    }
+
+    /// <summary>
     /// Ensures that a Python virtual environment exists at the expected path. If the venv does not exist,
-    /// it searches for a Python installation on the system and creates one. If Python is not found or
-    /// the venv creation fails, an exception is thrown.
+    /// it searches for a compatible Python installation, checks that pip is available via ensurepip if
+    /// needed, and creates the virtual environment. If the venv already exists, this method returns
+    /// immediately without recreating it. If Python is not found, pip cannot be bootstrapped, or the
+    /// venv creation fails, an exception is thrown.
     /// </summary>
     private void EnsureVenv()
     {
         if (File.Exists(VenvPython)) return;
 
         var venvDir = Path.Combine(LocalServer, ".venv");
-        var python = FindPython() ?? throw new Exception("Python not found. Please install Python 3.12 and try again.");
+        var python  = FindPython() ?? throw new Exception("Python not found. Please install Python 3.12 and try again.");
+        var exe     = python.Split(' ')[0];
+        var args    = python.Contains(' ') ? python.Split(' ', 2)[1] : string.Empty;
 
-        var p = Process.Start(BuildProcessInfo(python, $"-m venv \"{venvDir}\"", LocalServer))!;
+        EnsurePipAvailable(exe, args);
+
+        var venvArgs = string.IsNullOrEmpty(args)
+            ? $"-m venv \"{venvDir}\""
+            : $"{args} -m venv \"{venvDir}\"";
+
+        var p = Process.Start(BuildProcessInfo(exe, venvArgs, LocalServer))!;
         p.WaitForExit();
 
         if (!File.Exists(VenvPython))
@@ -310,20 +520,78 @@ public partial class LauncherWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Searches for a Python installation on the system by trying common executable names (py, python, python3).
-    /// Returns the name of the first executable that responds to --version with exit code 0, or null if none is found.
+    /// Checks if pip is available for the given Python executable by running pip --version.
+    /// If pip is not found, attempts to bootstrap it using the built-in ensurepip module.
+    /// If ensurepip also fails, an exception is thrown with platform-specific installation instructions.
+    /// This method may run on a background thread and uses Dispatcher.UIThread.Post to update the status text.
+    /// </summary>
+    /// <param name="exe"></param>
+    /// <param name="extraArgs"></param>
+    private void EnsurePipAvailable(string exe, string extraArgs)
+    {
+        var pipArgs = string.IsNullOrEmpty(extraArgs)
+            ? "-m pip --version"
+            : $"{extraArgs} -m pip --version";
+
+        var check = Process.Start(new ProcessStartInfo
+        {
+            FileName               = exe,
+            Arguments              = pipArgs,
+            RedirectStandardOutput = true,
+            RedirectStandardError  = true,
+            UseShellExecute        = false,
+            CreateNoWindow         = true,
+        })!;
+        check.WaitForExit();
+
+        if (check.ExitCode == 0) return;
+
+        var log = new Massage("pip not found, attempting bootstrap via ensurepip...", DateTime.Now, "WARN");
+        _logger.LogNewMassage(log);
+
+        Dispatcher.UIThread.Post(() => StatusText = "Bootstrapping pip...");
+
+        var ensureArgs = string.IsNullOrEmpty(extraArgs)
+            ? "-m ensurepip --upgrade"
+            : $"{extraArgs} -m ensurepip --upgrade";
+
+        var bootstrap = Process.Start(new ProcessStartInfo
+        {
+            FileName               = exe,
+            Arguments              = ensureArgs,
+            RedirectStandardOutput = true,
+            RedirectStandardError  = true,
+            UseShellExecute        = false,
+            CreateNoWindow         = true,
+        })!;
+        bootstrap.WaitForExit();
+
+        if (bootstrap.ExitCode != 0)
+            throw new Exception(
+                "pip is not installed and could not be bootstrapped automatically.\n" +
+                "On Debian/Ubuntu: sudo apt install python3-pip\n" +
+                "On Arch: sudo pacman -S python-pip"
+            );
+    }
+
+    /// <summary>
+    /// Searches for a compatible Python 3.12 installation on the system by trying version-specific
+    /// executable names first (py -3.12, python3.12) before falling back to generic names.
+    /// Returns the full invocation string (e.g. "py -3.12") of the first executable that responds
+    /// to --version with exit code 0, or null if none is found.
     /// </summary>
     /// <returns></returns>
     private static string FindPython()
     {
-        foreach (var name in new[] { "py", "python", "python3" })
+        foreach (var name in new[] { "py -3.12", "python3.12", "py", "python", "python3" })
         {
             try
             {
+                var parts = name.Split(' ', 2);
                 var p = Process.Start(new ProcessStartInfo
                 {
-                    FileName               = name,
-                    Arguments              = "--version",
+                    FileName               = parts[0],
+                    Arguments              = parts.Length > 1 ? parts[1] + " --version" : "--version",
                     RedirectStandardOutput = true,
                     RedirectStandardError  = true,
                     UseShellExecute        = false,
