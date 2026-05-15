@@ -17,7 +17,8 @@
         Title="PyScrapperDesktopApp"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
-        ExtendClientAreaTitleBarHeightHint="-1">
+        ExtendClientAreaTitleBarHeightHint="-1"
+        MaxWidth="400">
     
     <Grid RowDefinitions="35,*">
         
@@ -27,7 +28,11 @@
 
                 <TextBlock Text="{Binding Status}" Classes="UILabel"/>
 
-                <TextBlock Text="{Binding Progress, StringFormat={}{0}%}" Classes="UIValue"/>
+                <StackPanel Spacing="10" Orientation="Vertical">
+                    <TextBlock Text="{Binding Progress, StringFormat={}{0}%}" Classes="UIValue"/>
+                    <TextBlock Text="{Binding ProgressSpeed, StringFormat={}{0}Mb/s}" Classes="UIValue"/>
+                </StackPanel>
+                
                 
                 <ProgressBar Minimum="0"
                              Maximum="100"

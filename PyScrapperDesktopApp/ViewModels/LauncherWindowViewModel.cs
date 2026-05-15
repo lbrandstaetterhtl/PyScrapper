@@ -389,7 +389,7 @@ public partial class LauncherWindowViewModel : ObservableObject
         var p = Process.Start(new ProcessStartInfo
         {
             FileName               = "winget",
-            Arguments              = "install --id yt-dlp.FFmpeg --silent --accept-package-agreements --accept-source-agreements",
+            Arguments              = "install yt-dlp.FFmpeg",
             RedirectStandardOutput = true,
             RedirectStandardError  = true,
             UseShellExecute        = false,

@@ -1,0 +1,65 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="PyScrapperDesktopApp.Views.FilterWindow"
+        x:DataType="vm:FilterWindowViewModel"
+        SizeToContent="WidthAndHeight"
+        MaxHeight="600"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        Icon="/Assets/PyScrapperLogo.ico"
+        Title="PyScrapperDesktopApp">
+        
+        <Grid RowDefinitions="35,*">
+        
+                <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+                
+                <ScrollViewer Grid.Row="1" Classes="RootScrollViewer">
+                        <StackPanel HorizontalAlignment="Stretch">
+                                <Border Classes="Cell" HorizontalAlignment="Stretch">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                                <TextBlock Text="Search for a media: " Classes="UILabel"/>
+                                                <TextBox HorizontalAlignment="Center" Text="{Binding SearchQuery}" Classes="UI" Width="200"/>
+                                        </StackPanel>
+                                </Border>
+                                
+                                <Border Classes="Cell" HorizontalAlignment="Stretch">
+                                        <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Filter by media type: " Classes="UILabel"/>
+                                                <ListBox HorizontalAlignment="Center" Classes="List" ItemsSource="{Binding AvailableMediaTypes}" SelectedItems="{Binding SelectedMediaTypes}" SelectionMode="Toggle, Multiple"/>
+                                        </StackPanel>
+                                </Border>
+                                
+                                <Border Classes="Cell" HorizontalAlignment="Stretch">
+                                        <Grid RowDefinitions="Auto,*,Auto,*">
+                                                <TextBlock Grid.Row="0" Text="from:" Classes="UILabel"/>
+                                                <DatePicker Grid.Row="1" HorizontalAlignment="Center" SelectedDate="{Binding StartDate}" Classes="UI"/>
+                                                <TextBlock Grid.Row="2" Text="to:" Classes="UILabel"/>
+                                                <DatePicker Grid.Row="3" HorizontalAlignment="Center" SelectedDate="{Binding EndDate}" Classes="UI"/>
+                                        </Grid>
+                                </Border>
+                                
+                                <Border Classes="Cell" HorizontalAlignment="Stretch">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                                <TextBlock Text="Is playable: " Classes="UILabel"/>
+                                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsPlayable}" Classes="UI"/>
+                                        </StackPanel>
+                                </Border>
+                                
+                                <Border Classes="Cell" HorizontalAlignment="Stretch">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                                <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="primary"/>
+                                                <Button Content="Apply" Command="{Binding ApplyCommand}" Classes="primary" IsDefault="True"/>
+                                        </StackPanel>
+                                </Border>
+                        </StackPanel>
+                </ScrollViewer>
+        </Grid>
+        
+</Window>

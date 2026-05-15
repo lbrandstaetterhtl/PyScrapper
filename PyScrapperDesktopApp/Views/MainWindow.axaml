@@ -43,6 +43,10 @@
                     <MenuItem Header="By Date" Command="{Binding SortByDateCommand}"/>
                     <MenuItem Header="By ID" Command="{Binding SortByIdCommand}"/>
                 </MenuItem>
+                <MenuItem Header="Filter">
+                    <MenuItem Header="Select Filter" Command="{Binding FilterClickCommand}"/>
+                    <MenuItem Header="Clear Filter" Command="{Binding ClearFilterCommand}"/>
+                </MenuItem>
                 <MenuItem Header="Scrap">
                     <MenuItem Header="From Suno" Command="{Binding OpenSunoScrapWindowCommand}"/>
                     <MenuItem Header="From Youtube" Command="{Binding OpenYoutubeScrapWindowCommand}"/>

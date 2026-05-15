@@ -440,4 +440,24 @@ public partial class MainWindowViewModel : ObservableObject
     {
         _window = window;
     }
+
+    [RelayCommand]
+    private async Task OnFilterClick()
+    {
+        AppData.FilterEnabled = true;
+        var filterWindow = new FilterWindow();
+        
+        await filterWindow.ShowDialog(_window);
+    }
+
+    [RelayCommand]
+    private void ClearFilter()
+    {
+        foreach (var item in AppData.OriginalDownloadedMedias)
+        {
+            AppData.AddDownloadedMedia(item);
+        }
+        
+        AppData.FilterEnabled = false;
+    }
 }

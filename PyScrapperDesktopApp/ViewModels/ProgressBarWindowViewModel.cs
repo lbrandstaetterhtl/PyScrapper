@@ -85,7 +85,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                                 }
                                 else
                                 {
-                                    Status = progressData.Status;
+                                    Status = progressData.Status + " | please wait...";
                                 }
 
                                 Progress = progressData.DownloadProgress;
@@ -94,6 +94,8 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                                 if (progressData.Status.Equals("complete"))
                                 {
                                     IsFinished = true;
+                                    Status = "Completed";
+                                    ProgressSpeed = 0;
                                     StopProgress();
                                 }
                             });

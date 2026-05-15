@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
@@ -97,28 +98,21 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
         foreach (var item in SelectedItems)
         {
-            string filename;
+            var topLevel = TopLevel.GetTopLevel(_scrapWindow);
+            var storageService = new StorageService(topLevel);
             
-            while (true)
+            var options = new FilePickerSaveOptions();
+            options.SuggestedFileName = item.title;
+            options.FileTypeChoices = new List<FilePickerFileType>
             {
-                var inputWindow = new InputWindow($"Enter filename for the media '{item.title}' (without extension):");
-                filename = await inputWindow.ShowDialog<string>(_scrapWindow);
-
-                if (filename == null)
+                new ("Media Files")
                 {
-                    return;
+                    Patterns = new List<string> { $"*{SelectedMediaType}" }
                 }
-
-                filename = filename.Trim();
-
-                if (TryValidateFileName(filename, out var error))
-                {
-                    break;
-                }
-
-                var messageBox = new MessageBox(error);
-                await messageBox.ShowDialog(_scrapWindow);
-            }
+            };
+            
+            var file = storageService.SaveFilePickerAsync(options).Result;
+            var filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
 
             var requestData = new DownloadRequestData()
             {

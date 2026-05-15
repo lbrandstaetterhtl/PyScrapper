@@ -30,6 +30,11 @@ public partial class MainWindow : Window
         DataContext = _vm;
         
         _vm.UpdateHideIcon();
+        
+        foreach (var media in AppData.DownloadedMedias)
+        {
+            AppData.OriginalDownloadedMedias.Add(media);
+        }
 
         Opened += (s, e) =>
         {

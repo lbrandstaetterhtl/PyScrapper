@@ -16,7 +16,9 @@ namespace PyScrapperDesktopApp.Models;
 public static class AppData
 {
     public static readonly ObservableCollection<DownloadedMedia> DownloadedMedias = new();
+    public static readonly ObservableCollection<DownloadedMedia> OriginalDownloadedMedias = new();
     public static readonly ObservableCollection<DownloadedMedia> PlayableMedias = new();
+    public static bool FilterEnabled = false;
     public static readonly ObservableCollection<Playlist> Playlists = new();
     public static string PyScrapperPath { get;} = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
     public static string AppLogsPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");

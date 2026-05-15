@@ -85,7 +85,12 @@ public partial class SunoScrapWindowViewModel : ObservableObject
 
                     var downloadedFilePath = Path.Combine(AppData.Settings.DownloadPath, $"{Filename}{SelectedMediaType}");
 
-                    bool isPlayable = File.Exists(downloadedFilePath);
+                    bool isPlayable = false;
+
+                    while (!isPlayable)
+                    {
+                        isPlayable = File.Exists(downloadedFilePath);
+                    }
 
                     var media = new DownloadedMedia(SunoUrl, SelectedMediaType, DateTime.Now, downloadedFilePath,
                         isPlayable, identifier);
