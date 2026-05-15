@@ -22,7 +22,7 @@ public static class AppData
     public static string AppLogsPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
     public static string ServerLogsPath { get; set; } = Path.Combine(PyScrapperPath, "LocalServer", "logs");
     public static string DataPath { get; set; } =  Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "data");
-    public static string AssetPath { get; set; } = Path.Combine(AppData.PyScrapperPath, "PyScrapperDesktopApp", "Assets");
+    public static string AssetPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "Assets");
     public static Settings Settings = new();
     public static readonly List<FilePickerFileType> FileTypes = 
     [
@@ -35,6 +35,9 @@ public static class AppData
             Patterns = ["*.mp4"] 
         }
     ];
+
+    public static List<string> ValidMediaTypes = [".mp3", ".mp4"];
+    public static List<string> ValidProviders = ["suno", "youtube", "bandcamp", "archive"];
     
     /// <summary>
     /// Adds a downloaded media to the DownloadedMedias collection and, if it's playable, also to the PlayableMedias collection.

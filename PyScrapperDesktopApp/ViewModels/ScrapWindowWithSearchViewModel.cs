@@ -34,14 +34,14 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     private List<ApiClient.SearchResultItem> _selectedItems = new();
     
     [ObservableProperty]
-    private List<string> _availableMediaTypes = [".mp3", ".mp4"];
+    private List<string> _availableMediaTypes = AppData.ValidMediaTypes;
     
     [ObservableProperty]
     private string _selectedMediaType = ".mp3";
     
     private readonly Window _scrapWindow;
     
-    private readonly List<string> _providers = ["youtube", "suno", "bandcamp", "youtube.com", "suno.com", "bandcamp.com"];
+    private readonly List<string> _providers = AppData.ValidProviders;
     private readonly string _selectedProvider;
     
     public RelayCommand CancelCommand { get; set; }

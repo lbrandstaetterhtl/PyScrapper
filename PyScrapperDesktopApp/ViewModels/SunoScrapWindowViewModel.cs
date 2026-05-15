@@ -28,7 +28,7 @@ public partial class SunoScrapWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _sunoUrl;
     
-    private readonly List<string> _availableMediaType = [".mp3", ".mp4"];
+    private readonly List<string> _availableMediaType = AppData.ValidMediaTypes;
 
     [ObservableProperty]
     private string _selectedMediaType;

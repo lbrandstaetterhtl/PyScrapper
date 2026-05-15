@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
@@ -14,6 +15,8 @@ public partial class MainWindow : Window
 {
     private MainWindowViewModel _vm;
     private readonly AppLogger _logger = new();
+    private int _mediaHideCounter = 0;
+    private int _playlistHideCounter = 0;
     
     public MainWindow()
     {
@@ -26,16 +29,27 @@ public partial class MainWindow : Window
         
         DataContext = _vm;
         
-        SetHideIcons();
+        _vm.UpdateHideIcon();
 
         Opened += (s, e) =>
         {
             _vm.OnWindowReady(this);
         };
-        
-        App.Current.ActualThemeVariantChanged += (s, e) =>
+
+        MediaHide.Click += (s, e) =>
         {
-            SetHideIcons();
+            _mediaHideCounter++;
+            MediasGrid.IsVisible = _mediaHideCounter % 2 == 0;
+            FirstSplitter.IsVisible = _mediaHideCounter % 2 == 0;
+            _vm.UpdateHideIcon();
+        };
+
+        PlaylistHide.Click += (s, e) =>
+        {
+            _playlistHideCounter++;
+            PlaylistsGrid.IsVisible = _playlistHideCounter % 2 == 0;
+            LastSplitter.IsVisible = _playlistHideCounter % 2 == 0;
+            _vm.UpdateHideIcon();
         };
     }
 
@@ -227,11 +241,5 @@ public partial class MainWindow : Window
     
         var log = new Massage($"Added {media.Title} to {playlist.Name}", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
-    }
-
-    private void SetHideIcons()
-    {
-        DownloadedMediasHideIcon.Content = _vm.MediasHideIcon;
-        PlaylistHideIcon.Content = _vm.PlaylistHideIcon;
     }
 }

@@ -84,7 +84,7 @@ public partial class CodecConverterWindowViewModel : ObservableObject
             double duration;
             try
             {
-                duration = await GetDuration(_inputFilePath);
+                duration = await GetDuration(InputFilePath);
             }
             catch (Exception e)
             {

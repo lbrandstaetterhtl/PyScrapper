@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
+using PyScrapperDesktopApp.ViewModels;
 using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.Models;
@@ -194,6 +195,63 @@ public class ApiClient : Interfaces.IApiClient
                 "ERROR");
             _logger.LogNewMassage(log);
 
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// Sends a list of scrap requests to the server sequentially. For each request, it calls the SendScrapRequest method and waits for the result.
+    /// If the result is "-1", it adds false to the results list.
+    /// Otherwise, it shows a progress bar window and starts tracking the download progress using the ProgressBarWindowViewModel.
+    /// Once the download is complete, it adds the result (true if successful, false if there was an error) to the results list.
+    /// If any exception occurs during the process, it logs the error and returns null.
+    /// </summary>
+    /// <param name="requestDataList"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public async Task<List<bool>> SendListScrapRequest(List<DownloadRequestData> requestDataList)
+    {
+        HttpClient client = new();
+        
+        client.Timeout = TimeSpan.FromMinutes(30);
+
+        List<bool> results = new List<bool>();
+
+        try
+        {
+            foreach (var requestData in requestDataList)
+            {
+                var scrapResult = await SendScrapRequest(requestData);
+
+                if (scrapResult == "-1")
+                {
+                    results.Add(false);
+                }
+                else
+                {
+                    var progressWindow = new ProgressBarWindow();
+                    progressWindow.Show();
+
+                    var progressVm = progressWindow.DataContext as ProgressBarWindowViewModel;
+
+                    if (progressVm == null)
+                    {
+                        throw new Exception("ProgressBarWindowViewModel is null");
+                    }
+
+                    var result = await progressVm.StartProgress(scrapResult);
+
+                    results.Add(result);
+                }
+            }
+
+            return results;
+        }
+        catch (Exception ex)
+        {
+            var log =  new Massage($"Error sending scrap request: {ex.Message}", DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
             return null;
         }
     }

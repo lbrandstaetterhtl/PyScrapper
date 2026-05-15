@@ -32,19 +32,24 @@ public partial class MainWindowViewModel : ObservableObject
 
     private static bool darkMode = AppData.Settings.DarkModeEnabled;
 
-    [ObservableProperty] private Image _mediasHideIcon = new Image
+    [ObservableProperty]
+    private Image _mediaHideIcon;
+
+    [ObservableProperty] 
+    private Image _playlistHideIcon;
+
+    public void UpdateHideIcon()
     {
-        Source = darkMode
-            ? new Bitmap(Path.Combine(AppData.AssetPath, "DarkMode", "left-arrow-darkmode.png"))
-            : new Bitmap(Path.Combine(AppData.AssetPath, "LightMode", "left-arrow-lightmode.png"))
-    };
-    
-    [ObservableProperty] private Image _playlistHideIcon = new Image
-    {
-        Source = darkMode
-            ? new Bitmap(Path.Combine(AppData.AssetPath, "DarkMode", "left-arrow-darkmode.png"))
-            : new Bitmap(Path.Combine(AppData.AssetPath, "LightMode", "left-arrow-lightmode.png"))
-    };
+        MediaHideIcon = new Image()
+        {
+            Source = new Bitmap(Path.Combine(AppData.AssetPath, darkMode ? "DarkMode" : "LightMode", darkMode ? "left-arrow-darkmode.png" : "left-arrow-lightmode.png"))
+        };
+        
+        PlaylistHideIcon = new Image()
+        {
+            Source = new Bitmap(Path.Combine(AppData.AssetPath, darkMode ? "DarkMode" : "LightMode", darkMode ? "left-arrow-darkmode.png" : "left-arrow-lightmode.png"))
+        };
+    }
 
     /// <summary>
     /// Constructor for the MainWindowViewModel, which initializes the view model and sets up the list of downloaded media by fetching it from the AppData.
@@ -53,10 +58,12 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel()
     {
         if (Design.IsDesignMode) return;
-
+        UpdateHideIcon();
+        
         App.Current.ActualThemeVariantChanged += (s, e) =>
         {
-            
+            darkMode = AppData.Settings.DarkModeEnabled;
+            UpdateHideIcon();
         };
     }
     
