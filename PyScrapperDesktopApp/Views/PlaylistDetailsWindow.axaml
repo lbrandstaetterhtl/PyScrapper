@@ -4,75 +4,101 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="520" d:DesignHeight="500"
         x:Class="PyScrapperDesktopApp.Views.PlaylistDetailsWindow"
         x:DataType="vm:PlaylistDetailsWindowViewModel"
-        SizeToContent="WidthAndHeight"
-        MaxHeight="400"
-        MaxWidth="600"
+        MinWidth="400"
+        MaxWidth="560"
+        MinHeight="300"
+        MaxHeight="520"
+        SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1">
-        
-        <Grid RowDefinitions="35,*">
-        
-                <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
-        
-        <StackPanel Grid.Row="1" Spacing="10" Classes="RootPanel">
-                
-                <StackPanel Orientation="Horizontal">
-                <StackPanel Orientation="Horizontal" Classes="UICell">
-                        <TextBlock Text="Playlist Name: " Classes="UILabel"/>
-                        <Grid RowDefinitions="Auto, *">
-                        <TextBlock Grid.Row="0" Text="{Binding PlaylistName}" Classes="UILabel"/>
-                        </Grid>
-                </StackPanel>
-                        
-                        <Border Classes="SeparatorHorizontal"/>
-                
-                <StackPanel Orientation="Horizontal" Classes="UICell">
-                        <TextBlock Text="Playlist description: " Classes="UILabel"/>
-                        <Grid RowDefinitions="Auto, *">
-                        <TextBlock Grid.Row="0" Text="{Binding Description}" Classes="UILabel"/>
-                        </Grid>
-                </StackPanel>
-                </StackPanel>
-                
-                <Border Classes="SeparatorHorizontal"/>
-                
-                <ScrollViewer MaxHeight="250" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                        <ItemsControl ItemsSource="{Binding Medias}">
-                        <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                        <Border Classes="CellInteractive" HorizontalAlignment="Left" DoubleTapped="DoubleClickMedia">
-                                                
-                                                <Border.ContextFlyout>
-                                                        <MenuFlyout>
-                                                                <MenuItem Header="Play" Click="PlayButtonClick"/>
-                                                                <MenuItem Header="Remove from Playlist" Click="RemoveButtonClick"/>
-                                                        </MenuFlyout>
-                                                </Border.ContextFlyout>
-                                                
-                                                <StackPanel Classes="UICell">
-                                                        <TextBlock Text="{Binding Title}" Classes="UIValue"/>
-                                                        <CheckBox Content="Is Playable" IsChecked="{Binding IsPlayable}" Classes="IsPlayable"/>
-                                                </StackPanel>
-                                                
-                                        </Border>
-                                </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        
-                        <StackPanel Classes="UICell">
-                                <Button Classes="primary" Content="Play Playlist" IsDefault="True" Command="{Binding PlayPlaylistCommand}"/>
-                                <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
-                        </StackPanel>
-                        </StackPanel>
-                </ScrollViewer>
-        </StackPanel>
+
+    <Grid RowDefinitions="35,*" Classes="RootGrid">
+
+        <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+
+        <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto" Margin="14,10,14,14">
+
+            <!-- Header: Name + Description -->
+            <Border Grid.Row="0" Classes="Cell" HorizontalAlignment="Stretch" Margin="0,0,0,0">
+                <Grid ColumnDefinitions="*,Auto,*">
+                    <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="2" HorizontalAlignment="Center">
+                        <TextBlock Text="Playlist" Classes="UILabel" Margin="0" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding PlaylistName}" Classes="UIValue" FontSize="15" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="1" Classes="SeperatorVertical" Margin="8,4"/>
+
+                    <StackPanel Grid.Column="2" Orientation="Vertical" Spacing="2" HorizontalAlignment="Center">
+                        <TextBlock Text="Description" Classes="UILabel" Margin="0" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding Description}" Classes="UIValue" FontSize="15" HorizontalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="160"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Classes="SeparatorHorizontal" HorizontalAlignment="Stretch" Margin="4,6"/>
+
+            <!-- Track list -->
+            <ScrollViewer Grid.Row="2"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Medias}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Classes="CellInteractive"
+                                    HorizontalAlignment="Stretch"
+                                    Margin="0,3"
+                                    DoubleTapped="DoubleClickMedia">
+
+                                <Border.ContextFlyout>
+                                    <MenuFlyout>
+                                        <MenuItem Header="Play" Click="PlayButtonClick"/>
+                                        <MenuItem Header="Remove from Playlist" Click="RemoveButtonClick"/>
+                                    </MenuFlyout>
+                                </Border.ContextFlyout>
+
+                                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="2">
+                                        <TextBlock Text="{Binding Title}"
+                                                   Classes="UIValue"
+                                                   FontSize="14"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Left"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding MediaType}"
+                                                   Classes="UIValue"
+                                                   FontSize="12"
+                                                   HorizontalAlignment="Left"
+                                                   Opacity="0.6"/>
+                                    </StackPanel>
+
+                                    <CheckBox Grid.Column="1"
+                                              Content="Playable"
+                                              IsChecked="{Binding IsPlayable}"
+                                              Classes="IsPlayable"
+                                              VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Buttons -->
+            <Border Grid.Row="3" Classes="SeparatorHorizontal" HorizontalAlignment="Stretch" Margin="4,8,4,20"/>
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center"
+                        Spacing="8" Margin="0,36,0,0">
+                <Button Classes="primary" Content="Play Playlist" Command="{Binding PlayPlaylistCommand}"/>
+                <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
+            </StackPanel>
+
         </Grid>
+    </Grid>
 </Window>

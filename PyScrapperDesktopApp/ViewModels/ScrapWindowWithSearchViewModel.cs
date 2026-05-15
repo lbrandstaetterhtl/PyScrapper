@@ -158,8 +158,13 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     var downloadFilePath = Path.Combine(AppData.Settings.DownloadPath!, $"{filename}{SelectedMediaType}");
 
                     Task.Delay(2000).Wait();
-                    
-                    bool isPlayable = File.Exists(downloadFilePath);
+
+                    bool isPlayable = false;
+
+                    while (!isPlayable)
+                    {
+                        isPlayable = File.Exists(downloadFilePath);
+                    }
 
                     var media = new DownloadedMedia(item.url, SelectedMediaType, DateTime.Now, downloadFilePath,
                         isPlayable, identifier);
@@ -219,7 +224,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
         var httpClient = new HttpClient();
         
-        if (_selectedProvider == _providers[0] || _selectedProvider == _providers[3])
+        if (_selectedProvider == _providers[1])
         {
             foreach (var item in results)
             {
@@ -227,11 +232,11 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
                 var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
 
-                using var stream = new MemoryStream(bytes);
+                var stream = new MemoryStream(bytes);
                 item.ThumbnailBitmap = new Bitmap(stream);
             }
         }
-        else if (_selectedProvider == _providers[2] || _selectedProvider == _providers[5])
+        else if (_selectedProvider == _providers[2] || _selectedProvider == _providers[3])
         {
             foreach (var item in results)
             {
@@ -239,7 +244,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
                 var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
 
-                using var stream = new MemoryStream(bytes);
+                var stream = new MemoryStream(bytes);
                 item.ThumbnailBitmap = new Bitmap(stream);
             }
         }
