@@ -4,8 +4,11 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.Models;
 
@@ -16,7 +19,8 @@ namespace PyScrapperDesktopApp.Models;
 public static class AppData
 {
     public static readonly ObservableCollection<DownloadedMedia> DownloadedMedias = new();
-    public static readonly ObservableCollection<DownloadedMedia> OriginalDownloadedMedias = new();
+    public static MediaFilter CurrentMediaFilter = new();
+    public static List<DownloadedMedia> OriginalDownloadedMedias = new();
     public static readonly ObservableCollection<DownloadedMedia> PlayableMedias = new();
     public static bool FilterEnabled = false;
     public static readonly ObservableCollection<Playlist> Playlists = new();
@@ -262,5 +266,101 @@ public class Settings
     {
         DownloadPath = Path.Combine(AppData.PyScrapperPath, "Downloads");
         DarkModeEnabled = true;
+    }
+}
+
+public class MediaFilter
+{
+    public string? SearchQuery { get; set; } = null;
+    
+    public List<string>? MediaTypes { get; set; } = null;
+
+    public DateTimeOffset? StartDate { get; set; } = null;
+    public DateTimeOffset? EndDate { get; set; } = null;
+    
+    public bool IsPlayable { get; set; } = false;
+    
+    private static readonly AppLogger _logger = new();
+
+    public static async Task ApplyMediaFilter(MediaFilter filter)
+    {
+        try
+        {
+            if (AppData.FilterEnabled)
+            {
+                
+            }
+
+            AppData.FilterEnabled = true;
+            AppData.CurrentMediaFilter = filter;
+            AppData.OriginalDownloadedMedias = AppData.DownloadedMedias.ToList();
+            AppData.DownloadedMedias.Clear();
+
+            foreach (var media in AppData.OriginalDownloadedMedias)
+            {
+                bool matches =
+                    (filter.SearchQuery == null || media.Title.Contains(filter.SearchQuery, StringComparison.OrdinalIgnoreCase)) && // <-- fix 2
+                    (filter.MediaTypes == null || filter.MediaTypes.Contains(media.MediaType)) &&
+                    (filter.StartDate == null || media.DownloadedAt >= filter.StartDate.Value.DateTime) &&
+                    (filter.EndDate == null || media.DownloadedAt <= filter.EndDate.Value.DateTime) &&
+                    (!filter.IsPlayable || media.IsPlayable == filter.IsPlayable);
+
+                if (matches)
+                    AppData.AddDownloadedMedia(media);
+            }
+        }
+        catch (Exception ex)
+        {
+            var log = new Massage("An error occurred while applying the media filter: " + ex.InnerException!.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
+            var messageBox = new MessageBox("An error occurred while applying the media filter: " + ex.Message);
+            await messageBox.ShowDialog(App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+        }
+    }
+    
+    public static async Task ClearFilter()
+    {
+        try
+        {
+            if (AppData.FilterEnabled == false)
+            {
+                throw new Exception("No active filter to clear.", new Exception("No active filter"));
+            }
+
+            AppData.FilterEnabled = false;
+            AppData.DownloadedMedias.Clear();
+            AppData.CurrentMediaFilter = new MediaFilter();
+
+            foreach (var media in AppData.OriginalDownloadedMedias)
+            {
+                AppData.AddDownloadedMedia(media);
+            }
+
+            AppData.OriginalDownloadedMedias.Clear();
+        }
+        catch (Exception ex)
+        {
+            var log = new Massage("An error occurred while clearing the filter: " + ex.InnerException!.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
+            var messageBox = new MessageBox("An error occurred while clearing the filter: " + ex.Message);
+            await messageBox.ShowDialog(App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+        }
+    }
+
+    public static MediaFilter BuildMediaFilter(string? searchQuery, List<string>? mediaTypes, DateTimeOffset? startDate,
+        DateTimeOffset? endDate, bool isPlayable)
+    {
+        MediaFilter filter = new()
+        {
+            SearchQuery = searchQuery,
+            MediaTypes = mediaTypes,
+            StartDate = startDate,
+            EndDate = endDate,
+            IsPlayable = isPlayable
+         };
+        
+        return filter;
     }
 }

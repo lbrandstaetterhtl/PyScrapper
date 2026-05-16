@@ -114,7 +114,7 @@ public partial class App : Application
                 media.SetTitle();
 
                 bool exists = File.Exists(media.DownloadPath);
-                bool isSupported = true;
+                bool isSupported = false;
                 if (exists)
                 {
                     isSupported = !media.DownloadPath.EndsWith(".mp4") || await AudioPlayer.IsSupportedCodec(media.DownloadPath);
@@ -164,7 +164,7 @@ public partial class App : Application
                 AppData.AddPlaylist(playlist);
             }
 
-            ScanFolder(AppData.Settings.DownloadPath, out var diff);
+            var diff = await ScanFolder(AppData.Settings.DownloadPath);
 
             log = new Massage($"Scanned download folder for new media, found {diff} new media items", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
@@ -210,10 +210,10 @@ public partial class App : Application
         _logger.LogNewMassage(log);
     }
 
-    public static void ScanFolder(string folder, out int diff)
+    public static async Task<int> ScanFolder(string folder)
     {
-        diff = 0;
-        if (Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
+        var diff = 0;
+        if (Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return diff;
         
         try
         {
@@ -224,7 +224,7 @@ public partial class App : Application
             };
 
             if (!Directory.Exists(folder))
-                return;
+                return diff;
 
             var found = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
                 .Where(f => extensions.Contains(Path.GetExtension(f)));
@@ -241,6 +241,19 @@ public partial class App : Application
                 );
                 media.SetTitle();
                 media.SetHighestId(AppData.DownloadedMedias);
+                
+                bool exists = File.Exists(media.DownloadPath);
+                bool isSupported = false;
+                if (exists)
+                {
+                    isSupported = !media.DownloadPath.EndsWith(".mp4") || await AudioPlayer.IsSupportedCodec(media.DownloadPath);
+                }
+
+                if (exists && isSupported)
+                {
+                    media.IsPlayable = true;
+                }
+                
                 bool alreadyExists = AppData.MediaAlreadyExists(file);
 
                 int originalMediaCount = AppData.DownloadedMedias.Count;
@@ -249,6 +262,8 @@ public partial class App : Application
                     AppData.AddDownloadedMedia(media);
 
                 diff = AppData.DownloadedMedias.Count - originalMediaCount;
+
+                return diff;
             }
         }
         catch (Exception ex)
@@ -256,6 +271,8 @@ public partial class App : Application
             var log = new Massage("An error occurred while scanning the folder: " + ex.Message, DateTime.Now, "ERROR");
             new AppLogger().LogNewMassage(log);
         }
+        
+        return 0;
     }
 
     public static void ToggleTheme()

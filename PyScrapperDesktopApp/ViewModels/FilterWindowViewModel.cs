@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
@@ -13,19 +15,18 @@ namespace PyScrapperDesktopApp.ViewModels;
 public partial class FilterWindowViewModel : ObservableObject
 {
     [ObservableProperty]
-    private string _searchQuery;
+    private string? _searchQuery = null;
 
     [ObservableProperty] 
     private List<string> _availableMediaTypes = AppData.ValidMediaTypes;
+
+    [ObservableProperty] private List<string>? _selectedMediaTypes = null;
     
     [ObservableProperty]
-    private List<string> _selectedMediaTypes;
+    private DateTimeOffset? _startDate = null;
     
     [ObservableProperty]
-    private DateTimeOffset? _startDate;
-    
-    [ObservableProperty]
-    private DateTimeOffset? _endDate;
+    private DateTimeOffset? _endDate = null;
 
     [ObservableProperty] 
     private bool _isPlayable;
@@ -39,25 +40,44 @@ public partial class FilterWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Apply()
+    private async Task Apply()
     {
-        AppData.FilterEnabled = true;
-
-        var filteredMedias = AppData.DownloadedMedias.Where(m =>
-            (!IsPlayable || m.IsPlayable == IsPlayable) &&
-            (StartDate == null || m.DownloadedAt >= StartDate) &&
-            (EndDate == null || m.DownloadedAt <= EndDate) &&
-            (SelectedMediaTypes == null || !SelectedMediaTypes.Any() || SelectedMediaTypes.Contains(m.MediaType)) &&
-            (string.IsNullOrEmpty(SearchQuery) || m.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
-        ).ToList();
-        
-        AppData.DownloadedMedias.Clear();
-
-        foreach (var media in filteredMedias)
+        if (AvailableMediaTypes.Contains(SelectedMediaTypes?.FirstOrDefault() ?? string.Empty) == false)
         {
-            AppData.AddDownloadedMedia(media);
+            SelectedMediaTypes = null;
         }
         
+        var filter = MediaFilter.BuildMediaFilter(SearchQuery, SelectedMediaTypes, StartDate, EndDate, IsPlayable);
+        
+        await MediaFilter.ApplyMediaFilter(filter);
+        
         CloseRequested?.Invoke();
+    }
+
+    public FilterWindowViewModel()
+    {
+        if (AppData.FilterEnabled)
+        {
+            AppData.DownloadedMedias.Clear();
+            foreach (var media in AppData.OriginalDownloadedMedias)
+            {
+                AppData.AddDownloadedMedia(media);
+            }
+            
+            var searchQuery = AppData.CurrentMediaFilter.SearchQuery;
+            var mediaTypes = AppData.CurrentMediaFilter.MediaTypes;
+            var startDate = AppData.CurrentMediaFilter.StartDate;
+            var endDate = AppData.CurrentMediaFilter.EndDate;
+            var isPlayable = AppData.CurrentMediaFilter.IsPlayable;
+            
+            Dispatcher.UIThread.Post(() =>
+            {
+                SearchQuery = searchQuery;
+                SelectedMediaTypes = mediaTypes;
+                StartDate = startDate;
+                EndDate = endDate;
+                IsPlayable = isPlayable;
+            });
+        }
     }
 }

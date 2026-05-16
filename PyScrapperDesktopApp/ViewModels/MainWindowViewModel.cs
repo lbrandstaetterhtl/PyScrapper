@@ -337,7 +337,7 @@ public partial class MainWindowViewModel : ObservableObject
                 string folderPath = folders[0].TryGetLocalPath() ??
                                     throw new InvalidOperationException(
                                         "Unable to get local path of the selected folder.");
-                App.ScanFolder(folderPath, out var diff);
+                var diff = await App.ScanFolder(folderPath);
                 
                 var messageBox = new MessageBox($"Scan completed. {diff} new media items were added to the list.");
                 await  messageBox.ShowDialog(_window);
@@ -444,20 +444,14 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task OnFilterClick()
     {
-        AppData.FilterEnabled = true;
         var filterWindow = new FilterWindow();
         
         await filterWindow.ShowDialog(_window);
     }
 
     [RelayCommand]
-    private void ClearFilter()
+    private async Task ClearFilter()
     {
-        foreach (var item in AppData.OriginalDownloadedMedias)
-        {
-            AppData.AddDownloadedMedia(item);
-        }
-        
-        AppData.FilterEnabled = false;
+        await MediaFilter.ClearFilter();
     }
 }
