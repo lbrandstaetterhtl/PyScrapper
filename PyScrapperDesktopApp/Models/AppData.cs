@@ -273,7 +273,7 @@ public class MediaFilter
 {
     public string? SearchQuery { get; set; } = null;
     
-    public List<string>? MediaTypes { get; set; } = null;
+    public ObservableCollection<string>? MediaTypes { get; set; } = null;
 
     public DateTimeOffset? StartDate { get; set; } = null;
     public DateTimeOffset? EndDate { get; set; } = null;
@@ -349,7 +349,7 @@ public class MediaFilter
         }
     }
 
-    public static MediaFilter BuildMediaFilter(string? searchQuery, List<string>? mediaTypes, DateTimeOffset? startDate,
+    public static MediaFilter BuildMediaFilter(string? searchQuery, ObservableCollection<string>? mediaTypes, DateTimeOffset? startDate,
         DateTimeOffset? endDate, bool isPlayable)
     {
         MediaFilter filter = new()

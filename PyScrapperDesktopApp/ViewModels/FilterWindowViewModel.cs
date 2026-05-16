@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,7 +21,8 @@ public partial class FilterWindowViewModel : ObservableObject
     [ObservableProperty] 
     private List<string> _availableMediaTypes = AppData.ValidMediaTypes;
 
-    [ObservableProperty] private List<string>? _selectedMediaTypes = null;
+    [ObservableProperty]
+    private ObservableCollection<string> _selectedMediaTypes = new();
     
     [ObservableProperty]
     private DateTimeOffset? _startDate = null;
@@ -52,32 +54,5 @@ public partial class FilterWindowViewModel : ObservableObject
         await MediaFilter.ApplyMediaFilter(filter);
         
         CloseRequested?.Invoke();
-    }
-
-    public FilterWindowViewModel()
-    {
-        if (AppData.FilterEnabled)
-        {
-            AppData.DownloadedMedias.Clear();
-            foreach (var media in AppData.OriginalDownloadedMedias)
-            {
-                AppData.AddDownloadedMedia(media);
-            }
-            
-            var searchQuery = AppData.CurrentMediaFilter.SearchQuery;
-            var mediaTypes = AppData.CurrentMediaFilter.MediaTypes;
-            var startDate = AppData.CurrentMediaFilter.StartDate;
-            var endDate = AppData.CurrentMediaFilter.EndDate;
-            var isPlayable = AppData.CurrentMediaFilter.IsPlayable;
-            
-            Dispatcher.UIThread.Post(() =>
-            {
-                SearchQuery = searchQuery;
-                SelectedMediaTypes = mediaTypes;
-                StartDate = startDate;
-                EndDate = endDate;
-                IsPlayable = isPlayable;
-            });
-        }
     }
 }
