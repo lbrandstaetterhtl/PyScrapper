@@ -35,12 +35,21 @@ public partial class FilterWindowViewModel : ObservableObject
     
     public Action? CloseRequested { get; set; }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the "Cancel" button.
+    /// It simply invokes the CloseRequested action to signal that the filter window should be closed without applying any changes.
+    /// </summary>
     [RelayCommand]
     private void Cancel()
     {
         CloseRequested?.Invoke();
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the "Apply" button.
+    /// It validates the selected media types against the available media types, builds a media filter based on the current filter criteria, applies the filter to the media collection,
+    /// and then invokes the CloseRequested action to signal that the filter window should be closed after applying the changes.
+    /// </summary>
     [RelayCommand]
     private async Task Apply()
     {

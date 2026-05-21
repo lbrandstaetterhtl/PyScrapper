@@ -269,6 +269,11 @@ public class Settings
     }
 }
 
+/// <summary>
+/// Class representing a media filter, which contains properties for search query, media types, date range, and playability.
+/// It also includes static methods to apply the filter to the downloaded media collection and to clear the filter,
+/// allowing users to easily manage and organize their media library based on specific criteria such as search terms, media types, download dates, and playability status.
+/// </summary>
 public class MediaFilter
 {
     public string? SearchQuery { get; set; } = null;
@@ -282,6 +287,12 @@ public class MediaFilter
     
     private static readonly AppLogger _logger = new();
 
+    /// <summary>
+    /// Applies the provided media filter to the DownloadedMedias collection, filtering the media items based on the specified criteria such as search query, media types, date range, and playability status.
+    /// It updates the DownloadedMedias collection to only include media items that match the filter criteria, allowing users to easily manage and organize their media library based on specific preferences.
+    /// If an error occurs during the filtering process, it logs the error and displays a message box to inform the user of the issue.
+    /// </summary>
+    /// <param name="filter"></param>
     public static async Task ApplyMediaFilter(MediaFilter filter)
     {
         try
@@ -299,7 +310,7 @@ public class MediaFilter
             foreach (var media in AppData.OriginalDownloadedMedias)
             {
                 bool matches =
-                    (filter.SearchQuery == null || media.Title.Contains(filter.SearchQuery, StringComparison.OrdinalIgnoreCase)) && // <-- fix 2
+                    (filter.SearchQuery == null || media.Title.Contains(filter.SearchQuery, StringComparison.OrdinalIgnoreCase)) &&
                     (filter.MediaTypes == null || filter.MediaTypes.Contains(media.MediaType)) &&
                     (filter.StartDate == null || media.DownloadedAt >= filter.StartDate.Value.DateTime) &&
                     (filter.EndDate == null || media.DownloadedAt <= filter.EndDate.Value.DateTime) &&
@@ -319,6 +330,10 @@ public class MediaFilter
         }
     }
     
+    /// <summary>
+    /// Clears the currently applied media filter and restores the DownloadedMedias collection to its original state before the filter was applied.
+    /// </summary>
+    /// <exception cref="Exception"></exception>
     public static async Task ClearFilter()
     {
         try
@@ -349,6 +364,15 @@ public class MediaFilter
         }
     }
 
+    /// <summary>
+    /// Builds a MediaFilter object based on the provided parameters, allowing users to create a filter with specific criteria such as search query, media types, date range, and playability status.
+    /// </summary>
+    /// <param name="searchQuery"></param>
+    /// <param name="mediaTypes"></param>
+    /// <param name="startDate"></param>
+    /// <param name="endDate"></param>
+    /// <param name="isPlayable"></param>
+    /// <returns></returns>
     public static MediaFilter BuildMediaFilter(string? searchQuery, ObservableCollection<string>? mediaTypes, DateTimeOffset? startDate,
         DateTimeOffset? endDate, bool isPlayable)
     {

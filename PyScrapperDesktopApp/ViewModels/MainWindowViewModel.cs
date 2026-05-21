@@ -441,6 +441,10 @@ public partial class MainWindowViewModel : ObservableObject
         _window = window;
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to open the filter window.
+    /// It creates and shows the FilterWindow as a dialog, allowing the user to interact with it and apply filters to the media collection based on various criteria such as search query, media type, date range, and playability.
+    /// </summary>
     [RelayCommand]
     private async Task OnFilterClick()
     {
@@ -449,6 +453,10 @@ public partial class MainWindowViewModel : ObservableObject
         await filterWindow.ShowDialog(_window);
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to clear any applied filters on the media collection.
+    /// It calls the ClearFilter method in the MediaFilter class, which resets the media collection to its original state by removing any active filters and displaying all media items in the list.
+    /// </summary>
     [RelayCommand]
     private async Task ClearFilter()
     {
