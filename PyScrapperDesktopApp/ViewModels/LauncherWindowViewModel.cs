@@ -415,7 +415,6 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// <returns></returns>
     private static bool IsFfmpegAvailable()
     {
-        // 1) PATH check
         var where = Process.Start(new ProcessStartInfo
         {
             FileName               = "where",
@@ -428,7 +427,6 @@ public partial class LauncherWindowViewModel : ObservableObject
         where.WaitForExit();
         if (where.ExitCode == 0) return true;
 
-        // 2) WinGet yt-dlp.FFmpeg package directory — mirrors Python find_ffmpeg()
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var pkgRoot = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");
 
