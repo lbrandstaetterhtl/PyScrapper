@@ -15,42 +15,69 @@ public partial class MainWindow : Window
 {
     private MainWindowViewModel _vm;
     private readonly AppLogger _logger = new();
-    private int _mediaHideCounter = 0;
-    private int _playlistHideCounter = 0;
-    
+
+    // gespeicherte Column-Breiten vor Fullscreen
+    private GridLength _savedColPlaylists;
+    private GridLength _savedColSplitter;
+    private GridLength _savedColMedias;
+
     public MainWindow()
     {
         if (Design.IsDesignMode) return;
-        
+
         InitializeComponent();
         TitleBar.Initialize(this);
 
         _vm = new MainWindowViewModel();
-        
         DataContext = _vm;
-        
-        _vm.UpdateHideIcon();
 
         Opened += (s, e) =>
         {
             _vm.OnWindowReady(this);
-        };
 
-        MediaHide.Click += (s, e) =>
-        {
-            _mediaHideCounter++;
-            MediasGrid.IsVisible = _mediaHideCounter % 2 == 0;
-            FirstSplitter.IsVisible = _mediaHideCounter % 2 == 0;
-            _vm.UpdateHideIcon();
+            // Fullscreen-Event vom MediaPlayer abonnieren
+            MediaPlayer.OnFullscreenChanged += HandleFullscreenChanged;
         };
+    }
 
-        PlaylistHide.Click += (s, e) =>
+    /// <summary>
+    /// Wird aufgerufen wenn der MediaPlayer Fullscreen toggled.
+    /// Versteckt/zeigt die Listen-Columns im ContentGrid.
+    /// </summary>
+    private void HandleFullscreenChanged(bool isFullscreen)
+    {
+        if (isFullscreen)
         {
-            _playlistHideCounter++;
-            PlaylistsGrid.IsVisible = _playlistHideCounter % 2 == 0;
-            LastSplitter.IsVisible = _playlistHideCounter % 2 == 0;
-            _vm.UpdateHideIcon();
-        };
+            // Breiten speichern
+            _savedColPlaylists = ContentGrid.ColumnDefinitions[0].Width;
+            _savedColSplitter  = ContentGrid.ColumnDefinitions[1].Width;
+            _savedColMedias    = ContentGrid.ColumnDefinitions[2].Width;
+
+            // Content verstecken
+            ContentGrid.ColumnDefinitions[0].Width = new GridLength(0);
+            ContentGrid.ColumnDefinitions[1].Width = new GridLength(0);
+            ContentGrid.ColumnDefinitions[2].Width = new GridLength(0);
+            ContentGrid.RowDefinitions[2].Height   = new GridLength(0);
+
+            // MediaPlayer auf ganzen Bildschirm
+            MediaPlayer.VerticalAlignment   = Avalonia.Layout.VerticalAlignment.Stretch;
+            MediaPlayer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+        }
+        else
+        {
+            // Columns wiederherstellen
+            ContentGrid.ColumnDefinitions[0].Width = _savedColPlaylists == default
+                ? new GridLength(3, GridUnitType.Star) : _savedColPlaylists;
+            ContentGrid.ColumnDefinitions[1].Width = _savedColSplitter == default
+                ? GridLength.Auto : _savedColSplitter;
+            ContentGrid.ColumnDefinitions[2].Width = _savedColMedias == default
+                ? new GridLength(4, GridUnitType.Star) : _savedColMedias;
+            ContentGrid.RowDefinitions[2].Height   = new GridLength(70);
+
+            // MediaPlayer zurück auf Bottom
+            MediaPlayer.VerticalAlignment   = Avalonia.Layout.VerticalAlignment.Bottom;
+            MediaPlayer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+        }
     }
 
     private async void MediaDoubleClick(object? sender, RoutedEventArgs e)
@@ -67,7 +94,7 @@ public partial class MainWindow : Window
 
                 List<int> mediaIds = [media.Id];
                 Playlist playlist = new Playlist(mediaIds, "NPLL", "");
-                
+
                 MediaPlayer.LoadAndPlay(playlist);
             }
         }
@@ -75,7 +102,7 @@ public partial class MainWindow : Window
         {
             var log = new Massage("An error occurred while trying to play the media: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
-            
+
             var messageBox = new MessageBox("An error occurred while trying to play the media: " + ex.Message);
             await messageBox.ShowDialog(this);
         }
@@ -86,62 +113,48 @@ public partial class MainWindow : Window
         try
         {
             var clipboard = GetTopLevel(this)?.Clipboard;
-
-            if (clipboard == null)
-            {
-                throw new Exception("Clipboard is not available");
-            }
-            
+            if (clipboard == null) throw new Exception("Clipboard is not available");
             await clipboard.SetTextAsync(text);
         }
         catch (Exception ex)
         {
-            var log = new Massage("An error occurred while trying to copy the download path: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Massage("An error occurred while trying to copy: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
-            
-            var messageBox = new MessageBox("An error occurred while trying to copy the download path: " + ex.Message);
+
+            var messageBox = new MessageBox("An error occurred while trying to copy: " + ex.Message);
             await messageBox.ShowDialog(this);
         }
     }
-    
+
     private void CopyDownloadPathClick(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem { DataContext: DownloadedMedia media })
-        {
             CopyStringToClipboard(media.DownloadPath);
-        }
     }
-    
+
     private void CopyUrlClick(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem { DataContext: DownloadedMedia media })
-        {
             CopyStringToClipboard(media.Url);
-        }
     }
-    
+
     private async void DeleteMedia(object sender, RoutedEventArgs e)
     {
         try
         {
             if (sender is MenuItem { DataContext: DownloadedMedia media })
             {
-                var confirmationWindow =
-                    new ConfirmationWindow(
-                        "Are you sure you want to remove this media from the list? This action cannot be undone.");
+                var confirmationWindow = new ConfirmationWindow(
+                    "Are you sure you want to remove this media from the list? This action cannot be undone.");
                 var result = await confirmationWindow.ShowDialog<bool>(this);
-
                 if (!result) return;
 
                 AppData.RemoveDownloadedMedia(media);
                 var playlistContained = AppData.Playlists.Where(p => p.MediaIds.Contains(media.Id)).ToList();
-
                 foreach (var playlist in playlistContained)
-                {
                     playlist.RemoveMedia(media.Id);
-                }
 
-                var log = new Massage("Media removed from the list: " + media.Url, DateTime.Now, "INFO");
+                var log = new Massage("Media removed: " + media.Url, DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
                 var messageBox = new MessageBox("Media removed from the list: " + media.Url);
@@ -150,31 +163,30 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            var lag = new Massage("An error occurred while trying to remove the media from the list: " + ex.Message, DateTime.Now, "ERROR");
-            _logger.LogNewMassage(lag);
-            
-            var messageBox = new MessageBox("An error occurred while trying to remove the media from the list: " + ex.Message);
+            var log = new Massage("Error removing media: " + ex.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+
+            var messageBox = new MessageBox("An error occurred: " + ex.Message);
             await messageBox.ShowDialog(this);
         }
     }
-    
+
     private async void DeleteFile(object sender, RoutedEventArgs e)
     {
         try
         {
             if (sender is MenuItem { DataContext: DownloadedMedia media })
             {
-                var confirmationWindow =
-                    new ConfirmationWindow("Are you sure you want to delete the file? This action cannot be undone.");
+                var confirmationWindow = new ConfirmationWindow(
+                    "Are you sure you want to delete the file? This action cannot be undone.");
                 var result = await confirmationWindow.ShowDialog<bool>(this);
 
                 if (result && File.Exists(media.DownloadPath))
                 {
                     File.Delete(media.DownloadPath);
-
                     media.IsPlayable = false;
 
-                    var log = new Massage("File deleted successfully: " + media.DownloadPath, DateTime.Now, "INFO");
+                    var log = new Massage("File deleted: " + media.DownloadPath, DateTime.Now, "INFO");
                     _logger.LogNewMassage(log);
 
                     var messageBox = new MessageBox("File deleted successfully: " + media.DownloadPath);
@@ -188,14 +200,14 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            var log = new Massage("An error occurred while trying to delete the file: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Massage("Error deleting file: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
-                
-            var messageBox = new MessageBox("An error occurred while trying to delete the file: " + ex.Message);
+
+            var messageBox = new MessageBox("An error occurred: " + ex.Message);
             await messageBox.ShowDialog(this);
         }
     }
-    
+
     private void PlaylistDoubleClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Border { DataContext: Playlist playlist })
@@ -204,7 +216,7 @@ public partial class MainWindow : Window
             playlistWindow.Show();
         }
     }
-    
+
     private void OpenPlaylistDetailsClick(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem { DataContext: Playlist playlist })
@@ -213,21 +225,21 @@ public partial class MainWindow : Window
             playlistWindow.Show();
         }
     }
-    
+
     private void DeletePlaylist(object sender, RoutedEventArgs e)
     {
         if (sender is MenuItem { DataContext: Playlist playlist })
         {
             AppData.RemovePlaylist(playlist);
-            
-            var log = new Massage("Playlist removed from the list: " + playlist.Name, DateTime.Now, "INFO");
+
+            var log = new Massage("Playlist removed: " + playlist.Name, DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
-            
-            var messageBox = new MessageBox("Playlist removed from the list: " + playlist.Name);
+
+            var messageBox = new MessageBox("Playlist removed: " + playlist.Name);
             messageBox.ShowDialog(this);
         }
     }
-    
+
     private void AddToPlaylistClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not ListBox { SelectedItem: Playlist playlist } listBox) return;
@@ -235,10 +247,10 @@ public partial class MainWindow : Window
 
         playlist.AddMedia(media.Id);
         listBox.SelectedItem = null;
-        
+
         var messageBox = new MessageBox($"Added {media.Title} to {playlist.Name}");
         messageBox.ShowDialog(this);
-    
+
         var log = new Massage($"Added {media.Title} to {playlist.Name}", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
     }

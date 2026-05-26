@@ -60,40 +60,25 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
         ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "song-darkmode.png"))
         : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "song-lightmode.png"));
 
-    public Image PlayIcon => new Image
-    {
-        Source = DarkMode 
-            ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "play-darkmode.png"))
-            : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "play-lightmode.png"))
-    };
+    public Bitmap PlayIcon => DarkMode
+        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "play-darkmode.png"))
+        : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "play-lightmode.png"));
 
-    public Image ForwardIcon => new Image
-    {
-        Source = DarkMode 
-            ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "forward-darkmode.png"))
-            : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "forward-lightmode.png"))
-    };
+    public Bitmap PauseIcon => DarkMode
+        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "pause-darkmode.png"))
+        : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "pause-lightmode.png"));
 
-    public Image BackIcon => new Image
-    {
-        Source = DarkMode 
-            ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "backward-darkmode.png"))
-            : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "backward-lightmode.png"))
-    };
-    
-    public Image PauseIcon => new Image
-    {
-        Source = DarkMode 
-            ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "pause-darkmode.png"))
-            : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "pause-lightmode.png"))
-    };
+    public Bitmap ForwardIcon => DarkMode
+        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "forward-darkmode.png"))
+        : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "forward-lightmode.png"));
 
-    public Image ShuffleIcon => new Image
-    {
-        Source = DarkMode 
-            ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "shuffle-darkmode.png"))
-            : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "shuffle-lightmode.png")),
-    };
+    public Bitmap BackIcon => DarkMode
+        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "backward-darkmode.png"))
+        : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "backward-lightmode.png"));
+
+    public Bitmap ShuffleIcon => DarkMode
+        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "shuffle-darkmode.png"))
+        : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "shuffle-lightmode.png"));
     
     public bool VolumeSliderMoving { get; set; }
     public bool SeekSliderMoving { get; set; }
@@ -190,10 +175,21 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
         
         _audioPlayer.VideoAvailableChanged += (s, hasVideo) =>
         {
-            Dispatcher.UIThread.Post(() =>
+            Dispatcher.UIThread.Post(async () =>
             {
                 HasVideo = hasVideo;
                 VideoAvailableChanged?.Invoke(this, hasVideo);
+
+                if (hasVideo && IsCompact)
+                {
+                    IsCompact = false;
+                    OnPropertyChanged(nameof(ToggleIcon));
+                    OnPropertyChanged(nameof(IsNormalView));
+
+                    await Task.Delay(100);
+
+                    CompactClosed?.Invoke(this, EventArgs.Empty);
+                }
             });
         };
         
@@ -308,4 +304,64 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
     {
         _audioPlayer.Dispose();
     }
+    
+    [ObservableProperty]
+    private bool _isCompact = true;
+ 
+    [ObservableProperty]
+    private bool _isFullscreen = false;
+ 
+// IsNormalView = nicht kompakt UND nicht fullscreen
+// Wird als Binding in MediaPlayerControl.axaml verwendet
+    public bool IsNormalView => !IsCompact && !IsFullscreen;
+ 
+    public string ToggleIcon     => IsCompact ? "▲" : "▼";
+    public string FullscreenIcon => IsFullscreen ? "⊡" : "⊞";
+ 
+// Wird von MainWindow abonniert um Columns zu verstecken
+    public event EventHandler<bool>? FullscreenChanged;
+ 
+// Wird von MediaPlayerControl.axaml.cs abonniert um VideoView
+// erst nach dem Layout-Pass zu verknüpfen
+    public event EventHandler? CompactClosed;
+ 
+    [RelayCommand]
+    private void ToggleCompact()
+    {
+        // Beim Kompaktieren auch Fullscreen verlassen
+        if (!IsCompact && IsFullscreen)
+        {
+            IsFullscreen = false;
+            FullscreenChanged?.Invoke(this, false);
+            OnPropertyChanged(nameof(FullscreenIcon));
+            OnPropertyChanged(nameof(IsNormalView));
+        }
+ 
+        IsCompact = !IsCompact;
+        OnPropertyChanged(nameof(ToggleIcon));
+        OnPropertyChanged(nameof(IsNormalView));
+ 
+        // Event feuern wenn aus Compact rausgegangen —
+        // Code-behind wartet damit auf den Layout-Pass bevor VideoView verknüpft wird
+        if (!IsCompact)
+            CompactClosed?.Invoke(this, EventArgs.Empty);
+    }
+ 
+    [RelayCommand]
+    private void ToggleFullscreen()
+    {
+        // Beim Öffnen von Fullscreen aus Kompakt-Mode raus
+        if (IsCompact)
+        {
+            IsCompact = false;
+            OnPropertyChanged(nameof(ToggleIcon));
+            OnPropertyChanged(nameof(IsNormalView));
+        }
+ 
+        IsFullscreen = !IsFullscreen;
+        FullscreenChanged?.Invoke(this, IsFullscreen);
+        OnPropertyChanged(nameof(FullscreenIcon));
+        OnPropertyChanged(nameof(IsNormalView));
+    }
+
 }

@@ -23,211 +23,209 @@
 
         <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
 
-        <Grid Grid.Row="1" Classes="RootGrid" Grid.IsSharedSizeScope="True">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+        <Panel Grid.Row="1">
 
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="3*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="4*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="4*" MinWidth="490"/>
-            </Grid.ColumnDefinitions>
+            <!-- ── Haupt-Content ── -->
+            <Grid x:Name="ContentGrid" Classes="RootGrid" Grid.IsSharedSizeScope="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="70"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="4*"/>
+                </Grid.ColumnDefinitions>
 
-            <Menu Grid.ColumnSpan="3" Grid.Column="0" Grid.Row="0" Margin="5,0">
-                <MenuItem Header="Sort">
-                    <MenuItem Header="By Title" Command="{Binding SortByNameCommand}"/>
-                    <MenuItem Header="By Date" Command="{Binding SortByDateCommand}"/>
-                    <MenuItem Header="By ID" Command="{Binding SortByIdCommand}"/>
-                </MenuItem>
-                <MenuItem Header="Filter">
-                    <MenuItem Header="Select Filter" Command="{Binding FilterClickCommand}"/>
-                    <MenuItem Header="Clear Filter" Command="{Binding ClearFilterCommand}"/>
-                </MenuItem>
-                <MenuItem Header="Scrap">
-                    <MenuItem Header="From Suno" Command="{Binding OpenSunoScrapWindowCommand}"/>
-                    <MenuItem Header="From Youtube" Command="{Binding OpenYoutubeScrapWindowCommand}"/>
-                    <MenuItem Header="From Bandcamp" Command="{Binding OpenBandcampScrapWindowCommand}"/>
-                </MenuItem>
-                <MenuItem Header="Open Media Player" Command="{Binding OpenMediaPlayerWindowCommand}"/>
-                <MenuItem Header="Playlists">
-                    <MenuItem Header="Create Playlist" Command="{Binding CreatePlaylistCommand}"/>
-                    <MenuItem Header="Delete All Playlists" Command="{Binding DeleteAllPlaylistsCommand}"/>
-                </MenuItem>
-                <MenuItem Header="Medias">
-                    <MenuItem Header="Convert Video Codec" Command="{Binding ConvertCodecCommand}"/>
-                    <MenuItem Header="Scan A Folder For Medias" Command="{Binding ScanFolderCommand}"/>
-                    <MenuItem Header="Delete All Medias" Command="{Binding DeleteAllMediasCommand}"/>
-                </MenuItem>
-                <MenuItem Header="Server">
-                    <MenuItem Header="Get Health" Command="{Binding GetHealthCommand}"/>
-                </MenuItem>
-                <MenuItem Header="Logs">
-                    <MenuItem Header="App Logs" Command="{Binding ShowAppLogsCommand}"/>
-                    <MenuItem Header="Server Logs" Command="{Binding ShowServerLogsCommand}"/>
-                </MenuItem>
-                <MenuItem Header="Settings">
-                    <MenuItem Header="Default Downloads Path" Command="{Binding EditDownloadsPathCommand}"/>
-                    <MenuItem Header="Toggle Dark/Light Mode" Command="{Binding ToggleThemeCommand}"/>
-                </MenuItem>
-            </Menu>
+                <!-- Menu -->
+                <Menu Grid.ColumnSpan="3" Grid.Column="0" Grid.Row="0" Margin="5,0">
+                    <MenuItem Header="Sort">
+                        <MenuItem Header="By Title" Command="{Binding SortByNameCommand}"/>
+                        <MenuItem Header="By Date" Command="{Binding SortByDateCommand}"/>
+                        <MenuItem Header="By ID" Command="{Binding SortByIdCommand}"/>
+                    </MenuItem>
+                    <MenuItem Header="Filter">
+                        <MenuItem Header="Select Filter" Command="{Binding FilterClickCommand}"/>
+                        <MenuItem Header="Clear Filter" Command="{Binding ClearFilterCommand}"/>
+                    </MenuItem>
+                    <MenuItem Header="Scrap">
+                        <MenuItem Header="From Suno" Command="{Binding OpenSunoScrapWindowCommand}"/>
+                        <MenuItem Header="From Youtube" Command="{Binding OpenYoutubeScrapWindowCommand}"/>
+                        <MenuItem Header="From Bandcamp" Command="{Binding OpenBandcampScrapWindowCommand}"/>
+                    </MenuItem>
+                    <MenuItem Header="Open Media Player" Command="{Binding OpenMediaPlayerWindowCommand}"/>
+                    <MenuItem Header="Playlists">
+                        <MenuItem Header="Create Playlist" Command="{Binding CreatePlaylistCommand}"/>
+                        <MenuItem Header="Delete All Playlists" Command="{Binding DeleteAllPlaylistsCommand}"/>
+                    </MenuItem>
+                    <MenuItem Header="Medias">
+                        <MenuItem Header="Convert Video Codec" Command="{Binding ConvertCodecCommand}"/>
+                        <MenuItem Header="Scan A Folder For Medias" Command="{Binding ScanFolderCommand}"/>
+                        <MenuItem Header="Delete All Medias" Command="{Binding DeleteAllMediasCommand}"/>
+                    </MenuItem>
+                    <MenuItem Header="Server">
+                        <MenuItem Header="Get Health" Command="{Binding GetHealthCommand}"/>
+                    </MenuItem>
+                    <MenuItem Header="Logs">
+                        <MenuItem Header="App Logs" Command="{Binding ShowAppLogsCommand}"/>
+                        <MenuItem Header="Server Logs" Command="{Binding ShowServerLogsCommand}"/>
+                    </MenuItem>
+                    <MenuItem Header="Settings">
+                        <MenuItem Header="Default Downloads Path" Command="{Binding EditDownloadsPathCommand}"/>
+                        <MenuItem Header="Toggle Dark/Light Mode" Command="{Binding ToggleThemeCommand}"/>
+                    </MenuItem>
+                </Menu>
 
-            <ScrollViewer Classes="List" Grid.Column="2" x:Name="DownloadedMediasList"
-                          Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                    <Button x:Name="MediaHide" Content="{Binding MediaHideIcon}" Classes="Icon" HorizontalAlignment="Left"/>
-                    
-                    <Grid RowDefinitions="Auto, Auto, *" x:Name="MediasGrid">
-                        
-                        <!-- Header -->
-                        <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
-                            <TextBlock Text="Downloaded Medias"  DockPanel.Dock="Top" Classes="UIHeader" HorizontalAlignment="Left"/>
-                            <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
-                            <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
-                                        <ColumnDefinition MinWidth="50" MaxWidth="200" SharedSizeGroup="ColTitle"/>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="ColType"/>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="ColDate"/>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="ColPlayable"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="ID" Classes="UILabel"/>
-                                    <TextBlock Grid.Column="1" Text="Title" Classes="UILabel"/>
-                                    <TextBlock Grid.Column="2" Text="Type" Classes="UILabel"/>
-                                    <TextBlock Grid.Column="3" Text="Downloaded At" Classes="UILabel"/>
-                                    <TextBlock Grid.Column="4" Text="Is Playable" Classes="UILabel"/>
-                                </Grid>
-                            </Border>
-                            <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
-                        </DockPanel>
-
-                        <!-- Items -->
-                        <ItemsControl Grid.Row="2" ItemsSource="{Binding DownloadedMediaList}" >
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border DoubleTapped="MediaDoubleClick" Classes="CellInteractive"
-                                            HorizontalAlignment="Left" MaxWidth="900">
-                                        <Border.ContextFlyout>
-                                            <MenuFlyout>
-                                                <MenuItem Header="Add To Playlist">
-                                                    <ListBox ItemsSource="{x:Static models:AppData.Playlists}"
-                                                             SelectionMode="Single"
-                                                             SelectionChanged="AddToPlaylistClick">
-                                                        <ListBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="models:Playlist">
-                                                                <TextBlock Text="{Binding Name}" Classes="UIValue"/>
-                                                            </DataTemplate>
-                                                        </ListBox.ItemTemplate>
-                                                    </ListBox>
-                                                </MenuItem>
-                                                <MenuItem Header="Copy Download Path" Click="CopyDownloadPathClick"/>
-                                                <MenuItem Header="Copy URL" Click="CopyUrlClick"/>
-                                                <MenuItem Header="Delete File" Click="DeleteFile"/>
-                                                <MenuItem Header="Delete Only The Media Item" Click="DeleteMedia"/>
-                                            </MenuFlyout>
-                                        </Border.ContextFlyout>
-
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
-                                                <ColumnDefinition Width="*" SharedSizeGroup="ColTitle"/>
-                                                <ColumnDefinition Width="Auto" SharedSizeGroup="ColType"/>
-                                                <ColumnDefinition Width="Auto" SharedSizeGroup="ColDate"/>
-                                                <ColumnDefinition Width="Auto" SharedSizeGroup="ColPlayable"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding Id}" Classes="UILabel"/>
-                                            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" MinWidth="50" MaxWidth="200">
-                                            <TextBlock Text="{Binding Title}" Classes="UILabel" HorizontalAlignment="Left" />
-                                            </ScrollViewer>
-                                            <TextBlock Grid.Column="2" Text="{Binding MediaType}" Classes="UILabel"/>
-                                            <TextBlock Grid.Column="3" Text="{Binding DownloadedAt}" Classes="UILabel"/>
-                                            <CheckBox Grid.Column="4" IsChecked="{Binding IsPlayable}" VerticalAlignment="Center" HorizontalContentAlignment="Center" Classes="IsPlayable"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                    </Grid>
-                </StackPanel>
-            </ScrollViewer>
-            
-            <GridSplitter x:Name="LastSplitter" Grid.Row="1" Grid.Column="1" Classes="SeperatorVertical" HorizontalAlignment="Stretch" Margin="5"/>
-
-            <!-- Playlists View -->
-            <ScrollViewer Classes="List" Grid.Column="0" Grid.Row="1" Margin="10,0,0,0"
-                x:Name="PlaylistsList" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                Grid.IsSharedSizeScope="True">
-                <StackPanel>
-                <Button x:Name="PlaylistHide" Content="{Binding PlaylistHideIcon}" Classes="Icon" HorizontalAlignment="Left"/>
-                <Grid RowDefinitions="Auto, Auto, *" x:Name="PlaylistsGrid">
-                    <!-- Header -->
-                    <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
-                        <TextBlock Text="Playlists" Classes="UIHeader" DockPanel.Dock="Top" HorizontalAlignment="Left"/>
-                        <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
-                        <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
-                                    <ColumnDefinition MinWidth="50" MaxWidth="200" SharedSizeGroup="ColName"/>
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColDesc" MinWidth="50" MaxWidth="200"/>
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColCount"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Id" Classes="UILabel" HorizontalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Text="Name" Classes="UILabel" HorizontalAlignment="Left" />
-                                <TextBlock Grid.Column="2" Text="Description" Classes="UILabel" HorizontalAlignment="Left" />
-                                <TextBlock Grid.Column="3" Text="Song Count" Classes="UILabel" HorizontalAlignment="Left" />
-                            </Grid>
-                        </Border>
-                        <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
-                    </DockPanel>
-
-                    <!-- Items -->
-                    <ItemsControl Grid.Row="2" ItemsSource="{Binding Playlists}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Classes="CellInteractive" HorizontalAlignment="Left"
-                                    DoubleTapped="PlaylistDoubleClick" MaxWidth="900">
-                                    <Border.ContextFlyout>
-                                        <MenuFlyout>
-                                            <MenuItem Header="Delete Playlist" Click="DeletePlaylist"/>
-                                            <MenuItem Header="Open Playlist Details" Click="OpenPlaylistDetailsClick"/>
-                                        </MenuFlyout>
-                                    </Border.ContextFlyout>
-
+                <!-- Playlists -->
+                <ScrollViewer Classes="List" Grid.Column="0" Grid.Row="1" Margin="10,0,0,0"
+                              x:Name="PlaylistsList" HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto" Grid.IsSharedSizeScope="True">
+                    <StackPanel>
+                        <Grid RowDefinitions="Auto, Auto, *" x:Name="PlaylistsGrid">
+                            <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
+                                <TextBlock Text="Playlists" Classes="UIHeader" DockPanel.Dock="Top" HorizontalAlignment="Left"/>
+                                <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
+                                <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900">
                                     <Grid>
-                                         <Grid.ColumnDefinitions>
-                                             <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
-                                             <ColumnDefinition Width="*" SharedSizeGroup="ColName"/>
-                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ColDesc"/>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
+                                            <ColumnDefinition MinWidth="50" MaxWidth="200" SharedSizeGroup="ColName"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ColDesc" MinWidth="50" MaxWidth="200"/>
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="ColCount"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Id}" Classes="UILabel" HorizontalAlignment="Center"/>
-                                        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" MinWidth="50" MaxWidth="200">
-                                            <TextBlock Text="{Binding Name}" Classes="UILabel" HorizontalAlignment="Left"/>
-                                        </ScrollViewer>
-                                        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" MinWidth="50" MaxWidth="200">
-                                            <TextBlock Text="{Binding Description}" Classes="UILabel" HorizontalAlignment="Left"/>
-                                        </ScrollViewer>
-                                        <TextBlock Grid.Column="3" Text="{Binding Count}" Classes="UILabel" HorizontalAlignment="Center" />
+                                        <TextBlock Grid.Column="0" Text="Id" Classes="UILabel" HorizontalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="Name" Classes="UILabel" HorizontalAlignment="Left"/>
+                                        <TextBlock Grid.Column="2" Text="Description" Classes="UILabel" HorizontalAlignment="Left"/>
+                                        <TextBlock Grid.Column="3" Text="Song Count" Classes="UILabel" HorizontalAlignment="Left"/>
                                     </Grid>
                                 </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Grid>
-                </StackPanel>
-            </ScrollViewer>
-            
-            <GridSplitter x:Name="FirstSplitter" Grid.Row="1" Grid.Column="3" Classes="SeperatorVertical" HorizontalAlignment="Stretch" Margin="5"/>
-            
-            <ScrollViewer Grid.Row="1" Grid.Column="4" HorizontalAlignment="Stretch">
-            <controls:MediaPlayerControl x:Name="MediaPlayer" HorizontalAlignment="Stretch"/>
-            </ScrollViewer>
-        </Grid>
+                                <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
+                            </DockPanel>
+                            <ItemsControl Grid.Row="2" ItemsSource="{Binding Playlists}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Classes="CellInteractive" HorizontalAlignment="Left"
+                                                DoubleTapped="PlaylistDoubleClick" MaxWidth="900">
+                                            <Border.ContextFlyout>
+                                                <MenuFlyout>
+                                                    <MenuItem Header="Delete Playlist" Click="DeletePlaylist"/>
+                                                    <MenuItem Header="Open Playlist Details" Click="OpenPlaylistDetailsClick"/>
+                                                </MenuFlyout>
+                                            </Border.ContextFlyout>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
+                                                    <ColumnDefinition Width="*" SharedSizeGroup="ColName"/>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColDesc"/>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColCount"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Id}" Classes="UILabel" HorizontalAlignment="Center"/>
+                                                <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" MinWidth="50" MaxWidth="200">
+                                                    <TextBlock Text="{Binding Name}" Classes="UILabel" HorizontalAlignment="Left"/>
+                                                </ScrollViewer>
+                                                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" MinWidth="50" MaxWidth="200">
+                                                    <TextBlock Text="{Binding Description}" Classes="UILabel" HorizontalAlignment="Left"/>
+                                                </ScrollViewer>
+                                                <TextBlock Grid.Column="3" Text="{Binding Count}" Classes="UILabel" HorizontalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <GridSplitter x:Name="MainSplitter" Grid.Row="1" Grid.Column="1"
+                              Classes="SeperatorVertical" HorizontalAlignment="Stretch" Margin="5"/>
+
+                <!-- Downloaded Medias -->
+                <ScrollViewer Classes="List" Grid.Column="2" x:Name="DownloadedMediasList"
+                              Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <Grid RowDefinitions="Auto, Auto, *" x:Name="MediasGrid">
+                            <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
+                                <TextBlock Text="Downloaded Medias" DockPanel.Dock="Top" Classes="UIHeader" HorizontalAlignment="Left"/>
+                                <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
+                                <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
+                                            <ColumnDefinition MinWidth="50" MaxWidth="200" SharedSizeGroup="ColTitle"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ColType"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ColDate"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ColPlayable"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="ID" Classes="UILabel"/>
+                                        <TextBlock Grid.Column="1" Text="Title" Classes="UILabel"/>
+                                        <TextBlock Grid.Column="2" Text="Type" Classes="UILabel"/>
+                                        <TextBlock Grid.Column="3" Text="Downloaded At" Classes="UILabel"/>
+                                        <TextBlock Grid.Column="4" Text="Is Playable" Classes="UILabel"/>
+                                    </Grid>
+                                </Border>
+                                <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
+                            </DockPanel>
+                            <ItemsControl Grid.Row="2" ItemsSource="{Binding DownloadedMediaList}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border DoubleTapped="MediaDoubleClick" Classes="CellInteractive"
+                                                HorizontalAlignment="Left" MaxWidth="900">
+                                            <Border.ContextFlyout>
+                                                <MenuFlyout>
+                                                    <MenuItem Header="Add To Playlist">
+                                                        <ListBox ItemsSource="{x:Static models:AppData.Playlists}"
+                                                                 SelectionMode="Single"
+                                                                 SelectionChanged="AddToPlaylistClick">
+                                                            <ListBox.ItemTemplate>
+                                                                <DataTemplate x:DataType="models:Playlist">
+                                                                    <TextBlock Text="{Binding Name}" Classes="UIValue"/>
+                                                                </DataTemplate>
+                                                            </ListBox.ItemTemplate>
+                                                        </ListBox>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Copy Download Path" Click="CopyDownloadPathClick"/>
+                                                    <MenuItem Header="Copy URL" Click="CopyUrlClick"/>
+                                                    <MenuItem Header="Delete File" Click="DeleteFile"/>
+                                                    <MenuItem Header="Delete Only The Media Item" Click="DeleteMedia"/>
+                                                </MenuFlyout>
+                                            </Border.ContextFlyout>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
+                                                    <ColumnDefinition Width="*" SharedSizeGroup="ColTitle"/>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColType"/>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColDate"/>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ColPlayable"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Id}" Classes="UILabel"/>
+                                                <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Disabled"
+                                                              HorizontalScrollBarVisibility="Auto" MinWidth="50" MaxWidth="200">
+                                                    <TextBlock Text="{Binding Title}" Classes="UILabel" HorizontalAlignment="Left"/>
+                                                </ScrollViewer>
+                                                <TextBlock Grid.Column="2" Text="{Binding MediaType}" Classes="UILabel"/>
+                                                <TextBlock Grid.Column="3" Text="{Binding DownloadedAt}" Classes="UILabel"/>
+                                                <CheckBox Grid.Column="4" IsChecked="{Binding IsPlayable}"
+                                                          VerticalAlignment="Center" HorizontalContentAlignment="Center"
+                                                          Classes="IsPlayable"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+            </Grid>
+
+            <!-- ── MediaPlayer Overlay ── -->
+            <controls:MediaPlayerControl
+                x:Name="MediaPlayer"
+                VerticalAlignment="Bottom"
+                HorizontalAlignment="Stretch"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"/>
+
+        </Panel>
     </Grid>
 </Window>
