@@ -16,11 +16,9 @@ public partial class MediaPlayerControl : UserControl
     private MediaPlayerControlViewModel _vm;
     private int _playButtonCounter = 0;
     private Playlist? _pendingPlaylist = null;
-
-    /// <summary>
-    /// Event das MainWindow abonniert um auf Fullscreen-Änderungen zu reagieren.
-    /// </summary>
-    public event Action<bool>? OnFullscreenChanged;
+    private Window? _parentWindow;
+    
+    public event Action<bool>? OnCompactChanged;
 
     public MediaPlayerControl()
     {
@@ -33,30 +31,29 @@ public partial class MediaPlayerControl : UserControl
         SetPlayButton(1);
         SetImageIcons();
 
-        // ── Fullscreen-Event ──
-        _vm.FullscreenChanged += (s, isFullscreen) =>
-        {
-            OnFullscreenChanged?.Invoke(isFullscreen);
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                AttachVideoViews(); // zentral — nicht doppelt implementieren
-            }, DispatcherPriority.Loaded);
-        };
-
-        // ── CompactClosed-Event: VideoView ist jetzt sichtbar ──
+        // Wenn aus Compact rausgegangen — VideoView verknüpfen
         _vm.CompactClosed += (s, e) =>
         {
             Dispatcher.UIThread.Post(() =>
             {
                 Dispatcher.UIThread.Post(() =>
                 {
-                    AttachVideoViews();
+                    AttachVideoView();
+                    ToggleCompactButton.Content = new Image { Source = _vm.ToggleCompactIcon };
                 }, DispatcherPriority.Render);
             }, DispatcherPriority.Loaded);
         };
 
-        // ── SeekSlider (Normal View) ──
+        _vm.CompactOpened += (s, e) =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                VideoView.MediaPlayer = null;
+                ToggleCompactButton.Content = new Image { Source = _vm.ToggleCompactIcon };
+            }, DispatcherPriority.Loaded);
+        };
+
+        // ── SeekSlider ──
         SeekSlider.AddHandler(PointerPressedEvent,
             (s, e) => { if (DataContext is MediaPlayerControlViewModel vm) vm.SeekSliderMoving = true; },
             handledEventsToo: true);
@@ -76,7 +73,7 @@ public partial class MediaPlayerControl : UserControl
                 vm.PositionSeconds = e.NewValue;
         };
 
-        // ── VolumeSlider (Normal View) ──
+        // ── VolumeSlider ──
         VolumeSlider.AddHandler(PointerPressedEvent,
             (s, e) => { if (DataContext is MediaPlayerControlViewModel vm) vm.VolumeSliderMoving = true; },
             handledEventsToo: true);
@@ -96,7 +93,7 @@ public partial class MediaPlayerControl : UserControl
                 vm.Volume = (int)e.NewValue;
         };
 
-        // ── Play Buttons (alle drei Views) ──
+        // ── Play Buttons ──
         CompactPlayButton.Click += PlayButtonClick;
         PlayButton.Click        += PlayButtonClick;
 
@@ -107,6 +104,27 @@ public partial class MediaPlayerControl : UserControl
             SetNavigationButtons();
             SetPlayButton(counter);
             SetImageIcons();
+        };
+
+        _vm.CompactClosed += (s, e) =>
+        {
+            OnCompactChanged?.Invoke(false);
+            VideoView.MinHeight = 300;
+        };
+        _vm.CompactOpened += (s, e) => OnCompactChanged?.Invoke(true);
+        
+        VideoView.LayoutUpdated += (s, e) =>
+        {
+            if (_vm.AspectRatio <= 0) return;
+    
+            double availableWidth = VideoView.Parent is Control parent
+                ? parent.Bounds.Width
+                : VideoView.Bounds.Width;
+
+            if (availableWidth <= 0) return;
+
+            _vm.VideoWidth  = availableWidth;
+            _vm.VideoHeight = availableWidth / _vm.AspectRatio;
         };
     }
 
@@ -129,8 +147,6 @@ public partial class MediaPlayerControl : UserControl
 
     /// <summary>
     /// Lädt eine neue Playlist und startet die Wiedergabe.
-    /// Wenn der Player gerade kompakt ist, wird die Playlist gespeichert
-    /// und erst beim Öffnen des normalen Views verknüpft.
     /// </summary>
     public void LoadAndPlay(Playlist playlist)
     {
@@ -138,60 +154,43 @@ public partial class MediaPlayerControl : UserControl
 
         Dispatcher.UIThread.Post(() =>
         {
-            AttachVideoViews();
+            AttachVideoView();
         }, DispatcherPriority.Loaded);
 
         Task.Delay(2000).Wait();
     }
 
     /// <summary>
-    /// Verknüpft den MediaPlayer mit dem richtigen VideoView
-    /// je nach aktuellem Mode (Normal / Fullscreen).
-    /// Wird aufgerufen nachdem der VideoView sichtbar wurde.
+    /// Verknüpft den VideoView mit dem MediaPlayer.
+    /// Wird aufgerufen nachdem der Normal-View sichtbar ist.
     /// </summary>
-    private VideoView? _videoView;
-
-    private void AttachVideoViews()
+    private void AttachVideoView()
     {
         if (_pendingPlaylist != null)
         {
-            if (_videoView != null) _videoView.MediaPlayer = null;
+            VideoView.MediaPlayer = null;
             _vm.VideoViewLoaded(_pendingPlaylist);
             _pendingPlaylist = null;
         }
 
-        _videoView ??= new VideoView();
-
-        if (_vm.IsCompact)
+        // Warten bis VideoView wirklich im Visual Tree ist
+        if (VideoView.IsAttachedToVisualTree())
         {
-            VideoViewHost.Content = null;
-            VideoViewCompactHost.Content = _videoView;
-            _videoView.MediaPlayer = _vm.MediaPlayer;
+            VideoView.MediaPlayer = _vm.MediaPlayer;
         }
         else
         {
-            VideoViewCompactHost.Content = null;
-            VideoViewHost.Content = _videoView;
-
-            // Warten bis VideoView wirklich im Visual Tree ist
-            if (_videoView.IsAttachedToVisualTree())
+            void OnAttached(object? sender, VisualTreeAttachmentEventArgs e)
             {
-                _videoView.MediaPlayer = _vm.MediaPlayer;
+                VideoView.MediaPlayer = _vm.MediaPlayer;
+                VideoView.AttachedToVisualTree -= OnAttached;
             }
-            else
-            {
-                void OnAttached(object? sender, VisualTreeAttachmentEventArgs e)
-                {
-                    _videoView.MediaPlayer = _vm.MediaPlayer;
-                    _videoView.AttachedToVisualTree -= OnAttached;
-                }
-                _videoView.AttachedToVisualTree += OnAttached;
-            }
+            VideoView.AttachedToVisualTree += OnAttached;
         }
     }
-    
+
     /// <summary>
-    /// Gibt LibVLC-Ressourcen frei. Beim Schließen des MainWindow aufrufen.
+    /// Gibt LibVLC-Ressourcen frei.
     /// </summary>
     public void Dispose() => _vm?.Dispose();
 
@@ -199,8 +198,6 @@ public partial class MediaPlayerControl : UserControl
     {
         if (DataContext is not MediaPlayerControlViewModel vm) return;
         var bitmap = counter == 0 ? vm.PlayIcon : vm.PauseIcon;
-    
-        // Jeder Button bekommt sein eigenes neues Image-Objekt
         CompactPlayButton.Content = new Image { Source = bitmap };
         PlayButton.Content        = new Image { Source = bitmap };
     }
@@ -213,12 +210,13 @@ public partial class MediaPlayerControl : UserControl
         CompactPreviousButton.Content = new Image { Source = vm.BackIcon };
         CompactNextButton.Content     = new Image { Source = vm.ForwardIcon };
         ShuffleCheckbox.Content       = new Image { Source = vm.ShuffleIcon };
+        ToggleCompactButton.Content   = new Image { Source = vm.ToggleCompactIcon };
     }
 
     private void SetImageIcons()
     {
         if (DataContext is not MediaPlayerControlViewModel vm) return;
-        SongIcon.Source = vm.SongIcon;
+        SongIcon.Source   = vm.SongIcon;
         VolumeIcon.Source = vm.VolumeIcon;
     }
 }

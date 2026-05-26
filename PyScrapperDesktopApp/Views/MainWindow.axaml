@@ -23,9 +23,14 @@
 
         <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
 
-        <Panel Grid.Row="1">
+        <Grid Grid.Row="1">
+            
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto" MinHeight="{Binding MediaPlayerMinHeight}"/>
+            </Grid.RowDefinitions>
 
-            <!-- ── Haupt-Content ── -->
             <Grid x:Name="ContentGrid" Classes="RootGrid" Grid.IsSharedSizeScope="True">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -38,7 +43,6 @@
                     <ColumnDefinition Width="4*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Menu -->
                 <Menu Grid.ColumnSpan="3" Grid.Column="0" Grid.Row="0" Margin="5,0">
                     <MenuItem Header="Sort">
                         <MenuItem Header="By Title" Command="{Binding SortByNameCommand}"/>
@@ -77,7 +81,6 @@
                     </MenuItem>
                 </Menu>
 
-                <!-- Playlists -->
                 <ScrollViewer Classes="List" Grid.Column="0" Grid.Row="1" Margin="10,0,0,0"
                               x:Name="PlaylistsList" HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Auto" Grid.IsSharedSizeScope="True">
@@ -138,9 +141,8 @@
                 </ScrollViewer>
 
                 <GridSplitter x:Name="MainSplitter" Grid.Row="1" Grid.Column="1"
-                              Classes="SeperatorVertical" HorizontalAlignment="Stretch" Margin="5"/>
+                              Classes="SplitterVertical" HorizontalAlignment="Stretch" Margin="5"/>
 
-                <!-- Downloaded Medias -->
                 <ScrollViewer Classes="List" Grid.Column="2" x:Name="DownloadedMediasList"
                               Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
@@ -219,13 +221,15 @@
 
             </Grid>
 
-            <!-- ── MediaPlayer Overlay ── -->
-            <controls:MediaPlayerControl
-                x:Name="MediaPlayer"
-                VerticalAlignment="Bottom"
-                HorizontalAlignment="Stretch"
-                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"/>
+            <GridSplitter Grid.Row="1" x:Name="MediaPlayerSplitter" Classes="SplitterHorizontal" IsVisible="False"/>
+            
+            <Border Grid.Row="2" Classes="Cell" HorizontalAlignment="Stretch">
+                <controls:MediaPlayerControl
+                    x:Name="MediaPlayer"
+                    HorizontalAlignment="Stretch"
+                    Background="{DynamicResource SystemControlBackgroundAltHighBrush}"/>
+            </Border>
 
-        </Panel>
+        </Grid>
     </Grid>
 </Window>

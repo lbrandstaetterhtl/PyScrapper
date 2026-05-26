@@ -97,7 +97,13 @@
         <Setter Property="Margin"     Value="10,10,10,50"/>
     </Style>
     
-    <Style Selector="GridSplitter.SeperatorVertical">
+    <Style Selector="GridSplitter.SplitterHorizontal">
+        <Setter Property="Background" Value="{DynamicResource SeparatorBrush}"/>
+        <Setter Property="Height"      Value="1"/>
+        <Setter Property="Cursor" Value="SizeNorthSouth"/>
+    </Style>
+    
+    <Style Selector="GridSplitter.SplitterVertical">
         <Setter Property="Background" Value="{DynamicResource SeparatorBrush}"/>
         <Setter Property="Width" Value="1"/>
         <Setter Property="Cursor" Value="SizeWestEast"/>

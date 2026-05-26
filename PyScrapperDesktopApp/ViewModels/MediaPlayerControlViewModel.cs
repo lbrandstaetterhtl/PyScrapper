@@ -1,62 +1,48 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LibVLCSharp.Avalonia;
 using LibVLCSharp.Shared;
 using PyScrapperDesktopApp.Models;
-using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
-/// <summary>
-/// ViewModel for the MediaPlayerWindow, responsible for managing the state and logic of the media player interface. It interacts with the AudioPlayer model to control media playback, update UI elements such as the current track title, playback position, duration, and volume. The ViewModel also handles user interactions through commands for play, pause, stop, next, previous, volume adjustments, and seeking within the media. It raises events when video availability changes to allow the view to respond accordingly.
-/// Additionally, it manages playlist loading and shuffle mode toggling when applicable.
-/// </summary>
 public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
 {
     private AudioPlayer _audioPlayer = null;
 
-    [ObservableProperty]
-    private int _volume = 70;
-    
-    [ObservableProperty]
-    private string _nowPlayingTitle = "No media loaded";
-    
-    [ObservableProperty]
-    private double _positionSeconds;
-    
-    [ObservableProperty]
-    private double _durationSeconds;
-    
-    [ObservableProperty]
-    private bool _hasVideo;
-    
-    [ObservableProperty]
-    private bool _isShuffleEnabled;
-    
-    [ObservableProperty]
-    private bool _isPlaylistMode;
+    [ObservableProperty] private int _volume = 70;
+    [ObservableProperty] private string _nowPlayingTitle = "No media loaded";
+    [ObservableProperty] private double _positionSeconds;
+    [ObservableProperty] private double _durationSeconds;
+    [ObservableProperty] private bool _hasVideo;
+    [ObservableProperty] private bool _isShuffleEnabled;
+    [ObservableProperty] private bool _isPlaylistMode;
+    [ObservableProperty] private bool _hasNext;
+    [ObservableProperty] private bool _hasPrevious;
+    [ObservableProperty] private bool _isCompact = true;
+    [ObservableProperty] private double _videoHeight;
+    [ObservableProperty] private double _videoWidth;
+    public float AspectRatio { get; private set; } = 0;
 
-    [ObservableProperty] 
-    private bool _hasNext;
+    // IsNormalView = nicht kompakt
+    public bool IsNormalView => !IsCompact;
 
-    [ObservableProperty]
-    private bool _hasPrevious;
-    
+    // Event für Code-behind — VideoView verknüpfen nach Layout-Pass
+    public event EventHandler? CompactClosed;
+    public event EventHandler? CompactOpened;
+
     private static bool DarkMode => AppData.Settings.DarkModeEnabled;
 
     public Bitmap VolumeIcon => DarkMode
-        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "volume-darkmode.png")) 
+        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "volume-darkmode.png"))
         : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "volume-lightmode.png"));
-    
-    public Bitmap SongIcon => DarkMode 
+
+    public Bitmap SongIcon => DarkMode
         ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "song-darkmode.png"))
         : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "song-lightmode.png"));
 
@@ -80,61 +66,47 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
         ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "shuffle-darkmode.png"))
         : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "shuffle-lightmode.png"));
     
+    public Bitmap ArrowUpIcon => DarkMode
+        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "arrow-up-darkmode.png"))
+        : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "arrow-up-lightmode.png"));
+    
+    public Bitmap ArrowDownIcon => DarkMode
+        ? new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "DarkMode", "arrow-down-darkmode.png"))
+        : new Bitmap(Path.Combine(AppData.AssetPath, "MediaPlayer", "LightMode", "arrow-down-lightmode.png"));
+    
+    public Bitmap ToggleCompactIcon => IsCompact ? ArrowUpIcon : ArrowDownIcon;
+
     public bool VolumeSliderMoving { get; set; }
     public bool SeekSliderMoving { get; set; }
 
     public string CurrentlyText => TimeSpan.FromSeconds(PositionSeconds).ToString(@"mm\:ss");
-
-    public string DurationText => TimeSpan.FromSeconds(DurationSeconds).ToString(@"mm\:ss");
+    public string DurationText  => TimeSpan.FromSeconds(DurationSeconds).ToString(@"mm\:ss");
 
     public MediaPlayer MediaPlayer;
-    
+
     public event EventHandler<bool>? VideoAvailableChanged;
     private readonly AppLogger _logger = new();
     private bool _volumeInitialized = false;
+    private Playlist _playlist;
 
-    private  Playlist _playlist;
-    
-    /// <summary>
-    /// Constructor for the MediaPlayerWindowViewModel, which initializes the view model with an optional playlist.
-    /// It sets up event handlers for media playback events such as playing, track changes, video availability changes, time changes, and length changes.
-    /// The constructor also initializes the AudioPlayer instance and configures it to update the UI elements accordingly when these events occur.
-    /// If a playlist is provided, it will be loaded when the video view is loaded.
-    /// </summary>
-    /// <param name="playlist"></param>
     public MediaPlayerControlViewModel()
     {
-       SetAudioPlayer();
+        SetAudioPlayer();
     }
 
-    /// <summary>
-    /// Sets the current playback position of the media player based on the provided value in seconds.
-    /// The value is converted to milliseconds before being assigned to the MediaPlayer's Time property, allowing for seeking within the media.
-    /// </summary>
-    /// <param name="value"></param>
     public void SetSeekValue(long value)
     {
-        _audioPlayer.MediaPlayer.Time = (value * 1000);
+        _audioPlayer.MediaPlayer.Time = value * 1000;
     }
 
-    /// <summary>
-    /// Sets the volume of the media player based on the provided value, which is expected to be in the range of 0 to 100.
-    /// The value is cast to an integer and assigned to the MediaPlayer's Volume property, allowing for volume adjustments.
-    /// </summary>
-    /// <param name="volume"></param>
     public void SetVolume(double volume)
     {
         _audioPlayer.MediaPlayer.Volume = (int)volume;
     }
 
-    /// <summary>
-    /// Method to be called when the video view is loaded, which checks if a playlist is available and loads it into the audio player.
-    /// It also updates the HasNext, HasPrevious, and IsPlaylistMode properties based on the state of the audio player after loading the playlist.
-    /// </summary>
     public void VideoViewLoaded(Playlist playlist = null)
     {
         _playlist = playlist;
-        
         if (_playlist != null)
         {
             LoadPlaylist(_playlist);
@@ -148,9 +120,9 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
     private void SetAudioPlayer()
     {
         if (_audioPlayer != null) _audioPlayer?.Dispose();
-        
+
         _audioPlayer = new AudioPlayer();
-        
+
         _audioPlayer.MediaPlayer.Playing += (s, e) =>
         {
             Dispatcher.UIThread.Post(() =>
@@ -158,41 +130,18 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
                 _audioPlayer.MediaPlayer.Volume = Volume;
             });
         };
-        
+
         _audioPlayer.TrackChanged += (s, path) =>
         {
             _volumeInitialized = false;
-            
             Dispatcher.UIThread.Post(() =>
             {
-                var title = Path.GetFileNameWithoutExtension(path);
-                NowPlayingTitle = title ?? "Unknown Title";
+                NowPlayingTitle = Path.GetFileNameWithoutExtension(path) ?? "Unknown Title";
                 HasNext = _audioPlayer.HasNext;
                 HasPrevious = _audioPlayer.HasPrevious;
             });
-            
         };
-        
-        _audioPlayer.VideoAvailableChanged += (s, hasVideo) =>
-        {
-            Dispatcher.UIThread.Post(async () =>
-            {
-                HasVideo = hasVideo;
-                VideoAvailableChanged?.Invoke(this, hasVideo);
 
-                if (hasVideo && IsCompact)
-                {
-                    IsCompact = false;
-                    OnPropertyChanged(nameof(ToggleIcon));
-                    OnPropertyChanged(nameof(IsNormalView));
-
-                    await Task.Delay(100);
-
-                    CompactClosed?.Invoke(this, EventArgs.Empty);
-                }
-            });
-        };
-        
         _audioPlayer.MediaPlayer.TimeChanged += (s, e) =>
         {
             if (!_volumeInitialized)
@@ -200,7 +149,7 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
                 _volumeInitialized = true;
                 _audioPlayer.MediaPlayer.Volume = Volume;
             }
-            
+
             if (!SeekSliderMoving)
             {
                 Dispatcher.UIThread.Post(() =>
@@ -218,55 +167,50 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
                 DurationSeconds = e.Length / 1000.0;
                 OnPropertyChanged(nameof(DurationText));
             });
+            
+            uint videoWidth = 0, videoHeight = 0;
+            _audioPlayer.MediaPlayer.Size(0, ref videoWidth, ref videoHeight);
+
+            if (videoWidth > 0 && videoHeight > 0)
+            {
+                AspectRatio = (float)videoWidth / videoHeight;
+            }
+        };
+        
+        _audioPlayer.VideoAvailableChanged += (s, hasVideo) =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                HasVideo = hasVideo;
+            });
         };
 
         MediaPlayer = _audioPlayer.MediaPlayer;
     }
-    
-    /// <summary>
-    /// Method that is called when the IsShuffleEnabled property changes, which toggles the shuffle mode of the audio player.
-    /// </summary>
-    /// <param name="value"></param>
+
     partial void OnIsShuffleEnabledChanged(bool value)
     {
         _audioPlayer.ToggleShuffle();
     }
-    
-    public void Play() => _audioPlayer.MediaPlayer.Play();
- 
+
+    public void Play()  => _audioPlayer.MediaPlayer.Play();
     public void Pause() => _audioPlayer.MediaPlayer.Pause();
 
-    /// <summary>
-    /// Stops the media playback and resets the position and duration to zero.
-    /// It also raises property changed notifications for the CurrentlyText and DurationText properties to update the UI accordingly.
-    /// </summary>
     [RelayCommand]
     private void Stop()
     {
         _audioPlayer.Stop();
-        
         PositionSeconds = 0;
         DurationSeconds = 0;
         OnPropertyChanged(nameof(CurrentlyText));
         OnPropertyChanged(nameof(DurationText));
     }
 
-    [RelayCommand]
-    private void PlayNext() => _audioPlayer.PlayNext();
- 
-    [RelayCommand]
-    private void PlayPrevious() => _audioPlayer.PlayPrevious();
- 
-    [RelayCommand]
-    private void MoveForward() => _audioPlayer.MediaPlayer.Time += 10_000;
- 
-    [RelayCommand]
-    private void MoveBackward() => _audioPlayer.MediaPlayer.Time -= 10_000;
+    [RelayCommand] private void PlayNext()     => _audioPlayer.PlayNext();
+    [RelayCommand] private void PlayPrevious() => _audioPlayer.PlayPrevious();
+    [RelayCommand] private void MoveForward()  => _audioPlayer.MediaPlayer.Time += 10_000;
+    [RelayCommand] private void MoveBackward() => _audioPlayer.MediaPlayer.Time -= 10_000;
 
-    /// <summary>
-    /// Increases the volume of the media player by 5 units, ensuring that it does not exceed the maximum volume of 100.
-    /// It updates the Volume property and sets the MediaPlayer's Volume accordingly to reflect the change in the UI and the actual audio output.
-    /// </summary>
     [RelayCommand]
     private void IncreaseVolume()
     {
@@ -274,94 +218,35 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
         _audioPlayer.MediaPlayer.Volume = Volume;
     }
 
-    /// <summary>
-    /// Decreases the volume of the media player by 5 units, ensuring that it does not go below the minimum volume of 0.
-    /// It updates the Volume property and sets the MediaPlayer's Volume accordingly to reflect the change in the UI and the actual audio output.
-    /// </summary>
     [RelayCommand]
     private void DecreaseVolume()
     {
         Volume = Math.Max(0, Volume - 5);
         _audioPlayer.MediaPlayer.Volume = Volume;
     }
-    
-    /// <summary>
-    /// Loads a playlist into the audio player, allowing for the playback of multiple media items in a specified order.
-    /// The method takes a Playlist object as a parameter and uses the LoadPlaylist method of the AudioPlayer to set up the playlist for playback.
-    /// </summary>
-    /// <param name="playlist"></param>
+
     public void LoadPlaylist(Playlist playlist)
     {
         SetAudioPlayer();
         _audioPlayer.LoadPlaylist(playlist);
         IsPlaylistMode = _audioPlayer.PlaylistModeEnabled;
     }
-    
-    /// <summary>
-    /// Disposes of the resources used by the MediaPlayerWindowViewModel, specifically by calling the Dispose method of the AudioPlayer instance to release any unmanaged resources and clean up the media player properly when the view model is no longer needed.
-    /// </summary>
+
+    [RelayCommand]
+    private void ToggleCompact()
+    {
+        IsCompact = !IsCompact;
+        OnPropertyChanged(nameof(IsNormalView));
+        
+
+        if (!IsCompact)
+            CompactClosed?.Invoke(this, EventArgs.Empty);
+        else
+            CompactOpened?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Dispose()
     {
         _audioPlayer.Dispose();
     }
-    
-    [ObservableProperty]
-    private bool _isCompact = true;
- 
-    [ObservableProperty]
-    private bool _isFullscreen = false;
- 
-// IsNormalView = nicht kompakt UND nicht fullscreen
-// Wird als Binding in MediaPlayerControl.axaml verwendet
-    public bool IsNormalView => !IsCompact && !IsFullscreen;
- 
-    public string ToggleIcon     => IsCompact ? "▲" : "▼";
-    public string FullscreenIcon => IsFullscreen ? "⊡" : "⊞";
- 
-// Wird von MainWindow abonniert um Columns zu verstecken
-    public event EventHandler<bool>? FullscreenChanged;
- 
-// Wird von MediaPlayerControl.axaml.cs abonniert um VideoView
-// erst nach dem Layout-Pass zu verknüpfen
-    public event EventHandler? CompactClosed;
- 
-    [RelayCommand]
-    private void ToggleCompact()
-    {
-        // Beim Kompaktieren auch Fullscreen verlassen
-        if (!IsCompact && IsFullscreen)
-        {
-            IsFullscreen = false;
-            FullscreenChanged?.Invoke(this, false);
-            OnPropertyChanged(nameof(FullscreenIcon));
-            OnPropertyChanged(nameof(IsNormalView));
-        }
- 
-        IsCompact = !IsCompact;
-        OnPropertyChanged(nameof(ToggleIcon));
-        OnPropertyChanged(nameof(IsNormalView));
- 
-        // Event feuern wenn aus Compact rausgegangen —
-        // Code-behind wartet damit auf den Layout-Pass bevor VideoView verknüpft wird
-        if (!IsCompact)
-            CompactClosed?.Invoke(this, EventArgs.Empty);
-    }
- 
-    [RelayCommand]
-    private void ToggleFullscreen()
-    {
-        // Beim Öffnen von Fullscreen aus Kompakt-Mode raus
-        if (IsCompact)
-        {
-            IsCompact = false;
-            OnPropertyChanged(nameof(ToggleIcon));
-            OnPropertyChanged(nameof(IsNormalView));
-        }
- 
-        IsFullscreen = !IsFullscreen;
-        FullscreenChanged?.Invoke(this, IsFullscreen);
-        OnPropertyChanged(nameof(FullscreenIcon));
-        OnPropertyChanged(nameof(IsNormalView));
-    }
-
 }

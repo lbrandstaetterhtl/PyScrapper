@@ -37,6 +37,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] 
     private Image _playlistHideIcon;
+    
+    [ObservableProperty]
+    private int _mediaPlayerMinHeight = 65;
 
     public void UpdateHideIcon()
     {

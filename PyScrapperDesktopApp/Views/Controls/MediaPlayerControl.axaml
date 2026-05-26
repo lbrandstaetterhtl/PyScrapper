@@ -10,26 +10,17 @@
 
     <Grid RowDefinitions="Auto, *" Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
 
-        <!-- ── Top Bar — immer sichtbar ── -->
         <Grid Grid.Row="0" ColumnDefinitions="Auto, Auto">
             <Button Grid.Column="0"
+                    x:Name="ToggleCompactButton"
                     Command="{Binding ToggleCompactCommand}"
-                    Content="{Binding ToggleIcon}"
                     Classes="Icon"
                     Padding="10,2"
                     ToolTip.Tip="Expand / Collapse"/>
         </Grid>
-
-        <!-- ══════════════════════════════════════════════ -->
-        <!-- KOMPAKT VIEW                                   -->
-        <!-- ══════════════════════════════════════════════ -->
-        <Border Classes="Cell" Grid.Row="1" IsVisible="{Binding IsCompact}" HorizontalAlignment="Stretch">
-            <Grid ColumnDefinitions="*, Auto, Auto, Auto, Auto, Auto, Auto"
+        
+            <Grid MinHeight="65" MaxHeight="100" ColumnDefinitions="*, Auto, Auto, Auto, Auto, Auto, Auto" Grid.Row="1" IsVisible="{Binding IsCompact}" HorizontalAlignment="Stretch"
                   Margin="15,0">
-                
-                <ContentControl x:Name="VideoViewCompactHost"
-                                Width="0" Height="0"
-                                IsVisible="False"/>
 
                 <TextBlock Grid.Column="0"
                            Text="{Binding NowPlayingTitle}"
@@ -76,73 +67,63 @@
                         Width="150"
                         VerticalAlignment="Center"/>
             </Grid>
-        </Border>
-
-        <!-- ══════════════════════════════════════════════ -->
-        <!-- NORMAL VIEW (nicht kompakt, nicht fullscreen)  -->
-        <!-- ══════════════════════════════════════════════ -->
-        <Border Classes="Cell" Grid.Row="1"
-                IsVisible="{Binding IsNormalView}" HorizontalAlignment="Stretch">
-            <Grid RowDefinitions="*, Auto, Auto, Auto">
-
-                <Grid Grid.Row="0" RowDefinitions="Auto, *" Margin="15,0">
+                
+                <Grid Grid.Row="1" RowDefinitions="Auto, Auto, Auto, Auto, Auto" MinHeight="500"
+                      IsVisible="{Binding IsNormalView}" HorizontalAlignment="Stretch">
                     <TextBlock Grid.Row="0"
                                Text="{Binding NowPlayingTitle}"
                                Classes="UILabel"
                                Margin="0,5"/>
-                    <ContentControl Grid.Row="1"
-                                    x:Name="VideoViewHost"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Stretch"
-                                    MinHeight="150"
-                                    MinWidth="300"
-                                    MaxWidth="600"
-                                    IsVisible="{Binding HasVideo}"
-                                    Margin="0,5"/>
+                    <avalonia:VideoView Grid.Row="1"
+                                        x:Name="VideoView"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Top"
+                                        Height="{Binding VideoHeight}"
+                                        Width="{Binding VideoWidth}"
+                                        IsVisible="{Binding HasVideo}"
+                                        MaxHeight="500"
+                                        MaxWidth="900"/>
+                    
+                    <StackPanel Grid.Row="2" Classes="UICell" Margin="15,5" VerticalAlignment="Top">
+                        <Image x:Name="SongIcon" Classes="Icon"/>
+                        <Slider x:Name="SeekSlider"
+                                Minimum="0"
+                                Maximum="{Binding DurationSeconds}"
+                                Value="{Binding PositionSeconds, Mode=OneWay}"
+                                Classes="MediaPlayer"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" Classes="UICell" Margin="15,5" VerticalAlignment="Top">
+                        <TextBlock Text="{Binding CurrentlyText}" Classes="UILabel"/>
+                        <Button x:Name="PreviousButton"
+                                Command="{Binding PlayPreviousCommand}"
+                                IsEnabled="{Binding HasPrevious}"
+                                IsVisible="{Binding IsPlaylistMode}"
+                                Classes="Icon"/>
+                        <Button x:Name="PlayButton" Classes="Icon"/>
+                        <Button x:Name="NextButton"
+                                Command="{Binding PlayNextCommand}"
+                                IsVisible="{Binding IsPlaylistMode}"
+                                IsEnabled="{Binding HasNext}"
+                                Classes="Icon"/>
+                        <CheckBox x:Name="ShuffleCheckbox"
+                                  IsChecked="{Binding IsShuffleEnabled}"
+                                  IsVisible="{Binding IsPlaylistMode}"
+                                  Classes="Icon"/>
+                        <TextBlock Text="{Binding DurationText}" Classes="UILabel"/>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Row="4" Classes="UICell" Margin="15,5" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Image x:Name="VolumeIcon" Classes="Icon"/>
+                        <Button Content="+" Command="{Binding IncreaseVolumeCommand}" Classes="primary"/>
+                        <Slider x:Name="VolumeSlider"
+                                Minimum="0"
+                                Maximum="100"
+                                Value="{Binding Volume, Mode=TwoWay}"
+                                VerticalAlignment="Center"
+                                Classes="MediaPlayer"/>
+                        <Button Content="-" Command="{Binding DecreaseVolumeCommand}" Classes="primary"/>
+                    </StackPanel>
                 </Grid>
-
-                <StackPanel Grid.Row="1" Classes="UICell" Margin="15,5">
-                    <Image x:Name="SongIcon" Classes="Icon"/>
-                    <Slider x:Name="SeekSlider"
-                            Minimum="0"
-                            Maximum="{Binding DurationSeconds}"
-                            Value="{Binding PositionSeconds, Mode=OneWay}"
-                            Classes="MediaPlayer"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Classes="UICell" Margin="15,5">
-                    <TextBlock Text="{Binding CurrentlyText}" Classes="UILabel"/>
-                    <Button x:Name="PreviousButton"
-                            Command="{Binding PlayPreviousCommand}"
-                            IsEnabled="{Binding HasPrevious}"
-                            IsVisible="{Binding IsPlaylistMode}"
-                            Classes="Icon"/>
-                    <Button x:Name="PlayButton" Classes="Icon"/>
-                    <Button x:Name="NextButton"
-                            Command="{Binding PlayNextCommand}"
-                            IsVisible="{Binding IsPlaylistMode}"
-                            IsEnabled="{Binding HasNext}"
-                            Classes="Icon"/>
-                    <CheckBox x:Name="ShuffleCheckbox"
-                              IsChecked="{Binding IsShuffleEnabled}"
-                              IsVisible="{Binding IsPlaylistMode}"
-                              Classes="Icon"/>
-                    <TextBlock Text="{Binding DurationText}" Classes="UILabel"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="3" Classes="UICell" Margin="15,5" Orientation="Horizontal">
-                    <Image x:Name="VolumeIcon" Classes="Icon"/>
-                    <Slider x:Name="VolumeSlider"
-                            Minimum="0"
-                            Maximum="100"
-                            Value="{Binding Volume, Mode=TwoWay}"
-                            VerticalAlignment="Center"
-                            Classes="MediaPlayer"/>
-                    <Button Content="+" Command="{Binding IncreaseVolumeCommand}" Classes="primary"/>
-                    <Button Content="-" Command="{Binding DecreaseVolumeCommand}" Classes="primary"/>
-                </StackPanel>
             </Grid>
-        </Border>
-
-    </Grid>
 </UserControl>

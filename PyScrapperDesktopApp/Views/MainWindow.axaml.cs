@@ -16,11 +16,6 @@ public partial class MainWindow : Window
     private MainWindowViewModel _vm;
     private readonly AppLogger _logger = new();
 
-    // gespeicherte Column-Breiten vor Fullscreen
-    private GridLength _savedColPlaylists;
-    private GridLength _savedColSplitter;
-    private GridLength _savedColMedias;
-
     public MainWindow()
     {
         if (Design.IsDesignMode) return;
@@ -35,49 +30,23 @@ public partial class MainWindow : Window
         {
             _vm.OnWindowReady(this);
 
-            // Fullscreen-Event vom MediaPlayer abonnieren
-            MediaPlayer.OnFullscreenChanged += HandleFullscreenChanged;
+            MediaPlayer.OnCompactChanged += (isCompact) =>
+            {
+                var outerGrid = (Grid)((Grid)Content).Children[1];
+                if (isCompact)
+                {
+                    outerGrid.RowDefinitions[2].Height = GridLength.Auto;
+                    MediaPlayerSplitter.IsVisible = false;
+                    _vm.MediaPlayerMinHeight = 65;
+                }
+                else
+                {
+                    outerGrid.RowDefinitions[2].Height = new GridLength(1, GridUnitType.Star);
+                    MediaPlayerSplitter.IsVisible = true;
+                    _vm.MediaPlayerMinHeight = 1000;
+                }
+            };
         };
-    }
-
-    /// <summary>
-    /// Wird aufgerufen wenn der MediaPlayer Fullscreen toggled.
-    /// Versteckt/zeigt die Listen-Columns im ContentGrid.
-    /// </summary>
-    private void HandleFullscreenChanged(bool isFullscreen)
-    {
-        if (isFullscreen)
-        {
-            // Breiten speichern
-            _savedColPlaylists = ContentGrid.ColumnDefinitions[0].Width;
-            _savedColSplitter  = ContentGrid.ColumnDefinitions[1].Width;
-            _savedColMedias    = ContentGrid.ColumnDefinitions[2].Width;
-
-            // Content verstecken
-            ContentGrid.ColumnDefinitions[0].Width = new GridLength(0);
-            ContentGrid.ColumnDefinitions[1].Width = new GridLength(0);
-            ContentGrid.ColumnDefinitions[2].Width = new GridLength(0);
-            ContentGrid.RowDefinitions[2].Height   = new GridLength(0);
-
-            // MediaPlayer auf ganzen Bildschirm
-            MediaPlayer.VerticalAlignment   = Avalonia.Layout.VerticalAlignment.Stretch;
-            MediaPlayer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
-        }
-        else
-        {
-            // Columns wiederherstellen
-            ContentGrid.ColumnDefinitions[0].Width = _savedColPlaylists == default
-                ? new GridLength(3, GridUnitType.Star) : _savedColPlaylists;
-            ContentGrid.ColumnDefinitions[1].Width = _savedColSplitter == default
-                ? GridLength.Auto : _savedColSplitter;
-            ContentGrid.ColumnDefinitions[2].Width = _savedColMedias == default
-                ? new GridLength(4, GridUnitType.Star) : _savedColMedias;
-            ContentGrid.RowDefinitions[2].Height   = new GridLength(70);
-
-            // MediaPlayer zurück auf Bottom
-            MediaPlayer.VerticalAlignment   = Avalonia.Layout.VerticalAlignment.Bottom;
-            MediaPlayer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
-        }
     }
 
     private async void MediaDoubleClick(object? sender, RoutedEventArgs e)
