@@ -262,10 +262,12 @@ public class Settings
     public string? DownloadPath { get; set; }
     public string ServerUrl => "http://127.0.0.1:8765";
     public bool DarkModeEnabled { get; set; }
+    public bool ScanFolderOnStartup { get; set; }
     public void SetDefaultSettings()
     {
         DownloadPath = Path.Combine(AppData.PyScrapperPath, "Downloads");
         DarkModeEnabled = true;
+        ScanFolderOnStartup = false;
     }
 }
 

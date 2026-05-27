@@ -45,6 +45,14 @@ public partial class MainWindow : Window
                 }
             };
         };
+
+        ScanFolderCheckBox.IsCheckedChanged += (s, e) =>
+        {
+            if (ScanFolderCheckBox.IsChecked == true)
+                AppData.Settings.ScanFolderOnStartup = true;
+            else
+                AppData.Settings.ScanFolderOnStartup = false;
+        };
     }
 
     private async void MediaDoubleClick(object? sender, RoutedEventArgs e)

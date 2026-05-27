@@ -40,6 +40,9 @@ public partial class MainWindowViewModel : ObservableObject
     
     [ObservableProperty]
     private int _mediaPlayerMinHeight = 65;
+    
+    [ObservableProperty]
+    private bool _scanFolderCheckBoxValue = AppData.Settings.ScanFolderOnStartup;
 
     public void UpdateHideIcon()
     {

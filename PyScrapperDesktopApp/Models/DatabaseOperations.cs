@@ -364,7 +364,8 @@ public abstract class DatabaseOperations
                     CREATE TABLE IF NOT EXISTS Settings (
                         Id INTEGER PRIMARY KEY,
                         DownloadPath TEXT,
-                        DarkModeEnabled INTEGER
+                        DarkModeEnabled INTEGER,
+                        ScanFolderOnStartup INTEGER
                     )STRICT;
                 """;
             
@@ -372,7 +373,7 @@ public abstract class DatabaseOperations
             
             var selectCommand = Connection.CreateCommand();
             
-            selectCommand.CommandText = "SELECT DISTINCT Id, DownloadPath, DarkModeEnabled FROM Settings LIMIT 1;";
+            selectCommand.CommandText = "SELECT DISTINCT Id, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings LIMIT 1;";
             
             await using var reader = await selectCommand.ExecuteReaderAsync();
 
@@ -381,11 +382,13 @@ public abstract class DatabaseOperations
                 var id = reader.GetInt32(0);
                 var downloadPath = reader.GetString(1);
                 var darkModeEnabled = reader.GetBoolean(2);
+                var scanFolderOnStartup = reader.GetBoolean(3);
                 settings = new Settings()
                 {
                     Id = id,
                     DownloadPath = downloadPath,
-                    DarkModeEnabled = darkModeEnabled
+                    DarkModeEnabled = darkModeEnabled,
+                    ScanFolderOnStartup = scanFolderOnStartup
                 };
             }
             
@@ -428,7 +431,8 @@ public abstract class DatabaseOperations
                     CREATE TABLE IF NOT EXISTS Settings (
                         Id INTEGER PRIMARY KEY,
                         DownloadPath TEXT,
-                        DarkModeEnabled INTEGER
+                        DarkModeEnabled INTEGER,
+                        ScanFolderOnStartup INTEGER
                     )STRICT;
                 """;
                 
@@ -439,11 +443,12 @@ public abstract class DatabaseOperations
             
             var insertCommand = Connection.CreateCommand();
             insertCommand.CommandText =
-                "INSERT INTO Settings (Id, DownloadPath, DarkModeEnabled)" +
-                "VALUES ($id, $downloadPath,  $darkModeEnabled);";
+                "INSERT INTO Settings (Id, DownloadPath, DarkModeEnabled,  ScanFolderOnStartup)" +
+                "VALUES ($id, $downloadPath,  $darkModeEnabled, $scanFolderOnStartup);";
             insertCommand.Parameters.AddWithValue("$id", settings.Id);
             insertCommand.Parameters.AddWithValue("$downloadPath", settings.DownloadPath);
             insertCommand.Parameters.AddWithValue("$darkModeEnabled", settings.DarkModeEnabled);
+            insertCommand.Parameters.AddWithValue("$scanFolderOnStartup", settings.ScanFolderOnStartup);
             
             insertCommand.ExecuteNonQuery();
             

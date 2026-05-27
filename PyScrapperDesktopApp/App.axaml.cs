@@ -155,7 +155,7 @@ public partial class App : Application
                     {
                         log = new Massage(
                             $"Media with id {media.Id} has an unsupported codec and will be set to not playable",
-                            DateTime.Now, "WARNING");
+                            DateTime.Now, "WARN");
                         _logger.LogNewMassage(log);
                     }
                 }
@@ -167,7 +167,7 @@ public partial class App : Application
 
                 log = new Massage(
                     $"Media with id {mediaToRemove.Id} removed from the list because it does not exist",
-                    DateTime.Now, "WARNING");
+                    DateTime.Now, "WARN");
                 _logger.LogNewMassage(log);
             }
 
@@ -183,10 +183,14 @@ public partial class App : Application
                 AppData.AddPlaylist(playlist);
             }
 
-            var diff = await ScanFolder(AppData.Settings.DownloadPath);
+            if (AppData.Settings.ScanFolderOnStartup)
+            {
+                var diff = await ScanFolder(AppData.Settings.DownloadPath);
 
-            log = new Massage($"Scanned download folder for new media, found {diff} new media items", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
+                log = new Massage($"Scanned download folder for new media, found {diff} new media items", DateTime.Now,
+                    "INFO");
+                _logger.LogNewMassage(log);
+            }
 
             log = new Massage(
                 $"Application started with {AppData.DownloadedMedias.Count} listed medias and {AppData.PlayableMedias.Count} playable medias | deleted {mediasToRemove.Count} medias",
@@ -334,7 +338,7 @@ public partial class App : Application
         }
         catch
         {
-            // Server was already stopped or unreachable
+            var log = new Massage("Server was not reachable while trying to send quit command", DateTime.Now, "WARN");
         }
     }
 }
