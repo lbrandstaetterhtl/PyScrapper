@@ -1,0 +1,600 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>PyScrapper - Dokumentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+            padding: 40px 20px; 
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            line-height: 1.7;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #16213e;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border: 1px solid #0f3460;
+        }
+        h1 {
+            color: #00d4ff;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 2.2em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #a0a0a0;
+            margin-bottom: 50px;
+            font-size: 1em;
+        }
+        .intro-box {
+            background-color: #0f3460;
+            border-left: 4px solid #00d4ff;
+            padding: 20px;
+            margin-bottom: 40px;
+            border-radius: 4px;
+            line-height: 1.7;
+        }
+        .intro-box strong {
+            color: #00d4ff;
+        }
+        .docs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        .doc-card {
+            background-color: #0f3460;
+            border: 1px solid #1a5f7a;
+            border-radius: 8px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+        }
+        .doc-card:hover {
+            border-color: #00d4ff;
+            box-shadow: 0 0 15px rgba(0,212,255,0.2);
+            transform: translateY(-2px);
+        }
+        .doc-icon {
+            font-size: 2.5em;
+            margin-bottom: 12px;
+        }
+        .doc-title {
+            color: #00d4ff;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .doc-description {
+            color: #b0b0b0;
+            font-size: 0.95em;
+            line-height: 1.6;
+            flex-grow: 1;
+            margin-bottom: 15px;
+        }
+        .doc-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .tag {
+            background-color: rgba(0,212,255,0.15);
+            color: #00d4ff;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+        .section-header {
+            color: #00d4ff;
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0f3460;
+        }
+        
+        .snake-segment {
+            position: fixed;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.6);
+        }
+        
+        .snake-head {
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            border: 2px solid #00ffff;
+        }
+        
+        .snake-body {
+            background: rgba(0, 212, 255, 0.7);
+        }
+        .info-text {
+            background-color: #0f3460;
+            border-left: 4px solid #2ecc71;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            color: #b0b0b0;
+            font-size: 0.95em;
+        }
+        a {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #0f3460;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 PyScrapper Dokumentation</h1>
+        <div class="subtitle">Komplette technische und benutzer-orientierte Dokumentation</div>
+
+        <div class="intro-box">
+            <strong>Willkommen zur PyScrapper Dokumentation!</strong><br><br>
+            Diese Seite bietet einen umfassenden Überblick über die Architektur, Workflows und 
+            Benutzeroberfläche der PyScrapper-Anwendung. Wählen Sie ein Thema aus, um mehr zu erfahren.
+        </div>
+
+        <div class="section-header">Technische Dokumentation</div>
+        <div class="docs-grid">
+            <a href="Architecture_Professional.html" class="doc-card">
+                <div class="doc-icon">🏗️</div>
+                <div class="doc-title">Architektur & Datenmodelle</div>
+                <div class="doc-description">
+                    Detaillierte Übersicht der Applikations-Architektur, MVVM-Pattern, 
+                    Datenmodelle, API-Struktur und Datenbankschema.
+                </div>
+                <div class="doc-tags">
+                    <span class="tag">Models</span>
+                    <span class="tag">ViewModels</span>
+                    <span class="tag">Database</span>
+                    <span class="tag">API</span>
+                </div>
+            </a>
+
+            <a href="Workflows_Professional.html" class="doc-card">
+                <div class="doc-icon">⚙️</div>
+                <div class="doc-title">Prozessabläufe & Workflows</div>
+                <div class="doc-description">
+                    Detaillierte Flowcharts für: Download-Workflow, Anwendungs-Initialisierung, 
+                    Filter-Anwendung, Musik-Player State Machine und MVVM Data Binding.
+                </div>
+                <div class="doc-tags">
+                    <span class="tag">Download</span>
+                    <span class="tag">Initialization</span>
+                    <span class="tag">Binding</span>
+                    <span class="tag">State Machine</span>
+                </div>
+            </a>
+
+            <a href="UI_Documentation.html" class="doc-card">
+                <div class="doc-icon">🪟</div>
+                <div class="doc-title">Benutzeroberfläche</div>
+                <div class="doc-description">
+                    Dokumentation aller Fenster und Dialoge: Hauptfenster, Suche & Download, 
+                    Filter, Playlists, Video-Konverter, Fortschritt und Server-Status.
+                </div>
+                <div class="doc-tags">
+                    <span class="tag">UI</span>
+                    <span class="tag">Windows</span>
+                    <span class="tag">Dialog</span>
+                    <span class="tag">Layout</span>
+                </div>
+            </a>
+        </div>
+
+        <div class="section-header">✨ Magische Schlange - Folge mir mit deiner Maus!</div>
+        <div style="background-color: #0f3460; border: 2px solid #00d4ff; border-radius: 8px; padding: 20px; margin-bottom: 30px; text-align: center; color: #b0b0b0;">
+            🐍 Eine glühende Schlange folgt deinem Cursor auf der ganzen Seite! Bewege deine Maus herum und sieh, wie sie dir nachfolgt.
+        </div>
+
+        <!-- Info Dashboard -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 40px;">
+            <div style="background-color: #0f3460; border: 1px solid #1a5f7a; border-radius: 6px; padding: 20px; text-align: center;">
+                <div style="font-size: 2.5em; color: #00d4ff; font-weight: bold; margin-bottom: 10px;">6</div>
+                <div style="color: #b0b0b0; font-size: 0.95em;">Dokumentations-Dateien</div>
+                <div style="color: #666; font-size: 0.85em; margin-top: 5px;">HTML & Markdown</div>
+            </div>
+
+            <div style="background-color: #0f3460; border: 1px solid #1a5f7a; border-radius: 6px; padding: 20px; text-align: center;">
+                <div style="font-size: 2.5em; color: #00d4ff; font-weight: bold; margin-bottom: 10px;">15+</div>
+                <div style="color: #b0b0b0; font-size: 0.95em;">Interaktive Diagramme</div>
+                <div style="color: #666; font-size: 0.85em; margin-top: 5px;">Flowcharts & Graphs</div>
+            </div>
+
+            <div style="background-color: #0f3460; border: 1px solid #1a5f7a; border-radius: 6px; padding: 20px; text-align: center;">
+                <div style="font-size: 2.5em; color: #00d4ff; font-weight: bold; margin-bottom: 10px;">98 KB</div>
+                <div style="color: #b0b0b0; font-size: 0.95em;">Kompakte Größe</div>
+                <div style="color: #666; font-size: 0.85em; margin-top: 5px;">Schnell zu laden</div>
+            </div>
+
+            <div style="background-color: #0f3460; border: 1px solid #1a5f7a; border-radius: 6px; padding: 20px; text-align: center;">
+                <div style="font-size: 2.5em; color: #00d4ff; font-weight: bold; margin-bottom: 10px;">7</div>
+                <div style="color: #b0b0b0; font-size: 0.95em;">Fenster dokumentiert</div>
+                <div style="color: #666; font-size: 0.85em; margin-top: 5px;">Mit Mockups</div>
+            </div>
+
+            <div style="background-color: #0f3460; border: 1px solid #1a5f7a; border-radius: 6px; padding: 20px; text-align: center;">
+                <div style="font-size: 2.5em; color: #00d4ff; font-weight: bold; margin-bottom: 10px;">5</div>
+                <div style="color: #b0b0b0; font-size: 0.95em;">Hauptworkflows</div>
+                <div style="color: #666; font-size: 0.85em; margin-top: 5px;">Download bis Player</div>
+            </div>
+
+            <div style="background-color: #0f3460; border: 1px solid #1a5f7a; border-radius: 6px; padding: 20px; text-align: center;">
+                <div style="font-size: 2.5em; color: #00d4ff; font-weight: bold; margin-bottom: 10px;">∞</div>
+                <div style="color: #b0b0b0; font-size: 0.95em;">Zoom Funktionalität</div>
+                <div style="color: #666; font-size: 0.85em; margin-top: 5px;">Pan & Scroll</div>
+            </div>
+        </div>
+
+        <script>
+            // Canvas Skyline Storm Animation
+            const canvas = document.getElementById('stormCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            let rainParticles = [];
+            let time = 0;
+            
+            // Hochhäuser definieren
+            const buildings = [
+                { x: 50, width: 60, height: 200, wobble: 0.8 },
+                { x: 130, width: 70, height: 240, wobble: 1.2 },
+                { x: 220, width: 55, height: 180, wobble: 0.9 },
+                { x: 295, width: 80, height: 260, wobble: 1.5 },
+                { x: 395, width: 65, height: 210, wobble: 1.0 },
+                { x: 480, width: 75, height: 230, wobble: 1.1 },
+                { x: 575, width: 60, height: 190, wobble: 0.7 },
+                { x: 655, width: 85, height: 270, wobble: 1.3 },
+                { x: 760, width: 70, height: 220, wobble: 1.1 },
+                { x: 850, width: 60, height: 200, wobble: 0.9 },
+                { x: 930, width: 50, height: 150, wobble: 0.6 }
+            ];
+
+            class RainParticle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.vx = (Math.random() - 0.5) * 3;
+                    this.vy = Math.random() * 3 + 2;
+                    this.opacity = Math.random() * 0.6 + 0.2;
+                    this.length = Math.random() * 15 + 8;
+                }
+
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    if (this.y > canvas.height || this.x > canvas.width || this.x < 0) {
+                        this.y = -10;
+                        this.x = Math.random() * canvas.width;
+                    }
+                }
+
+                draw() {
+                    ctx.strokeStyle = `rgba(150, 200, 255, ${this.opacity})`;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x + this.vx * 2, this.y + this.length);
+                    ctx.stroke();
+                }
+            }
+
+            function drawBuilding(building, wobble) {
+                const xOffset = Math.sin(wobble) * building.wobble * 2;
+                const baseY = canvas.height - 80;
+                
+                ctx.save();
+                
+                // Gebäude Körper
+                ctx.fillStyle = '#1a1a3e';
+                ctx.fillRect(building.x + xOffset, baseY - building.height, building.width, building.height);
+                
+                // Gebäude Rahmen
+                ctx.strokeStyle = 'rgba(0, 212, 255, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(building.x + xOffset, baseY - building.height, building.width, building.height);
+                
+                // Fenster
+                const windowSize = 8;
+                const spacing = 12;
+                const cols = Math.floor(building.width / spacing) - 1;
+                const rows = Math.floor(building.height / spacing) - 2;
+                
+                for (let row = 0; row < rows; row++) {
+                    for (let col = 0; col < cols; col++) {
+                        const windowX = building.x + xOffset + 6 + col * spacing;
+                        const windowY = baseY - building.height + 10 + row * spacing;
+                        
+                        // Zufällig: Fenster beleuchtet oder nicht
+                        if (Math.random() > 0.3) {
+                            ctx.fillStyle = 'rgba(255, 255, 100, 0.8)';
+                            ctx.shadowColor = 'rgba(255, 255, 100, 0.5)';
+                            ctx.shadowBlur = 5;
+                        } else {
+                            ctx.fillStyle = 'rgba(0, 0, 20, 0.6)';
+                            ctx.shadowColor = 'transparent';
+                        }
+                        
+                        ctx.fillRect(windowX, windowY, windowSize, windowSize);
+                    }
+                }
+                
+                ctx.restore();
+            }
+
+            function drawClouds() {
+                ctx.fillStyle = 'rgba(50, 50, 80, 0.4)';
+                
+                for (let i = 0; i < 3; i++) {
+                    const cloudX = (time * 0.3 + i * 300) % (canvas.width + 100);
+                    const cloudY = 20 + i * 50;
+                    
+                    // Wolke
+                    ctx.beginPath();
+                    ctx.arc(cloudX, cloudY, 30, 0, Math.PI * 2);
+                    ctx.arc(cloudX + 25, cloudY - 15, 35, 0, Math.PI * 2);
+                    ctx.arc(cloudX + 50, cloudY, 30, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function drawLightning() {
+                if (Math.random() < 0.015) {
+                    const startX = Math.random() * canvas.width;
+                    const startY = 0;
+                    const endX = startX + (Math.random() - 0.5) * 100;
+                    const endY = canvas.height * 0.4;
+                    
+                    ctx.strokeStyle = 'rgba(255, 255, 150, 0.9)';
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = 'rgba(255, 255, 100, 0.8)';
+                    ctx.shadowBlur = 15;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    
+                    let x = startX, y = startY;
+                    while (y < endY) {
+                        x += (Math.random() - 0.5) * 50;
+                        y += Math.random() * 50 + 20;
+                        ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                    ctx.shadowColor = 'transparent';
+                }
+            }
+
+            function animate() {
+                // Gradient Hintergrund
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, '#0a0a1a');
+                gradient.addColorStop(0.4, '#1a1a3e');
+                gradient.addColorStop(1, '#0f1f2e');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Unwetter-Effekt
+                ctx.fillStyle = 'rgba(100, 100, 150, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Wolken
+                drawClouds();
+
+                // Regen-Partikel
+                for (let i = rainParticles.length - 1; i >= 0; i--) {
+                    rainParticles[i].update();
+                    rainParticles[i].draw();
+                }
+
+                // Neue Regen-Partikel
+                for (let i = 0; i < 3; i++) {
+                    if (Math.random() < 0.6) {
+                        rainParticles.push(new RainParticle());
+                    }
+                }
+
+                // Hochhäuser zeichnen
+                buildings.forEach(building => {
+                    drawBuilding(building, time * 0.05);
+                });
+
+                // Blitze
+                drawLightning();
+
+                // Glow-Effekt oben
+                const glowGradient = ctx.createLinearGradient(0, 0, 0, 100);
+                glowGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+                glowGradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+                ctx.fillStyle = glowGradient;
+                ctx.fillRect(0, 0, canvas.width, 100);
+
+                // Text
+                ctx.fillStyle = 'rgba(0, 212, 255, 0.4)';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚡ SKYLINE IM STURM ⚡', canvas.width / 2, 35);
+
+                time++;
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+        </script>
+
+        <div class="section-header">Schnelle Links</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 40px;">
+            <div style="background-color: #0f3460; border: 1px solid #1a5f7a; border-radius: 6px; padding: 15px;">
+                <div style="color: #00d4ff; font-weight: 600; margin-bottom: 10px;">Kern-Entities</div>
+                <ul style="list-style: none; color: #b0b0b0; font-size: 0.9em; line-height: 1.8;">
+                    <li>→ <a href="Architecture_Professional.html#entities">DownloadedMedia</a></li>
+                    <li>→ <a href="Architecture_Professional.html#entities">Playlist</a></li>
+                    <li>→ <a href="Architecture_Professional.html#entities">Settings</a></li>
+                    <li>→ <a href="Architecture_Professional.html#entities">MediaFilter</a></li>
+                </ul>
+            </div>
+
+            <div style="background-color: #0f3460; border: 1px solid #1a5f7a; border-radius: 6px; padding: 15px;">
+                <div style="color: #00d4ff; font-weight: 600; margin-bottom: 10px;">Hauptfenster</div>
+                <ul style="list-style: none; color: #b0b0b0; font-size: 0.9em; line-height: 1.8;">
+                    <li>→ <a href="UI_Documentation.html">MainWindow</a></li>
+                    <li>→ <a href="UI_Documentation.html">ScrapWindow</a></li>
+                    <li>→ <a href="UI_Documentation.html">FilterWindow</a></li>
+                    <li>→ <a href="UI_Documentation.html">ProgressWindow</a></li>
+                </ul>
+            </div>
+
+            <div style="background-color: #0f3460; border: 1px solid #1a5f7a; border-radius: 6px; padding: 15px;">
+                <div style="color: #00d4ff; font-weight: 600; margin-bottom: 10px;">Workflows</div>
+                <ul style="list-style: none; color: #b0b0b0; font-size: 0.9em; line-height: 1.8;">
+                    <li>→ <a href="Workflows_Professional.html">Download Workflow</a></li>
+                    <li>→ <a href="Workflows_Professional.html">App Initialization</a></li>
+                    <li>→ <a href="Workflows_Professional.html">Filter Application</a></li>
+                    <li>→ <a href="Workflows_Professional.html">Media Player</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>PyScrapper Dokumentation v1.0 | Letzte Aktualisierung: 27. Mai 2026</p>
+            <p>Alle Inhalte sind urheberrechtlich geschützt. Für Fragen wenden Sie sich an das Entwicklungsteam.</p>
+        </div>
+    </div>
+
+    <script>
+        // Magische Schlange - folgt dem Cursor auf der ganzen Seite (GUMMIBALL VERSION)
+        class Snake {
+            constructor() {
+                this.segments = [];
+                this.segmentLength = 10;   // Kurz!
+                this.segmentCount = 12;    // Wenige Segmente
+                this.mouseX = 0;
+                this.mouseY = 0;
+                
+                // Schlangen-Segmente erstellen
+                for (let i = 0; i < this.segmentCount; i++) {
+                    const segment = document.createElement('div');
+                    segment.className = 'snake-segment';
+                    if (i === 0) {
+                        segment.classList.add('snake-head');
+                    } else {
+                        segment.classList.add('snake-body');
+                    }
+                    document.body.appendChild(segment);
+                    this.segments.push({
+                        element: segment,
+                        x: this.mouseX,
+                        y: this.mouseY,
+                        vx: 0,
+                        vy: 0,
+                        targetX: this.mouseX,
+                        targetY: this.mouseY
+                    });
+                }
+                
+                // Maus-Tracking
+                document.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                
+                // Animation starten
+                this.animate();
+            }
+            
+            onMouseMove(e) {
+                this.mouseX = e.clientX;
+                this.mouseY = e.clientY;
+            }
+            
+            animate() {
+                // Kopf direkt zum Cursor - sanft ohne Bounce
+                this.segments[0].x += (this.mouseX - this.segments[0].x) * 0.1;
+                this.segments[0].y += (this.mouseY - this.segments[0].y) * 0.1;
+                
+                // Jedes Segment folgt dem vorherigen - rein linear
+                for (let i = 1; i < this.segments.length; i++) {
+                    const current = this.segments[i];
+                    const previous = this.segments[i - 1];
+                    
+                    const dx = previous.x - current.x;
+                    const dy = previous.y - current.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Einfache sanfte Verfolgung - kein Bounce
+                    const angle = Math.atan2(dy, dx);
+                    const targetX = previous.x - Math.cos(angle) * this.segmentLength;
+                    const targetY = previous.y - Math.sin(angle) * this.segmentLength;
+                    
+                    // Direkte sanfte Bewegung ohne Velocity
+                    current.x += (targetX - current.x) * 0.08;
+                    current.y += (targetY - current.y) * 0.08;
+                }
+                
+                // Segmente rendern
+                this.segments.forEach((segment, index) => {
+                    segment.element.style.left = (segment.x - 5) + 'px';
+                    segment.element.style.top = (segment.y - 5) + 'px';
+                    
+                    // Kleine Größe, schnelles Fadeout
+                    const ratio = index / this.segments.length;
+                    const opacity = Math.max(0.2, 1 - ratio * 0.9);
+                    const scale = Math.max(0.4, 1 - ratio * 0.7);
+                    
+                    segment.element.style.opacity = opacity;
+                    segment.element.style.transform = `scale(${scale})`;
+                });
+                
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        
+        // Snake beim Laden starten
+        window.addEventListener('load', () => {
+            new Snake();
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
