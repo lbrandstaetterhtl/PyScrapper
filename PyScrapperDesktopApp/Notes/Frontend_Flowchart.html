@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>PyScrapper Frontend - Interaktive Diagramme</title>
+    <!-- Mermaid.js library for rendering the flowchart -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom/dist/svg-pan-zoom.min.js"></script>
+    <script>
+        // Init mermaid without auto-load
+        mermaid.initialize({
+            startOnLoad: false, 
+            theme: 'default',
+            flowchart: { curve: 'linear' }
+        });
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const elements = document.querySelectorAll('.mermaid-code');
+            for (let i = 0; i < elements.length; i++) {
+                const el = elements[i];
+                const graphDefinition = el.textContent;
+                
+                // create target div
+                const targetDiv = document.createElement('div');
+                targetDiv.className = 'mermaid-container';
+                targetDiv.id = 'graphDiv' + i;
+                el.parentNode.insertBefore(targetDiv, el.nextSibling);
+                
+                // render svg
+                const { svg } = await mermaid.render('mermaid-svg-' + i, graphDefinition);
+                targetDiv.innerHTML = svg;
+                el.style.display = 'none'; // hide RAW code
+                
+                // apply svg-pan-zoom
+                const svgElement = targetDiv.querySelector('svg');
+                svgElement.style.width = '100%';
+                svgElement.style.height = '600px';
+                
+                svgPanZoom(svgElement, {
+                    zoomEnabled: true,
+                    controlIconsEnabled: true,
+                    fit: true,
+                    center: true,
+                    minZoom: 0.1
+                });
+            }
+        });
+    </script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 40px; 
+            background-color: #1e1e1e; 
+            color: #d4d4d4;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background-color: #252526;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+        }
+        .mermaid-container { 
+            background-color: #ffffff; 
+            border-radius: 8px; 
+            margin-top: 20px;
+            margin-bottom: 40px;
+            cursor: grab;
+            border: 2px solid #4ea8de;
+            overflow: hidden;
+            height: 600px; /* fixed height for zooming/panning */
+        }
+        .mermaid-container:active {
+            cursor: grabbing;
+        }
+        h2 { 
+            color: #4ea8de; 
+            border-bottom: 1px solid #3c3c3c;
+            padding-bottom: 10px;
+            margin-top: 50px;
+        }
+        h2:first-of-type {
+            margin-top: 0;
+        }
+        p {
+            line-height: 1.6;
+        }
+        .mermaid-code {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>1. PyScrapper Desktop - Scraping Ablaufdiagramm</h2>
+        <p>Dieses Flussdiagramm visualisiert den Such- und Download-Prozess zwischen der Avalonia UI (C#) und dem lokalen Python-Server. <br/>
+        <strong>Tipp:</strong> In allen drei Diagrammen kannst du mit dem Mausrad zoomen, mit den Controls interagieren und die Diagramme herumziehen!</p>
+        
+        <pre class="mermaid-code">
+        flowchart TD
+            A([User öffnet die Suche]) --> B[/Eingabe Suchbegriff & Klick auf Search/]
+            
+            subgraph Frontend [C# Avalonia Frontend]
+                B --> C{ApiClient.cs}
+                C --> E[Frontend zeigt Such-Ergebnisse an]
+                E --> F[/User wählt ein Medium & klickt 'Scrap'/]
+                F --> G[Zeigt FilePicker: Speicherort wählen]
+                G --> H{ApiClient.cs}
+                H --> I[Öffnet ProgressBarWindow]
+                I --> J((Progress Polling))
+                J -- Loop bis 100% --> J
+                J -- Fertig --> K[Speichert Medium in AppData]
+                K --> L([Update der MainWindow Ansicht])
+            end
+
+            subgraph Backend [Local Python Server]
+                D[(Python Web-API)]
+            end
+
+            C -- "POST /search" --> D
+            D -- "JSON: Ergebnisse & Thumbnails" --> C
+
+            H -- "POST /download" --> D
+            D -- "Download-ID guid" --> H
+
+            J -- "GET /download/progress/id" --> D
+            D -- "Status, % Fortschritt, Speed" --> J
+        </pre>
+
+        <h2>2. Architektur-Layout (MVVM Struktur)</h2>
+        <p>Zeigt, wie die Schichten in der App miteinander kommunizieren. Avalonia Views sprechen mit ViewModels, welche sich wiederum der Models bedienen.</p>
+        
+        <pre class="mermaid-code">
+        flowchart LR
+            subgraph V [Views /.axaml]
+                MW[MainWindow]
+                LW[LauncherWindow]
+                SW[ScrapWindow]
+            end
+            subgraph VM [ViewModels]
+                MWVM[MainWindowViewModel]
+                LWVM[LauncherWindowViewModel]
+                SWVM[ScrapWindowWithSearchViewModel]
+            end
+            subgraph M [Models / Services]
+                AD[AppData]
+                AC[ApiClient]
+                DB[DatabaseOperations]
+            end
+            subgraph EXT [External Backend / Storage]
+                SQL[(SQLite DB)]
+                PY[Local Python Server]
+            end
+
+            MW -->|DataBinding| MWVM
+            LW -->|DataBinding| LWVM
+            SW -->|DataBinding| SWVM
+
+            MWVM -->|Read / Write| AD
+            SWVM -->|Calls| AC
+            LWVM -->|Reads Settings| DB
+
+            DB -->|SQLite queries| SQL
+            AC -->|HTTP JSON requests| PY
+        </pre>
+
+        <h2>3. App Start-Lebenszyklus (Lifecycle)</h2>
+        <p>Der Startup-Prozess von der ersten Initialization der GUI bis zur vollständig geladenen Benutzeroberfläche.</p>
+        
+        <pre class="mermaid-code">
+        stateDiagram-v2
+            [*] --> Init : OnFrameworkInitializationCompleted
+            Init --> LauncherWindow : Startet Ladefenster
+            LauncherWindow --> DatabaseOperations : Laedt SQLite AppDaten
+            LauncherWindow --> [*] : User Bricht ab
+            DatabaseOperations --> MediasValidate : Pruefe Dateien auf Festplatte
+            MediasValidate --> ScanFolder : App.ScanFolder
+            ScanFolder --> CheckDiff : Fuege neue Medien hinzu
+            CheckDiff --> MainWindow : Oeffnet Hauptfenster
+            MainWindow --> [*] : App Ready
+        </pre>
+
+        <h2>4. Datenmodell & Relationen (ER-Diagramm)</h2>
+        <p>Zeigt, wie die zentralen Datenstrukturen für Medien, Playlists und App-Einstellungen aufgebaut sind und vom zentralen State-Manager (AppData) gehalten werden.</p>
+        
+        <pre class="mermaid-code">
+        erDiagram
+            AppData ||--o{ DownloadedMedia : contains
+            AppData ||--o{ Playlist : manages
+            AppData ||--|| Settings : uses
+            
+            DownloadedMedia {
+                int Id
+                string Title
+                string Url
+                string MediaType
+                string DownloadPath
+                boolean IsPlayable
+                datetime DownloadedAt
+                string Identifier
+            }
+            
+            Playlist {
+                int Id
+                string Name
+                string ImagePath
+                string MediaListIds
+            }
+            
+            Settings {
+                string DownloadPath
+                string ServerUrl
+                boolean DarkModeEnabled
+            }
+        </pre>
+
+        <h2>5. Ablauf der Codec-Konvertierung</h2>
+        <p>Visualisiert den Workflow, wenn ein Benutzer aus dem Hauptfenster eine Datei in einen unterstützten Codec (z.B. H264) umwandeln möchte.</p>
+        
+        <pre class="mermaid-code">
+        flowchart TD
+            A([Klick auf Convert Codec]) --> B[FilePicker: Videodatei auswaehlen]
+            B --> C{Datei existiert?}
+            C -- "Nein" --> D[Zeige Error MessageBox]
+            C -- "Ja" --> E{User bestaetigt Umwandlung?}
+            E -- "Nein" --> F([Abbruch / Return])
+            E -- "Ja" --> G[Startet CodecConverterWindow]
+            G --> H((Konvertierungsprozess laeuft))
+            H --> I{Erfolgreich beendet?}
+            I -- "Nein" --> J[Schreibe Abbruch in App.log]
+            I -- "Ja" --> K[Zeige Success MessageBox]
+            K --> L([Konvertierte Datei steht als IsPlayable zur Verfuegung])
+        </pre>
+
+        <h2>6. UI-Komponenten-Baum (Component Hierarchy)</h2>
+        <p>Gibt einen visuellen Überblick über die Verschachtelung der grafischen Oberflächen, hauptsächlich zentriert um das Hauptfenster (MainWindow).</p>
+        
+        <pre class="mermaid-code">
+        flowchart TD
+            MW[MainWindow.axaml] --> SB[Sidebar / Menue-Bereich]
+            MW --> ML[Media List / Listen-Ansicht]
+            MW --> MPC[MediaPlayerControl.axaml]
+            
+            SB --> BTN[(Navigations-Buttons)]
+            ML --> LST[(DataGrid)]
+            LST --> ITM[Media Item DataTemplate]
+            
+            MPC --> CTRL[Playback Controls]
+            MPC --> SLD[Progress and Volume Sliders]
+            
+            style MW stroke:#4ea8de,stroke-width:2px
+            style MPC stroke:#4ea8de,stroke-width:2px
+        </pre>
+
+        <h2>7. Medienwiedergabe Zustandsmaschine (Playback State)</h2>
+        <p>Zeigt, wie der interne AudioPlayer (mit LibVLC) den Status der Medienwiedergabe verwaltet und wie Playlisten die Ladevorgänge steuern.</p>
+        
+        <pre class="mermaid-code">
+        stateDiagram-v2
+            [*] --> Idle : App gestartet
+            Idle --> Loading : LoadMedia oder LoadAndPlay
+            Loading --> Playing : Starte Wiedergabe
+            Playing --> Paused : User klickt Pause
+            Paused --> Playing : User klickt Resume
+            Playing --> Stopped : User klickt Stop oder Ende des Tracks
+            Stopped --> Loading : Lade naechsten Track aus Playlist
+            Stopped --> Idle : Keine Tracks mehr
+            Playing --> [*] : App verlassen
+        </pre>
+
+    </div>
+</body>
+</html>
