@@ -72,6 +72,25 @@ public partial class MediaPlayerControl : UserControl
             if (DataContext is MediaPlayerControlViewModel vm && vm.SeekSliderMoving)
                 vm.PositionSeconds = e.NewValue;
         };
+        
+        CompactSeekSlider.AddHandler(PointerPressedEvent,
+            (s, e) => { if (DataContext is MediaPlayerControlViewModel vm) vm.SeekSliderMoving = true; },
+            handledEventsToo: true);
+        
+        CompactSeekSlider.AddHandler(PointerReleasedEvent,
+            (s, e) =>
+            {
+                if (DataContext is not MediaPlayerControlViewModel vm) return;
+                vm.SetSeekValue((long)CompactSeekSlider.Value);
+                vm.SeekSliderMoving = false;
+            },
+            handledEventsToo: true);
+        
+        CompactSeekSlider.ValueChanged += (s, e) =>
+        {
+            if (DataContext is MediaPlayerControlViewModel vm && vm.SeekSliderMoving)
+                vm.PositionSeconds = e.NewValue;
+        };
 
         // ── VolumeSlider ──
         VolumeSlider.AddHandler(PointerPressedEvent,

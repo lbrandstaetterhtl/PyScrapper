@@ -221,7 +221,7 @@
 
             </Grid>
 
-            <GridSplitter Grid.Row="1" x:Name="MediaPlayerSplitter" Classes="SplitterHorizontal" IsVisible="False"/>
+            <Border Grid.Row="1" Classes="SeparatorHorizontal" Margin="0" Height="3" HorizontalAlignment="Stretch"/>
             
             <Border Grid.Row="2" Classes="Cell" HorizontalAlignment="Stretch">
                 <controls:MediaPlayerControl

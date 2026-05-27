@@ -36,13 +36,11 @@ public partial class MainWindow : Window
                 if (isCompact)
                 {
                     outerGrid.RowDefinitions[2].Height = GridLength.Auto;
-                    MediaPlayerSplitter.IsVisible = false;
                     _vm.MediaPlayerMinHeight = 65;
                 }
                 else
                 {
                     outerGrid.RowDefinitions[2].Height = new GridLength(1, GridUnitType.Star);
-                    MediaPlayerSplitter.IsVisible = true;
                     _vm.MediaPlayerMinHeight = 1000;
                 }
             };

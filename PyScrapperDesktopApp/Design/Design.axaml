@@ -91,7 +91,7 @@
         <Setter Property="Margin"              Value="10,5"/>
     </Style>
     
-    <Style Selector="Border.SeperatorVertical">
+    <Style Selector="Border.SeparatorVertical">
         <Setter Property="Background" Value="{DynamicResource SeparatorBrush}"/>
         <Setter Property="Width"      Value="1"/>
         <Setter Property="Margin"     Value="10,10,10,50"/>
