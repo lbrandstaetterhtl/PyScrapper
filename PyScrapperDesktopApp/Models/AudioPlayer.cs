@@ -19,7 +19,7 @@ namespace PyScrapperDesktopApp.Models;
 public class AudioPlayer : IDisposable
 {
     private readonly LibVLC _libVLC;
-    private MediaPlayer _mediaPlayer;
+    private readonly MediaPlayer _mediaPlayer;
     private readonly List<DownloadedMedia> _playlistTracks = new();
     private readonly List<DownloadedMedia> _originalPlaylistTracks = new();
     private int _currentIndex = -1;
