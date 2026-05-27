@@ -19,53 +19,60 @@
                     ToolTip.Tip="Expand / Collapse"/>
         </Grid>
         
-            <Grid MinHeight="65" MaxHeight="100" ColumnDefinitions="*, Auto, Auto, Auto, Auto, Auto, Auto" Grid.Row="1" IsVisible="{Binding IsCompact}" HorizontalAlignment="Stretch"
+            <Grid MinHeight="65" MaxHeight="100" ColumnDefinitions="*, Auto, Auto, Auto, Auto, Auto, Auto" Grid.Row="1" IsVisible="{Binding IsCompact}" HorizontalAlignment="Center"
                   Margin="15,0">
 
                 <TextBlock Grid.Column="0"
                            Text="{Binding NowPlayingTitle}"
                            Classes="UILabel"
+                           HorizontalAlignment="Left"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"/>
-
-                <TextBlock Grid.Column="1"
+                
+                <Button Grid.Column="1"
+                        x:Name="CompactPlayButton"
+                        HorizontalAlignment="Center"
+                        Classes="Icon"/>
+                
+                <TextBlock Grid.Column="2"
                            Text="{Binding CurrentlyText}"
                            Classes="UILabel"
+                           HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            Margin="10,0"/>
-
-                <Button Grid.Column="2"
+                
+                <Button Grid.Column="3"
                         x:Name="CompactPreviousButton"
                         Command="{Binding PlayPreviousCommand}"
                         Classes="Icon"
+                        HorizontalAlignment="Center"
                         IsVisible="{Binding IsPlaylistMode}"
                         IsEnabled="{Binding HasPrevious}"/>
-
-                <Button Grid.Column="3"
-                        x:Name="CompactPlayButton"
-                        Classes="Icon"/>
-
-                <Button Grid.Column="4"
-                        x:Name="CompactNextButton"
-                        Command="{Binding PlayNextCommand}"
-                        Classes="Icon"
-                        IsVisible="{Binding IsPlaylistMode}"
-                        IsEnabled="{Binding HasNext}"/>
-
-                <TextBlock Grid.Column="5"
-                           Text="{Binding DurationText}"
-                           Classes="UILabel"
-                           VerticalAlignment="Center"
-                           Margin="10,0"/>
-
-                <Slider Grid.Column="6"
+                
+                <Slider Grid.Column="4"
                         x:Name="CompactSeekSlider"
                         Minimum="0"
                         Maximum="{Binding DurationSeconds}"
                         Value="{Binding PositionSeconds, Mode=TwoWay}"
                         Classes="MediaPlayer"
                         Width="150"
+                        HorizontalAlignment="Center"
                         VerticalAlignment="Center"/>
+
+                <Button Grid.Column="5"
+                        x:Name="CompactNextButton"
+                        Command="{Binding PlayNextCommand}"
+                        Classes="Icon"
+                        HorizontalAlignment="Center"
+                        IsVisible="{Binding IsPlaylistMode}"
+                        IsEnabled="{Binding HasNext}"/>
+
+                <TextBlock Grid.Column="6"
+                           Text="{Binding DurationText}"
+                           Classes="UILabel"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
+                           Margin="10,0"/>
             </Grid>
                 
                 <Grid Grid.Row="1" RowDefinitions="Auto, Auto, Auto, Auto, Auto" MinHeight="500"
