@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>PyScrapper - Alle Datenmodelle</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom/dist/svg-pan-zoom.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: false, 
+            theme: 'default',
+            flowchart: { curve: 'linear' },
+            securityLevel: 'loose'
+        });
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const elements = document.querySelectorAll('.mermaid-wrapper');
+            for (let i = 0; i < elements.length; i++) {
+                const el = elements[i];
+                const graphDefinition = el.textContent.trim();
+                
+                try {
+                    const id = 'mermaid-' + i;
+                    const { svg } = await mermaid.render(id, graphDefinition);
+                    
+                    const container = document.createElement('div');
+                    container.className = 'mermaid-container';
+                    container.innerHTML = svg;
+                    
+                    el.innerHTML = '';
+                    el.appendChild(container);
+                    
+                    const svgElement = container.querySelector('svg');
+                    if (svgElement) {
+                        svgElement.style.width = '100%';
+                        svgElement.style.height = '700px';
+                        svgPanZoom(svgElement, {
+                            zoomEnabled: true,
+                            controlIconsEnabled: true,
+                            fit: true,
+                            center: true,
+                            minZoom: 0.1
+                        });
+                    }
+                } catch (err) {
+                    console.error('Diagram ' + i + ' error:', err);
+                    el.innerHTML = '<p style="color:red;">Fehler: ' + err.message + '</p>';
+                }
+            }
+        });
+    </script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 40px; 
+            background-color: #1e1e1e; 
+            color: #d4d4d4;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background-color: #252526;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: #4ea8de;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h2 {
+            color: #4ea8de;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3c3c3c;
+        }
+        p {
+            color: #a0a0a0;
+            font-size: 0.95em;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        .mermaid-wrapper {
+            background-color: #f5f5f5;
+            border-radius: 6px;
+            border: 2px solid #4ea8de;
+            overflow: hidden;
+            min-height: 700px;
+            margin-bottom: 30px;
+        }
+        .mermaid-container {
+            width: 100%;
+            height: 700px;
+            cursor: grab;
+        }
+        .mermaid-container:active {
+            cursor: grabbing;
+        }
+        .note {
+            background-color: #2a2a2a;
+            border-left: 4px solid #4ea8de;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 3px;
+        }
+        .note strong {
+            color: #4ea8de;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PyScrapper - Komplette Datenmodell-Architektur</h1>
+        
+        <h2>1. Klassen-Diagramm aller Modelle (Komplettübersicht)</h2>
+        <p>Zeigt alle Klassen, Interfaces und ihre Beziehungen zueinander.</p>
+        <div class="mermaid-wrapper"><pre>
+classDiagram
+    class AppData {
+        +static DownloadedMedias: ObservableCollection
+        +static PlayableMedias: ObservableCollection
+        +static Playlists: ObservableCollection
+        +static CurrentMediaFilter: MediaFilter
+        +static OriginalDownloadedMedias: List
+        +static Settings: Settings
+        +static ValidMediaTypes: List
+        +static ValidProviders: List
+        +AddDownloadedMedia()
+        +RemoveDownloadedMedia()
+        +AddPlaylist()
+        +RemovePlaylist()
+        +MediaAlreadyExists()
+    }
+    
+    class DownloadedMedia {
+        +int Id
+        +string Identifier
+        +string Title
+        +string Url
+        +string MediaType
+        +DateTime DownloadedAt
+        +string DownloadPath
+        +bool IsPlayable
+        +SetHighestId()
+        +SetTitle()
+    }
+    
+    class Playlist {
+        +int Id
+        +string Name
+        +string Description
+        +List MediaIds
+        +List PlayableMediaIds
+        +int Count
+        +SetHighestId()
+        +SetPlayableMediaIds()
+        +AddMedia()
+        +RemoveMedia()
+    }
+    
+    class Settings {
+        +int Id
+        +string DownloadPath
+        +string ServerUrl
+        +bool DarkModeEnabled
+        +SetDefaultSettings()
+    }
+    
+    class MediaFilter {
+        +string SearchQuery
+        +ObservableCollection MediaTypes
+        +DateTimeOffset StartDate
+        +DateTimeOffset EndDate
+        +bool IsPlayable
+        +ApplyMediaFilter()
+        +ClearFilter()
+        +BuildMediaFilter()
+    }
+    
+    class Massage {
+        +string Text
+        +DateTime Timestamp
+        +string Type
+    }
+    
+    class AppLogger {
+        +LogNewMassage()
+        +LogDebugMessage()
+    }
+    
+    class IAppLogger {
+        <<interface>>
+        +LogNewMassage()
+        +LogDebugMessage()
+    }
+    
+    class IApiClient {
+        <<interface>>
+        +SendScrapRequest()
+        +SendSearchRequest()
+        +GetDownloadProgress()
+        +GetHealth()
+        +SendListScrapRequest()
+    }
+    
+    class IStorageService {
+        <<interface>>
+        +OpenFilePickerAsync()
+        +SaveFilePickerAsync()
+        +OpenFolderPickerAsync()
+    }
+    
+    class ApiClient {
+        +SendScrapRequest()
+        +SendSearchRequest()
+        +GetDownloadProgress()
+        +GetHealth()
+        +SendListScrapRequest()
+    }
+    
+    class StorageService {
+        +TopLevel TopLevel
+        +OpenFilePickerAsync()
+        +SaveFilePickerAsync()
+        +OpenFolderPickerAsync()
+    }
+    
+    class DownloadRequestData {
+        +string Provider
+        +string Url
+        +string Mediatype
+        +string Filename
+        +string Download_path
+    }
+    
+    class SearchRequestData {
+        +string Provider
+        +string Search
+        +int Top
+    }
+    
+    class SearchResultItem {
+        +string identifier
+        +string url
+        +string thumbnail
+        +Bitmap ThumbnailBitmap
+        +string title
+    }
+    
+    class DownloadJobItem {
+        +string Id
+        +string Status
+        +float DownloadProgress
+        +string ErrorMessage
+    }
+    
+    class ServerProcess {
+        +int Pid
+        +string Name
+    }
+    
+    class NormalResponse {
+        +string Id
+        +string Message
+    }
+    
+    class ProgressSuccessResponse {
+        +string Id
+        +string Status
+        +float DownloadProgress
+        +string ErrorMessage
+        +long TotalBytes
+        +long DownloadedBytes
+        +float Speed
+    }
+    
+    class SearchSuccessResponse {
+        +string Provider
+        +string Query
+        +List Results
+    }
+    
+    class HealthResponse {
+        +bool Ok
+        +double UptimeSeconds
+        +double MemoryMb
+        +int Pid
+        +List Processes
+        +List ActiveDownloads
+        +List ErrorMessages
+    }
+    
+    class HealthErrorResponse {
+        +string msg
+        +string type
+    }
+    
+    class HttpErrorResponse {
+        +string Detail
+    }
+    
+    class DatabaseOperations {
+        <<abstract>>
+        +SaveDownloadedMedias()
+        +LoadDownloadedMediasNoDuplicates()
+        +SavePlaylists()
+        +LoadPlaylistsNoDuplicates()
+        +LoadSettings()
+        +SaveSettings()
+    }
+    
+    class AudioPlayer {
+        +MediaPlayer LibVLC
+        +bool PlaylistModeEnabled
+        +LoadPlaylist()
+        +PlayNext()
+        +PlayPrevious()
+        +ToggleShuffle()
+        +Stop()
+        +IsSupportedCodec()
+    }
+    
+    AppData --> DownloadedMedia
+    AppData --> Playlist
+    AppData --> Settings
+    AppData --> MediaFilter
+    AppLogger --|> IAppLogger
+    AppLogger --> Massage
+    ApiClient --|> IApiClient
+    StorageService --|> IStorageService
+    ApiClient --> DownloadRequestData
+    ApiClient --> SearchRequestData
+    ApiClient --> SearchResultItem
+    ApiClient --> DownloadJobItem
+    ApiClient --> ServerProcess
+    ApiClient --> NormalResponse
+    ApiClient --> ProgressSuccessResponse
+    ApiClient --> SearchSuccessResponse
+    ApiClient --> HealthResponse
+    ApiClient --> HealthErrorResponse
+    ApiClient --> HttpErrorResponse
+        </pre></div>
+
+        <h2>2. Request/Response DTO Modelle (Server-Kommunikation)</h2>
+        <p>Diese Modelle werden für die JSON-Serialisierung bei der HTTP-Kommunikation mit dem Python-Backend verwendet.</p>
+        <div class="mermaid-wrapper"><pre>
+classDiagram
+    class DownloadRequestData {
+        +string Provider YouTube,Bandcamp,Suno,Archive
+        +string Url Link zum Video
+        +string Mediatype mp3,mp4
+        +string Filename Speichername
+        +string Download_path Zielpfad
+    }
+    
+    class SearchRequestData {
+        +string Provider Platform
+        +string Search Suchbegriff
+        +int Top Anzahl Ergebnisse 1-25
+    }
+    
+    class SearchResultItem {
+        +string identifier Eindeutige ID
+        +string url Video URL
+        +string thumbnail Thumbnail URL
+        +Bitmap ThumbnailBitmap Lade Bitmap
+        +string title Video Titel
+    }
+    
+    class SearchSuccessResponse {
+        +string Provider Plattform
+        +string Query Suchbegriff
+        +List Results SearchResultItem Liste
+    }
+    
+    class NormalResponse {
+        +string Id Download ID
+        +string Message Statusmeldung
+    }
+    
+    class ProgressSuccessResponse {
+        +string Id Download ID
+        +string Status Running,Finished,Error
+        +float DownloadProgress Prozentangabe
+        +string ErrorMessage Fehlermeldung
+        +long TotalBytes Gesamtgroesse
+        +long DownloadedBytes Heruntergeladen
+        +float Speed MB pro Sekunde
+    }
+    
+    class HealthResponse {
+        +bool Ok Server ist verfuegbar
+        +double UptimeSeconds Laufzeit
+        +double MemoryMb RAM Nutzung
+        +int Pid Prozess ID
+        +List Processes Laufende Prozesse
+        +List ActiveDownloads Aktive Downloads
+        +List ErrorMessages Fehler
+    }
+    
+    class HttpErrorResponse {
+        +string Detail Fehlerbeschreibung
+    }
+        </pre></div>
+
+        <h2>3. Entity Modelle (Geschäftslogik)</h2>
+        <p>Diese Modelle repräsentieren die Hauptentitäten des Systems: Medien, Playlists, Filter, etc.</p>
+        <div class="mermaid-wrapper"><pre>
+classDiagram
+    class DownloadedMedia {
+        +int Id Eindeutige ID
+        +string Identifier Original Identifier
+        +string Title Angezeigter Name
+        +string Url Quelle URL
+        +string MediaType mp3,mp4
+        +DateTime DownloadedAt Zeitstempel
+        +string DownloadPath Dateipfad
+        +bool IsPlayable Kann abspielbar sein
+        ---
+        +SetHighestId() ID automatisch setzen
+        +SetTitle() Titel aus Datei Name
+    }
+    
+    class Playlist {
+        +int Id Eindeutige ID
+        +string Name Playlist Name
+        +string Description Kurzbeschreibung
+        +List~int~ MediaIds Enthaltene Medien
+        +List~int~ PlayableMediaIds Nur abspielbar
+        +int Count Anzahl Medien
+        ---
+        +SetHighestId() ID automatisch setzen
+        +SetPlayableMediaIds() Filtert spielbar
+        +AddMedia() Medium hinzufuegen
+        +RemoveMedia() Medium entfernen
+    }
+    
+    class Settings {
+        +int Id Eindeutige ID
+        +string DownloadPath Speicher Dir
+        +string ServerUrl http://127.0.0.1:8765
+        +bool DarkModeEnabled Theme
+        ---
+        +SetDefaultSettings() Defaults setzen
+    }
+    
+    class MediaFilter {
+        +string SearchQuery Suchtext
+        +ObservableCollection~string~ MediaTypes Filter
+        +DateTimeOffset StartDate Von Datum
+        +DateTimeOffset EndDate Bis Datum
+        +bool IsPlayable Nur spielbar
+        ---
+        +ApplyMediaFilter() Filter anwenden
+        +ClearFilter() Filter zurueck
+        +BuildMediaFilter() Filter erstellen
+    }
+    
+    class AppData {
+        +static DownloadedMedias Alle Medien
+        +static PlayableMedias Spielbare Medien
+        +static Playlists Alle Playlists
+        +static CurrentMediaFilter Aktiver Filter
+        +static Settings Konfiguration
+        ---
+        +AddDownloadedMedia() Medium hinzu
+        +RemoveDownloadedMedia() Medium weg
+        +AddPlaylist() Playlist erstellen
+        +RemovePlaylist() Playlist loeschen
+        +MediaAlreadyExists() Existiert bereits
+    }
+        </pre></div>
+
+        <h2>4. Service Modelle (Logger, API-Client)</h2>
+        <p>Diese Modelle implementieren Services für Logging, API-Kommunikation und Datenspeicherung.</p>
+        <div class="mermaid-wrapper"><pre>
+classDiagram
+    class IAppLogger {
+        <<interface>>
+        +LogNewMassage()
+        +LogDebugMessage()
+    }
+    
+    class AppLogger {
+        -CreateLogFile() erstellt Bei Bedarf
+        +LogNewMassage() In Datei schreiben
+        +LogDebugMessage() Console und Datei
+    }
+    
+    class Massage {
+        +string Text Nachricht
+        +DateTime Timestamp Zeitstempel
+        +string Type INFO,ERROR,DEBUG
+    }
+    
+    class IApiClient {
+        <<interface>>
+        +SendScrapRequest()
+        +SendSearchRequest()
+        +GetDownloadProgress()
+        +GetHealth()
+        +SendListScrapRequest()
+    }
+    
+    class ApiClient {
+        -HttpClient client
+        -JsonSerializerOptions options
+        ---
+        +SendScrapRequest() HTTP POST download
+        +SendSearchRequest() HTTP POST search
+        +GetDownloadProgress() HTTP GET progress
+        +GetHealth() HTTP GET health
+        +SendListScrapRequest() Mehrfach scrapen
+    }
+    
+    class IStorageService {
+        <<interface>>
+        +OpenFilePickerAsync()
+        +SaveFilePickerAsync()
+        +OpenFolderPickerAsync()
+    }
+    
+    class StorageService {
+        -TopLevel TopLevel
+        +OpenFilePickerAsync() Datei oeffnen
+        +SaveFilePickerAsync() Datei speichern
+        +OpenFolderPickerAsync() Ordner waehlen
+    }
+    
+    class DatabaseOperations {
+        <<abstract>>
+        +SaveDownloadedMedias()
+        +LoadDownloadedMediasNoDuplicates()
+        +SavePlaylists()
+        +LoadPlaylistsNoDuplicates()
+        +LoadSettings()
+        +SaveSettings()
+    }
+    
+    class AudioPlayer {
+        -MediaPlayer player
+        -List~string~ playlist
+        +LoadPlaylist()
+        +PlayNext()
+        +PlayPrevious()
+        +ToggleShuffle()
+        +Stop()
+        +IsSupportedCodec()
+    }
+    
+    AppLogger --|> IAppLogger
+    AppLogger --> Massage
+    ApiClient --|> IApiClient
+    StorageService --|> IStorageService
+        </pre></div>
+
+        <h2>5. Beziehungen und Abhängigkeiten (Datenfluss)</h2>
+        <p>Zeigt, wie die verschiedenen Modelle mit einander interagieren und Daten fließen.</p>
+        <div class="mermaid-wrapper"><pre>
+graph TD
+    User["👤 Benutzer"]
+    UI["🖥️ UI Layer\n(ViewModels + Views)"]
+    AppD["📦 AppData\n(Globale Daten)"]
+    Filter["🔍 MediaFilter\n(Such/Filter Logik)"]
+    Media["🎬 DownloadedMedia\n(Medien Objekte)"]
+    Playlist["📋 Playlist\n(Sammlungen)"]
+    Settings["⚙️ Settings\n(Konfiguration)"]
+    
+    API["🌐 ApiClient\n(Backend Kommunikation)"]
+    Storage["💾 StorageService\n(Datei Dialog)"]
+    DB["🗄️ DatabaseOps\n(SQLite Persistierung)"]
+    Logger["📝 AppLogger\n(Logging)"]
+    Audio["🎵 AudioPlayer\n(Abspielen)"]
+    
+    Backend["🖥️ Python Backend\n(http://127.0.0.1:8765)"]
+    
+    User -->|Aktion| UI
+    UI -->|Liest/Schreibt| AppD
+    AppD -->|Filtert| Filter
+    Filter -->|Verwaltet| Media
+    AppD -->|Enthält| Playlist
+    AppD -->|Speichert| Settings
+    
+    UI -->|API Rekuests| API
+    API -->|HTTP| Backend
+    Backend -->|JSON Response| API
+    API -->|Log Eintrag| Logger
+    
+    UI -->|Dialog| Storage
+    AppD -->|Persistierung| DB
+    DB -->|Laden| AppD
+    
+    Media -->|Datei Pfad| Audio
+    Audio -->|Status| Logger
+    
+    style AppD fill:#4ea8de,stroke:#2b7ab8,stroke-width:3px
+    style API fill:#90ee90,stroke:#228b22,stroke-width:2px
+    style Backend fill:#ffb347,stroke:#ff8c00,stroke-width:2px
+        </pre></div>
+
+        <h2>6. Response Status Zustände und Enumerationen</h2>
+        <p>Mögliche Werte und Zustände in den verschiedenen Modellen.</p>
+        <div class="note">
+            <strong>Download Status Werte:</strong> "Running", "Finished", "Error"
+        </div>
+        <div class="note">
+            <strong>MediaType Werte:</strong> ".mp3", ".mp4"
+        </div>
+        <div class="note">
+            <strong>Provider Werte:</strong> "suno", "youtube", "bandcamp", "archive"
+        </div>
+        <div class="note">
+            <strong>Logger Type Werte:</strong> "INFO", "ERROR", "DEBUG"
+        </div>
+        <div class="note">
+            <strong>Server URL:</strong> http://127.0.0.1:8765
+        </div>
+        <div class="note">
+            <strong>API Endpoints:</strong>
+            <ul style="margin:5px 0; padding-left:20px;">
+                <li>POST /download - Download starten</li>
+                <li>POST /search - Suche durchführen</li>
+                <li>GET /download/progress/{id} - Fortschritt prüfen</li>
+                <li>GET /health - Server Status</li>
+            </ul>
+        </div>
+
+        <h2>7. Speicherung und Persistierung (SQLite)</h2>
+        <p>Die DatabaseOperations abstrahiert die Persistierung in SQLite (Data.sqlite).</p>
+        <div class="mermaid-wrapper"><pre>
+graph TD
+    A["AppData Collections"]
+    B["DatabaseOperations"]
+    C["SQLite Database"]
+    D["Tabelle DownloadedMedias"]
+    E["Tabelle Playlists"]
+    F["Tabelle Settings"]
+    
+    A -->|SaveDownloadedMedias| D
+    A -->|SavePlaylists| E
+    A -->|SaveSettings| F
+    B -->|LoadDownloadedMedias| D
+    B -->|LoadPlaylists| E
+    B -->|LoadSettings| F
+    D --> C
+    E --> C
+    F --> C
+        </pre></div>
+
+    </div>
+</body>
+</html>
+
+
