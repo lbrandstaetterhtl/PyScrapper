@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>PyScrapper Frontend - Visual Tree Diagramme für alle Fenster</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom/dist/svg-pan-zoom.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: false, 
+            theme: 'default',
+            flowchart: { curve: 'linear' },
+            securityLevel: 'loose'
+        });
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const elements = document.querySelectorAll('.mermaid-wrapper');
+            for (let i = 0; i < elements.length; i++) {
+                const el = elements[i];
+                const graphDefinition = el.textContent.trim();
+                
+                try {
+                    const id = 'mermaid-' + i;
+                    const { svg } = await mermaid.render(id, graphDefinition);
+                    
+                    const container = document.createElement('div');
+                    container.className = 'mermaid-container';
+                    container.innerHTML = svg;
+                    
+                    el.innerHTML = '';
+                    el.appendChild(container);
+                    
+                    const svgElement = container.querySelector('svg');
+                    if (svgElement) {
+                        svgElement.style.width = '100%';
+                        svgElement.style.height = '500px';
+                        svgPanZoom(svgElement, {
+                            zoomEnabled: true,
+                            controlIconsEnabled: true,
+                            fit: true,
+                            center: true,
+                            minZoom: 0.1
+                        });
+                    }
+                } catch (err) {
+                    console.error('Diagram ' + i + ' error:', err);
+                    el.innerHTML = '<p style="color:red;">Fehler Diagramm ' + (i+1) + '</p>';
+                }
+            }
+        });
+    </script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 40px; 
+            background-color: #1e1e1e; 
+            color: #d4d4d4;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: #252526;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: #4ea8de;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .windows-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(700px, 1fr));
+            gap: 30px;
+        }
+        .window-section {
+            background-color: #2a2a2a;
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            padding: 20px;
+            overflow: hidden;
+        }
+        .window-section h2 {
+            color: #4ea8de;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #3c3c3c;
+            font-size: 1.2em;
+        }
+        .window-section p {
+            color: #a0a0a0;
+            font-size: 0.9em;
+            margin: 10px 0;
+            line-height: 1.4;
+        }
+        .mermaid-wrapper {
+            background-color: #f5f5f5;
+            border-radius: 6px;
+            margin-top: 15px;
+            border: 1px solid #4ea8de;
+            overflow: hidden;
+            min-height: 500px;
+        }
+        .mermaid-container {
+            width: 100%;
+            height: 500px;
+            cursor: grab;
+        }
+        .mermaid-wrapper pre {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PyScrapper - Visual Tree aller Fenster</h1>
+        
+        <div class="windows-grid">
+            <div class="window-section">
+                <h2>1. MainWindow</h2>
+                <p>Hauptfenster mit Menu, Playlists, Medias, MediaPlayer</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window MainWindow"]
+    A --> B["Grid RowDef"]
+    B --> C["TitleBar"]
+    B --> D["Grid Row1"]
+    D --> E["Menu"]
+    D --> F["Playlists"]
+    D --> G["Splitter"]
+    D --> H["Medias"]
+    D --> I["MediaPlayer"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>2. ScrapWindowWithSearch</h2>
+                <p>Youtube Bandcamp Scraper</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window ScrapWindow"]
+    A --> B["Grid"]
+    B --> C["TitleBar"]
+    B --> D["SearchGrid"]
+    D --> E["Query"]
+    D --> F["Count"]
+    D --> G["MediaType"]
+    B --> H["Results"]
+    H --> I["ListBox"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>3. FilterWindow</h2>
+                <p>Global Media Filter Dialog</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window Filter"]
+    A --> B["Grid"]
+    B --> C["TitleBar"]
+    B --> D["StackPanel"]
+    D --> E["Search"]
+    D --> F["MediaType"]
+    D --> G["Date"]
+    D --> H["Playable"]
+    D --> I["Apply"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>4. CreatePlaylistWindow</h2>
+                <p>Create Playlist Dialog</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window CreatePlaylist"]
+    A --> B["Grid"]
+    B --> C["TitleBar"]
+    B --> D["StackPanel"]
+    D --> E["Name"]
+    D --> F["Description"]
+    D --> G["Select Medias"]
+    D --> H["Create"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>5. CodecConverterWindow</h2>
+                <p>FFmpeg Video Converter</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window Converter"]
+    A --> B["Grid"]
+    B --> C["TitleBar"]
+    B --> D["StackPanel"]
+    D --> E["Input"]
+    D --> F["Format"]
+    D --> G["Quality"]
+    D --> H["Output"]
+    D --> I["Convert"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>6. PlaylistDetailsWindow</h2>
+                <p>Playlist Details View</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window Details"]
+    A --> B["Grid"]
+    B --> C["TitleBar"]
+    B --> D["StackPanel"]
+    D --> E["PlaylistInfo"]
+    D --> F["MediasList"]
+    D --> G["Actions"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>7. GetServerHealthWindow</h2>
+                <p>Server Health Status</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window Health"]
+    A --> B["Grid"]
+    B --> C["TitleBar"]
+    B --> D["StackPanel"]
+    D --> E["Status"]
+    D --> F["Uptime"]
+    D --> G["PID"]
+    D --> H["Downloads"]
+    D --> I["Refresh"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>8. LogsWindow</h2>
+                <p>App Server Logs Viewer</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window Logs"]
+    A --> B["Grid"]
+    B --> C["TitleBar"]
+    B --> D["TabControl"]
+    D --> E["AppLogs"]
+    D --> F["ServerLogs"]
+    B --> G["Actions"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>9. ProgressBarWindow</h2>
+                <p>Download Progress Display</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window Progress"]
+    A --> B["Grid"]
+    B --> C["TitleBar"]
+    B --> D["StackPanel"]
+    D --> E["Status"]
+    D --> F["ProgressBar"]
+    D --> G["Speed"]
+    D --> H["Downloaded"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>10. SunoScrapWindow</h2>
+                <p>Suno Music Scraper</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window Suno"]
+    A --> B["Grid"]
+    B --> C["TitleBar"]
+    B --> D["StackPanel"]
+    D --> E["Description"]
+    D --> F["URLInput"]
+    D --> G["Type"]
+    D --> H["Scrap"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>11. LauncherWindow</h2>
+                <p>Boot Loader Window</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window Launcher"]
+    A --> B["Grid"]
+    B --> C["Logo"]
+    B --> D["Title"]
+    B --> E["Spinner"]
+    B --> F["Status"]
+    B --> G["ProgressBar"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>12. MessageBox</h2>
+                <p>Message Dialog</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window MessageBox"]
+    A --> B["Grid"]
+    B --> C["Icon"]
+    B --> D["Title"]
+    B --> E["Message"]
+    B --> F["Buttons"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>13. ConfirmationWindow</h2>
+                <p>Yes No Dialog</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window Confirm"]
+    A --> B["Grid"]
+    B --> C["Title"]
+    B --> D["Message"]
+    B --> E["Yes Button"]
+    B --> F["No Button"]
+                </pre></div>
+            </div>
+
+            <div class="window-section">
+                <h2>14. InputWindow</h2>
+                <p>Text Input Dialog</p>
+                <div class="mermaid-wrapper"><pre>
+graph TD
+    A["Window Input"]
+    A --> B["Grid"]
+    B --> C["Prompt"]
+    B --> D["TextBox"]
+    B --> E["OK Button"]
+    B --> F["Cancel Button"]
+                </pre></div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
+

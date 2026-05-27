@@ -20,15 +20,28 @@ using Tmds.DBus.Protocol;
 
 namespace PyScrapperDesktopApp;
 
+/// <summary>
+/// The main Application class for PyScrapperDesktopApp. Handles initialization, 
+/// startup lifecycle, loading of user settings, database initialization, 
+/// directory scanning, and orderly shutdown processes including stopping the local server.
+/// </summary>
 public partial class App : Application
 {
     private readonly AppLogger _logger = new AppLogger();
 
+    /// <summary>
+    /// Initializes the application by loading the XAML.
+    /// </summary>
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
     }
 
+    /// <summary>
+    /// Called when the framework initialization is completed. 
+    /// Sets up the desktop application lifetime, load settings, sets the visual theme,
+    /// and opens the LauncherWindow to begin the data loading process.
+    /// </summary>
     public override async void OnFrameworkInitializationCompleted()
     {
         try
@@ -96,6 +109,12 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// Loads core application data including downloaded medias and playlists from the database. 
+    /// Performs file existence checks, validates media codecs, scans the download directory for new files, 
+    /// and finally launches the MainWindow.
+    /// </summary>
+    /// <param name="desktop">The application lifetime object.</param>
     private async Task LoadApplicationData(IClassicDesktopStyleApplicationLifetime desktop)
     {
         try
@@ -192,6 +211,12 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// Triggered upon application exit. Saves the current state of downloaded medias, 
+    /// playlists, and settings back to the database, and shuts down the local Python API server.
+    /// </summary>
+    /// <param name="sender">Event sender.</param>
+    /// <param name="e">Event arguments.</param>
     private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
         var log = new Massage("Saving Data...", DateTime.Now, "INFO");
@@ -210,6 +235,12 @@ public partial class App : Application
         _logger.LogNewMassage(log);
     }
 
+    /// <summary>
+    /// Scans the given folder for media files (e.g., .mp3, .mp4) and registers any new items 
+    /// that are not already present in the AppData media list. Returns the number of new medias added.
+    /// </summary>
+    /// <param name="folder">The folder to scan.</param>
+    /// <returns>The number of new files added.</returns>
     public static async Task<int> ScanFolder(string folder)
     {
         var diff = 0;
@@ -275,6 +306,10 @@ public partial class App : Application
         return 0;
     }
 
+    /// <summary>
+    /// Toggles the application's visual theme between Light and Dark mode, 
+    /// updating the centralized settings and applying the change to the UI.
+    /// </summary>
     public static void ToggleTheme()
     {
         AppData.Settings.DarkModeEnabled = !AppData.Settings.DarkModeEnabled;
@@ -283,6 +318,10 @@ public partial class App : Application
             : ThemeVariant.Light;
     }
 
+    /// <summary>
+    /// Stops the underlying local Python server by sending a 'quit' command via HTTP POST. 
+    /// Uses a short timeout since the server might already be down or unreachable.
+    /// </summary>
     public static void StopServer()
     {
         try
