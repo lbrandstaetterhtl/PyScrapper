@@ -49,7 +49,7 @@ public class AudioPlayer : IDisposable
     /// </summary>
     public AudioPlayer()
     {
-        _libVLC = new LibVLC("--verbose=1", "--file-caching=500", "--avcodec-hw=none", "--codec=avcodec");
+        _libVLC = new LibVLC("--quiet", "--file-caching=500", "--avcodec-hw=none", "--codec=avcodec");
         
         _mediaPlayer = new MediaPlayer(_libVLC);
 
