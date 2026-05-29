@@ -78,7 +78,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
             if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
                 return;
-            
+
             var messageBox = new MessageBox("An error occurred: " + ex.Message);
             messageBox.ShowDialog(desktop.MainWindow!);
             

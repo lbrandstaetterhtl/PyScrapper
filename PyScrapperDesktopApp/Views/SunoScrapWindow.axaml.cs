@@ -8,7 +8,7 @@ public partial class SunoScrapWindow : Window
     public SunoScrapWindow()
     {
         if (Design.IsDesignMode) return;
-        
+
         InitializeComponent();
         TitleBar.Initialize(this);
         

@@ -16,8 +16,16 @@ namespace PyScrapperDesktopApp.Models;
 /// Static class that holds the main data collections and settings for the application, including downloaded media, playable media, playlists, file paths, and application settings.
 /// It also provides methods for adding and removing media and playlists, as well as checking for existing media items.
 /// </summary>
-public static class AppData
+public class AppData : Interfaces.IAppDataService 
 {
+    ObservableCollection<DownloadedMedia> Interfaces.IAppDataService.DownloadedMedias => DownloadedMedias;
+    ObservableCollection<Playlist> Interfaces.IAppDataService.Playlists => Playlists;
+    Settings Interfaces.IAppDataService.Settings => Settings;
+
+    void Interfaces.IAppDataService.AddDownloadedMedia(DownloadedMedia media) => AddDownloadedMedia(media);
+    void Interfaces.IAppDataService.RemoveDownloadedMedia(DownloadedMedia media) => RemoveDownloadedMedia(media);
+    bool Interfaces.IAppDataService.MediaAlreadyExists(string filePath) => MediaAlreadyExists(filePath);
+
     public static readonly ObservableCollection<DownloadedMedia> DownloadedMedias = new();
     public static MediaFilter CurrentMediaFilter = new();
     public static List<DownloadedMedia> OriginalDownloadedMedias = new();

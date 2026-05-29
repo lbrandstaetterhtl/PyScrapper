@@ -8,18 +8,18 @@ public partial class ScrapWindowWithSearch : Window
     public ScrapWindowWithSearch(string provider)
     {
         if (Design.IsDesignMode) return;
-        
+
         InitializeComponent();
         TitleBar.Initialize(this);
-        
+
        var vm = new ScrapWindowWithSearchViewModel(this, provider);
-        
+
         DataContext = vm;
-        
+
         vm.RequestClose += Close;
-        
+
         int buttonCount = 0;
-        
+
         EnterButton.Click += async (sender, args) =>
         {
             if (buttonCount == 0)
@@ -40,7 +40,7 @@ public partial class ScrapWindowWithSearch : Window
                 buttonCount--;
             }
         };
-        
+
         if (provider == "bandcamp" || provider == "bandcamp.com")
         {
             MediaTypePanel.IsVisible = false;

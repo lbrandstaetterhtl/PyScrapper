@@ -44,6 +44,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _scanFolderCheckBoxValue = AppData.Settings.ScanFolderOnStartup;
 
+    private readonly DialogService _dialogService;
+
     public void UpdateHideIcon()
     {
         MediaHideIcon = new Image()
@@ -61,9 +63,11 @@ public partial class MainWindowViewModel : ObservableObject
     /// Constructor for the MainWindowViewModel, which initializes the view model and sets up the list of downloaded media by fetching it from the AppData.
     /// It also checks if the application is in design mode to avoid executing code that should only run at runtime.
     /// </summary>
-    public MainWindowViewModel()
+    public MainWindowViewModel(DialogService dialogService)
     {
         if (Design.IsDesignMode) return;
+        
+        _dialogService = dialogService;
         UpdateHideIcon();
         
         App.Current.ActualThemeVariantChanged += (s, e) =>
@@ -124,8 +128,7 @@ public partial class MainWindowViewModel : ObservableObject
         
         if (!File.Exists(path))
         {
-            var messageBox = new MessageBox("File does not exist. Please check the path and try again.");
-            await messageBox.ShowDialog(_window);
+
             return;
         }
         
@@ -293,14 +296,12 @@ public partial class MainWindowViewModel : ObservableObject
         
         if (!File.Exists(path))
         {
-            var messageBox = new MessageBox("File does not exist. Please check the path and try again.");
-            await messageBox.ShowDialog(_window);
+            await _dialogService.ShowAlertAsync("File does not exist. Please check the path and try again.");
             return;
         }
         
         var message = "Would you like to convert it to a supported codec H264?";
-        var confirmationWindow = new ConfirmationWindow(message);
-        var confirmationResult = await confirmationWindow.ShowDialog<bool>(_window);
+        bool confirmationResult =  await _dialogService.ConfirmAsync(message);
 
         if (!confirmationResult)
             return;
@@ -316,8 +317,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
         else
         {
-            var messageBox = new MessageBox("Conversion completed successfully. The converted file has been added to the media list.");
-            await messageBox.ShowDialog(_window);
+            await _dialogService.ShowAlertAsync("Conversion completed successfully. The converted file has been added to the media list.");
         }
     }
 
