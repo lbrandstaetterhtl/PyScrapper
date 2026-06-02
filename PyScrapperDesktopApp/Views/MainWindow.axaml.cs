@@ -15,6 +15,8 @@ public partial class MainWindow : Window
 {
     private MainWindowViewModel _vm;
     private readonly AppLogger _logger = new();
+    
+    private DialogService _ds;
 
     public MainWindow()
     {
@@ -23,7 +25,9 @@ public partial class MainWindow : Window
         InitializeComponent();
         TitleBar.Initialize(this);
 
-        _vm = new MainWindowViewModel();
+        _ds = new DialogService(this);
+        
+        _vm = new MainWindowViewModel(_ds);
         DataContext = _vm;
 
         Opened += (s, e) =>
@@ -78,8 +82,7 @@ public partial class MainWindow : Window
             var log = new Massage("An error occurred while trying to play the media: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
-            var messageBox = new MessageBox("An error occurred while trying to play the media: " + ex.Message);
-            await messageBox.ShowDialog(this);
+            
         }
     }
 
@@ -96,8 +99,7 @@ public partial class MainWindow : Window
             var log = new Massage("An error occurred while trying to copy: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
-            var messageBox = new MessageBox("An error occurred while trying to copy: " + ex.Message);
-            await messageBox.ShowDialog(this);
+            await _ds.ShowAlertAsync("An error occurred while trying to copy: " + ex.Message);
         }
     }
 
@@ -119,9 +121,7 @@ public partial class MainWindow : Window
         {
             if (sender is MenuItem { DataContext: DownloadedMedia media })
             {
-                var confirmationWindow = new ConfirmationWindow(
-                    "Are you sure you want to remove this media from the list? This action cannot be undone.");
-                var result = await confirmationWindow.ShowDialog<bool>(this);
+                var result = await _ds.ConfirmAsync("Are you sure you want to remove this media from the list? This action cannot be undone");
                 if (!result) return;
 
                 AppData.RemoveDownloadedMedia(media);
@@ -132,8 +132,7 @@ public partial class MainWindow : Window
                 var log = new Massage("Media removed: " + media.Url, DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
-                var messageBox = new MessageBox("Media removed from the list: " + media.Url);
-                await messageBox.ShowDialog(this);
+                await _ds.ShowAlertAsync("Media removed from the list: " + media.Url);
             }
         }
         catch (Exception ex)
@@ -141,8 +140,7 @@ public partial class MainWindow : Window
             var log = new Massage("Error removing media: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
-            var messageBox = new MessageBox("An error occurred: " + ex.Message);
-            await messageBox.ShowDialog(this);
+            await _ds.ShowAlertAsync("An error occured while trying to remove the media: " + ex.Message);
         }
     }
 
@@ -152,9 +150,7 @@ public partial class MainWindow : Window
         {
             if (sender is MenuItem { DataContext: DownloadedMedia media })
             {
-                var confirmationWindow = new ConfirmationWindow(
-                    "Are you sure you want to delete the file? This action cannot be undone.");
-                var result = await confirmationWindow.ShowDialog<bool>(this);
+                var result = await _ds.ConfirmAsync("Are you sure you want to delete the file? This action cannot be undone.");
 
                 if (result && File.Exists(media.DownloadPath))
                 {
@@ -164,8 +160,7 @@ public partial class MainWindow : Window
                     var log = new Massage("File deleted: " + media.DownloadPath, DateTime.Now, "INFO");
                     _logger.LogNewMassage(log);
 
-                    var messageBox = new MessageBox("File deleted successfully: " + media.DownloadPath);
-                    messageBox.ShowDialog(this);
+                    await _ds.ShowAlertAsync("File deleted: " + media.DownloadPath);
                 }
                 else
                 {
@@ -178,8 +173,7 @@ public partial class MainWindow : Window
             var log = new Massage("Error deleting file: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
-            var messageBox = new MessageBox("An error occurred: " + ex.Message);
-            await messageBox.ShowDialog(this);
+            await _ds.ShowAlertAsync("An error occured while trying to delete the file: " + ex.Message);
         }
     }
 
@@ -201,32 +195,50 @@ public partial class MainWindow : Window
         }
     }
 
-    private void DeletePlaylist(object sender, RoutedEventArgs e)
+    private async void DeletePlaylist(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem { DataContext: Playlist playlist })
+        try
         {
-            AppData.RemovePlaylist(playlist);
+            if (sender is MenuItem { DataContext: Playlist playlist })
+            {
+                AppData.RemovePlaylist(playlist);
 
-            var log = new Massage("Playlist removed: " + playlist.Name, DateTime.Now, "INFO");
+                var log = new Massage("Playlist removed: " + playlist.Name, DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+
+                await _ds.ShowAlertAsync("Playlist removed: " + playlist.Name);
+            }
+        }
+        catch (Exception ex)
+        {
+            var log = new Massage("Error removing playlist: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
-
-            var messageBox = new MessageBox("Playlist removed: " + playlist.Name);
-            messageBox.ShowDialog(this);
+            
+            await _ds.ShowAlertAsync("An error occured while trying to remove the playlist: " + ex.Message);
         }
     }
 
-    private void AddToPlaylistClick(object? sender, RoutedEventArgs e)
+    private async void AddToPlaylistClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not ListBox { SelectedItem: Playlist playlist } listBox) return;
-        if (listBox.DataContext is not DownloadedMedia media) return;
+        try
+        {
+            if (sender is not ListBox { SelectedItem: Playlist playlist } listBox) return;
+            if (listBox.DataContext is not DownloadedMedia media) return;
 
-        playlist.AddMedia(media.Id);
-        listBox.SelectedItem = null;
+            playlist.AddMedia(media.Id);
+            listBox.SelectedItem = null;
 
-        var messageBox = new MessageBox($"Added {media.Title} to {playlist.Name}");
-        messageBox.ShowDialog(this);
+            await _ds.ShowAlertAsync($"Added {media.Title} to {playlist.Name}");
 
-        var log = new Massage($"Added {media.Title} to {playlist.Name}", DateTime.Now, "INFO");
-        _logger.LogNewMassage(log);
+            var log = new Massage($"Added {media.Title} to {playlist.Name}", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+        }
+        catch (Exception ex)
+        {
+            var log = new Massage("An error occured while trying to add media to playlist: " + ex.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+
+            await _ds.ShowAlertAsync("An error occured while trying to add media to playlist: " + ex.Message);
+        }
     }
 }

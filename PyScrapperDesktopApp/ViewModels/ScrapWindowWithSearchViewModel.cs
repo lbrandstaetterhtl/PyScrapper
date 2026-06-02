@@ -46,6 +46,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     private readonly string _selectedProvider;
     
     public RelayCommand CancelCommand { get; set; }
+    private DialogService _dialogService;
     
     public event Action? RequestClose;
     
@@ -57,7 +58,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     /// <param name="scrapWindow"></param>
     /// <param name="provider"></param>
     /// <exception cref="Exception"></exception>
-    public ScrapWindowWithSearchViewModel(Window scrapWindow, string provider)
+    public ScrapWindowWithSearchViewModel(Window scrapWindow, string provider, DialogService dialogService)
     {
         try
         {
@@ -70,6 +71,8 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             _selectedProvider = provider;
 
             CancelCommand = new RelayCommand(() => RequestClose?.Invoke());
+            
+            _dialogService = dialogService;
         }
         catch (Exception ex)
         {
@@ -136,8 +139,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
                 if (vm == null)
                 {
-                    var messageBox = new MessageBox("ProgressBar ViewModel not found");
-                    await messageBox.ShowDialog(_scrapWindow);
+                    await _dialogService.ShowAlertAsync("An error occurred while initializing the progress window.");
                     continue;
                 }
 
@@ -169,8 +171,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 }
                 else
                 {
-                    var massageBox = new MessageBox("Download failed, check logs for more details");
-                    await massageBox.ShowDialog(_scrapWindow);
+                    await _dialogService.ShowAlertAsync("Download failed, check logs for more details");
                 }
                 
                 Task.Delay(1000).Wait();
@@ -207,8 +208,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         
         if (results.Count == 0)
         {
-            var massageBox = new MessageBox($"No results found for query: {SearchQuery}. Please try a different query.");
-            await massageBox.ShowDialog(_scrapWindow);
+            await _dialogService.ShowAlertAsync($"No results found for the given search query \"{SearchQuery}\".");
             
             log = new Massage("No results found for query: " + SearchQuery, DateTime.Now, "INFO");
             new AppLogger().LogNewMassage(log);

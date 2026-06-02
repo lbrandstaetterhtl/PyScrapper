@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls;
+using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
 namespace PyScrapperDesktopApp.Views;
@@ -12,7 +13,9 @@ public partial class SunoScrapWindow : Window
         InitializeComponent();
         TitleBar.Initialize(this);
         
-        var vm = new SunoScrapWindowViewModel(this);
+        DialogService ds = new DialogService(this);
+        
+        var vm = new SunoScrapWindowViewModel(this, ds);
         
         DataContext = vm;
         

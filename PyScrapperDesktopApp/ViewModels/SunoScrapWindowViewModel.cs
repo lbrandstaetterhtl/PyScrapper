@@ -43,6 +43,8 @@ public partial class SunoScrapWindowViewModel : ObservableObject
     
     public event Action? RequestClose;
     
+    private DialogService _dialogService;
+    
     /// <summary>
     /// Scrap method that is executed when the user initiates the scraping process.
     /// It creates an instance of the ApiClient and sends a scrap request to the server with the provided URL, media type, filename, and download path.
@@ -101,8 +103,7 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                 }
                 else
                 {
-                    var massageBox = new MessageBox("Download failed, check logs for more details");
-                    await massageBox.ShowDialog(_ScrapWindow);
+                    await _dialogService.ShowAlertAsync("An error occurred while downloading the media. Please try again.");
                 }
             }
             
@@ -114,11 +115,12 @@ public partial class SunoScrapWindowViewModel : ObservableObject
     /// It sets up the necessary properties and commands for the scrap functionality, including the CancelCommand that allows the user to close the scrap window without initiating the scrap process.
     /// </summary>
     /// <param name="scrapWindow"></param>
-    public SunoScrapWindowViewModel(Window scrapWindow)
+    public SunoScrapWindowViewModel(Window scrapWindow, DialogService dialogService)
     {
         if (Design.IsDesignMode) return;
         
         _ScrapWindow = scrapWindow;
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke());
+        _dialogService = dialogService;
     }
 }

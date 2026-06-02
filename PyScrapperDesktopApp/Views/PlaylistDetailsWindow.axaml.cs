@@ -19,8 +19,10 @@ public partial class PlaylistDetailsWindow : Window
         TitleBar.Initialize(this);
 
         _mainWindow = App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null;
+        
+        DialogService ds = new DialogService(this);
 
-        var vm = new PlaylistDetailsWindowViewModel(playlist);
+        var vm = new PlaylistDetailsWindowViewModel(playlist, ds);
 
         DataContext = vm;
 

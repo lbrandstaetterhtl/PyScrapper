@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LibVLCSharp.Shared;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.Views;
 
@@ -32,14 +33,15 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     private int _playlistId;
     
     public readonly Playlist _playlist;
-    private readonly IClassicDesktopStyleApplicationLifetime _desktop;
+    
+    private DialogService _dialogService;
     
     /// <summary>
     /// Constructor for the PlaylistDetailsWindowViewModel class, which initializes the view model with the details of a given playlist. It sets the playlist name, description, and media items based on the provided playlist object.
     /// The constructor also assigns the playlist to a private field for later use in command methods.
     /// </summary>
     /// <param name="playlist"></param>
-    public PlaylistDetailsWindowViewModel(Playlist playlist)
+    public PlaylistDetailsWindowViewModel(Playlist playlist, DialogService dialogService)
     {
         PlaylistName = playlist.Name;
 
@@ -47,8 +49,7 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
         PlaylistId = playlist.Id;
         Medias = AppData.DownloadedMedias.Where(m => playlist.MediaIds.Contains(m.Id)).ToList();
         _playlist = playlist;
-        
-        _desktop = App.Current.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+        _dialogService = dialogService;
     }
     
     public void RefreshMedias()
@@ -77,7 +78,7 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     /// This allows users to easily play all the media items in the playlist directly from the playlist details view.
     /// </summary>
     [RelayCommand]
-    private void PlayPlaylist()
+    private async void PlayPlaylist()
     {
         if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -86,12 +87,11 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
         
         if (_playlist.PlayableMediaIds.Count == 0)
         {
-            var messageBox = new MessageBox("No playable media found in this playlist.");
-            messageBox.ShowDialog(desktop.MainWindow);
+            await _dialogService.ShowAlertAsync("No playable media found in this playlist.");
             return;
         }
 
-        if (_desktop.MainWindow is MainWindow mainWindow)
+        if (desktop.MainWindow is MainWindow mainWindow)
         {
             mainWindow.MediaPlayer.LoadAndPlay(_playlist);
         }

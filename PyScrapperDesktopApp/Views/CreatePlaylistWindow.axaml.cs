@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls;
+using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
 namespace PyScrapperDesktopApp.Views;
@@ -10,7 +11,9 @@ public partial class CreatePlaylistWindow : Window
         InitializeComponent();
         TitleBar.Initialize(this);
         
-        var vm = new CreatePlaylistWindowViewModel(this);
+        DialogService ds = new DialogService(this);
+        
+        var vm = new CreatePlaylistWindowViewModel(ds);
         
         DataContext = vm;
         

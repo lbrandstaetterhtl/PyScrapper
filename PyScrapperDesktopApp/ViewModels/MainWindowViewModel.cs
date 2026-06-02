@@ -345,16 +345,14 @@ public partial class MainWindowViewModel : ObservableObject
                                         "Unable to get local path of the selected folder.");
                 var diff = await App.ScanFolder(folderPath);
                 
-                var messageBox = new MessageBox($"Scan completed. {diff} new media items were added to the list.");
-                await  messageBox.ShowDialog(_window);
+                await _dialogService.ShowAlertAsync($"Scan completed. {diff} new media items were added to the list.");
             }
         }
         catch (Exception ex)
         {
             var log = new Massage($"Error while scanning folder: {ex.Message}", DateTime.Now, "ERROR");
             new AppLogger().LogNewMassage(log);
-            var messageBox = new MessageBox($"Error while scanning folder: {ex.Message}");
-            await messageBox.ShowDialog(_window);
+            await _dialogService.ShowAlertAsync($"An error occurred while scanning the folder: {ex.Message}");
         }
     }
     
@@ -367,8 +365,9 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteAllMedias()
     {
-        var confirmationWindow = new ConfirmationWindow("Are you sure you want to delete all downloaded media? This action cannot be undone.");
-        var result = await confirmationWindow.ShowDialog<bool>(_window);
+        var result =
+            await _dialogService.ConfirmAsync(
+                "Are you sure you want to delete all downloaded media? This action cannot be undone.");
 
         if (!result)
             return;
@@ -385,8 +384,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteAllPlaylists()
     {
-        var confirmationWindow = new ConfirmationWindow("Are you sure you want to delete all playlists? This action cannot be undone.");
-        var result = await confirmationWindow.ShowDialog<bool>(_window);
+        var result = await _dialogService.ConfirmAsync("Are you sure you want to delete all playlists? This action cannot be undone.");
 
         if (!result)
             return;
@@ -418,8 +416,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (!Directory.Exists(path) || string.IsNullOrWhiteSpace(path))
         {
-            var messageBox = new MessageBox("Please select a valid download path.");
-            await messageBox.ShowDialog(_window);
+            await _dialogService.ShowAlertAsync("Please select a valid download path and try again.");
             return;
         }
         

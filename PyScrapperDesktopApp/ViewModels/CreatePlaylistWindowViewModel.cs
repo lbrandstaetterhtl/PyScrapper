@@ -13,7 +13,6 @@ namespace PyScrapperDesktopApp.ViewModels;
 /// </summary>
 public partial class CreatePlaylistWindowViewModel : ObservableObject
 {
-    private readonly Window _createPlaylistWindow;
     
     [ObservableProperty]
     private string _playlistName;
@@ -28,6 +27,8 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
     
     [ObservableProperty]
     private string? _description;
+
+    private DialogService _dialogService;
     
     /// <summary>
     /// Constructor for the CreatePlaylistWindowViewModel class, which initializes the view model with the provided create playlist window.
@@ -35,12 +36,12 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
     /// The constructor also assigns the provided window to a private field for later use in displaying message boxes.
     /// </summary>
     /// <param name="createPlaylistWindow"></param>
-    public CreatePlaylistWindowViewModel(Window createPlaylistWindow)
+    public CreatePlaylistWindowViewModel(DialogService dialogService)
     {
         AvailableMedias = new List<DownloadedMedia>(AppData.DownloadedMedias);
         SelectedMedias = new List<DownloadedMedia>();
         _selectedMediaIds = new List<int>();
-        _createPlaylistWindow = createPlaylistWindow;
+        _dialogService = dialogService;
     }
     
     public Action? CloseRequested { get; set; }
@@ -50,12 +51,11 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
     /// It validates the playlist name, collects the selected media IDs, creates a new playlist with the provided name and description, and adds it to the application's playlist data.
     /// </summary>
     [RelayCommand]
-    private void CreatePlaylist()
+    private async void CreatePlaylist()
     {
         if (string.IsNullOrWhiteSpace(PlaylistName))
         {
-            var messageBox = new MessageBox("Playlist name cannot be empty.");
-            messageBox.ShowDialog(_createPlaylistWindow);
+            await _dialogService.ShowAlertAsync("Playlist name cannot be empty.");
             return;
         }
         
@@ -71,8 +71,7 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
         
         AppData.AddPlaylist(newPlaylist);
         
-        var messagebox = new MessageBox("Playlist created successfully!");
-        messagebox.ShowDialog(_createPlaylistWindow);
+        await _dialogService.ShowAlertAsync("Playlist created successfully!");
         
         SelectedMedias = new List<DownloadedMedia>();
         PlaylistName = string.Empty;

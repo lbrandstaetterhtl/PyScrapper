@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls;
+using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
 namespace PyScrapperDesktopApp.Views;
@@ -11,8 +12,10 @@ public partial class ScrapWindowWithSearch : Window
 
         InitializeComponent();
         TitleBar.Initialize(this);
+        
+        DialogService ds = new(this);
 
-       var vm = new ScrapWindowWithSearchViewModel(this, provider);
+       var vm = new ScrapWindowWithSearchViewModel(this, provider, ds);
 
         DataContext = vm;
 
