@@ -1,27 +1,27 @@
 using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
 using PyScrapperDesktopApp.ViewModels;
-using Xunit;
 
 namespace PyScrapperDesktopApp.Tests.ViewModels;
 
 [Collection("Avalonia")]
 public class InputWindowViewModelTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void OkCommand_Exists()
     {
         var vm = new InputWindowViewModel(new Window(), "Message");
         Assert.NotNull(vm.OkCommand);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CancelCommand_Exists()
     {
         var vm = new InputWindowViewModel(new Window(), "Message");
         Assert.NotNull(vm.CancelCommand);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Properties_SetCorrectly()
     {
         var message = "Input Message";

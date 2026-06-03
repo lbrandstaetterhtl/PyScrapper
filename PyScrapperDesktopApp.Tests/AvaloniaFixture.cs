@@ -1,35 +1,18 @@
-﻿using System;
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Themes.Fluent;
 using Xunit;
+
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace PyScrapperDesktopApp.Tests;
 
 /// <summary>
 /// Initializes the Avalonia headless platform once for all tests that need it.
-/// Use as [CollectionDefinition] + ICollectionFixture.
 /// </summary>
-public class AvaloniaFixture : IDisposable
+public class AvaloniaFixture 
 {
-    private static readonly object _lock = new();
-    private static bool _initialized;
-
-    public AvaloniaFixture()
-    {
-        lock (_lock)
-        {
-            if (!_initialized)
-            {
-                AppBuilder.Configure<TestApp>()
-                    .UseHeadless(new AvaloniaHeadlessPlatformOptions())
-                    .SetupWithoutStarting();
-                _initialized = true;
-            }
-        }
-    }
-
-    public void Dispose() { }
+    // Keeping it mostly empty as Avalonia.Headless.XUnit handles most logic via AvaloniaFact
 }
 
 public class TestApp : Application
@@ -38,6 +21,14 @@ public class TestApp : Application
     {
         Styles.Add(new FluentTheme());
     }
+
+    public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<TestApp>()
+        .UseSkia()
+        .UseHeadless(new AvaloniaHeadlessPlatformOptions
+        {
+            UseHeadlessDrawing = true
+        })
+        .WithInterFont();
 }
 
 [CollectionDefinition("Avalonia")]

@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
 using PyScrapperDesktopApp.ViewModels;
 using Xunit;
 
@@ -7,7 +8,7 @@ namespace PyScrapperDesktopApp.Tests.ViewModels;
 [Collection("Avalonia")]
 public class ConfirmationWindowViewModelTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void Constructor_SetsMessage()
     {
         var message = "Are you sure?";
@@ -16,16 +17,10 @@ public class ConfirmationWindowViewModelTests
         Assert.Equal(message, vm.Message);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ConfirmCommand_ClosesWindowWithTrue()
     {
-        // Note: Closing a window in headless mode might be tricky to verify the result
-        // but we can at least check if the command exists and runs without error.
-        var window = new Window();
-        var vm = new ConfirmationWindowViewModel(window, "Test");
-        
-        // We can't easily check the result of window.Close(true) without more setup,
-        // but we verify the view model logic.
+        var vm = new ConfirmationWindowViewModel(new Window(), "Test");
         Assert.NotNull(vm.ConfirmCommand);
     }
 }

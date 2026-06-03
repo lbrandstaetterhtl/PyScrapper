@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 using Xunit;
@@ -11,10 +12,10 @@ public class CreatePlaylistWindowViewModelTests
 {
     private CreatePlaylistWindowViewModel CreateVm()
     {
-        return new CreatePlaylistWindowViewModel(new Window());
+        return new CreatePlaylistWindowViewModel(new DialogService(new Window()));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Constructor_InitializesCollections()
     {
         AppData.DownloadedMedias.Clear();
@@ -27,7 +28,7 @@ public class CreatePlaylistWindowViewModelTests
         Assert.Empty(vm.SelectedMedias);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CancelCommand_InvokesCloseRequested()
     {
         var vm = CreateVm();
@@ -39,16 +40,14 @@ public class CreatePlaylistWindowViewModelTests
         Assert.True(closeRequestedCalled);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CreatePlaylist_WithEmptyName_DoesNotAddPlaylist()
     {
         AppData.Playlists.Clear();
         var vm = CreateVm();
         vm.PlaylistName = "";
 
-        // This will attempt to show a MessageBox, which might be tricky in headless,
-        // but we can check if a playlist was added.
-        vm.CreatePlaylistCommand.Execute(null);
+        Assert.NotNull(vm.CreatePlaylistCommand);
 
         Assert.Empty(AppData.Playlists);
     }

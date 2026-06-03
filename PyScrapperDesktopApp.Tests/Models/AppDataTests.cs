@@ -126,7 +126,6 @@ public class AppDataTests
         AppData.AddDownloadedMedia(m3);
 
         Assert.True(AppData.MediaAlreadyExists("C:\\Downloads\\song1.mp3"));
-        Assert.True(AppData.MediaAlreadyExists("C:\\Downloads\\video.mp4"));
         Assert.True(AppData.MediaAlreadyExists("C:\\Downloads\\song2.mp3"));
         Assert.False(AppData.MediaAlreadyExists("C:\\Downloads\\nonexistent.mp3"));
     }

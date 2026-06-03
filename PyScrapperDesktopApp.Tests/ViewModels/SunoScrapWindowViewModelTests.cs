@@ -1,7 +1,8 @@
 ﻿using System.Linq;
 using Avalonia.Controls;
+using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
-using Xunit;
+using Avalonia.Headless.XUnit;
 
 namespace PyScrapperDesktopApp.Tests.ViewModels;
 
@@ -11,10 +12,10 @@ public class SunoScrapWindowViewModelTests
     private SunoScrapWindowViewModel CreateVm()
     {
         var window = new Window();
-        return new SunoScrapWindowViewModel(window);
+        return new SunoScrapWindowViewModel(window, new DialogService(window));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SunoUrl_SetGet_Works()
     {
         var vm = CreateVm();
@@ -22,7 +23,7 @@ public class SunoScrapWindowViewModelTests
         Assert.Equal("https://suno.com/song/123", vm.SunoUrl);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SunoUrl_RaisesPropertyChanged()
     {
         var vm = CreateVm();
@@ -36,7 +37,7 @@ public class SunoScrapWindowViewModelTests
         Assert.True(raised);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SelectedMediaType_SetGet_Works()
     {
         var vm = CreateVm();
@@ -44,7 +45,7 @@ public class SunoScrapWindowViewModelTests
         Assert.Equal(".mp3", vm.SelectedMediaType);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SelectedMediaType_RaisesPropertyChanged()
     {
         var vm = CreateVm();
@@ -58,7 +59,7 @@ public class SunoScrapWindowViewModelTests
         Assert.True(raised);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AvailableMediaTypes_ContainsMp3AndMp4()
     {
         var vm = CreateVm();
@@ -68,21 +69,21 @@ public class SunoScrapWindowViewModelTests
         Assert.Equal(2, types.Count);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ScrapCommand_IsNotNull()
     {
         var vm = CreateVm();
         Assert.NotNull(vm.ScrapCommand);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CancelCommand_IsNotNull()
     {
         var vm = CreateVm();
         Assert.NotNull(vm.CancelCommand);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CancelCommand_InvokesRequestClose()
     {
         var vm = CreateVm();
@@ -92,14 +93,14 @@ public class SunoScrapWindowViewModelTests
         Assert.True(closeCalled);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SunoUrl_InitiallyNull()
     {
         var vm = CreateVm();
         Assert.Null(vm.SunoUrl);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SelectedMediaType_InitiallyNull()
     {
         var vm = CreateVm();
