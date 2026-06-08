@@ -302,8 +302,6 @@ public class ApiClient : Interfaces.IApiClient
             _logger.LogNewMassage(log);
             return null;
         }
-
-        return null;
     }
 
 
