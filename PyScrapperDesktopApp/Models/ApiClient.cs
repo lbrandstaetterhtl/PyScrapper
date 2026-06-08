@@ -285,11 +285,10 @@ public class ApiClient : Interfaces.IApiClient
                     {
                         await _dialogService.ShowAlertAsync("Download failed, check logs for more details");
                     }
-
-                    return results;
                 }
-
             }
+            
+            return results;
         }
         catch (OperationCanceledException ex)
         {

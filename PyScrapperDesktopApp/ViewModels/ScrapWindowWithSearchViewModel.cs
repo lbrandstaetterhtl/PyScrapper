@@ -74,7 +74,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 
             _selectedProvider = provider;
 
-            CancelCommand = new RelayCommand(() => RequestClose?.Invoke());
+            CancelCommand = new RelayCommand(CancelDownload);
             
             _dialogService = dialogService;
         }
@@ -117,26 +117,60 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             var client = new ApiClient(_dialogService);
 
             List<DownloadRequestData> requestsDates = new();
+            
+            var topLevel = TopLevel.GetTopLevel(_scrapWindow);
+            var storageService = new StorageService(topLevel);
 
+            var options = new FilePickerSaveOptions();
+            options.FileTypeChoices = new List<FilePickerFileType>
+            {
+                new("Media Files")
+                {
+                    Patterns = new List<string> { $"*{SelectedMediaType}" }
+                }
+            };
+            
             foreach (var item in SelectedItems)
             {
                 _cts.Token.ThrowIfCancellationRequested();
+                
+                var filename = item.title;
 
-                var topLevel = TopLevel.GetTopLevel(_scrapWindow);
-                var storageService = new StorageService(topLevel);
-
-                var options = new FilePickerSaveOptions();
-                options.SuggestedFileName = item.title;
-                options.FileTypeChoices = new List<FilePickerFileType>
+                if (SelectedItems.Count == 1)
                 {
-                    new("Media Files")
-                    {
-                        Patterns = new List<string> { $"*{SelectedMediaType}" }
-                    }
-                };
+                    var file = await storageService.SaveFilePickerAsync(options);
+                    
+                    if (file == null) continue;
+                    
+                    filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
+                }
+                
+                
+                var validFilename = TryValidateFileName(filename, out var errorMessage);
+                
+                while (!validFilename)
+                {
+                    await _dialogService.ShowAlertAsync($"The filename \"{filename}\" is invalid: {errorMessage} Please rename the file and try again.");
+                    
+                    var log = new Massage($"Invalid filename \"{filename}\" for item \"{item.title}\": {errorMessage}", DateTime.Now, "ERROR");
+                    new AppLogger().LogNewMassage(log);
+                    
+                    var file = await storageService.SaveFilePickerAsync(options);
 
-                var file = storageService.SaveFilePickerAsync(options).Result;
-                var filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
+                    if (file == null)
+                    {
+                        filename = null;
+                        break;
+                    }
+                    
+                    filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
+                    validFilename = TryValidateFileName(filename, out errorMessage);
+                }
+
+                if (filename == null)
+                {
+                    continue;
+                }
 
                 var requestData = new DownloadRequestData()
                 {
@@ -150,7 +184,9 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 requestsDates.Add(requestData);
             }
 
-            await client.SendListScrapRequest(requestsDates, _cts.Token);
+            var result = await client.SendListScrapRequest(requestsDates, _cts.Token);
+            
+            
 
             _cts.Cancel();
             _cts.Dispose();
@@ -158,8 +194,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            var log = new Massage("Scrap operation was canceled by the user.", DateTime.Now, "INFO");
-            new AppLogger().LogNewMassage(log);
+            CancelDownload();
         }
         catch (Exception ex)
         {
@@ -282,5 +317,18 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         }
 
         return true;
+    }
+    
+    private void CancelDownload()
+    {
+        if (_cts == null)
+            return;
+
+        _cts.Cancel();
+        _cts.Dispose();
+        var log = new Massage("Scrap operation was canceled by the user.", DateTime.Now, "INFO");
+        new AppLogger().LogNewMassage(log);
+        
+        RequestClose?.Invoke();
     }
 }
