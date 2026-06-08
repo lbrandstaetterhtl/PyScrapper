@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls;
+using PyScrapperDesktopApp.Models;
 
 namespace PyScrapperDesktopApp.Views;
 
@@ -11,7 +12,7 @@ public partial class ProgressBarWindow : Window
         InitializeComponent();
         TitleBar.Initialize(this);
         
-        var vm = new ViewModels.ProgressBarWindowViewModel();
+        var vm = new ViewModels.ProgressBarWindowViewModel(new DialogService(this));
         vm.CloseRequested += Close;
         DataContext = vm;
     }

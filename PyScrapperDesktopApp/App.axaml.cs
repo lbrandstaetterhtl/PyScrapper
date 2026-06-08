@@ -263,6 +263,8 @@ public partial class App : Application
 
             var found = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
                 .Where(f => extensions.Contains(Path.GetExtension(f)));
+            
+            int originalMediaCount = AppData.DownloadedMedias.Count;
 
             foreach (var file in found)
             {
@@ -291,15 +293,13 @@ public partial class App : Application
                 
                 bool alreadyExists = AppData.MediaAlreadyExists(file);
 
-                int originalMediaCount = AppData.DownloadedMedias.Count;
-
                 if (!alreadyExists)
                     AppData.AddDownloadedMedia(media);
-
-                diff = AppData.DownloadedMedias.Count - originalMediaCount;
-
-                return diff;
             }
+            
+            diff = AppData.DownloadedMedias.Count - originalMediaCount;
+            
+            return diff;
         }
         catch (Exception ex)
         {

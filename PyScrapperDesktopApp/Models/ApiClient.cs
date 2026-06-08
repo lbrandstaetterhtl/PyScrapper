@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
@@ -22,12 +23,19 @@ public class ApiClient : Interfaces.IApiClient
     private readonly AppLogger _logger = new();
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly DialogService _dialogService;
+    
+    public ApiClient(DialogService dialogService)
+    {
+        _dialogService = dialogService;
+    }
 
     /// <summary>
     /// Sends a scrap request to the server and returns the download ID if successful, or "-1" if there was an error.
     /// Also logs the response from the server and shows a message box if there was an error.
     /// </summary>
     /// <param name="requestData"></param>
+    /// <param name="ct"></param>
     /// <returns name="id"></returns>
     public async Task<string> SendScrapRequest(DownloadRequestData requestData)
     {
@@ -68,6 +76,7 @@ public class ApiClient : Interfaces.IApiClient
     /// If there is an error, it logs the error and shows a message box with the error detail, then returns null.
     /// </summary>
     /// <param name="loogHealthResponse"></param>
+    /// <param name="ct"></param>
     /// <returns name="health"></returns>
     public async Task<HealthResponse> GetHealth(bool loogHealthResponse = true)
     {
@@ -150,7 +159,7 @@ public class ApiClient : Interfaces.IApiClient
             return new List<SearchResultItem>();
         }
     }
-    
+
     /// <summary>
     /// Gets the download progress for a given download ID by sending a GET request to the /download/progress/{downloadId} endpoint.
     /// If successful, it logs the progress information and returns a ProgressSuccessResponse object.
@@ -159,6 +168,7 @@ public class ApiClient : Interfaces.IApiClient
     /// This information can be used to update the UI with the current progress of the download.
     /// </summary>
     /// <param name="downloadId"></param>
+    /// <param name="ct"></param>
     /// <returns name="progressResponse"></returns>
     public async Task<ProgressSuccessResponse> GetDownloadProgress(string downloadId)
     {
@@ -199,7 +209,7 @@ public class ApiClient : Interfaces.IApiClient
             return null;
         }
     }
-    
+
     /// <summary>
     /// Sends a list of scrap requests to the server sequentially. For each request, it calls the SendScrapRequest method and waits for the result.
     /// If the result is "-1", it adds false to the results list.
@@ -208,12 +218,13 @@ public class ApiClient : Interfaces.IApiClient
     /// If any exception occurs during the process, it logs the error and returns null.
     /// </summary>
     /// <param name="requestDataList"></param>
+    /// <param name="ct"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public async Task<List<bool>> SendListScrapRequest(List<DownloadRequestData> requestDataList)
+    public async Task<List<bool>> SendListScrapRequest(List<DownloadRequestData> requestDataList, CancellationToken ct)
     {
         HttpClient client = new();
-        
+
         client.Timeout = TimeSpan.FromMinutes(30);
 
         List<bool> results = new List<bool>();
@@ -222,40 +233,81 @@ public class ApiClient : Interfaces.IApiClient
         {
             foreach (var requestData in requestDataList)
             {
+                ct.ThrowIfCancellationRequested();
+                
                 var scrapResult = await SendScrapRequest(requestData);
 
-                if (scrapResult == "-1")
+                if (scrapResult != "-1")
                 {
-                    results.Add(false);
-                }
-                else
-                {
+                    Task.Delay(2000).Wait();
+
                     var progressWindow = new ProgressBarWindow();
                     progressWindow.Show();
 
-                    var progressVm = progressWindow.DataContext as ProgressBarWindowViewModel;
+                    var vm = progressWindow.DataContext as ProgressBarWindowViewModel;
 
-                    if (progressVm == null)
+                    if (vm == null)
                     {
-                        throw new Exception("ProgressBarWindowViewModel is null");
+                        await _dialogService.ShowAlertAsync(
+                            "An error occurred while initializing the progress window.");
+                        continue;
                     }
 
-                    var result = await progressVm.StartProgress(scrapResult);
+                    bool errorWhileDownloading = await vm.StartProgress(scrapResult);
 
-                    results.Add(result);
+                    if (!errorWhileDownloading)
+                    {
+                        await vm.WaitUntilFinished();
+
+                        var identifier = requestData.Url.Split('=')[^1];
+
+                        var downloadFilePath = Path.Combine(AppData.Settings.DownloadPath!,
+                            $"{requestData.Filename}{requestData.Mediatype}");
+
+                        Task.Delay(2000).Wait();
+
+                        bool isPlayable = false;
+
+                        while (!isPlayable)
+                        {
+                            isPlayable = File.Exists(downloadFilePath);
+                        }
+
+                        var media = new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now,
+                            downloadFilePath,
+                            isPlayable, identifier);
+                        media.SetHighestId(AppData.DownloadedMedias);
+                        media.SetTitle();
+
+                        AppData.AddDownloadedMedia(media);
+                    }
+                    else
+                    {
+                        await _dialogService.ShowAlertAsync("Download failed, check logs for more details");
+                    }
+
+                    return results;
                 }
-            }
 
-            return results;
+            }
+        }
+        catch (OperationCanceledException ex)
+        {
+            var log = new Massage($"Scrap request cancelled: {ex.Message}", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            return null;
         }
         catch (Exception ex)
         {
-            var log =  new Massage($"Error sending scrap request: {ex.Message}", DateTime.Now, "ERROR");
+            var log = new Massage($"Error sending scrap request: {ex.Message}", DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
-            
             return null;
         }
+
+        return null;
     }
+
+
 
     /// <summary>
     /// ServerProcess represents a process running on the server, with its PID and name.

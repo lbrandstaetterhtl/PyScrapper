@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls;
+using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
 namespace PyScrapperDesktopApp.Views;
@@ -12,7 +13,7 @@ public partial class GetServerHealthWindow : Window
         InitializeComponent();
         TitleBar.Initialize(this);
         
-        var vm = new GetServerHealthWindowViewModel();
+        var vm = new GetServerHealthWindowViewModel(new DialogService(this));
         DataContext = vm;
         
         vm.CloseRequested += Close;

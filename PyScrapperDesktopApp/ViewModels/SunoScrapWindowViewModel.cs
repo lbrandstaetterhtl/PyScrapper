@@ -55,7 +55,7 @@ public partial class SunoScrapWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task Scrap()
     {
-            ApiClient client = new();
+            ApiClient client = new(_dialogService);
         
             var requestData = new DownloadRequestData()
             {

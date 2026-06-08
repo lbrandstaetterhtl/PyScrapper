@@ -13,6 +13,7 @@
 | 7 | MDI oder Tab-based Window System | 🟡 Low | 5-7 Tage | TODO | S3 | Task 4 |
 | 8 | Theme Editor / Customization UI | 🟡 Low | 2-3 Tage | TODO | S3 | - |
 | 9 | Advanced Search (Regex Support) | 🟡 Low | 1-2 Tage | TODO | S3 | - |
+| 10 | Tab-Hauptansicht mit Controls sauber aufbauen | 🟡 Low | 1-2 Tage | TODO | S3 | Task 7 |
 
 ---
 
@@ -1026,6 +1027,111 @@ public class MediaListViewModel : ObservableObject
 // Vorher:  14 Dialog-Fenster offen → Chaos
 // Nachher: 1 Fenster mit Tabs → Organisiert ✓
 ```
+
+---
+
+### 10. 🟡 Tab-Hauptansicht mit Controls sauber aufbauen
+
+#### Erklärung
+**Problem:** Eine Tab-Hauptansicht wirkt schnell unübersichtlich, wenn alle Tabs, Inhalte und Aktionen direkt im selben XAML landen. Dann wird die View schwer wartbar und die Navigation unklar.
+
+**Lösung:** Die Hauptansicht in drei Ebenen trennen:
+1. **Tab-Leiste** für Navigation und Tab-Wechsel
+2. **Content-Bereich** für den aktuell aktiven Tab
+3. **Wiederverwendbare Controls** pro Tab-Inhalt, z. B. Media-Liste, Player, Filter, Details
+
+#### Empfohlene Control-Struktur
+- **`ItemsControl`** für die Tab-Header, wenn du die Tab-Leiste selbst bauen willst
+- **`ContentControl`** für den aktiven Tab-Inhalt
+- **`UserControl`** für jeden Tab-Inhalt, damit die Logik sauber getrennt bleibt
+- **`Button`**, **`TextBlock`**, **`ToggleButton`**, **`CloseButton`** für Tab-Aktionen wie Wechseln und Schließen
+- **`Grid`** als Hauptlayout, damit Header und Content sauber getrennt sind
+
+#### Empfohlene Architektur
+```csharp
+public class MainTabsViewModel
+{
+    public ObservableCollection<TabItemViewModel> OpenTabs { get; } = new();
+    public TabItemViewModel? ActiveTab { get; set; }
+}
+
+public class TabItemViewModel
+{
+    public string Title { get; set; }
+    public object Content { get; set; }
+    public ICommand CloseCommand { get; set; }
+}
+```
+
+#### So sollte die View aufgebaut sein
+```xml
+<Grid RowDefinitions="Auto,*">
+    <!-- Tab-Leiste -->
+    <ItemsControl Grid.Row="0" ItemsSource="{Binding OpenTabs}">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+    </ItemsControl>
+
+    <!-- Aktiver Tab-Inhalt -->
+    <ContentControl Grid.Row="1" Content="{Binding ActiveTab.Content}" />
+</Grid>
+```
+
+#### Best Practice
+- Wenn die Tabs fest bekannt sind, kann auch ein **`TabControl`** reichen.
+- Wenn Tabs dynamisch geöffnet und geschlossen werden, ist eine eigene Kombination aus **`ItemsControl` + `ContentControl`** flexibler.
+- Für komplexe Inhalte sollte jeder Tab in ein eigenes **`UserControl`** ausgelagert werden.
+- Die Hauptansicht selbst sollte nur noch orchestration machen, nicht die ganze Logik enthalten.
+
+#### Konkret für PyScrapper
+- **`MainWindow`** sollte nur die Shell sein: oben Tab-Leiste, darunter Inhalt.
+- **`MediaTab`** kann z. B. Suchfeld, Medienliste und Medien-Aktionen enthalten.
+- **`PlayerTab`** kann Play/Pause, Fortschritt, Lautstärke und Titelanzeige enthalten.
+- **`PlaylistTab`** kann Playlist-Liste, Neu/Löschen/Details-Buttons und eine Detailansicht enthalten.
+- **`FilterTab`** kann Filterfelder, Dropdowns und Apply/Clear-Buttons enthalten.
+- Der aktuelle Tab-Inhalt sollte über ein **`ContentControl`** gebunden werden, damit immer nur ein Bereich sichtbar ist.
+- Jeder Tab-Inhalt sollte als eigenes **`UserControl`** gebaut werden, wenn er mehrere Controls und eigene Logik hat.
+- Gemeinsame Aktionen wie `Undo`, `Redo`, `Settings` oder `Refresh` können in eine obere Command-Leiste gehören.
+
+#### Vorteil
+- ✓ bessere Trennung von UI und Logik
+- ✓ Tabs sind leichter erweiterbar
+- ✓ jedes Tab-Feature kann separat getestet werden
+- ✓ die Hauptansicht bleibt übersichtlich
+
+---
+
+### 11. Ergänzende Detailerklärungen zu den Punkten 1–9
+
+#### 1. GetInstance() Pattern für AppData - nicht statisch
+Hier geht es darum, dass `AppData` nicht mehr als globale, direkt verwendete Sammelstelle funktioniert. Stattdessen soll die Datenhaltung über eine Instanz oder besser über ein Interface laufen. Dadurch kannst du im Test eine eigene Datenquelle einsetzen und musst nicht mit globalem Zustand kämpfen. In der Praxis bedeutet das: ViewModels bekommen ihre Daten über Konstruktor-Injection, und Tests können gefälschte Collections oder Mock-Objekte übergeben.
+
+#### 2. Unit Tests schreiben (Filter, AudioPlayer, MediaFilter)
+Dieser Punkt bedeutet nicht nur "mehr Tests", sondern vor allem die Logik in kleine, gut prüfbare Teile zu zerlegen. Der Filter sollte mit klaren Eingaben und Ausgaben testbar sein, der AudioPlayer sollte auf Zustände wie Play, Pause, Stop geprüft werden, und die MediaFilter-Logik sollte auf Suchbegriffe, Datum und Medienarten getestet werden. Je einfacher eine Methode einzeln testbar ist, desto weniger UI brauchst du für den Test.
+
+#### 3. Thumbnail Caching System implementieren
+Hier soll verhindert werden, dass Vorschaubilder jedes Mal neu vom Server geladen werden. Am besten denkst du in drei Ebenen: zuerst Speicher-Cache, dann Dateisystem-Cache, dann erst Download. Die View selbst bleibt dabei schlank, weil sie nur ein Bild anzeigt; das eigentliche Laden und Wiederverwenden der Thumbnails gehört in einen eigenen Service oder in den ApiClient-Bereich.
+
+#### 4. Refactor große ViewModels (MainWindowViewModel splitten)
+Dieser Punkt bedeutet, dass das Haupt-ViewModel nur noch koordiniert, aber nicht alles selbst macht. Wenn dort aktuell Listen, Sortierung, Filterung, Kontextmenü, Dialoge und Aktionen zusammenliegen, wird es schwer wartbar. Besser ist es, die Verantwortung nach Themen zu trennen: ein ViewModel für Medien, eins für Playlists, eins für Filter/Sortierung. Die Hauptansicht bindet diese Teil-ViewModels dann nur noch zusammen.
+
+#### 5. Performance: Pagination für Media-Listen
+Hier geht es darum, nicht alle Medien gleichzeitig in die UI zu laden. Stattdessen wird die Liste in kleinere Seiten aufgeteilt, damit die Oberfläche schnell bleibt und nicht bei großen Datenmengen blockiert. Technisch heißt das: Du lädst nur die sichtbaren Datensätze und wechselst bei Bedarf zur nächsten Seite. Für große Sammlungen ist das oft wichtiger als komplexe UI-Optimierungen.
+
+#### 6. Undo/Redo System für Delete-Operationen
+Dieser Punkt erweitert die Bedienung um Fehlerkorrektur. Wenn der Benutzer versehentlich etwas löscht, soll er die Aktion zurücknehmen können. Dafür brauchst du eine Historie der Aktionen, typischerweise mit einem Undo- und Redo-Stack. Besonders sinnvoll ist das für Löschaktionen, Verschiebungen oder Änderungen an Playlists, weil diese Operationen oft riskant sind.
+
+#### 7. MDI oder Tab-based Window System
+Das ist die architektonische Grundlage für mehrere gleichzeitig verfügbare Ansichten. Statt viele separate Fenster zu öffnen, werden Bereiche als Tabs organisiert und in einer Hauptansicht zusammengeführt. Das ist besonders dann sinnvoll, wenn du zwischen Medienliste, Player, Details und Einstellungen schnell wechseln willst, ohne dass die Fensterführung unübersichtlich wird.
+
+#### 8. Theme Editor / Customization UI
+Hier soll der Benutzer die Darstellung anpassen können, statt nur zwischen hart codiertem Dark/Light Mode zu wechseln. Dafür brauchst du UI-Controls wie `ColorPicker`, Schalter oder Preset-Buttons, die Theme-Werte verändern. Die eigentliche Wirkung entsteht dann dadurch, dass die App auf diese Änderungen reagiert und Styles bzw. Ressourcen aktualisiert.
+
+#### 9. Advanced Search (Regex Support)
+Dieser Punkt erweitert die Suche von einfacher Teilzeichenkette zu flexiblerer Suche. Dadurch können Benutzer mit Mustern suchen, also zum Beispiel nur Inhalte finden, die mit einem bestimmten Wort beginnen oder enden. Wichtig ist dabei, die Suche robust zu halten: Wenn der Benutzer keine Regex verwenden will, soll die normale Suche weiterhin einfach funktionieren.
 
 ---
 

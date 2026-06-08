@@ -19,7 +19,7 @@ namespace PyScrapperDesktopApp.ViewModels;
 /// </summary>
 public partial class GetServerHealthWindowViewModel : ObservableObject
 {
-    private readonly ApiClient _apiClient = new();
+    private readonly ApiClient _apiClient;
     private readonly AppLogger _logger = new();
 
     private CancellationTokenSource _cts;
@@ -60,6 +60,14 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     public event Action? CloseRequested;
     
     private int _runCount = 0;
+    
+    private DialogService _dialogService;
+    
+    public GetServerHealthWindowViewModel(DialogService dialogService)
+    {
+        _dialogService = dialogService;
+        _apiClient = new ApiClient(_dialogService);
+    }
     
     /// <summary>
     /// Starts the health check process by creating a cancellation token and running a loop that periodically fetches the server's health status from the API. The loop updates the connection status, uptime, memory usage, active processes, download jobs, and error messages based on the response from the server. If an error occurs during the health check, it sets the status to offline and logs the error message. T
@@ -154,7 +162,6 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     public void StopHealthCheck()
     {
         _cts.Cancel();
-        CloseRequested?.Invoke();
     }
     
     /// <summary>

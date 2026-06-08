@@ -31,13 +31,16 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isFinished = false;
     
+    private DialogService _dialogService;
+    
     /// <summary>
     /// Constructor for the ProgressBarWindowViewModel class, which initializes the API client used for fetching download progress data. This class is responsible for managing the state and logic of a progress bar window that displays the download progress, status, and speed of a download operation.
     /// It also handles cancellation of the progress tracking when necessary.
     /// </summary>
-    public ProgressBarWindowViewModel()
+    public ProgressBarWindowViewModel(DialogService dialogService)
     {
-        _apiClient = new ApiClient();
+        _dialogService = dialogService;
+        _apiClient = new ApiClient(_dialogService);
     }
 
     /// <summary>
@@ -61,7 +64,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
 
                 Task.Run(async () =>
                 {
-                    while (!_isFinished)
+                    while (!IsFinished)
                     {
                         if (token.IsCancellationRequested)
                             break;
@@ -102,6 +105,8 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                         }
                         catch (OperationCanceledException)
                         {
+                            var log = new Massage("Progress tracking cancelled", DateTime.Now, "INFO");
+                            new AppLogger().LogNewMassage(log);
                             break;
                         }
                         catch (Exception e)
@@ -115,6 +120,8 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                         }
                         catch (OperationCanceledException)
                         {
+                            var log = new Massage("Progress tracking cancelled during delay", DateTime.Now, "INFO");
+                            new AppLogger().LogNewMassage(log);
                             break;
                         }
                     }
@@ -153,6 +160,8 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     [RelayCommand]
     private void Close()
     {
+        _cts.Cancel();
+        _cts.Dispose();
         CloseRequested!.Invoke();
     }
     

@@ -15,10 +15,6 @@
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1">
 
-    <Design.DataContext>
-        <vm:MainWindowViewModel/>
-    </Design.DataContext>
-
     <Grid RowDefinitions="35,*">
 
         <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
@@ -82,11 +78,8 @@
                     </MenuItem>
                 </Menu>
 
-                <ScrollViewer Classes="List" Grid.Column="0" Grid.Row="1" Margin="10,0,0,0"
-                              x:Name="PlaylistsList" HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto" Grid.IsSharedSizeScope="True">
-                    <StackPanel>
-                        <Grid RowDefinitions="Auto, Auto, *" x:Name="PlaylistsGrid">
+                
+                        <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto, Auto, *" x:Name="PlaylistsGrid">
                             <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
                                 <TextBlock Text="Playlists" Classes="UIHeader" DockPanel.Dock="Top" HorizontalAlignment="Left"/>
                                 <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
@@ -107,6 +100,22 @@
                                 <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
                             </DockPanel>
                             <ItemsControl Grid.Row="2" ItemsSource="{Binding Playlists}">
+                                
+                                <ItemsControl.Template>
+                                    <ControlTemplate>
+                                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Auto">
+                                            <ItemsPresenter/>
+                                        </ScrollViewer>
+                                    </ControlTemplate>
+                                </ItemsControl.Template>
+                                
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Classes="CellInteractive" HorizontalAlignment="Left"
@@ -138,16 +147,12 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </Grid>
-                    </StackPanel>
-                </ScrollViewer>
 
                 <GridSplitter x:Name="MainSplitter" Grid.Row="1" Grid.Column="1"
                               Classes="SplitterVertical" HorizontalAlignment="Stretch" Margin="5"/>
-
-                <ScrollViewer Classes="List" Grid.Column="2" x:Name="DownloadedMediasList"
-                              Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <Grid RowDefinitions="Auto, Auto, *" x:Name="MediasGrid">
+                
+                
+                        <Grid Grid.Row="1" Grid.Column="2" RowDefinitions="Auto, Auto, *" x:Name="MediasGrid">
                             <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
                                 <TextBlock Text="Downloaded Medias" DockPanel.Dock="Top" Classes="UIHeader" HorizontalAlignment="Left"/>
                                 <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
@@ -170,6 +175,22 @@
                                 <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
                             </DockPanel>
                             <ItemsControl Grid.Row="2" ItemsSource="{Binding DownloadedMediaList}">
+                                
+                                <ItemsControl.Template>
+                                    <ControlTemplate>
+                                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Auto">
+                                            <ItemsPresenter/>
+                                        </ScrollViewer>
+                                    </ControlTemplate>
+                                </ItemsControl.Template>
+                                
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border DoubleTapped="MediaDoubleClick" Classes="CellInteractive"
@@ -217,8 +238,6 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </Grid>
-                    </StackPanel>
-                </ScrollViewer>
 
             </Grid>
 

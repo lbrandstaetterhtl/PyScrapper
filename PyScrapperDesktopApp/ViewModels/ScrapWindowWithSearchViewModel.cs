@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -47,8 +48,11 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     
     public RelayCommand CancelCommand { get; set; }
     private DialogService _dialogService;
+
+    private CancellationTokenSource? _cts;
     
     public event Action? RequestClose;
+    
     
     /// <summary>
     /// Constructor for the ScrapWindowWithSearchViewModel class, which initializes the view model with the provided scrap window and provider.
@@ -97,88 +101,73 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     [RelayCommand]
     private async Task Scrap()
     {
-        var client = new ApiClient();
-
-        foreach (var item in SelectedItems)
+        try
         {
-            var topLevel = TopLevel.GetTopLevel(_scrapWindow);
-            var storageService = new StorageService(topLevel);
-            
-            var options = new FilePickerSaveOptions();
-            options.SuggestedFileName = item.title;
-            options.FileTypeChoices = new List<FilePickerFileType>
+            if (_cts is null)
             {
-                new ("Media Files")
-                {
-                    Patterns = new List<string> { $"*{SelectedMediaType}" }
-                }
-            };
-            
-            var file = storageService.SaveFilePickerAsync(options).Result;
-            var filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
-
-            var requestData = new DownloadRequestData()
-            {
-                Provider = _selectedProvider,
-                Url = item.url,
-                Mediatype = SelectedMediaType,
-                Filename = filename,
-                Download_path = AppData.Settings.DownloadPath!
-            };
-            
-            var result = await client.SendScrapRequest(requestData);
-        
-            if (result != "-1")
-            { 
-                Task.Delay(2000).Wait();
-                 
-                var progressWindow = new ProgressBarWindow();
-                progressWindow.Show();
-
-                var vm = progressWindow.DataContext as ProgressBarWindowViewModel;
-
-                if (vm == null)
-                {
-                    await _dialogService.ShowAlertAsync("An error occurred while initializing the progress window.");
-                    continue;
-                }
-
-                bool errorWhileDownloading = await vm.StartProgress(result);
-                
-                if (!errorWhileDownloading)
-                {
-                    await vm.WaitUntilFinished();
-                    
-                    var identifier = item.url.Split('=')[^1];
-
-                    var downloadFilePath = Path.Combine(AppData.Settings.DownloadPath!, $"{filename}{SelectedMediaType}");
-
-                    Task.Delay(2000).Wait();
-
-                    bool isPlayable = false;
-
-                    while (!isPlayable)
-                    {
-                        isPlayable = File.Exists(downloadFilePath);
-                    }
-
-                    var media = new DownloadedMedia(item.url, SelectedMediaType, DateTime.Now, downloadFilePath,
-                        isPlayable, identifier);
-                    media.SetHighestId(AppData.DownloadedMedias);
-                    media.SetTitle();
-
-                    AppData.AddDownloadedMedia(media);
-                }
-                else
-                {
-                    await _dialogService.ShowAlertAsync("Download failed, check logs for more details");
-                }
-                
-                Task.Delay(1000).Wait();
+                _cts = new CancellationTokenSource();
             }
+            else
+            {
+                _cts.Cancel();
+                _cts.Dispose();
+                _cts = new CancellationTokenSource();
+            }
+
+            var client = new ApiClient(_dialogService);
+
+            List<DownloadRequestData> requestsDates = new();
+
+            foreach (var item in SelectedItems)
+            {
+                _cts.Token.ThrowIfCancellationRequested();
+
+                var topLevel = TopLevel.GetTopLevel(_scrapWindow);
+                var storageService = new StorageService(topLevel);
+
+                var options = new FilePickerSaveOptions();
+                options.SuggestedFileName = item.title;
+                options.FileTypeChoices = new List<FilePickerFileType>
+                {
+                    new("Media Files")
+                    {
+                        Patterns = new List<string> { $"*{SelectedMediaType}" }
+                    }
+                };
+
+                var file = storageService.SaveFilePickerAsync(options).Result;
+                var filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
+
+                var requestData = new DownloadRequestData()
+                {
+                    Provider = _selectedProvider,
+                    Url = item.url,
+                    Mediatype = SelectedMediaType,
+                    Filename = filename,
+                    Download_path = AppData.Settings.DownloadPath!
+                };
+
+                requestsDates.Add(requestData);
+            }
+
+            await client.SendListScrapRequest(requestsDates, _cts.Token);
+
+            _cts.Cancel();
+            _cts.Dispose();
+            RequestClose?.Invoke();
         }
-        
-        RequestClose?.Invoke();
+        catch (OperationCanceledException)
+        {
+            var log = new Massage("Scrap operation was canceled by the user.", DateTime.Now, "INFO");
+            new AppLogger().LogNewMassage(log);
+        }
+        catch (Exception ex)
+        {
+            var log = new Massage($"An error occurred during the scrap process: {ex.Message}", DateTime.Now, "ERROR");
+            new AppLogger().LogNewMassage(log);
+
+            await _dialogService.ShowAlertAsync("An error occurred during the scrap process: " + ex.Message);
+        }
     }
 
     /// <summary>
@@ -193,7 +182,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     [RelayCommand]
     public async Task Search()
     {
-        var client = new ApiClient();
+        var client = new ApiClient(_dialogService);
 
         var requestData = new SearchRequestData()
         {
