@@ -38,15 +38,19 @@
                 <TextBlock Text="PyScrapper" Classes="LauncherTitle"/>
             </StackPanel>
             
-            <TextBlock Text="{Binding StatusText}" Classes="LauncherStatus"/>
-
-            <ProgressBar IsIndeterminate="True"
-                         IsVisible="{Binding IsLoading}"
-                         Classes="LauncherProgress"/>
-
-            <Border IsVisible="{Binding HasError}" Classes="ErrorPanel">
-                <TextBlock Text="{Binding ErrorMessage}" Classes="ErrorText"/>
-            </Border>
+            <ScrollViewer x:Name="MessagesScrollViewer" MaxHeight="150">
+            <ItemsControl ItemsSource="{Binding Messages}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Title}" Classes="UILabel"/>
+                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Classes="UIValue"/>
+                            <TextBlock Text="{Binding Symbol}" Classes="UILabel"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            </ScrollViewer>
             
             <Button Content="Close"
                     IsVisible="{Binding HasError}"

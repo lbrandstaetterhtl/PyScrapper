@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -34,17 +37,14 @@ public partial class LauncherWindowViewModel : ObservableObject
         : Path.Combine(LocalServer, ".venv", "bin", "python");
     private string Requirements => Path.Combine(LocalServer, "requirements.txt");
 
-    [ObservableProperty]
-    private string _statusText = "Initializing...";
+    [ObservableProperty] 
+    private ObservableCollection<LauncherMessage> _messages = new();
 
     [ObservableProperty]
     private bool _isLoading = true;
 
     [ObservableProperty]
     private bool _hasError = false;
-
-    [ObservableProperty]
-    private string _errorMessage = string.Empty;
 
     /// <summary>
     /// Constructor for the LauncherWindowViewModel. Checks for design mode to avoid executing runtime code in the designer.
@@ -70,7 +70,15 @@ public partial class LauncherWindowViewModel : ObservableObject
 
         try
         {
-            StatusText = "Checking for running server...";
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                Messages.Add(new LauncherMessage()
+                {
+                    Message = "Checking if server is running",
+                    Title = "Server",
+                    Symbol = "✓"
+                });
+            });
 
             var log = new Massage("Checking if server is already running...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
@@ -80,83 +88,34 @@ public partial class LauncherWindowViewModel : ObservableObject
                 log = new Massage("Server is already running, skipping startup sequence", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
-                StatusText = "Server already running!";
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Messages.Add(new LauncherMessage()
+                    {
+                        Message = "is already running",
+                        Title = "Server",
+                        Symbol = "✗"
+                    });
+                });
+
                 await FinishSuccess();
                 return;
             }
 
-            StatusText = "Checking Visual C++ Redistributable...";
-
-            log = new Massage("Checking Visual C++ Redistributable...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            await Task.Run(() => EnsureVcRedist());
-
-            StatusText = "Checking ffmpeg...";
-
-            log = new Massage("Checking ffmpeg...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            await Task.Run(() => EnsureFfmpeg());
-
-            StatusText = "Checking Python installation...";
-
-            log = new Massage("Checking Python installation...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            await Task.Run(() => EnsurePython());
-
-            StatusText = "Checking virtual environment...";
-
-            log = new Massage("Checking Python virtual environment...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            await Task.Run(() => EnsureVenv());
-
-            StatusText = "Upgrading pip...";
-
-            log = new Massage("Upgrading pip...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            await RunProcess(VenvPython, "-m pip install --upgrade pip", LocalServer);
-
-            StatusText = "Checking Python packages...";
-
-            log = new Massage("Checking and installing Python requirements...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            await RunProcess(VenvPython, $"-m pip install -r \"{Requirements}\"", LocalServer);
-
-            StatusText = "Checking Playwright browsers...";
-
-            log = new Massage("Checking and installing Playwright browsers...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            await RunProcess(VenvPython, "-m playwright install", LocalServer);
-
-            StatusText = "Restoring .NET packages...";
-
-            log = new Massage("Restoring .NET packages...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            await RestoreDotnetPackages();
-
-            StatusText = "Starting server...";
-
-            log = new Massage("Starting local server...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
+            await Task.WhenAll(
+                Task.Run(EnsureVcRedist),
+                Task.Run(EnsureFfmpeg),
+                Task.Run(EnsurePython),
+                Task.Run(EnsureVenv),
+                Task.Run(() => { RunProcess("python", "-m pip install --upgrade pip", LocalServer).Wait();}),
+                Task.Run(() => {RunProcess("python", $"-m pip install -r \"{Requirements}\"", LocalServer).Wait(); }),
+                Task.Run(() => RunProcess(VenvPython, " -m playwright install", LocalServer).Wait() ),
+                RestoreDotnetPackages()
+            );
+            
             StartServerProcess();
-
-            StatusText = "Waiting for server to respond...";
-
-            log = new Massage("Waiting for server to respond...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
+            
             await WaitForServerReady();
-
-            log = new Massage("Server started successfully", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
 
             await FinishSuccess();
         }
@@ -176,7 +135,16 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// </summary>
     private async Task FinishSuccess()
     {
-        StatusText = "Ready!";
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            Messages.Add(new LauncherMessage()
+            {
+                Message = "finished",
+                Title = "Successfully",
+                Symbol = "✓"
+            });
+        });
+
         IsLoading = false;
 
         if (_window is LauncherWindow launcher)
@@ -194,12 +162,20 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// the application when the window is closed.
     /// </summary>
     /// <param name="message"></param>
-    private void ShowError(string message)
+    private async Task ShowError(string message)
     {
         IsLoading = false;
         HasError = true;
-        ErrorMessage = message;
-        StatusText = "Launch failed";
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            Messages.Add(new LauncherMessage()
+            {
+                Message = message,
+                Title = "Error: ",
+                Symbol = "✗"
+            });
+        });
 
         if (_window is LauncherWindow launcher)
             launcher.Result = LauncherResult.Error;
@@ -306,7 +282,15 @@ public partial class LauncherWindowViewModel : ObservableObject
 
         foreach (var proj in csprojFiles)
         {
-            StatusText = $"Restoring {Path.GetFileNameWithoutExtension(proj)}...";
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                Messages.Add(new LauncherMessage()
+                {
+                    Message = Path.GetFileName(proj),
+                    Title = "Restoring",
+                    Symbol = "✓"
+                });
+            });
             await RunProcess("dotnet", $"restore \"{proj}\"", RepoRoot);
         }
     }
@@ -317,7 +301,7 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// Microsoft and runs it silently. This is required for Python C-extensions such as greenlet and
     /// playwright to load correctly on Windows. On non-Windows platforms this check is skipped entirely.
     /// </summary>
-    private void EnsureVcRedist()
+    private async Task EnsureVcRedist()
     {
         if (!OperatingSystem.IsWindows()) return;
 
@@ -325,6 +309,16 @@ public partial class LauncherWindowViewModel : ObservableObject
 
         if (File.Exists(dll))
         {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                Messages.Add(new LauncherMessage()
+                {
+                    Message = "found Visual C++ Redistributable...",
+                    Title = "VcRedist Check",
+                    Symbol = "✓"
+                });
+            });
+
             var log = new Massage("VCRUNTIME140.dll found, skipping Visual C++ Redistributable install", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             return;
@@ -333,14 +327,24 @@ public partial class LauncherWindowViewModel : ObservableObject
         var warnLog = new Massage("VCRUNTIME140.dll not found, downloading Visual C++ Redistributable...", DateTime.Now, "WARN");
         _logger.LogNewMassage(warnLog);
 
-        Dispatcher.UIThread.Post(() => StatusText = "Downloading Visual C++ Redistributable...");
+        Dispatcher.UIThread.Post(() => Messages.Add(new LauncherMessage()
+        {
+            Message = "Downloading Visual C++ Redistributable...",
+            Title = "VcRdedist Check",
+            Symbol = "✓"
+        }));
 
         var installer = Path.Combine(Path.GetTempPath(), "vc_redist.x64.exe");
 
         using var http = new System.Net.WebClient();
         http.DownloadFile("https://aka.ms/vs/17/release/vc_redist.x64.exe", installer);
 
-        Dispatcher.UIThread.Post(() => StatusText = "Installing Visual C++ Redistributable...");
+        Dispatcher.UIThread.Post(() => Messages.Add(new LauncherMessage()
+        {
+            Message = "installing Visual C++ Redistributable...",
+            Title = "VcRedist Check",
+            Symbol = "✓"
+        }));
 
         var p = Process.Start(new ProcessStartInfo
         {
@@ -370,12 +374,22 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// and places ffmpeg in the LocalAppData WinGet packages directory where find_ffmpeg() will locate it.
     /// On non-Windows platforms this check is skipped entirely.
     /// </summary>
-    private void EnsureFfmpeg()
+    private async Task EnsureFfmpeg()
     {
         if (!OperatingSystem.IsWindows()) return;
 
         if (IsFfmpegAvailable())
         {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                Messages.Add(new LauncherMessage()
+                {
+                    Message = "found Ffmpeg...",
+                    Title = "Ffmpeg Check",
+                    Symbol = "✓"
+                });
+            });
+
             var log = new Massage("ffmpeg found, skipping install", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             return;
@@ -384,7 +398,12 @@ public partial class LauncherWindowViewModel : ObservableObject
         var warnLog = new Massage("ffmpeg not found, installing via WinGet (yt-dlp.FFmpeg)...", DateTime.Now, "WARN");
         _logger.LogNewMassage(warnLog);
 
-        Dispatcher.UIThread.Post(() => StatusText = "Installing ffmpeg...");
+        Dispatcher.UIThread.Post(() => Messages.Add(new LauncherMessage()
+        {
+            Message = "installing Ffmpeg...",
+            Title = "Ffmpeg Check",
+            Symbol = "✓"
+        }));
 
         var p = Process.Start(new ProcessStartInfo
         {
@@ -533,7 +552,12 @@ public partial class LauncherWindowViewModel : ObservableObject
         var log = new Massage("pip not found, attempting bootstrap via ensurepip...", DateTime.Now, "WARN");
         _logger.LogNewMassage(log);
 
-        Dispatcher.UIThread.Post(() => StatusText = "Bootstrapping pip...");
+        Dispatcher.UIThread.Post(() => Messages.Add(new LauncherMessage()
+        {
+            Message = "bootstrapping pip...",
+            Title = "pip Check",
+            Symbol = "✓"
+        }));
 
         var ensureArgs = string.IsNullOrEmpty(extraArgs)
             ? "-m ensurepip --upgrade"
@@ -598,11 +622,44 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// <param name="args"></param>
     /// <param name="workDir"></param>
     /// <returns></returns>
-    private Task RunProcess(string exe, string args, string workDir = null)
+    private Task RunProcess(string exe, string args, string workDir = null, bool log = false)
     {
         return Task.Run(() =>
         {
+            
             using var p = new Process { StartInfo = BuildProcessInfo(exe, args, workDir ?? RepoRoot) };
+
+            if (log)
+            {
+                p.OutputDataReceived += (s, e) =>
+                {
+                    if (e.Data == null) return;
+                    var logMessage = new Massage(e.Data, DateTime.Now, "INFO");
+                    _logger.LogNewMassage(logMessage);
+
+                    Messages.Add(new LauncherMessage()
+                    {
+                        Message = e.Data,
+                        Title = p.StartInfo.FileName,
+                        Symbol = "✓"
+                    });
+                };
+
+                p.ErrorDataReceived += (s, e) =>
+                {
+                    if (e.Data == null) return;
+                    var logMessage = new Massage(e.Data, DateTime.Now, "ERROR");
+                    _logger.LogNewMassage(logMessage);
+
+                    Messages.Add(new LauncherMessage()
+                    {
+                        Message = e.Data,
+                        Title = p.StartInfo.FileName,
+                        Symbol = "✗"
+                    });
+                };
+            }
+
             p.Start();
             p.BeginOutputReadLine();
             p.BeginErrorReadLine();
@@ -633,4 +690,11 @@ public partial class LauncherWindowViewModel : ObservableObject
             UseShellExecute        = false,
             CreateNoWindow         = true,
         };
+
+    public class LauncherMessage
+    {
+        public string Message { get; set; }
+        public string Title { get; set; }
+        public string Symbol { get; set; }
+    }
 }

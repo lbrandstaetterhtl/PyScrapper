@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Threading;
 using PyScrapperDesktopApp.ViewModels;
 
 namespace PyScrapperDesktopApp.Views;
@@ -29,6 +30,15 @@ public partial class LauncherWindow : Window
         {
             _vm.OnWindowReady(this);
             TitleBar.Initialize(this);
+        };
+
+        _vm.Messages.CollectionChanged += (s, e) =>
+        {
+            // Nach dem Layout-Pass ans Ende scrollen
+            Dispatcher.UIThread.Post(() =>
+            {
+                MessagesScrollViewer.ScrollToEnd();
+            }, DispatcherPriority.Loaded);
         };
     }
 }
