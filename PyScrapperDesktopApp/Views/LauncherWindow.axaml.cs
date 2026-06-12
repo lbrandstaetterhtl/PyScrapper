@@ -34,7 +34,6 @@ public partial class LauncherWindow : Window
 
         _vm.Messages.CollectionChanged += (s, e) =>
         {
-            // Nach dem Layout-Pass ans Ende scrollen
             Dispatcher.UIThread.Post(() =>
             {
                 MessagesScrollViewer.ScrollToEnd();
