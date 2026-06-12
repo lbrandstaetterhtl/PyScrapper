@@ -7,8 +7,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using PyScrapperDesktopApp.ViewModels;
 using PyScrapperDesktopApp.Views;
 

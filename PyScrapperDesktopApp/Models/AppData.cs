@@ -174,6 +174,53 @@ public partial class DownloadedMedia(string url, string mediaType, DateTime down
     {
         Title = Path.GetFileNameWithoutExtension(DownloadPath);
     }
+    
+     private static readonly HashSet<string> ReservedWindowsNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+        };
+    
+        /// <summary>
+        /// Tries to validate the provided file name by checking if it is not empty, does not end with a space or dot, does not contain invalid characters, and is not a reserved Windows name.
+        /// If the file name is valid, it returns true; otherwise, it returns false and provides an appropriate error message indicating the reason for the validation failure.
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="errorMessage"></param>
+        /// <returns></returns>
+        public static bool TryValidateFileName(string? fileName, out string errorMessage)
+        {
+            errorMessage = string.Empty;
+    
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                errorMessage = "Filename must not be empty.";
+                return false;
+            }
+    
+            fileName = fileName.Trim();
+    
+            if (fileName.EndsWith(' ') || fileName.EndsWith('.'))
+            {
+                errorMessage = "Filename must not end with a space or dot.";
+                return false;
+            }
+    
+            if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                errorMessage = "Filename contains invalid characters.";
+                return false;
+            }
+    
+            if (ReservedWindowsNames.Contains(fileName))
+            {
+                errorMessage = "Filename is a reserved Windows name.";
+                return false;
+            }
+    
+            return true;
+        }
 }
 
 /// <summary>

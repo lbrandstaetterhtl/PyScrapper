@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -119,16 +120,8 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             List<DownloadRequestData> requestsDates = new();
             
             var topLevel = TopLevel.GetTopLevel(_scrapWindow);
-            var storageService = new StorageService(topLevel);
-
-            var options = new FilePickerSaveOptions();
-            options.FileTypeChoices = new List<FilePickerFileType>
-            {
-                new("Media Files")
-                {
-                    Patterns = new List<string> { $"*{SelectedMediaType}" }
-                }
-            };
+            var storageService = new StorageService(topLevel!);
+            var folder = await topLevel.StorageProvider.TryGetFolderFromPathAsync(AppData.Settings.DownloadPath!);
             
             foreach (var item in SelectedItems)
             {
@@ -138,6 +131,19 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
                 if (SelectedItems.Count == 1)
                 {
+                    var options = new FilePickerSaveOptions()
+                    {
+                        SuggestedStartLocation = folder,
+                        SuggestedFileName = filename,
+                    };
+                    options.FileTypeChoices = new List<FilePickerFileType>
+                    {
+                        new("Media Files")
+                        {
+                            Patterns = new List<string> { $"*{SelectedMediaType}" }
+                        }
+                    };
+                    
                     var file = await storageService.SaveFilePickerAsync(options);
                     
                     if (file == null) continue;
@@ -146,7 +152,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 }
                 
                 
-                var validFilename = TryValidateFileName(filename, out var errorMessage);
+                var validFilename = DownloadedMedia.TryValidateFileName(filename, out var errorMessage);
                 
                 while (!validFilename)
                 {
@@ -154,6 +160,12 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     
                     var log = new Massage($"Invalid filename \"{filename}\" for item \"{item.title}\": {errorMessage}", DateTime.Now, "ERROR");
                     new AppLogger().LogNewMassage(log);
+                    
+                    var options = new FilePickerSaveOptions()
+                    {
+                        SuggestedStartLocation = folder,
+                        SuggestedFileName = filename,
+                    };
                     
                     var file = await storageService.SaveFilePickerAsync(options);
 
@@ -164,7 +176,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     }
                     
                     filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
-                    validFilename = TryValidateFileName(filename, out errorMessage);
+                    validFilename = DownloadedMedia.TryValidateFileName(filename, out errorMessage);
                 }
 
                 if (filename == null)
@@ -183,6 +195,8 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
                 requestsDates.Add(requestData);
             }
+            
+            var toplevel = TopLevel.GetTopLevel(_scrapWindow);
 
             var result = await client.SendListScrapRequest(requestsDates, _cts.Token);
             
@@ -241,82 +255,34 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         }
 
         var httpClient = new HttpClient();
+
+        var tasks = results.Select(async item =>
+        {
+                if (_selectedProvider == _providers[1])
+                {
+                    var thumbnailUrl = $"https://i.ytimg.com/vi/{item.identifier}/hqdefault.jpg";
+    
+                    var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
+    
+                    var stream = new MemoryStream(bytes);
+                    item.ThumbnailBitmap = new Bitmap(stream);
+                }
+                else if (_selectedProvider == _providers[2] || _selectedProvider == _providers[3])
+                {
+                    var thumbnailUrl = item.thumbnail;
+    
+                    var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
+    
+                    var stream = new MemoryStream(bytes);
+                    item.ThumbnailBitmap = new Bitmap(stream);
+                }
+        });
         
-        if (_selectedProvider == _providers[1])
-        {
-            foreach (var item in results)
-            {
-                var thumbnailUrl = $"https://i.ytimg.com/vi/{item.identifier}/hqdefault.jpg";
-
-                var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
-
-                var stream = new MemoryStream(bytes);
-                item.ThumbnailBitmap = new Bitmap(stream);
-            }
-        }
-        else if (_selectedProvider == _providers[2] || _selectedProvider == _providers[3])
-        {
-            foreach (var item in results)
-            {
-                var thumbnailUrl = item.thumbnail;
-
-                var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
-
-                var stream = new MemoryStream(bytes);
-                item.ThumbnailBitmap = new Bitmap(stream);
-            }
-        }
+        await Task.WhenAll(tasks);
         
         httpClient.Dispose();
 
         Items = results;
-    }
-    
-    private static readonly HashSet<string> ReservedWindowsNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "CON", "PRN", "AUX", "NUL",
-        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
-    };
-
-    /// <summary>
-    /// Tries to validate the provided file name by checking if it is not empty, does not end with a space or dot, does not contain invalid characters, and is not a reserved Windows name.
-    /// If the file name is valid, it returns true; otherwise, it returns false and provides an appropriate error message indicating the reason for the validation failure.
-    /// </summary>
-    /// <param name="fileName"></param>
-    /// <param name="errorMessage"></param>
-    /// <returns></returns>
-    private static bool TryValidateFileName(string? fileName, out string errorMessage)
-    {
-        errorMessage = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            errorMessage = "Filename must not be empty.";
-            return false;
-        }
-
-        fileName = fileName.Trim();
-
-        if (fileName.EndsWith(' ') || fileName.EndsWith('.'))
-        {
-            errorMessage = "Filename must not end with a space or dot.";
-            return false;
-        }
-
-        if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-        {
-            errorMessage = "Filename contains invalid characters.";
-            return false;
-        }
-
-        if (ReservedWindowsNames.Contains(fileName))
-        {
-            errorMessage = "Filename is a reserved Windows name.";
-            return false;
-        }
-
-        return true;
     }
     
     private void CancelDownload()
