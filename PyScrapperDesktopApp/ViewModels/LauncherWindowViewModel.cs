@@ -45,6 +45,9 @@ public partial class LauncherWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _hasError = false;
+    
+    private string _installerUrl  = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe";
+    private string _installerPath = Path.Combine(Path.GetTempPath(), "python-3.12.10-installer.exe");
 
     /// <summary>
     /// Constructor for the LauncherWindowViewModel. Checks for design mode to avoid executing runtime code in the designer.
@@ -226,7 +229,8 @@ public partial class LauncherWindowViewModel : ObservableObject
         var psi = BuildProcessInfo(
             VenvPython,
             "-m uvicorn LocalServer.server:app --host 127.0.0.1 --port 8765",
-            RepoRoot
+            RepoRoot,
+            false
         );
 
         _serverProcess = new Process { StartInfo = psi };
@@ -463,34 +467,67 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// If no compatible Python is found or the version is too new, an exception is thrown with
     /// instructions for the user.
     /// </summary>
-    private void EnsurePython()
+    private async Task EnsurePython()
     {
-        var python = FindPython() ?? throw new Exception("Python not found. Please install Python 3.12 and try again.");
 
-        var versionProcess = Process.Start(new ProcessStartInfo
-        {
-            FileName               = python.Split(' ')[0],
-            Arguments              = python.Contains(' ') ? python.Split(' ', 2)[1] + " --version" : "--version",
-            RedirectStandardOutput = true,
-            RedirectStandardError  = true,
-            UseShellExecute        = false,
-            CreateNoWindow         = true,
-        })!;
+            var python = FindPython();
 
-        var versionOutput = versionProcess.StandardOutput.ReadToEnd().Trim();
-        versionProcess.WaitForExit();
+            if (python != null)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => Messages.Add(new LauncherMessage
+                {
+                    Message = $"Found {python.Split(' ')[0]} executable",
+                    Title = "Python",
+                    Symbol = "✓"
+                }));
+                return;
+            }
 
-        var versionString = versionOutput.Replace("Python ", "").Trim();
+            await Dispatcher.UIThread.InvokeAsync(() => Messages.Add(new LauncherMessage()
+            {
+                Message = "3.12 not found | downloading installer",
+                Title = "Python",
+                Symbol = "⏳"
+            }));
 
-        if (Version.TryParse(versionString, out var version) && version.Minor >= 13)
-            throw new Exception(
-                $"Python {versionString} is not supported. Please install Python 3.12.\n" +
-                "Packages such as greenlet and playwright do not yet support Python 3.13+.\n" +
-                "If Python 3.12 is already installed, delete LocalServer\\.venv and restart."
-            );
+            using var httpClient = new HttpClient();
+            var bytes = await httpClient.GetByteArrayAsync(_installerUrl);
+            await File.WriteAllBytesAsync(_installerPath, bytes);
 
-        var log = new Massage($"Python found: {python} ({versionOutput})", DateTime.Now, "INFO");
-        _logger.LogNewMassage(log);
+            await Dispatcher.UIThread.InvokeAsync(() => Messages.Add(new LauncherMessage()
+            {
+                Message = $"Installing (admins right required)",
+                Title = "Python",
+                Symbol = "⏳"
+            }));
+
+            await RunProcess(_installerPath, "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0", null, log: true, shell: true);
+
+            await Dispatcher.UIThread.InvokeAsync(() => Messages.Add(new LauncherMessage()
+            {
+                Message = "Installation complete, verifying...",
+                Title = "Python",
+                Symbol = "⏳"
+            }));
+            
+            RefreshEnvironmentPath();
+            
+            python = FindPython();
+
+            if (python == null)
+            {
+                throw new Exception(
+                    "Python 3.12 executable not found after installation. Please ensure Python 3.12 is installed and added to PATH, then restart the application.\n" +
+                    "You can download it from: https://www.python.org/downloads/release/python-3120/"
+                );
+            }
+            
+            await Dispatcher.UIThread.InvokeAsync(() => Messages.Add(new LauncherMessage()
+            {
+                Message = $"Found {python.Split(' ')[0]} executable after installation",
+                Title = "Python",
+                Symbol = "✓"
+            }));    
     }
 
     /// <summary>
@@ -515,7 +552,7 @@ public partial class LauncherWindowViewModel : ObservableObject
             ? $"-m venv \"{venvDir}\""
             : $"{args} -m venv \"{venvDir}\"";
 
-        var p = Process.Start(BuildProcessInfo(exe, venvArgs, LocalServer))!;
+        var p = Process.Start(BuildProcessInfo(exe, venvArgs, LocalServer, false))!;
         p.WaitForExit();
 
         if (!File.Exists(VenvPython))
@@ -612,6 +649,19 @@ public partial class LauncherWindowViewModel : ObservableObject
         }
         return null;
     }
+    
+    /// <summary>
+    /// Lädt die PATH-Umgebungsvariable für den AKTUELLEN Prozess neu.
+    /// Notwendig nachdem ein Installer den PATH geändert hat, weil unser
+    /// Launcher-Prozess die alte (gecachte) Version im Speicher hat.
+    /// </summary>
+    private static void RefreshEnvironmentPath()
+    {
+        var machinePath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? "";
+        var userPath    = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? "";
+
+        Environment.SetEnvironmentVariable("PATH", $"{machinePath};{userPath}", EnvironmentVariableTarget.Process);
+    }
 
     /// <summary>
     /// Runs an external process with the specified executable, arguments and working directory.
@@ -620,14 +670,17 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// </summary>
     /// <param name="exe"></param>
     /// <param name="args"></param>
+    /// <param name="waitForExit"></param>
     /// <param name="workDir"></param>
+    /// <param name="log"></param>
+    /// <param name="shell"></param>
     /// <returns></returns>
-    private Task RunProcess(string exe, string args, string workDir = null, bool log = false)
+    private Task RunProcess(string exe, string args, string? workDir = null, bool log = false, bool shell = false)
     {
         return Task.Run(() =>
         {
             
-            using var p = new Process { StartInfo = BuildProcessInfo(exe, args, workDir ?? RepoRoot) };
+            using var p = new Process { StartInfo = BuildProcessInfo(exe, args, workDir ?? RepoRoot, shell) };
 
             if (log)
             {
@@ -669,6 +722,8 @@ public partial class LauncherWindowViewModel : ObservableObject
                 throw new Exception($"{Path.GetFileName(exe)} exited with code {p.ExitCode}");
         });
     }
+    
+    
 
     /// <summary>
     /// Creates a ProcessStartInfo configured for running a background process with redirected output and error
@@ -678,8 +733,9 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// <param name="exe"></param>
     /// <param name="args"></param>
     /// <param name="workDir"></param>
+    /// <param name="shell"></param>
     /// <returns></returns>
-    private static ProcessStartInfo BuildProcessInfo(string exe, string args, string workDir) =>
+    private static ProcessStartInfo BuildProcessInfo(string exe, string args, string workDir, bool shell) =>
         new()
         {
             FileName               = exe,
@@ -687,7 +743,7 @@ public partial class LauncherWindowViewModel : ObservableObject
             WorkingDirectory       = workDir,
             RedirectStandardOutput = true,
             RedirectStandardError  = true,
-            UseShellExecute        = false,
+            UseShellExecute        = shell,
             CreateNoWindow         = true,
         };
 
