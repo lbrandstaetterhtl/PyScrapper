@@ -1,18 +1,17 @@
-﻿
+﻿from os import mkdir
+
+import fastapi
 from PythonModule.models.settings import PROGRESSDICT
-from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest
+from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest, CreateUserRequest
 from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
 from PythonModule import Session
-
-
-
-
-
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import sys, time, re, json, uuid
 from datetime import datetime
+import bcrypt
 
 
 import urllib.error, urllib.request
@@ -20,14 +19,16 @@ import platform, subprocess
 
 import os
 import asyncio
-
-
-
-
+import sqlite3
+from contextlib import asynccontextmanager
 
 #Global Variables
 current_path = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_path)
+db_path = os.path.join(current_path, "Data", "data.db")
+load_dotenv()
+print(repr(os.getenv("ADMIN_KEY")))
+ADMIN_KEY = os.getenv("ADMIN_KEY")
 
 #Runtime Logs will be saved under this path
 log_dir = os.path.join(project_root, "LocalServer", "logs")
@@ -143,6 +144,8 @@ async def startup_event():
     asyncio.create_task(logger(quit_event, log_queue))
 
     log_queue.put_nowait("[INFO] Server started successfully")
+
+    create_app_tables()
 
     
 
@@ -368,3 +371,117 @@ ConvertTo-Json
         data = [data]
 
     return [{"pid": int(p["ProcessId"]), "name": p["Name"]} for p in data]
+
+#db management
+
+def create_app_tables():
+
+    if not os.path.exists(db_path):
+        mkdir(os.path.dirname(db_path))
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS Users (
+                                                        Identifier TEXT NOT NULL PRIMARY KEY,
+                                                        Username TEXT NOT NULL,
+                                                        PasswordHash TEXT NOT NULL,
+                                                        CreatedAt TEXT NOT NULL)""")
+
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS DownloadedMedias
+                   (
+                       Identifier TEXT NOT NULL PRIMARY KEY,
+                       UserIdentifier TEXT NOT NULL,
+                       Url TEXT,
+                       MediaType TEXT NOT NULL,
+                       DownloadedAt Text,
+                       DownloadPath TEXT NOT NULL,
+                       IsPlayable BOOLEAN NOT NULL,
+                       FOREIGN KEY (UserIdentifier) REFERENCES Users (Identifier) ON DELETE CASCADE
+                   )""")
+
+    cursor.execute("""
+                   Create table IF NOT EXISTS Playlists
+                   (
+                       Identifier TEXT NOT NULL PRIMARY KEY,
+                       UserIdentifier TEXT NOT NULL,
+                       Name TEXT NOT NULL,
+                       Description TEXT,
+                       FOREIGN KEY (UserIdentifier) REFERENCES Users (Identifier) ON DELETE CASCADE
+                   )""")
+
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS PlaylistMedias
+                   (
+                       PlaylistIdentifier TEXT NOT NULL,
+                       MediaIdentifier TEXT NOT NULL,
+                       Position INTEGER NOT NULL,
+                       PRIMARY KEY (PlaylistIdentifier, MediaIdentifier),
+                       FOREIGN KEY (PlaylistIdentifier) REFERENCES Playlists (Identifier) ON DELETE CASCADE,
+                       FOREIGN KEY (MediaIdentifier) REFERENCES DownloadedMedias (Identifier) ON DELETE CASCADE
+                   )""")
+
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS Settings
+                   (
+                       Identifier TEXT NOT NULL PRIMARY KEY,
+                       UserIdentifier TEXT NOT NULL,
+                       DefaultDownloadPath TEXT NOT NULL,
+                       DarkModeEnabled BOOLEAN NOT NULL,
+                       ScanFolderOnStartup BOOLEAN NOT NULL,
+                       FOREIGN KEY (UserIdentifier) REFERENCES Users (Identifier) ON DELETE CASCADE
+                   )""")
+
+    conn.commit()
+    conn.close()
+
+def create_user(username: str, password: str, identifier: str, created_at: str):
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""INSERT INTO Users (Username, PasswordHash, Identifier, CreatedAt) VALUES (?, ?, ?, ?)""", (username, password, identifier, created_at))
+    conn.commit()
+    conn.close()
+
+def connect_db():
+    conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+@app.get("/users/{identifier}")
+async def get_users(identifier: str):
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT Identifier, Username, CreatedAt FROM Users WHERE Identifier = ?", (identifier,))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if row is None:
+        raise fastapi.HTTPException(status_code=404, detail="User not found")
+
+    return dict(row)
+
+@app.post("/create-tables/{key}")
+async def create_table(key: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+    create_app_tables()
+
+@app.post("/create/user/{key}")
+async def handle_create_user_req(key: str, req: CreateUserRequest):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    identifier = str(uuid.uuid4())
+    username = req.username
+    password = req.password
+    created_at = datetime.now().isoformat()
+
+    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+    create_user(username, password_hash, identifier, created_at)

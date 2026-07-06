@@ -36,3 +36,7 @@ class SearchRequest(BaseModel):
     top: int = 5
     
     filters: SearchFilters = Field(default_factory=SearchFilters)
+
+class CreateUserRequest(BaseModel):
+    username: str
+    password: str
