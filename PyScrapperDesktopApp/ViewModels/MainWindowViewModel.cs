@@ -173,6 +173,17 @@ public partial class MainWindowViewModel : ObservableObject
         var bandcampScrapWindow = new ScrapWindowWithSearch("bandcamp");
         await bandcampScrapWindow.ShowDialog(_window);
     }
+
+    /// <summary>
+    /// Command method that is executed when the user clicks the button to open the Archive scrap window.
+    /// It checks if the application is running in a desktop environment and then creates and shows the ScrapWindowWithSearch with "archive" as the provider, allowing the user to interact with it and perform scraping operations specific to Archive without leaving the main window.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenArchiveScrapWindow()
+    {
+        var archiveScrapWindow = new ScrapWindowWithSearch("archive");
+        await archiveScrapWindow.ShowDialog(_window);
+    }
     
     /// <summary>
     /// Command method that is executed when the user clicks the button to show the application logs.

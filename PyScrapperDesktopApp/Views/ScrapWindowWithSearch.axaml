@@ -61,7 +61,7 @@
                 </StackPanel>
                 </Grid>
                 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left">
+        <ScrollViewer Name="ResultsScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left" IsVisible="False">
         <Grid Name="ResultsGrid" IsVisible="False">
                 <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"></RowDefinition>

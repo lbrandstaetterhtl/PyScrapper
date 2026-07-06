@@ -29,6 +29,7 @@ public partial class ScrapWindowWithSearch : Window
             {
                 SearchGrid.IsVisible = false;
                 ResultsGrid.IsVisible = true;
+                ResultsScrollViewer.IsVisible = true;
                 await vm.Search();
                 buttonCount++;
             }
@@ -40,6 +41,7 @@ public partial class ScrapWindowWithSearch : Window
             {
                 SearchGrid.IsVisible = true;
                 ResultsGrid.IsVisible = false;
+                ResultsScrollViewer.IsVisible = false;
                 buttonCount--;
             }
         };

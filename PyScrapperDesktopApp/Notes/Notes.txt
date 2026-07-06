@@ -3,5 +3,5 @@
 
 Next steps:
 add Archive window
-
+server db management not finished and client not adjusted
 https://deepwiki.com/videolan/libvlcsharp/2.3-best-practices-and-common-patterns

@@ -53,6 +53,7 @@
                         <MenuItem Header="From Suno" Command="{Binding OpenSunoScrapWindowCommand}"/>
                         <MenuItem Header="From Youtube" Command="{Binding OpenYoutubeScrapWindowCommand}"/>
                         <MenuItem Header="From Bandcamp" Command="{Binding OpenBandcampScrapWindowCommand}"/>
+                        <MenuItem Header="From Archive" Command="{Binding OpenArchiveScrapWindowCommand}"/>
                     </MenuItem>
                     <MenuItem Header="Open Media Player" Command="{Binding OpenMediaPlayerWindowCommand}"/>
                     <MenuItem Header="Playlists">
@@ -80,10 +81,13 @@
 
                 
                         <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="Auto, Auto, *" x:Name="PlaylistsGrid">
-                            <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                <DockPanel Grid.Row="0" HorizontalAlignment="Left" MinWidth="600">
                                 <TextBlock Text="Playlists" Classes="UIHeader" DockPanel.Dock="Top" HorizontalAlignment="Left"/>
                                 <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
-                                <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900">
+                                <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900" MinWidth="600">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
@@ -99,6 +103,7 @@
                                 </Border>
                                 <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
                             </DockPanel>
+                                
                             <ItemsControl Grid.Row="2" ItemsSource="{Binding Playlists}">
                                 
                                 <ItemsControl.Template>
@@ -119,7 +124,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Classes="CellInteractive" HorizontalAlignment="Left"
-                                                DoubleTapped="PlaylistDoubleClick" MaxWidth="900">
+                                                DoubleTapped="PlaylistDoubleClick" MaxWidth="900" MinWidth="600">
                                             <Border.ContextFlyout>
                                                 <MenuFlyout>
                                                     <MenuItem Header="Delete Playlist" Click="DeletePlaylist"/>
@@ -146,6 +151,8 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
                         </Grid>
 
                 <GridSplitter x:Name="MainSplitter" Grid.Row="1" Grid.Column="1"
@@ -153,10 +160,10 @@
                 
                 
                         <Grid Grid.Row="1" Grid.Column="2" RowDefinitions="Auto, Auto, *" x:Name="MediasGrid">
-                            <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
+                            <DockPanel Grid.Row="0" HorizontalAlignment="Left" MinWidth="600">
                                 <TextBlock Text="Downloaded Medias" DockPanel.Dock="Top" Classes="UIHeader" HorizontalAlignment="Left"/>
                                 <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
-                                <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900">
+                                <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900" MinWidth="600">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="ColId"/>
@@ -194,7 +201,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border DoubleTapped="MediaDoubleClick" Classes="CellInteractive"
-                                                HorizontalAlignment="Left" MaxWidth="900">
+                                                HorizontalAlignment="Left" MaxWidth="900" MinWidth="600">
                                             <Border.ContextFlyout>
                                                 <MenuFlyout>
                                                     <MenuItem Header="Add To Playlist">
