@@ -125,10 +125,13 @@ public class AppData : Interfaces.IAppDataService
 /// <param name="downloadPath"></param>
 /// <param name="isPlayable"></param>
 /// <param name="identifier"></param>
-public partial class DownloadedMedia(string url, string mediaType, DateTime downloadedAt, string downloadPath, bool isPlayable, string identifier) : ObservableObject
+public partial class DownloadedMedia(string userIdentifier, string url, string mediaType, DateTime downloadedAt, string downloadPath, bool isPlayable, string identifier) : ObservableObject
 {
     [ObservableProperty]
     private string _identifier = identifier;
+    
+    [ObservableProperty]
+    private string _userIdentifier = userIdentifier;
     
     [ObservableProperty]
     private string _title = string.Empty;

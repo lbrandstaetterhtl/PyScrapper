@@ -98,27 +98,27 @@ public class AudioPlayer : IDisposable
     /// <param name="playlist"></param>
     public void LoadPlaylist(Playlist playlist)
     {
-        if (playlist.Count == 1)
+        if (playlist.MediaIdentifiers.Count == 1)
         {
             PlaylistModeEnabled = false;
             _playlistTracks.Clear();
 
-            var media = AppData.PlayableMedias.FirstOrDefault(m => m.Id == playlist.MediaIds[0]);
+            var media = AppData.PlayableMedias.FirstOrDefault(m => m.Identifier == playlist.MediaIdentifiers[0]);
 
             if (media == null)
             {
-                var log = new Massage($"Playlist media with id {playlist.MediaIds[0]} is not playable or does not exist", DateTime.Now, "WARN");
+                var log = new Massage($"Playlist media with id {playlist.MediaIdentifiers[0]} is not playable or does not exist", DateTime.Now, "WARN");
                 _logger.LogNewMassage(log);
                 return;
             }
 
             _playlistTracks.Add(media);
         }
-        else if (playlist.Count > 1)
+        else if (playlist.MediaIdentifiers.Count > 1)
         {
             PlaylistModeEnabled = true;
 
-            var list = AppData.PlayableMedias.Where(m => playlist.MediaIds.Contains(m.Id)).ToList();
+            var list = AppData.PlayableMedias.Where(m => playlist.MediaIdentifiers.Contains(m.Identifier)).ToList();
 
             _originalPlaylistTracks.Clear();
             _originalPlaylistTracks.AddRange(list);

@@ -265,15 +265,15 @@ public class ApiClient : Interfaces.IApiClient
                         var userIdentifier = AppData.CurrentUser.Identifier;
                         var url = requestData.Url;
                         var mediaType = requestData.Mediatype;
-                        var downloadedFilePath = requestData.Download_path;
+                        var downloadFilePath = requestData.Download_path;
                         var downloadedAt = DateTime.Now;
-                        var isPlayable = File.Exists(downloadedFilePath) && await AudioPlayer.IsSupportedCodec(downloadedFilePath);
+                        var isPlayable = File.Exists(downloadFilePath) && await AudioPlayer.IsSupportedCodec(downloadFilePath);
                         
                         var createRequest = new CreateDownloadedMediaRequest()
                         {
                             UserIdentifier = userIdentifier,
                             Url = url,
-                            DownloadPath = downloadedFilePath,
+                            DownloadPath = downloadFilePath,
                             MediaType = mediaType,
                             DownloadedAt = downloadedAt.ToString("o"),
                             IsPlayable = isPlayable
@@ -283,10 +283,13 @@ public class ApiClient : Interfaces.IApiClient
                         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
                         var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/downloadedmedia", content);
                         var responseData = await response.Content.ReadAsStringAsync();
+                        string identifier = "";
                         
                         if (response.IsSuccessStatusCode)
                         {
-                            var deserializedResponse = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);
+                            var deserializedResponse = JsonSerializer.Deserialize<CreateResponse>(responseData, JsonOptions);
+                            
+                            identifier = deserializedResponse?.Identifier ?? "";
 
                             var log = new Massage($"Downloaded media created successfully: {deserializedResponse?.Message}", DateTime.Now, "INFO");
                             _logger.LogNewMassage(log);
@@ -298,9 +301,7 @@ public class ApiClient : Interfaces.IApiClient
                             _logger.LogNewMassage(log);
                         }
                         
-                        //TODO: Waiting on server implementation
-
-                        DownloadedMedia media = null;
+                        DownloadedMedia media = new(userIdentifier, url, mediaType, downloadedAt, downloadFilePath, isPlayable, identifier);
                         
                         AppData.AddDownloadedMedia(media);
                     }

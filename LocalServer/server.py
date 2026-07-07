@@ -487,6 +487,10 @@ async def create_table(key: str):
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
     create_app_tables()
 
+    return {
+        "message": "Tables created successfully"
+    }
+
 @app.post("/create/user/{key}")
 async def handle_create_user_req(key: str, req: CreateUserRequest):
     if key != ADMIN_KEY:
@@ -501,6 +505,11 @@ async def handle_create_user_req(key: str, req: CreateUserRequest):
 
     create_user(username, password_hash, identifier, created_at)
 
+    return {
+        "message": "User created successfully",
+        "identifier": identifier
+    }
+
 @app.post("/delete/user/{key}")
 async def handle_delete_user_req(key: str, identifier: str):
     if key != ADMIN_KEY:
@@ -512,6 +521,10 @@ async def handle_delete_user_req(key: str, identifier: str):
     cursor.execute("""DELETE FROM Users WHERE Identifier = ?""", (identifier,))
     conn.commit()
     conn.close()
+
+    return {
+        "message": "User deleted successfully"
+    }
 
 @app.post("/get/playlists/{identifier}")
 async def get_playlists(identifier: str):
@@ -542,6 +555,11 @@ async def handle_create_playlist_req(key: str, req: CreatePlaylistRequest):
     conn.commit()
     conn.close()
 
+    return {
+        "message": "Playlist created successfully",
+        "identifier": identifier
+    }
+
 @app.post("/delete/playlist/{key}")
 async def handle_delete_playlist_req(key: str, identifier: str):
     if key != ADMIN_KEY:
@@ -553,6 +571,10 @@ async def handle_delete_playlist_req(key: str, identifier: str):
     cursor.execute("""DELETE FROM Playlists WHERE Identifier = ?""", (identifier,))
     conn.commit()
     conn.close()
+
+    return {
+        "message": "Playlist deleted successfully"
+    }
 
 @app.post("/getall/playlists/{key}")
 async def get_all_playlists(key: str):
@@ -589,6 +611,11 @@ async def handle_create_downloaded_media_req(key: str, req: CreateDownloadedMedi
     conn.commit()
     conn.close()
 
+    return {
+        "message": "Downloaded media created successfully",
+        "identifier": identifier
+    }
+
 @app.post("/delete/downloadedmedia/{key}")
 async def handle_delete_downloaded_media_req(key: str, identifier: str):
     if key != ADMIN_KEY:
@@ -600,6 +627,10 @@ async def handle_delete_downloaded_media_req(key: str, identifier: str):
     cursor.execute("""DELETE FROM DownloadedMedias WHERE Identifier = ?""", (identifier,))
     conn.commit()
     conn.close()
+
+    return {
+        "message": "Downloaded media deleted successfully"
+    }
 
 @app.post("/get/downloadedmedia/{identifier}")
 async def get_downloaded_media(identifier: str):
@@ -648,6 +679,11 @@ async def handle_create_setting_req(key: str, req: CreateSettingsRequest):
     conn.commit()
     conn.close()
 
+    return {
+        "message": "Setting created successfully",
+        "identifier": identifier
+    }
+
 @app.post("/delete/setting/{key}")
 async def handle_delete_setting_req(key: str, identifier: str):
     if key != ADMIN_KEY:
@@ -659,6 +695,10 @@ async def handle_delete_setting_req(key: str, identifier: str):
     cursor.execute("""DELETE FROM Settings WHERE Identifier = ?""", (identifier,))
     conn.commit()
     conn.close()
+
+    return {
+        "message": "Setting deleted successfully"
+    }
 
 @app.post("/get/setting/{user_identifier}")
 async def get_setting(user_identifier: str):
@@ -714,6 +754,10 @@ async def handle_create_playlist_media_req(key: str, req: CreatePlaylistMediaReq
     conn.commit()
     conn.close()
 
+    return {
+        "message": "Media added to playlist successfully"
+    }
+
 @app.post("/delete/playlistmedia/{key}")
 async def handle_delete_playlist_media_req(key: str, req: DeletePlaylistMediaRequest):
     if key != ADMIN_KEY:
@@ -728,6 +772,10 @@ async def handle_delete_playlist_media_req(key: str, req: DeletePlaylistMediaReq
     cursor.execute("DELETE FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?", (playlist_identifier, media_identifier))
     conn.commit()
     conn.close()
+
+    return {
+        "message": "Media removed from playlist successfully",
+    }
 
 @app.post("/get/playlistmedias/{playlist_identifier}")
 async def get_playlist_medias(playlist_identifier: str):

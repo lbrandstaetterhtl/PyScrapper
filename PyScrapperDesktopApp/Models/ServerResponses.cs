@@ -111,3 +111,12 @@ public class HttpErrorResponse
     [JsonPropertyName("detail")] 
     public string Detail { get; set; }
 }
+
+public class CreateResponse
+{
+    [JsonPropertyName("message")]
+    public string Message { get; set; }
+    
+    [JsonPropertyName("identifier")]
+    public string Identifier { get; set; }
+}

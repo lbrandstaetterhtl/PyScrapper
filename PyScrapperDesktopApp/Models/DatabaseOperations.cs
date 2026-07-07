@@ -32,55 +32,10 @@ public abstract class DatabaseOperations
     {
         try
         {
-            if (!File.Exists(DatabaseFilePath))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(DatabaseFilePath));
-                File.Create(DatabaseFilePath).Close();
-            }
-            
-            Connection.Open();
-        
-            var create = Connection.CreateCommand();
-        
-            create.CommandText =
-                """
-                CREATE TABLE IF NOT EXISTS DownloadedMedias (
-                    Id INTEGER PRIMARY KEY,
-                    Identifier TEXT,
-                    Url TEXT,
-                    MediaType TEXT,
-                    DownloadedAt TEXT,
-                    DownloadPath TEXT,
-                    IsPlayable INTEGER
-                )STRICT;
-                """;
-
-            create.ExecuteNonQuery();
-            
-            var delete = Connection.CreateCommand();
-            delete.CommandText = "DELETE FROM DownloadedMedias;";
-            delete.ExecuteNonQuery();
-            
             foreach (var media in downloadedMedias)
             {
-                var insert = Connection.CreateCommand();
-                insert.CommandText =
-                    """
-                    INSERT INTO DownloadedMedias (Id, Identifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable)
-                    VALUES ($id, $identifier, $url, $mediaType, $downloadedAt, $downloadPath, $isPlayable);
-                    """;
-                insert.Parameters.AddWithValue("$id", media.Id);
-                insert.Parameters.AddWithValue("$identifier", media.Identifier);
-                insert.Parameters.AddWithValue("$url", media.Url);
-                insert.Parameters.AddWithValue("$mediaType", media.MediaType);
-                insert.Parameters.AddWithValue("$downloadedAt", media.DownloadedAt.ToString("o"));
-                insert.Parameters.AddWithValue("$downloadPath", media.DownloadPath);
-                insert.Parameters.AddWithValue("$isPlayable", media.IsPlayable);
                 
-                insert.ExecuteNonQuery();
             }
-            
-            Connection.Close();
         }
         catch (Exception exception)
         {
@@ -110,7 +65,10 @@ public abstract class DatabaseOperations
             {
                 foreach (var media in medias)
                 {
-                    
+                    if (media.UserIdentifier == AppData.CurrentUser.Identifier)
+                    {
+                        downloadedMedias.Add(media);
+                    }
                 }
             }
         }
@@ -121,75 +79,6 @@ public abstract class DatabaseOperations
         }
         
         return downloadedMedias;
-    }
-
-    /// <summary>
-    /// Loads the collection of downloaded media from the SQLite database, creating the necessary table if it doesn't exist and retrieving distinct records based on the Identifier to populate an ObservableCollection of DownloadedMedia objects without duplicates.
-    /// </summary>
-    /// <returns name="downloadedMedias"></returns>
-    public static async Task<ObservableCollection<DownloadedMedia>> LoadDownloadedMediasNoDuplicates()
-    {
-        try
-        {
-            if (!File.Exists(DatabaseFilePath))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(DatabaseFilePath));
-                File.Create(DatabaseFilePath).Close();
-            }
-            
-            var downloadedMedias = new ObservableCollection<DownloadedMedia>();
-
-            Connection.Open();
-
-            var create = Connection.CreateCommand();
-
-            create.CommandText =
-                """
-                CREATE TABLE IF NOT EXISTS DownloadedMedias (
-                    Id INTEGER PRIMARY KEY,
-                    Identifier TEXT,
-                    Url TEXT,
-                    MediaType TEXT,
-                    DownloadedAt TEXT,
-                    DownloadPath TEXT,
-                    IsPlayable INTEGER
-                )STRICT;
-                """;
-
-            create.ExecuteNonQuery();
-
-            var select = Connection.CreateCommand();
-            select.CommandText =
-                "SELECT DISTINCT Id, Identifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias GROUP BY Identifier;";
-
-            await using var reader = await select.ExecuteReaderAsync();
-            while (reader.Read())
-            {
-                var media = new DownloadedMedia(
-                    reader.GetString(2), // Url
-                    reader.GetString(3), // MediaType
-                    DateTime.Parse(reader.GetString(4)), // DownloadedAt
-                    reader.GetString(5), // DownloadPath
-                    reader.GetBoolean(6), // IsPlayable
-                    reader.GetString(1) // Identifier
-                )
-                {
-                    Id = reader.GetInt32(0) // Id
-                };
-
-                downloadedMedias.Add(media);
-            }
-
-            Connection.Close();
-
-            return downloadedMedias;
-        }
-        catch (Exception exception)
-        {
-            var errorLog = new Massage("Error while loading Medias" + exception.Message, DateTime.Now, "ERROR");
-            Logger.LogNewMassage(errorLog);
-            return null;
-        }
     }
     
     /// <summary>
