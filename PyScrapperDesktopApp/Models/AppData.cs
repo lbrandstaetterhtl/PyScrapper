@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
+using DotNetEnv;
 using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.Models;
@@ -35,6 +36,8 @@ public class AppData : Interfaces.IAppDataService
     public static readonly ObservableCollection<Playlist> Playlists = new();
     public static User CurrentUser = null;
     public static Settings Settings = new("default");
+    public static List<PlaylistMedia> PlaylistMedias = new();
+    public static string AdminKey;
     public static string PyScrapperPath { get;} = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
     public static string AppLogsPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
     public static string ServerLogsPath { get; set; } = Path.Combine(PyScrapperPath, "LocalServer", "logs");
@@ -54,6 +57,12 @@ public class AppData : Interfaces.IAppDataService
 
     public static List<string> ValidMediaTypes = [".mp3", ".mp4"];
     public static List<string> ValidProviders = ["suno", "youtube", "bandcamp", "archive"];
+    
+    public AppData()
+    {
+        Env.Load(Path.Combine(PyScrapperPath, ".env"));
+        AdminKey = Environment.GetEnvironmentVariable("ADMIN_KEY") ?? throw new Exception("ADMIN_KEY not found in .env file.");
+    }
     
     /// <summary>
     /// Adds a downloaded media to the DownloadedMedias collection and, if it's playable, also to the PlayableMedias collection.
@@ -370,8 +379,15 @@ public class MediaFilter
     }
 }
 
-public class User(string username, string identifier)
+public abstract class User(string username, string identifier)
 {
     public string Username { get; set; } = username;
     public string Identifier { get; set; } = identifier;
+}
+
+public class PlaylistMedia(string mediaIdentifier, string playlistIdentifier, int position)
+{
+    public string MediaIdentifier { get; set; } = mediaIdentifier;
+    public string PlaylistIdentifier { get; set; } = playlistIdentifier;
+    public int Position { get; set; } = position;
 }

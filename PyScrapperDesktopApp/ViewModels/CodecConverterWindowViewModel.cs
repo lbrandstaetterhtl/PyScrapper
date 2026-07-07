@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -176,12 +177,19 @@ public partial class CodecConverterWindowViewModel : ObservableObject
             
             var log = new Massage("Conversion completed successfully!", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
+
+            var req = new CreateDownloadedMediaRequest()
+            {
+                UserIdentifier = AppData.CurrentUser.Identifier,
+                Url = "N/A",
+                DownloadPath = OutputFilePath,
+                MediaType = OutputFilePath.Split('.')[^1],
+                DownloadedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                IsPlayable = true
+            };
+
+            DownloadedMedia newMedia = await Database.CreateDownloadedMedia(req);
             
-            var guid = Guid.NewGuid().ToString();
-            
-            var newMedia = new DownloadedMedia("N/A", ".mp4", DateTime.Now, OutputFilePath, true, guid);
-            newMedia.SetHighestId(AppData.DownloadedMedias);
-            newMedia.SetTitle();
             AppData.AddDownloadedMedia(newMedia);
             
             _window.Close(true);

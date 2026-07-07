@@ -278,30 +278,8 @@ public class ApiClient : Interfaces.IApiClient
                             DownloadedAt = downloadedAt.ToString("o"),
                             IsPlayable = isPlayable
                         };
-
-                        var jsonContent = JsonSerializer.Serialize(createRequest, JsonOptions);
-                        var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-                        var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/downloadedmedia", content);
-                        var responseData = await response.Content.ReadAsStringAsync();
-                        string identifier = "";
                         
-                        if (response.IsSuccessStatusCode)
-                        {
-                            var deserializedResponse = JsonSerializer.Deserialize<CreateResponse>(responseData, JsonOptions);
-                            
-                            identifier = deserializedResponse?.Identifier ?? "";
-
-                            var log = new Massage($"Downloaded media created successfully: {deserializedResponse?.Message}", DateTime.Now, "INFO");
-                            _logger.LogNewMassage(log);
-                        }
-                        else
-                        {
-                            var deserializedError = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
-                            var log = new Massage($"Error creating downloaded media: " + deserializedError?.Detail, DateTime.Now, "ERROR");
-                            _logger.LogNewMassage(log);
-                        }
-                        
-                        DownloadedMedia media = new(userIdentifier, url, mediaType, downloadedAt, downloadFilePath, isPlayable, identifier);
+                        DownloadedMedia media = await Database.CreateDownloadedMedia(createRequest);
                         
                         AppData.AddDownloadedMedia(media);
                     }

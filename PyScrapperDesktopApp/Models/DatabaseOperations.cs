@@ -8,9 +8,302 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
+using SQLitePCL;
 
 namespace PyScrapperDesktopApp.Models;
 
+public class Database
+{
+    private static readonly AppLogger _logger = new();
+    
+    public static async Task<ObservableCollection<DownloadedMedia>> LoadDownloadedMediasFromApi()
+    {
+        try
+        {
+            var downloadedMedias = new ObservableCollection<DownloadedMedia>();
+
+            using var client = new HttpClient();
+
+            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getall/downloadedmedias");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var medias = JsonSerializer.Deserialize<List<DownloadedMedia>>(json);
+
+                if (medias != null)
+                {
+                    foreach (var media in medias)
+                    {
+                        if (media.UserIdentifier == AppData.CurrentUser.Identifier)
+                        {
+                            downloadedMedias.Add(media);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+
+            return downloadedMedias;
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while loading downloaded medias from API: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            throw;
+        }
+    }
+    
+    public static async Task<ObservableCollection<Playlist>> LoadPlaylistsFromApi()
+    {
+        try
+        {
+            var playlists = new ObservableCollection<Playlist>();
+
+            using var client = new HttpClient();
+
+            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getall/playlists");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var apiPlaylists = JsonSerializer.Deserialize<List<Playlist>>(json);
+
+                if (apiPlaylists != null)
+                {
+                    foreach (var playlist in apiPlaylists)
+                    {
+                        if (playlist.UserIdentifier == AppData.CurrentUser.Identifier)
+                        {
+                            playlists.Add(playlist);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+
+            return playlists;
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while loading playlists from API: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            throw;
+        }
+    }
+    
+    public static async Task<Settings> LoadSettingsFromApi()
+    {
+        try
+        {
+            using var client = new HttpClient();
+
+            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/get/settings/{AppData.CurrentUser.Identifier}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var settings = JsonSerializer.Deserialize<Settings>(json);
+
+                if (settings != null)
+                {
+                    return settings;
+                }
+                else
+                {
+                    throw new Exception("Failed to deserialize settings from API response.");
+                }
+            }
+            else
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while loading settings from API: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            throw;
+        }
+    }
+    
+    public static async Task<List<PlaylistMedia>> LoadPlaylistMediaFromApi(string playlistIdentifier)
+    {
+        try
+        {
+            var playlistMediaList = new List<PlaylistMedia>();
+
+            using var client = new HttpClient();
+
+            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/get/playlistmedia/{playlistIdentifier}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var apiPlaylistMedia = JsonSerializer.Deserialize<List<PlaylistMedia>>(json);
+
+                if (apiPlaylistMedia != null)
+                {
+                    playlistMediaList.AddRange(apiPlaylistMedia);
+                }
+            }
+            else
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+
+            return playlistMediaList;
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while loading playlist media from API: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            throw;
+        }
+    }
+
+    public async Task<List<PlaylistMedia>> LoadAllPlaylistMedias(string playlistIdentifier, List<Playlist> playlists)
+    {
+        List<PlaylistMedia> allPlaylistMedias = new List<PlaylistMedia>();
+        foreach (var playlist in playlists)
+        {
+            var media = await LoadPlaylistMediaFromApi(playlist.Identifier);
+            allPlaylistMedias.AddRange(media);
+        }
+        
+        return allPlaylistMedias;
+    }
+
+    public static async Task<DownloadedMedia> CreateDownloadedMedia(CreateDownloadedMediaRequest req)
+    {
+        try
+        {
+            using var client = new HttpClient();
+
+            var jsonContent = JsonSerializer.Serialize(req);
+            var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+
+            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/create/downloadedmedia/{AppData.AdminKey}", content);
+
+            DownloadedMedia result;
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+            else
+            {
+                var log = new Massage("Downloaded media created successfully via API.", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var deserialized = JsonSerializer.Deserialize<CreateResponse>(json);
+                
+                string identifier = deserialized?.Identifier ?? throw new Exception("Failed to deserialize identifier from API response.");
+                
+                DateTime downloadedAt = DateTime.Parse(req.DownloadedAt);
+                
+                result = new DownloadedMedia(AppData.CurrentUser.Identifier, req.Url, req.MediaType, downloadedAt, req.DownloadPath, req.IsPlayable, identifier);
+                
+                return result;
+            }
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while creating downloaded media via API: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            throw;
+        }
+    }
+    
+    public static async Task<Playlist> CreatePlaylist(CreatePlaylistRequest req)
+    {
+        try
+        {
+            using var client = new HttpClient();
+
+            var jsonContent = JsonSerializer.Serialize(req);
+            var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+
+            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/create/playlist/{AppData.AdminKey}", content);
+
+            Playlist result;
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+            else
+            {
+                var log = new Massage("Playlist created successfully via API.", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var deserialized = JsonSerializer.Deserialize<CreateResponse>(json);
+                
+                string identifier = deserialized?.Identifier ?? throw new Exception("Failed to deserialize identifier from API response.");
+                
+                result = new Playlist(req.Name, req.Description, identifier, AppData.CurrentUser.Identifier);
+                
+                return result;
+            }
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while creating playlist via API: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            throw;
+        }
+    }
+    
+    public static async Task<PlaylistMedia> CreatePlaylistMedia(CreatePlaylistMediaRequest req)
+    {
+        try
+        {
+            using var client = new HttpClient();
+
+            var jsonContent = JsonSerializer.Serialize(req);
+            var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+
+            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/create/playlistmedia/{AppData.AdminKey}", content);
+
+            PlaylistMedia result;
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+            else
+            {
+                var log = new Massage("Playlist media created successfully via API.", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+                
+                var json = await response.Content.ReadAsStringAsync();
+                var deserialized = JsonSerializer.Deserialize<CreatePlaylistMediaResponse>(json);
+                
+                int position = deserialized?.Position ?? throw new Exception("Failed to deserialize position from API response.");
+                
+                result = new PlaylistMedia(req.PlaylistIdentifier, req.MediaIdentifier, position);
+                
+                return result;
+            }
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while creating playlist media via API: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            throw;
+        }
+    }
+}
+
+/*
 /// <summary>
 /// Class responsible for handling database operations related to downloaded media, including saving and loading media information to and from a SQLite database.
 /// </summary>
@@ -333,3 +626,4 @@ public abstract class DatabaseOperations
         }
     }
 }
+*/

@@ -17,8 +17,6 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _playlistName;
     
-    private readonly List<int> _selectedMediaIds;
-    
     [ObservableProperty]
     private List<DownloadedMedia> _selectedMedias;
     
@@ -40,7 +38,6 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
     {
         AvailableMedias = new List<DownloadedMedia>(AppData.DownloadedMedias);
         SelectedMedias = new List<DownloadedMedia>();
-        _selectedMediaIds = new List<int>();
         _dialogService = dialogService;
     }
     
@@ -58,20 +55,32 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
             await _dialogService.ShowAlertAsync("Playlist name cannot be empty.");
             return;
         }
-        
-        _selectedMediaIds.Clear();
-        foreach (var media in SelectedMedias)
+
+        var req = new CreatePlaylistRequest()
         {
-            _selectedMediaIds.Add(media.Id);
-        }
-        
-        var newPlaylist = new Playlist(_selectedMediaIds, PlaylistName, Description ?? "");
-        newPlaylist.SetHighestId(AppData.Playlists);
-        newPlaylist.SetPlayableMediaIds(AppData.PlayableMedias);
+            Name = PlaylistName,
+            Description = Description ?? string.Empty,
+            UserIdentifier = AppData.CurrentUser.Identifier
+        };
+
+        var newPlaylist = await Database.CreatePlaylist(req);
         
         AppData.AddPlaylist(newPlaylist);
         
         await _dialogService.ShowAlertAsync("Playlist created successfully!");
+
+        foreach (var media in SelectedMedias)
+        {
+            var reqMedia = new CreatePlaylistMediaRequest()
+            {
+                PlaylistIdentifier = newPlaylist.Identifier,
+                MediaIdentifier = media.Identifier
+            };
+            
+            var newPlaylistMedia = await Database.CreatePlaylistMedia(reqMedia);
+            
+            AppData.PlaylistMedias.Add(newPlaylistMedia);
+        }
         
         SelectedMedias = new List<DownloadedMedia>();
         PlaylistName = string.Empty;

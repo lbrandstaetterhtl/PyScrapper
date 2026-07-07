@@ -60,3 +60,24 @@ public class CreateDownloadedMediaRequest
     [JsonPropertyName("IsPlayable")]
     public bool IsPlayable { get; set; }
 }
+
+public class CreatePlaylistRequest
+{
+    [JsonPropertyName("UserIdentifier")]
+    public string UserIdentifier { get; set; }
+    
+    [JsonPropertyName("Name")]
+    public string Name { get; set; }
+    
+    [JsonPropertyName("Description")]
+    public string Description { get; set; }
+}
+
+public class CreatePlaylistMediaRequest
+{
+    [JsonPropertyName("PlaylistIdentifier")]
+    public string PlaylistIdentifier { get; set; }
+    
+    [JsonPropertyName("MediaIdentifier")]
+    public string MediaIdentifier { get; set; }
+}

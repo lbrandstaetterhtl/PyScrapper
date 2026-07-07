@@ -128,26 +128,28 @@ public partial class MainWindowViewModel : ObservableObject
         
         if (!File.Exists(path))
         {
-
             return;
         }
         
         string mediaType = Path.GetExtension(path);
-        
-        var guid = Guid.NewGuid().ToString();
-        var media = new DownloadedMedia("N/A", mediaType, DateTime.Now, path, true, guid);
-        media.SetTitle();
-        media.SetHighestId(AppData.DownloadedMedias);
+
+        var req = new CreateDownloadedMediaRequest()
+        {
+            UserIdentifier = AppData.CurrentUser.Identifier,
+            DownloadPath = path,
+            MediaType = mediaType,
+            Url = "N/A",
+            IsPlayable = true,
+            DownloadedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+        };
+
+        var media = await Database.CreateDownloadedMedia(req);
         AppData.AddDownloadedMedia(media);
 
-        List<int> mediaIds = [media.Id];
-
-        // "NPLL" = No Playlist
-        var playlist = new Playlist(mediaIds, "NPLL", "");
+        //TODO: So many things todo till it will work
 
         if (_window is MainWindow mainWindow)
         {
-            mainWindow.MediaPlayer.LoadAndPlay(playlist);
         }
     }
 
@@ -271,12 +273,12 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void SortById()
     {
-        var sortedList = AppData.DownloadedMedias.OrderBy(m => m.Id).ToList();
+        /*var sortedList = AppData.DownloadedMedias.OrderBy(m => m.Id).ToList();
         AppData.DownloadedMedias.Clear();
         foreach (var media in sortedList)
         {
             AppData.DownloadedMedias.Add(media);
-        }
+        }*/
     }
 
     /// <summary>

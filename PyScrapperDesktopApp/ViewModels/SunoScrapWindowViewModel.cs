@@ -94,9 +94,7 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                         isPlayable = File.Exists(downloadedFilePath);
                     }
 
-                    var media = new DownloadedMedia(SunoUrl, SelectedMediaType, DateTime.Now, downloadedFilePath,
-                        isPlayable, identifier);
-                    media.SetHighestId(AppData.DownloadedMedias);
+                    var media = Database.CreateDownloadedMedia()
                     media.SetTitle();
 
                     AppData.AddDownloadedMedia(media);

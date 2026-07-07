@@ -120,3 +120,12 @@ public class CreateResponse
     [JsonPropertyName("identifier")]
     public string Identifier { get; set; }
 }
+
+public class CreatePlaylistMediaResponse
+{
+    [JsonPropertyName("message")]
+    public string Message { get; set; }
+    
+    [JsonPropertyName("position")]
+    public int Position { get; set; }
+}

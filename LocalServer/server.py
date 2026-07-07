@@ -755,7 +755,8 @@ async def handle_create_playlist_media_req(key: str, req: CreatePlaylistMediaReq
     conn.close()
 
     return {
-        "message": "Media added to playlist successfully"
+        "message": "Media added to playlist successfully",
+        "position": new_position
     }
 
 @app.post("/delete/playlistmedia/{key}")
