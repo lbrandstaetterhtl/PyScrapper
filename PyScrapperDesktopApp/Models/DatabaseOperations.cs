@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -95,48 +96,30 @@ public abstract class DatabaseOperations
     public static async Task<ObservableCollection<DownloadedMedia>> LoadDownloadedMedias()
     {
         var downloadedMedias = new ObservableCollection<DownloadedMedia>();
-        
-        Connection.Open();
-        
-        var create = Connection.CreateCommand();
-        
-        create.CommandText =
-            """
-            CREATE TABLE IF NOT EXISTS DownloadedMedias (
-                Id INTEGER PRIMARY KEY,
-                Identifier TEXT,
-                Url TEXT,
-                MediaType TEXT,
-                DownloadedAt TEXT,
-                DownloadPath TEXT,
-                IsPlayable INTEGER
-            )STRICT;
-            """;
 
-        create.ExecuteNonQuery();
+        using var client = new HttpClient();
         
-        var select = Connection.CreateCommand();
-        select.CommandText = "SELECT Id, Identifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias;";
-
-        await using var reader = await select.ExecuteReaderAsync();
-        while (reader.Read())
+        var response = await client.GetAsync("http://127.0.0.0:8765/getall/downloadedmedias/pyscrapper_K4i1MwQkWUVibOArEC6WtbRibTPlCBYR");
+        
+        if (response.IsSuccessStatusCode)
         {
-            var media = new DownloadedMedia(
-                reader.GetString(2), // Url
-                reader.GetString(3), // MediaType
-                DateTime.Parse(reader.GetString(4)), // DownloadedAt
-                reader.GetString(5), // DownloadPath
-                reader.GetBoolean(6), // IsPlayable
-                reader.GetString(1) // Identifier
-            )
+            var json = await response.Content.ReadAsStringAsync();
+            var medias = JsonSerializer.Deserialize<List<DownloadedMedia>>(json);
+
+            if (medias != null)
             {
-                Id = reader.GetInt32(0) // Id
-            };
-                
-            downloadedMedias.Add(media);
+                foreach (var media in medias)
+                {
+                    
+                }
+            }
+        }
+        else
+        {
+            var log = new Massage("Error while loading downloaded medias from API: " + response.ReasonPhrase, DateTime.Now, "ERROR");
+            Logger.LogNewMassage(log);
         }
         
-        Connection.Close();
         return downloadedMedias;
     }
 

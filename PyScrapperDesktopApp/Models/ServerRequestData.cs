@@ -39,3 +39,24 @@ public class SearchRequestData
     [JsonPropertyName("top")]
     public int Top { get; set; }
 }
+
+public class CreateDownloadedMediaRequest
+{
+    [JsonPropertyName("UserIdentifier")]
+    public string UserIdentifier { get; set; }
+    
+    [JsonPropertyName("Url")]
+    public string Url { get; set; }
+    
+    [JsonPropertyName("DownloadPath")]
+    public string DownloadPath { get; set; }
+    
+    [JsonPropertyName("MediaType")]
+    public string MediaType { get; set; }
+    
+    [JsonPropertyName("DownloadedAt")]
+    public string DownloadedAt { get; set; }
+    
+    [JsonPropertyName("IsPlayable")]
+    public bool IsPlayable { get; set; }
+}

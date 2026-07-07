@@ -40,3 +40,32 @@ class SearchRequest(BaseModel):
 class CreateUserRequest(BaseModel):
     username: str
     password: str
+
+class CreatePlaylistRequest(BaseModel):
+    user_identifier: str
+    name: str
+    description: Optional[str] = None
+
+class CreateDownloadedMediaRequest(BaseModel):
+    user_identifier: str
+    download_path: str
+    downloaded_at: str
+    is_playable: bool
+    url: str
+    mediatype: str
+
+class CreateSettingsRequest(BaseModel):
+    user_identifier: str
+    default_download_path: str
+    server_url: str
+    dark_mode_enabled: bool
+    scan_folder_on_startup: bool
+
+class CreatePlaylistMediaRequest(BaseModel):
+    playlist_identifier: str
+    media_identifier: str
+    position: int
+
+class DeletePlaylistMediaRequest(BaseModel):
+    playlist_identifier: str
+    media_identifier: str

@@ -21,6 +21,7 @@ public class AppData : Interfaces.IAppDataService
     ObservableCollection<DownloadedMedia> Interfaces.IAppDataService.DownloadedMedias => DownloadedMedias;
     ObservableCollection<Playlist> Interfaces.IAppDataService.Playlists => Playlists;
     Settings Interfaces.IAppDataService.Settings => Settings;
+    
 
     void Interfaces.IAppDataService.AddDownloadedMedia(DownloadedMedia media) => AddDownloadedMedia(media);
     void Interfaces.IAppDataService.RemoveDownloadedMedia(DownloadedMedia media) => RemoveDownloadedMedia(media);
@@ -32,12 +33,13 @@ public class AppData : Interfaces.IAppDataService
     public static readonly ObservableCollection<DownloadedMedia> PlayableMedias = new();
     public static bool FilterEnabled = false;
     public static readonly ObservableCollection<Playlist> Playlists = new();
+    public static User CurrentUser = null;
+    public static Settings Settings = new("default");
     public static string PyScrapperPath { get;} = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
     public static string AppLogsPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
     public static string ServerLogsPath { get; set; } = Path.Combine(PyScrapperPath, "LocalServer", "logs");
     public static string DataPath { get; set; } =  Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "data");
     public static string AssetPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "Assets");
-    public static Settings Settings = new();
     public static readonly List<FilePickerFileType> FileTypes = 
     [
         new ("Media Files") 
@@ -126,9 +128,6 @@ public class AppData : Interfaces.IAppDataService
 public partial class DownloadedMedia(string url, string mediaType, DateTime downloadedAt, string downloadPath, bool isPlayable, string identifier) : ObservableObject
 {
     [ObservableProperty]
-    private int _id;
-    
-    [ObservableProperty]
     private string _identifier = identifier;
     
     [ObservableProperty]
@@ -150,22 +149,6 @@ public partial class DownloadedMedia(string url, string mediaType, DateTime down
     private bool _isPlayable = isPlayable;
 
     private static readonly AppLogger _logger = new();
-    
-    /// <summary>
-    /// Sets the id property to the highest existing id in the provided collection of downloaded medias plus one, ensuring a unique identifier for each media item.
-    /// </summary>
-    /// <param name="medias"></param>
-    public void SetHighestId(ObservableCollection<DownloadedMedia> medias)
-    {
-        if (medias.Count > 0)
-        {
-            Id = medias.Max(m => m.Id) + 1;
-        }
-        else
-        {
-            Id = 1;
-        }
-    }
 
     /// <summary>
     /// Sets the title property of the media item to the file name without the extension from the download path, providing a user-friendly name for the media item based on its file name.
@@ -228,82 +211,20 @@ public partial class DownloadedMedia(string url, string mediaType, DateTime down
 /// </summary>
 /// <param name="mediaIds"></param>
 /// <param name="name"></param>
-public class Playlist(List<int> mediaIds, string name, string description)
+public class Playlist(string name, string description, string identifier, string userIdentifier)
 {
-    public int Id { get; set; }
+    public string Identifier { get; set; } = identifier;
+    public string UserIdentifier { get; set; } = userIdentifier;
     public string Name { get; set; } = name;
     public string? Description { get; set; } = description;
-    public List<int> MediaIds { get; set; } = mediaIds;
-    public List<int> PlayableMediaIds { get; set; } = new();
-    public int Count => MediaIds.Count;
+    public List<string> MediaIdentifiers { get; set; } = new();
     
-    /// <summary>
-    /// Sets the id property to the highest existing id in the provided collection of playlists plus one, ensuring a unique identifier for each playlist item.
-    /// </summary>
-    /// <param name="playlists"></param>
-    public void SetHighestId(ObservableCollection<Playlist> playlists)
+    public void SetMediaIdentifiers()
     {
-        if (playlists.Count > 0)
+        MediaIdentifiers = new List<string>();
+        foreach (var media in AppData.DownloadedMedias)
         {
-            Id = playlists.Max(p => p.Id) + 1;
-        }
-        else
-        {
-            Id = 1;
-        }
-    }
-    
-    /// <summary>
-    /// Populates the PlayableMediaIds list with the IDs of media items that are both in the MediaIds list and in the provided collection of playable media items.
-    /// </summary>
-    /// <param name="playableMedias"></param>
-    public void SetPlayableMediaIds(ObservableCollection<DownloadedMedia> playableMedias)
-    {
-        foreach (var mediaId in MediaIds)
-        {
-            var media = playableMedias.FirstOrDefault(m => m.Id == mediaId);
-
-            if (media is not null)
-            {
-                PlayableMediaIds.Add(media.Id);
-            }
-        }
-    }
-    
-    /// <summary>
-    /// Adds a media ID to the MediaIds list if it is not already present, and updates the Count property accordingly.
-    /// It also ensures that the playlist is updated in the Playlists collection to reflect the changes.
-    /// </summary>
-    /// <param name="mediaId"></param>
-    public void AddMedia(int mediaId)
-    {
-        if (!MediaIds.Contains(mediaId))
-        {
-            var index = AppData.Playlists.IndexOf(this);
-            
-            MediaIds.Add(mediaId);
-            
-            AppData.Playlists.Insert(index, this);
-            AppData.Playlists.RemoveAt(index+1);
-        }
-    }
-    
-    /// <summary>
-    /// Removes a media ID from the MediaIds list if it is present, and updates the Count property accordingly.
-    /// It also ensures that the playlist is updated in the Playlists collection to reflect the changes.
-    /// Removing a media ID from the playlist will disassociate that media item from the playlist, but it will not delete the media item itself from the DownloadedMedias collection, allowing the user to maintain their downloaded media while managing their playlists effectively.
-    /// </summary>
-    /// <param name="mediaId"></param>
-    public void RemoveMedia(int mediaId)
-    {
-        if (MediaIds.Contains(mediaId))
-        {
-            var index = AppData.Playlists.IndexOf(this);
-            
-            MediaIds.Remove(mediaId);
-            
-            AppData.Playlists.Insert(index, this);
-            AppData.Playlists.RemoveAt(index+1);
+                MediaIdentifiers.Add(media.Identifier);
         }
     }
 }
@@ -311,9 +232,9 @@ public class Playlist(List<int> mediaIds, string name, string description)
 /// <summary>
 /// Class representing the application settings, which includes properties for the download path and server URL, as well as a method to set default settings for the application.
 /// </summary>
-public class Settings
+public class Settings(string identifier)
 {
-    public int Id = 1;
+    public string Identifier { get; set; } = identifier;
     public string? DownloadPath { get; set; }
     public string ServerUrl => "http://127.0.0.1:8765";
     public bool DarkModeEnabled { get; set; }
@@ -444,4 +365,10 @@ public class MediaFilter
         
         return filter;
     }
+}
+
+public class User(string username, string identifier)
+{
+    public string Username { get; set; } = username;
+    public string Identifier { get; set; } = identifier;
 }

@@ -2,7 +2,7 @@
 
 import fastapi
 from PythonModule.models.settings import PROGRESSDICT
-from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest, CreateUserRequest
+from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest, CreateUserRequest, CreatePlaylistRequest, CreateDownloadedMediaRequest, CreateSettingsRequest, CreatePlaylistMediaRequest, DeletePlaylistMediaRequest
 from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
 from PythonModule import Session
 from dotenv import load_dotenv
@@ -372,7 +372,7 @@ ConvertTo-Json
 
     return [{"pid": int(p["ProcessId"]), "name": p["Name"]} for p in data]
 
-#db management
+#---------------- DB management ------------------------
 
 def create_app_tables():
 
@@ -429,6 +429,7 @@ def create_app_tables():
                        Identifier TEXT NOT NULL PRIMARY KEY,
                        UserIdentifier TEXT NOT NULL,
                        DefaultDownloadPath TEXT NOT NULL,
+                       ServerUrl TEXT NOT NULL,
                        DarkModeEnabled BOOLEAN NOT NULL,
                        ScanFolderOnStartup BOOLEAN NOT NULL,
                        FOREIGN KEY (UserIdentifier) REFERENCES Users (Identifier) ON DELETE CASCADE
@@ -451,7 +452,7 @@ def connect_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.get("/users/{identifier}")
+@app.post("/get/user/{identifier}")
 async def get_users(identifier: str):
     conn = connect_db()
     cursor = conn.cursor()
@@ -465,6 +466,20 @@ async def get_users(identifier: str):
         raise fastapi.HTTPException(status_code=404, detail="User not found")
 
     return dict(row)
+
+@app.post("/getall/users/{key}")
+async def get_all_users(key: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT Identifier, Username, CreatedAt FROM Users")
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
 
 @app.post("/create-tables/{key}")
 async def create_table(key: str):
@@ -485,3 +500,242 @@ async def handle_create_user_req(key: str, req: CreateUserRequest):
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
     create_user(username, password_hash, identifier, created_at)
+
+@app.post("/delete/user/{key}")
+async def handle_delete_user_req(key: str, identifier: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""DELETE FROM Users WHERE Identifier = ?""", (identifier,))
+    conn.commit()
+    conn.close()
+
+@app.post("/get/playlists/{identifier}")
+async def get_playlists(identifier: str):
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT Identifier, Name, Description FROM Playlists WHERE Identifier = ?", (identifier,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+@app.post("/create/playlist/{key}")
+async def handle_create_playlist_req(key: str, req: CreatePlaylistRequest):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    identifier = str(uuid.uuid4())
+
+    user_identifier = req.user_identifier
+    name = req.name
+    description = req.description
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""INSERT INTO Playlists (Identifier, UserIdentifier, Name, Description) VALUES (?, ?, ?, ?)""", (identifier, user_identifier, name, description))
+    conn.commit()
+    conn.close()
+
+@app.post("/delete/playlist/{key}")
+async def handle_delete_playlist_req(key: str, identifier: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""DELETE FROM Playlists WHERE Identifier = ?""", (identifier,))
+    conn.commit()
+    conn.close()
+
+@app.post("/getall/playlists/{key}")
+async def get_all_playlists(key: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT Identifier, UserIdentifier, Name, Description FROM Playlists")
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+@app.post("/create/downloadedmedia/{key}")
+async def handle_create_downloaded_media_req(key: str, req: CreateDownloadedMediaRequest):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    identifier = str(uuid.uuid4())
+
+    user_identifier = req.user_identifier
+    download_path = req.download_path
+    downloaded_at = req.downloaded_at
+    is_playable = req.is_playable
+    url = req.url
+    mediatype = req.mediatype
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""INSERT INTO DownloadedMedias (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable) VALUES (?, ?, ?, ?, ?, ?, ?)""", (identifier, user_identifier, url, mediatype, downloaded_at, download_path, is_playable))
+    conn.commit()
+    conn.close()
+
+@app.post("/delete/downloadedmedia/{key}")
+async def handle_delete_downloaded_media_req(key: str, identifier: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""DELETE FROM DownloadedMedias WHERE Identifier = ?""", (identifier,))
+    conn.commit()
+    conn.close()
+
+@app.post("/get/downloadedmedia/{identifier}")
+async def get_downloaded_media(identifier: str):
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias WHERE Identifier = ?", (identifier,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row is None:
+        raise fastapi.HTTPException(status_code=404, detail="Downloaded media not found")
+
+    return dict(row)
+
+@app.post("/getall/downloadedmedia/{key}")
+async def get_all_downloaded_media(key: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias")
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+@app.post("/create/setting/{key}")
+async def handle_create_setting_req(key: str, req: CreateSettingsRequest):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    identifier = str(uuid.uuid4())
+
+    user_identifier = req.user_identifier
+    default_download_path = req.default_download_path
+    dark_mode_enabled = req.dark_mode_enabled
+    scan_folder_on_startup = req.scan_folder_on_startup
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""INSERT INTO Settings (Identifier, UserIdentifier, DefaultDownloadPath, DarkModeEnabled, ScanFolderOnStartup) VALUES (?, ?, ?, ?, ?)""", (identifier, user_identifier, default_download_path, dark_mode_enabled, scan_folder_on_startup))
+    conn.commit()
+    conn.close()
+
+@app.post("/delete/setting/{key}")
+async def handle_delete_setting_req(key: str, identifier: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""DELETE FROM Settings WHERE Identifier = ?""", (identifier,))
+    conn.commit()
+    conn.close()
+
+@app.post("/get/setting/{user_identifier}")
+async def get_setting(user_identifier: str):
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT Identifier, UserIdentifier, DefaultDownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings WHERE UserIdentifier = ?", (user_identifier,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row is None:
+        raise fastapi.HTTPException(status_code=404, detail="Setting not found")
+
+    return dict(row)
+
+@app.post("/getall/settings/{key}")
+async def get_all_settings(key: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT Identifier, UserIdentifier, DefaultDownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings")
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+@app.post("/create/playlistmedia/{key}")
+async def handle_create_playlist_media_req(key: str, req: CreatePlaylistMediaRequest):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    playlist_identifier = req.playlist_identifier
+    media_identifier = req.media_identifier
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?", (playlist_identifier, media_identifier))
+    count = cursor.fetchone()[0]
+
+    if count > 0:
+        raise fastapi.HTTPException(status_code=400, detail="Media already exists in the playlist")
+
+    cursor.execute("SELECT MAX(Position) FROM PlaylistMedias WHERE PlaylistIdentifier = ?", (playlist_identifier,))
+    max_position_row = cursor.fetchone()
+    max_position = max_position_row[0] if max_position_row[0] is not None else 0
+    new_position = max_position + 1
+
+    cursor.execute("""INSERT INTO PlaylistMedias (PlaylistIdentifier, MediaIdentifier, Position) VALUES (?, ?, ?)""", (playlist_identifier, media_identifier, new_position))
+    conn.commit()
+    conn.close()
+
+@app.post("/delete/playlistmedia/{key}")
+async def handle_delete_playlist_media_req(key: str, req: DeletePlaylistMediaRequest):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    playlist_identifier = req.playlist_identifier
+    media_identifier = req.media_identifier
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?", (playlist_identifier, media_identifier))
+    conn.commit()
+    conn.close()
+
+@app.post("/get/playlistmedias/{playlist_identifier}")
+async def get_playlist_medias(playlist_identifier: str):
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT PlaylistIdentifier, MediaIdentifier, Position FROM PlaylistMedias WHERE PlaylistIdentifier = ? ORDER BY Position", (playlist_identifier,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]

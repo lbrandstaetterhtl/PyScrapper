@@ -11,6 +11,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using LibVLCSharp.Shared;
 using PyScrapperDesktopApp.ViewModels;
 using PyScrapperDesktopApp.Views;
 
@@ -261,26 +262,46 @@ public class ApiClient : Interfaces.IApiClient
                     {
                         await vm.WaitUntilFinished();
 
-                        var identifier = requestData.Url.Split('=')[^1];
-
-                        var downloadFilePath = Path.Combine(AppData.Settings.DownloadPath!,
-                            $"{requestData.Filename}{requestData.Mediatype}");
-
-                        Task.Delay(2000).Wait();
-
-                        bool isPlayable = false;
-
-                        while (!isPlayable)
+                        var userIdentifier = AppData.CurrentUser.Identifier;
+                        var url = requestData.Url;
+                        var mediaType = requestData.Mediatype;
+                        var downloadedFilePath = requestData.Download_path;
+                        var downloadedAt = DateTime.Now;
+                        var isPlayable = File.Exists(downloadedFilePath) && await AudioPlayer.IsSupportedCodec(downloadedFilePath);
+                        
+                        var createRequest = new CreateDownloadedMediaRequest()
                         {
-                            isPlayable = File.Exists(downloadFilePath);
+                            UserIdentifier = userIdentifier,
+                            Url = url,
+                            DownloadPath = downloadedFilePath,
+                            MediaType = mediaType,
+                            DownloadedAt = downloadedAt.ToString("o"),
+                            IsPlayable = isPlayable
+                        };
+
+                        var jsonContent = JsonSerializer.Serialize(createRequest, JsonOptions);
+                        var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+                        var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/downloadedmedia", content);
+                        var responseData = await response.Content.ReadAsStringAsync();
+                        
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var deserializedResponse = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);
+
+                            var log = new Massage($"Downloaded media created successfully: {deserializedResponse?.Message}", DateTime.Now, "INFO");
+                            _logger.LogNewMassage(log);
                         }
+                        else
+                        {
+                            var deserializedError = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
+                            var log = new Massage($"Error creating downloaded media: " + deserializedError?.Detail, DateTime.Now, "ERROR");
+                            _logger.LogNewMassage(log);
+                        }
+                        
+                        //TODO: Waiting on server implementation
 
-                        var media = new DownloadedMedia(requestData.Url, requestData.Mediatype, DateTime.Now,
-                            downloadFilePath,
-                            isPlayable, identifier);
-                        media.SetHighestId(AppData.DownloadedMedias);
-                        media.SetTitle();
-
+                        DownloadedMedia media = null;
+                        
                         AppData.AddDownloadedMedia(media);
                     }
                     else
