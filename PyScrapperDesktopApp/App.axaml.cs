@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -63,6 +64,7 @@ public partial class App : Application
 
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+            /*
             // --- Lokalen Server starten ---
             StartLocalServer();
 
@@ -82,6 +84,7 @@ public partial class App : Application
 
             log = new Massage("Local server is ready", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
+            */
 
             // --- Login-Fenster zeigen und wirklich darauf warten (ShowDialog geht hier nicht, kein Owner vorhanden) ---
             var loginWindow = new LoginWindow();
@@ -115,7 +118,9 @@ public partial class App : Application
                 {
                     DefaultDownloadPath = AppData.DataPath,
                     DarkModeEnabled = false,
-                    ScanFolderOnStartup = true
+                    ScanFolderOnStartup = true,
+                    UserIdentifier = AppData.CurrentUser.Identifier,
+                    ServerUrl = "http://127.0.0.1:8765",
                 };
 
                 defaultSettings = await Database.CreateSettings(settingReq);
@@ -265,7 +270,7 @@ public partial class App : Application
             var log = new Massage("Loading Data...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            var medias = await Database.LoadDownloadedMediasFromApi();
+            var medias = await Database.LoadDownloadedMediasFromApi() ?? new ObservableCollection<DownloadedMedia>();
 
             var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
 

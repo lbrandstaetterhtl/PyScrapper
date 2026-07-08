@@ -116,9 +116,9 @@ public partial class LauncherWindowViewModel : ObservableObject
                 RestoreDotnetPackages()
             );
             
-            StartServerProcess();
+            //StartServerProcess();
             
-            await WaitForServerReady();
+            //await WaitForServerReady();
 
             await FinishSuccess();
         }

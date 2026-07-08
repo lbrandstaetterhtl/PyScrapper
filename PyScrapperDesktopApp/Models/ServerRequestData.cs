@@ -42,72 +42,72 @@ public class SearchRequestData
 
 public class CreateDownloadedMediaRequest
 {
-    [JsonPropertyName("UserIdentifier")]
+    [JsonPropertyName("user_identifier")]
     public string UserIdentifier { get; set; }
     
-    [JsonPropertyName("Url")]
+    [JsonPropertyName("url")]
     public string Url { get; set; }
     
-    [JsonPropertyName("DownloadPath")]
+    [JsonPropertyName("download_path")]
     public string DownloadPath { get; set; }
     
-    [JsonPropertyName("MediaType")]
+    [JsonPropertyName("media_type")]
     public string MediaType { get; set; }
     
-    [JsonPropertyName("DownloadedAt")]
+    [JsonPropertyName("download_at")]
     public string DownloadedAt { get; set; }
     
-    [JsonPropertyName("IsPlayable")]
+    [JsonPropertyName("is_playable")]
     public bool IsPlayable { get; set; }
     
-    [JsonPropertyName("Titel")]
-    public string Titel { get; set; }
+    [JsonPropertyName("title")]
+    public string Title { get; set; }
 }
 
 public class CreatePlaylistRequest
 {
-    [JsonPropertyName("UserIdentifier")]
+    [JsonPropertyName("user_identifier")]
     public string UserIdentifier { get; set; }
     
-    [JsonPropertyName("Name")]
+    [JsonPropertyName("name")]
     public string Name { get; set; }
     
-    [JsonPropertyName("Description")]
+    [JsonPropertyName("description")]
     public string Description { get; set; }
 }
 
 public class CreatePlaylistMediaRequest
 {
-    [JsonPropertyName("PlaylistIdentifier")]
+    [JsonPropertyName("playlist_identifier")]
     public string PlaylistIdentifier { get; set; }
     
-    [JsonPropertyName("MediaIdentifier")]
+    [JsonPropertyName("media_identifier")]
     public string MediaIdentifier { get; set; }
 }
 
 public class CreateSettingRequest
 {
-    [JsonPropertyName("UserIdentifier")]
+    [JsonPropertyName("user_identifier")]
     public string UserIdentifier { get; set; }
     
-    [JsonPropertyName("DefaultDownloadPath")]
+    [JsonPropertyName("default_download_path")]
     public string DefaultDownloadPath { get; set; }
     
-    [JsonPropertyName("DarkModeEnabled")]
+    [JsonPropertyName("dark_mode_enabled")]
     public bool DarkModeEnabled { get; set; }
     
-    [JsonPropertyName("ServerUrl")]
+    [JsonPropertyName("server_url")]
     public string? ServerUrl { get; set; }
     
-    [JsonPropertyName("ScanFolderOnStartup")]
+    [JsonPropertyName("scan_folder_on_startup")]
     public bool ScanFolderOnStartup { get; set; }
 }
 
 public class LoginRequest
 {
-    [JsonPropertyName("Username")]
+    [JsonPropertyName("username")]
     public string Username { get; set; }
     
-    [JsonPropertyName("Password")]
+    [JsonPropertyName("password")]
     public string Password { get; set; }
 }

@@ -58,8 +58,11 @@ public class AppData : Interfaces.IAppDataService
     public static List<string> ValidMediaTypes = [".mp3", ".mp4"];
     public static List<string> ValidProviders = ["suno", "youtube", "bandcamp", "archive"];
     
-    public AppData()
+    static AppData()
     {
+        var envPath = Path.Combine(PyScrapperPath, ".env");
+        Console.WriteLine($"Looking for .env at: {envPath}");
+        Console.WriteLine($"File exists: {File.Exists(envPath)}");
         Env.Load(Path.Combine(PyScrapperPath, ".env"));
         AdminKey = Environment.GetEnvironmentVariable("ADMIN_KEY") ?? throw new Exception("ADMIN_KEY not found in .env file.");
     }
@@ -404,7 +407,7 @@ public class MediaFilter
     }
 }
 
-public abstract class User(string username, string identifier)
+public class User(string username, string identifier)
 {
     public string Username { get; set; } = username;
     public string Identifier { get; set; } = identifier;

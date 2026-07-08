@@ -455,7 +455,7 @@ def connect_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.post("/get/user/{identifier}")
+@app.get("/get/user/{identifier}")
 async def get_users(identifier: str):
     conn = connect_db()
     cursor = conn.cursor()
@@ -474,7 +474,7 @@ async def get_users(identifier: str):
     conn.close()
     return dict(row)
 
-@app.post("/getall/users/{key}")
+@app.get("/getall/users/{key}")
 async def get_all_users(key: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
@@ -533,7 +533,7 @@ async def handle_delete_user_req(key: str, identifier: str):
         "message": "User deleted successfully"
     }
 
-@app.post("/get/playlists/{identifier}")
+@app.get("/get/playlists/{identifier}")
 async def get_playlists(identifier: str):
     conn = connect_db()
     cursor = conn.cursor()
@@ -583,7 +583,7 @@ async def handle_delete_playlist_req(key: str, identifier: str):
         "message": "Playlist deleted successfully"
     }
 
-@app.post("/getall/playlists/{key}")
+@app.get("/getall/playlists/{key}")
 async def get_all_playlists(key: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
@@ -640,7 +640,7 @@ async def handle_delete_downloaded_media_req(key: str, identifier: str):
         "message": "Downloaded media deleted successfully"
     }
 
-@app.post("/get/downloadedmedia/{identifier}")
+@app.get("/get/downloadedmedia/{identifier}")
 async def get_downloaded_media(identifier: str):
     conn = connect_db()
     cursor = conn.cursor()
@@ -654,7 +654,7 @@ async def get_downloaded_media(identifier: str):
 
     return dict(row)
 
-@app.post("/getall/downloadedmedia/{key}")
+@app.get("/getall/downloadedmedias/{key}")
 async def get_all_downloaded_media(key: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
@@ -709,7 +709,7 @@ async def handle_delete_setting_req(key: str, identifier: str):
         "message": "Setting deleted successfully"
     }
 
-@app.post("/get/setting/{user_identifier}")
+@app.get("/get/setting/{user_identifier}")
 async def get_setting(user_identifier: str):
     conn = connect_db()
     cursor = conn.cursor()
@@ -723,7 +723,7 @@ async def get_setting(user_identifier: str):
 
     return dict(row)
 
-@app.post("/getall/settings/{key}")
+@app.get("/getall/settings/{key}")
 async def get_all_settings(key: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
@@ -787,7 +787,7 @@ async def handle_delete_playlist_media_req(key: str, req: DeletePlaylistMediaReq
         "message": "Media removed from playlist successfully",
     }
 
-@app.post("/get/playlistmedias/{playlist_identifier}")
+@app.get("/get/playlistmedias/{playlist_identifier}")
 async def get_playlist_medias(playlist_identifier: str):
     conn = connect_db()
     cursor = conn.cursor()
