@@ -104,7 +104,7 @@ public class Database
         {
             using var client = new HttpClient();
 
-            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/get/settings/{AppData.CurrentUser.Identifier}");
+            var response = await client.GetAsync($"http://127.0.0.1:8765/get/settings/{AppData.CurrentUser.Identifier}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -299,6 +299,154 @@ public class Database
             var log = new Massage("Error while creating playlist media via API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             throw;
+        }
+    }
+    
+    public static async Task DeleteDownloadedMedia(string identifier)
+    {
+        try
+        {
+            var content = new StringContent(JsonSerializer.Serialize(new { Identifier = identifier }), System.Text.Encoding.UTF8, "application/json");
+            
+            using var client = new HttpClient();
+
+            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/delete/downloadedmedia/{AppData.AdminKey}", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+            else
+            {
+                var log = new Massage("Downloaded media deleted successfully via API.", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+            }
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while deleting downloaded media via API: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            throw;
+        }
+    }
+    
+    public static async Task DeletePlaylist(string identifier)
+    {
+        try
+        {
+            var content = new StringContent(JsonSerializer.Serialize(new { Identifier = identifier }), System.Text.Encoding.UTF8, "application/json");
+            
+            using var client = new HttpClient();
+
+            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/delete/playlist/{AppData.AdminKey}", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+            else
+            {
+                var log = new Massage("Playlist deleted successfully via API.", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+            }
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while deleting playlist via API: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            throw;
+        }
+    }
+    
+    public static async Task DeletePlaylistMedia(string playlistIdentifier, string mediaIdentifier)
+    {
+        try
+        {
+            var content = new StringContent(JsonSerializer.Serialize(new { PlaylistIdentifier = playlistIdentifier, MediaIdentifier = mediaIdentifier }), System.Text.Encoding.UTF8, "application/json");
+            
+            using var client = new HttpClient();
+
+            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/delete/playlistmedia/{AppData.AdminKey}", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+            else
+            {
+                var log = new Massage("Playlist media deleted successfully via API.", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+            }
+        }
+        catch (Exception e)
+        {
+            var log = new Massage("Error while deleting playlist media via API: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            throw;
+        }
+    }
+
+    public static async Task<Settings> CreateSettings(CreateSettingRequest req)
+    {
+        var content = new StringContent(JsonSerializer.Serialize(req), System.Text.Encoding.UTF8, "application/json");
+        var client = new HttpClient();
+        var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/create/settings/{AppData.AdminKey}", content);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception(response.ReasonPhrase);
+        }
+        else
+        {
+            var log = new Massage("Default settings created successfully via API.", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            var json = await response.Content.ReadAsStringAsync();
+            var deserialized = JsonSerializer.Deserialize<CreateResponse>(json);
+
+            if (deserialized != null)
+            {
+                var setting = new Settings(deserialized.Identifier)
+                {
+                    DownloadPath = req.DefaultDownloadPath,
+                    DarkModeEnabled = req.DarkModeEnabled,
+                    ScanFolderOnStartup = req.ScanFolderOnStartup
+                };
+                
+                return setting;
+            }
+            else
+            {
+                throw new Exception("Failed to deserialize settings from API response.");
+            }
+        }
+    }
+    
+    public static async Task<User> GetUser(string identifier)
+    {
+        var client = new HttpClient();
+        var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/get/user/{identifier}");
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception(response.ReasonPhrase);
+        }
+        else
+        {
+            var log = new Massage("User retrieved successfully via API.", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            var json = await response.Content.ReadAsStringAsync();
+            var user = JsonSerializer.Deserialize<User>(json);
+
+            if (user != null)
+            {
+                return user;
+            }
+            else
+            {
+                throw new Exception("Failed to deserialize user from API response.");
+            }
         }
     }
 }

@@ -306,6 +306,37 @@ public class ApiClient : Interfaces.IApiClient
         }
     }
 
+    public async Task<bool> Login(LoginRequest req)
+    {
+        var client = new HttpClient();
+        var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
+        var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"http://127.0.0.1:8765/login", content);
+        var responseData = await response.Content.ReadAsStringAsync();
+        
+        var deserializedResponse = JsonSerializer.Deserialize<LoginResponse>(responseData, JsonOptions);
+        
+        if (response.IsSuccessStatusCode)
+        {
+            var log = new Massage($"Login successful for user: \"{req.Username}\"", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            
+            AppData.CurrentUser = await Database.GetUser(req.Username);
+            
+            return true;
+        }
+        else
+        {
+            var log = new Massage($"Login failed for user: \"{req.Username}\", error: " + deserializedResponse?.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
+            var massageBox = new MessageBox($"Login failed: {deserializedResponse?.Message}");
+            await massageBox.ShowDialog(App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+            
+            return false;
+        }
+    }
+
 
 
     /// <summary>

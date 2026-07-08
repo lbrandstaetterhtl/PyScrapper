@@ -4,3 +4,5 @@ pydantic
 certifi
 yt-dlp
 playwright
+bcrypt
+dotenv

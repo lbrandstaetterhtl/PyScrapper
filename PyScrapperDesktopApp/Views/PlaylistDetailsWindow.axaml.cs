@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
@@ -41,13 +42,7 @@ public partial class PlaylistDetailsWindow : Window
                     throw new Exception("Media not found");
                 }
 
-                List<int> mediaIds = [media.Id];
-                Playlist playlist = new Playlist(mediaIds, "NPLL", "");
-
-                if (_mainWindow is MainWindow mainWindow)
-                {
-                    mainWindow.MediaPlayer.LoadAndPlay(playlist);
-                }
+                //TODO: Need new Mediaplayer logic
             }
         }
         catch (Exception ex)
@@ -77,15 +72,29 @@ public partial class PlaylistDetailsWindow : Window
         }
     }
 
-    public void RemoveButtonClick(object? sender, RoutedEventArgs e)
+    public async void RemoveButtonClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem { DataContext: DownloadedMedia media })
+        try
         {
-            if (DataContext is PlaylistDetailsWindowViewModel vm)
+
+            if (sender is MenuItem { DataContext: DownloadedMedia media })
             {
-                vm._playlist.RemoveMedia(media.Id);
-                vm.RefreshMedias();
+                if (DataContext is PlaylistDetailsWindowViewModel vm)
+                {
+                    await Database.DeletePlaylistMedia(media.Identifier, vm._playlist.Identifier);
+                    vm._playlist.RemoveMedia(media.Identifier);
+                    vm.RefreshMedias();
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            var log = new Massage("An error occurred while trying to remove the media: " + ex.Message, DateTime.Now, "ERROR");
+            var logger = new AppLogger();
+            logger.LogNewMassage(log);
+
+            var messageBox = new MessageBox("An error occurred while trying to remove the media: " + ex.Message);
+            _ = messageBox.ShowDialog(this);
         }
     }
 }

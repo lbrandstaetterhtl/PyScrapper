@@ -1,4 +1,6 @@
-﻿from os import mkdir
+﻿import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 import fastapi
 from PythonModule.models.settings import PROGRESSDICT
@@ -395,8 +397,9 @@ def create_app_tables():
                        Identifier TEXT NOT NULL PRIMARY KEY,
                        UserIdentifier TEXT NOT NULL,
                        Url TEXT,
+                       Titel TEXT NOT NULL,
                        MediaType TEXT NOT NULL,
-                       DownloadedAt Text,
+                       DownloadedAt TEXT,
                        DownloadPath TEXT NOT NULL,
                        IsPlayable BOOLEAN NOT NULL,
                        FOREIGN KEY (UserIdentifier) REFERENCES Users (Identifier) ON DELETE CASCADE
@@ -457,14 +460,18 @@ async def get_users(identifier: str):
     conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, Username, CreatedAt FROM Users WHERE Identifier = ?", (identifier,))
+    cursor.execute("SELECT Identifier, Username FROM Users WHERE Identifier = ?", (identifier,))
 
     row = cursor.fetchone()
-    conn.close()
 
     if row is None:
-        raise fastapi.HTTPException(status_code=404, detail="User not found")
+        cursor.execute("SELECT Identifier, Username FROM Users WHERE Username = ?", (identifier,))
+        row = cursor.fetchone()
+        
+        if row is None:
+            raise fastapi.HTTPException(status_code=404, detail="User not found")
 
+    conn.close()
     return dict(row)
 
 @app.post("/getall/users/{key}")
@@ -603,11 +610,12 @@ async def handle_create_downloaded_media_req(key: str, req: CreateDownloadedMedi
     is_playable = req.is_playable
     url = req.url
     mediatype = req.mediatype
+    titel = req.titel
 
     conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute("""INSERT INTO DownloadedMedias (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable) VALUES (?, ?, ?, ?, ?, ?, ?)""", (identifier, user_identifier, url, mediatype, downloaded_at, download_path, is_playable))
+    cursor.execute("""INSERT INTO DownloadedMedias (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Titel) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", (identifier, user_identifier, url, mediatype, downloaded_at, download_path, is_playable, titel))
     conn.commit()
     conn.close()
 
@@ -671,11 +679,12 @@ async def handle_create_setting_req(key: str, req: CreateSettingsRequest):
     default_download_path = req.default_download_path
     dark_mode_enabled = req.dark_mode_enabled
     scan_folder_on_startup = req.scan_folder_on_startup
+    server_url = req.server_url
 
     conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute("""INSERT INTO Settings (Identifier, UserIdentifier, DefaultDownloadPath, DarkModeEnabled, ScanFolderOnStartup) VALUES (?, ?, ?, ?, ?)""", (identifier, user_identifier, default_download_path, dark_mode_enabled, scan_folder_on_startup))
+    cursor.execute("""INSERT INTO Settings (Identifier, UserIdentifier, DefaultDownloadPath, DarkModeEnabled, ScanFolderOnStartup, ServerUrl) VALUES (?, ?, ?, ?, ?, ?)""", (identifier, user_identifier, default_download_path, dark_mode_enabled, scan_folder_on_startup, server_url))
     conn.commit()
     conn.close()
 
@@ -788,3 +797,28 @@ async def get_playlist_medias(playlist_identifier: str):
     conn.close()
 
     return [dict(row) for row in rows]
+
+@app.post("/login")
+async def handle_login_req(req: CreateUserRequest):
+    username = req.username
+    password = req.password
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT Identifier, PasswordHash FROM Users WHERE Username = ?", (username,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row is None:
+        raise fastapi.HTTPException(status_code=404, detail="User not found")
+
+    identifier, password_hash = row["Identifier"], row["PasswordHash"]
+
+    if not bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
+        raise fastapi.HTTPException(status_code=401, detail="Invalid password")
+
+    return {
+        "message": "Login successful",
+        "identifier": identifier
+    }

@@ -82,8 +82,6 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                 if (!errorWhileDownloading)
                 {
                     Task.Delay(2000).Wait();
-                    
-                    var identifier = SunoUrl.Split('/')[^1];
 
                     var downloadedFilePath = Path.Combine(AppData.Settings.DownloadPath, $"{Filename}{SelectedMediaType}");
 
@@ -94,8 +92,17 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                         isPlayable = File.Exists(downloadedFilePath);
                     }
 
-                    var media = Database.CreateDownloadedMedia()
-                    media.SetTitle();
+                    var req = new CreateDownloadedMediaRequest
+                    {
+                        UserIdentifier = AppData.CurrentUser.Identifier,
+                        DownloadPath = downloadedFilePath,
+                        DownloadedAt = DateTime.Now.ToLongDateString(),
+                        MediaType = SelectedMediaType,
+                        IsPlayable = isPlayable,
+                        Url = SunoUrl
+                    };
+
+                    var media = await Database.CreateDownloadedMedia(req);
 
                     AppData.AddDownloadedMedia(media);
                 }

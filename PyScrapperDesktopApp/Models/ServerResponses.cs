@@ -129,3 +129,12 @@ public class CreatePlaylistMediaResponse
     [JsonPropertyName("position")]
     public int Position { get; set; }
 }
+
+public class LoginResponse
+{
+    [JsonPropertyName("message")]
+    public string Message { get; set; }
+    
+    [JsonPropertyName("identifier")]
+    public string Identifier { get; set; }
+}

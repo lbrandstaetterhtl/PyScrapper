@@ -199,8 +199,11 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             var toplevel = TopLevel.GetTopLevel(_scrapWindow);
 
             var result = await client.SendListScrapRequest(requestsDates, _cts.Token);
-            
-            
+
+            if (result.Contains(false))
+            {
+                await _dialogService.ShowAlertAsync("Not all scrap requests were successful. Please check the logs for more information.");
+            }
 
             _cts.Cancel();
             _cts.Dispose();

@@ -53,6 +53,7 @@ class CreateDownloadedMediaRequest(BaseModel):
     is_playable: bool
     url: str
     mediatype: str
+    tite: str
 
 class CreateSettingsRequest(BaseModel):
     user_identifier: str
@@ -64,8 +65,11 @@ class CreateSettingsRequest(BaseModel):
 class CreatePlaylistMediaRequest(BaseModel):
     playlist_identifier: str
     media_identifier: str
-    position: int
 
 class DeletePlaylistMediaRequest(BaseModel):
     playlist_identifier: str
     media_identifier: str
+    
+class LoginRequest(BaseModel):
+    username: str
+    password: str

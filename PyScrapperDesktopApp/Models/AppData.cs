@@ -231,12 +231,33 @@ public class Playlist(string name, string description, string identifier, string
     public string? Description { get; set; } = description;
     public List<string> MediaIdentifiers { get; set; } = new();
     
-    public void SetMediaIdentifiers()
+    public async Task AddNewMedia(string mediaIdentifier)
     {
-        MediaIdentifiers = new List<string>();
-        foreach (var media in AppData.DownloadedMedias)
+        if (!AppData.PlaylistMedias.Any(pm => pm.MediaIdentifier == mediaIdentifier && pm.PlaylistIdentifier == Identifier))
         {
-                MediaIdentifiers.Add(media.Identifier);
+            var req = new CreatePlaylistMediaRequest
+            {
+                PlaylistIdentifier = Identifier,
+                MediaIdentifier = mediaIdentifier
+            };
+
+            var playlistMedia = await Database.CreatePlaylistMedia(req);
+            AppData.PlaylistMedias.Add(playlistMedia);
+        }
+    }
+
+    public void FindMedias()
+    {
+        var medias = AppData.PlaylistMedias.Where(pm => pm.PlaylistIdentifier == Identifier).ToList();
+        MediaIdentifiers = medias.Select(pm => pm.MediaIdentifier).ToList();
+    }
+    
+    public void RemoveMedia(string mediaIdentifier)
+    {
+        var playlistMedia = AppData.PlaylistMedias.FirstOrDefault(pm => pm.MediaIdentifier == mediaIdentifier && pm.PlaylistIdentifier == Identifier);
+        if (playlistMedia != null)
+        {
+            AppData.PlaylistMedias.Remove(playlistMedia);
         }
     }
 }
@@ -248,7 +269,11 @@ public class Settings(string identifier)
 {
     public string Identifier { get; set; } = identifier;
     public string? DownloadPath { get; set; }
-    public string ServerUrl => "http://127.0.0.1:8765";
+    public string ServerUrl
+    {
+        get => "http://127.0.0.1:8765";
+    }
+
     public bool DarkModeEnabled { get; set; }
     public bool ScanFolderOnStartup { get; set; }
     public void SetDefaultSettings()
@@ -390,4 +415,11 @@ public class PlaylistMedia(string mediaIdentifier, string playlistIdentifier, in
     public string MediaIdentifier { get; set; } = mediaIdentifier;
     public string PlaylistIdentifier { get; set; } = playlistIdentifier;
     public int Position { get; set; } = position;
+}
+
+public enum LoginResult
+{
+    Success,
+    Cancelled,
+    Error
 }

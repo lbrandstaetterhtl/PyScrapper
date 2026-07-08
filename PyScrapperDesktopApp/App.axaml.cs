@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using LibVLCSharp.Shared;
@@ -28,6 +29,7 @@ namespace PyScrapperDesktopApp;
 public partial class App : Application
 {
     private readonly AppLogger _logger = new AppLogger();
+    private static System.Diagnostics.Process? _serverProcess;
 
     /// <summary>
     /// Initializes the application by loading the XAML.
@@ -39,8 +41,9 @@ public partial class App : Application
 
     /// <summary>
     /// Called when the framework initialization is completed. 
-    /// Sets up the desktop application lifetime, load settings, sets the visual theme,
-    /// and opens the LauncherWindow to begin the data loading process.
+    /// Starts the local server, waits for it to be ready, shows the LoginWindow and waits for it 
+    /// to close, then loads settings, sets the visual theme, and opens the LauncherWindow 
+    /// to begin the data loading process.
     /// </summary>
     public override async void OnFrameworkInitializationCompleted()
     {
@@ -53,50 +56,107 @@ public partial class App : Application
             var log = new Massage("Application initializing...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             {
-                desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-                
-                var settings = await DatabaseOperations.LoadSettings();
-                var defaultSettings = new Settings();
-                defaultSettings.SetDefaultSettings();
+                return;
+            }
 
-                AppData.Settings = settings ?? defaultSettings;
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-                RequestedThemeVariant = AppData.Settings.DarkModeEnabled ? ThemeVariant.Dark : ThemeVariant.Light;
+            // --- Lokalen Server starten ---
+            StartLocalServer();
 
-                var launcher = new LauncherWindow();
+            // --- Warten, bis der Server tatsächlich erreichbar ist ---
+            log = new Massage("Waiting for local server to become ready...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
 
-                launcher.Closed += async (sender, args) =>
+            bool serverReady = await WaitForServerReady("http://127.0.0.1:8765");
+
+            if (!serverReady)
+            {
+                log = new Massage("Local server did not start in time, shutting down", DateTime.Now, "ERROR");
+                _logger.LogNewMassage(log);
+                desktop.Shutdown(1);
+                return;
+            }
+
+            log = new Massage("Local server is ready", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            // --- Login-Fenster zeigen und wirklich darauf warten (ShowDialog geht hier nicht, kein Owner vorhanden) ---
+            var loginWindow = new LoginWindow();
+            desktop.MainWindow = loginWindow;
+
+            var loginTcs = new TaskCompletionSource<LoginResult>();
+            loginWindow.Closed += (sender, args) => loginTcs.TrySetResult(loginWindow.Result);
+            loginWindow.Show();
+
+            var loginResult = await loginTcs.Task;
+
+            if (loginResult != LoginResult.Success || AppData.CurrentUser == null)
+            {
+                log = new Massage("Login was cancelled or failed, shutting down", DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+                StopServer();
+                desktop.Shutdown(0);
+                return;
+            }
+
+            // --- Ab hier ist AppData.CurrentUser garantiert gesetzt ---
+            var settings = await Database.LoadSettingsFromApi();
+
+            var defaultSettings = new Settings("");
+            if (settings == null)
+            {
+                log = new Massage("Failed to load settings from database, using default settings", DateTime.Now, "WARN");
+                _logger.LogNewMassage(log);
+
+                var settingReq = new CreateSettingRequest
                 {
-                    switch (launcher.Result)
-                    {
-                        case LauncherResult.Success:
-                            log = new Massage("Launcher completed successfully, loading application data...", DateTime.Now, "INFO");
-                            _logger.LogNewMassage(log);
-
-                            await LoadApplicationData(desktop);
-                            break;
-
-                        case LauncherResult.Cancelled:
-                            log = new Massage("Launcher was cancelled by the user", DateTime.Now, "INFO");
-                            _logger.LogNewMassage(log);
-                            StopServer();
-                            desktop.Shutdown(0);
-                            break;
-
-                        case LauncherResult.Error:
-                        default:
-                            log = new Massage("Launcher failed with an error", DateTime.Now, "ERROR");
-                            _logger.LogNewMassage(log);
-                            StopServer();
-                            desktop.Shutdown(1);
-                            break;
-                    }
+                    DefaultDownloadPath = AppData.DataPath,
+                    DarkModeEnabled = false,
+                    ScanFolderOnStartup = true
                 };
 
-                desktop.MainWindow = launcher;
+                defaultSettings = await Database.CreateSettings(settingReq);
             }
+
+            AppData.Settings = settings ?? defaultSettings;
+
+            RequestedThemeVariant = AppData.Settings.DarkModeEnabled ? ThemeVariant.Dark : ThemeVariant.Light;
+
+            var launcher = new LauncherWindow();
+
+            launcher.Closed += async (sender, args) =>
+            {
+                switch (launcher.Result)
+                {
+                    case LauncherResult.Success:
+                        log = new Massage("Launcher completed successfully, loading application data...", DateTime.Now, "INFO");
+                        _logger.LogNewMassage(log);
+
+                        await LoadApplicationData(desktop);
+                        break;
+
+                    case LauncherResult.Cancelled:
+                        log = new Massage("Launcher was cancelled by the user", DateTime.Now, "INFO");
+                        _logger.LogNewMassage(log);
+                        StopServer();
+                        desktop.Shutdown(0);
+                        break;
+
+                    case LauncherResult.Error:
+                    default:
+                        log = new Massage("Launcher failed with an error", DateTime.Now, "ERROR");
+                        _logger.LogNewMassage(log);
+                        StopServer();
+                        desktop.Shutdown(1);
+                        break;
+                }
+            };
+
+            desktop.MainWindow = launcher;
+            launcher.Show();
         }
         catch (Exception e)
         {
@@ -107,6 +167,87 @@ public partial class App : Application
                 desktop.Shutdown(1);
             }
         }
+    }
+
+    /// <summary>
+    /// Starts the local Python FastAPI server as a subprocess, using the interpreter 
+    /// from the project's virtual environment. Redirects stdout/stderr into the app log.
+    /// </summary>
+    private static void StartLocalServer()
+    {
+        var logger = new AppLogger();
+
+        string pythonPath = Path.Combine(AppData.PyScrapperPath, "LocalServer", ".venv", "Scripts", "python.exe");
+
+        if (!File.Exists(pythonPath))
+        {
+            var errorLog = new Massage($"Python venv not found at expected path: {pythonPath}", DateTime.Now, "ERROR");
+            logger.LogNewMassage(errorLog);
+            throw new FileNotFoundException($"Python venv not found at: {pythonPath}");
+        }
+
+        _serverProcess = new System.Diagnostics.Process
+        {
+            StartInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = pythonPath,
+                Arguments = "-m uvicorn server:app --host 127.0.0.1 --port 8765",
+                WorkingDirectory = Path.Combine(AppData.PyScrapperPath, "LocalServer"),
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            }
+        };
+
+        _serverProcess.OutputDataReceived += (sender, e) =>
+        {
+            if (!string.IsNullOrEmpty(e.Data))
+            {
+                var log = new Massage($"[Server] {e.Data}", DateTime.Now, "INFO");
+                logger.LogNewMassage(log);
+            }
+        };
+
+        _serverProcess.ErrorDataReceived += (sender, e) =>
+        {
+            if (!string.IsNullOrEmpty(e.Data))
+            {
+                var log = new Massage($"[Server ERROR] {e.Data}", DateTime.Now, "ERROR");
+                logger.LogNewMassage(log);
+            }
+        };
+
+        _serverProcess.Start();
+        _serverProcess.BeginOutputReadLine();
+        _serverProcess.BeginErrorReadLine();
+    }
+
+    /// <summary>
+    /// Polls the given base URL until it responds successfully or the maximum number 
+    /// of attempts is reached. Used to ensure the local server is up before making API calls.
+    /// </summary>
+    private static async Task<bool> WaitForServerReady(string baseUrl, int maxAttempts = 40)
+    {
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
+
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            try
+            {
+                var response = await client.GetAsync($"{baseUrl}/");
+                if (response.IsSuccessStatusCode)
+                    return true;
+            }
+            catch
+            {
+                // Server noch nicht bereit, weiter versuchen
+            }
+
+            await Task.Delay(250);
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -124,7 +265,7 @@ public partial class App : Application
             var log = new Massage("Loading Data...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            var medias = await DatabaseOperations.LoadDownloadedMediasNoDuplicates();
+            var medias = await Database.LoadDownloadedMediasFromApi();
 
             var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
 
@@ -154,7 +295,7 @@ public partial class App : Application
                     else
                     {
                         log = new Massage(
-                            $"Media with id {media.Id} has an unsupported codec and will be set to not playable",
+                            $"Media with id {media.Identifier} has an unsupported codec and will be set to not playable",
                             DateTime.Now, "WARN");
                         _logger.LogNewMassage(log);
                     }
@@ -166,7 +307,7 @@ public partial class App : Application
                 medias.Remove(mediaToRemove);
 
                 log = new Massage(
-                    $"Media with id {mediaToRemove.Id} removed from the list because it does not exist",
+                    $"Media with id {mediaToRemove.Identifier} removed from the list because it does not exist",
                     DateTime.Now, "WARN");
                 _logger.LogNewMassage(log);
             }
@@ -176,7 +317,7 @@ public partial class App : Application
                 AppData.AddDownloadedMedia(media);
             }
 
-            var playlists = await DatabaseOperations.LoadPlaylistsNoDuplicates();
+            var playlists = await Database.LoadPlaylistsFromApi();
 
             foreach (var playlist in playlists)
             {
@@ -225,16 +366,14 @@ public partial class App : Application
     {
         var log = new Massage("Saving Data...", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
-        
-        DatabaseOperations.SaveDownloadedMedias(AppData.DownloadedMedias);
-        DatabaseOperations.SavePlaylists(AppData.Playlists);
-        DatabaseOperations.SaveSettings(AppData.Settings);
-        
+
+        //TODO: Update all data / update only changed data
+
         log = new Massage("Shutting down local server...", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
-        
+
         StopServer();
-        
+
         log = new Massage("Local server is shutdown", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
     }
@@ -249,7 +388,7 @@ public partial class App : Application
     {
         var diff = 0;
         if (Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return diff;
-        
+
         try
         {
             var extensions = new[]
@@ -263,22 +402,21 @@ public partial class App : Application
 
             var found = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
                 .Where(f => extensions.Contains(Path.GetExtension(f)));
-            
+
             int originalMediaCount = AppData.DownloadedMedias.Count;
 
             foreach (var file in found)
             {
-                var media = new DownloadedMedia(
-                    url: "N/A",
-                    mediaType: Path.GetExtension(file),
-                    downloadedAt: DateTime.Now,
-                    downloadPath: file,
-                    isPlayable: false,
-                    identifier: Guid.NewGuid().ToString()
-                );
-                media.SetTitle();
-                media.SetHighestId(AppData.DownloadedMedias);
-                
+                var req = new CreateDownloadedMediaRequest
+                {
+                    DownloadPath = file,
+                    UserIdentifier = AppData.CurrentUser.Identifier,
+                    DownloadedAt = File.GetCreationTime(file).ToLongDateString(),
+                    MediaType = Path.GetExtension(file)
+                };
+
+                var media = await Database.CreateDownloadedMedia(req);
+
                 bool exists = File.Exists(media.DownloadPath);
                 bool isSupported = false;
                 if (exists)
@@ -290,15 +428,15 @@ public partial class App : Application
                 {
                     media.IsPlayable = true;
                 }
-                
+
                 bool alreadyExists = AppData.MediaAlreadyExists(file);
 
                 if (!alreadyExists)
                     AppData.AddDownloadedMedia(media);
             }
-            
+
             diff = AppData.DownloadedMedias.Count - originalMediaCount;
-            
+
             return diff;
         }
         catch (Exception ex)
@@ -306,7 +444,7 @@ public partial class App : Application
             var log = new Massage("An error occurred while scanning the folder: " + ex.Message, DateTime.Now, "ERROR");
             new AppLogger().LogNewMassage(log);
         }
-        
+
         return 0;
     }
 

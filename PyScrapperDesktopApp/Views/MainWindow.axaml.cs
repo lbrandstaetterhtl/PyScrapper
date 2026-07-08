@@ -71,10 +71,7 @@ public partial class MainWindow : Window
                     throw new Exception("Media not found");
                 }
 
-                List<int> mediaIds = [media.Id];
-                Playlist playlist = new Playlist(mediaIds, "NPLL", "");
-
-                MediaPlayer.LoadAndPlay(playlist);
+                //TODO: NEW Mediaplayer logic
             }
         }
         catch (Exception ex)
@@ -125,9 +122,8 @@ public partial class MainWindow : Window
                 if (!result) return;
 
                 AppData.RemoveDownloadedMedia(media);
-                var playlistContained = AppData.Playlists.Where(p => p.MediaIds.Contains(media.Id)).ToList();
-                foreach (var playlist in playlistContained)
-                    playlist.RemoveMedia(media.Id);
+
+                await Database.DeleteDownloadedMedia(media.Identifier);
 
                 var log = new Massage("Media removed: " + media.Url, DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
@@ -225,7 +221,7 @@ public partial class MainWindow : Window
             if (sender is not ListBox { SelectedItem: Playlist playlist } listBox) return;
             if (listBox.DataContext is not DownloadedMedia media) return;
 
-            playlist.AddMedia(media.Id);
+            await playlist.AddNewMedia(media.Identifier);
             listBox.SelectedItem = null;
 
             await _ds.ShowAlertAsync($"Added {media.Title} to {playlist.Name}");

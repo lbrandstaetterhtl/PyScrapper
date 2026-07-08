@@ -138,14 +138,13 @@
                                                     <ColumnDefinition Width="Auto" SharedSizeGroup="ColDesc"/>
                                                     <ColumnDefinition Width="Auto" SharedSizeGroup="ColCount"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding Id}" Classes="UILabel" HorizontalAlignment="Center"/>
+                                                <TextBlock Grid.Column="0" Text="{Binding Identifier}" Classes="UILabel" HorizontalAlignment="Center"/>
                                                 <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" MinWidth="50" MaxWidth="200">
                                                     <TextBlock Text="{Binding Name}" Classes="UILabel" HorizontalAlignment="Left"/>
                                                 </ScrollViewer>
                                                 <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto" MinWidth="50" MaxWidth="200">
                                                     <TextBlock Text="{Binding Description}" Classes="UILabel" HorizontalAlignment="Left"/>
                                                 </ScrollViewer>
-                                                <TextBlock Grid.Column="3" Text="{Binding Count}" Classes="UILabel" HorizontalAlignment="Center"/>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -229,7 +228,7 @@
                                                     <ColumnDefinition Width="Auto" SharedSizeGroup="ColDate"/>
                                                     <ColumnDefinition Width="Auto" SharedSizeGroup="ColPlayable"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding Id}" Classes="UILabel"/>
+                                                <TextBlock Grid.Column="0" Text="{Binding Identifier}" Classes="UILabel"/>
                                                 <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Disabled"
                                                               HorizontalScrollBarVisibility="Auto" MinWidth="50" MaxWidth="200">
                                                     <TextBlock Text="{Binding Title}" Classes="UILabel" HorizontalAlignment="Left"/>

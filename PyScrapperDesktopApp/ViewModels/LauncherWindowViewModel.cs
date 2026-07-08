@@ -127,7 +127,7 @@ public partial class LauncherWindowViewModel : ObservableObject
             var log = new Massage($"Launcher error: {ex.Message}", DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
-            ShowError(ex.Message);
+            await ShowError(ex.Message);
         }
     }
 

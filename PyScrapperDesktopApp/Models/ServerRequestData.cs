@@ -59,6 +59,9 @@ public class CreateDownloadedMediaRequest
     
     [JsonPropertyName("IsPlayable")]
     public bool IsPlayable { get; set; }
+    
+    [JsonPropertyName("Titel")]
+    public string Titel { get; set; }
 }
 
 public class CreatePlaylistRequest
@@ -80,4 +83,31 @@ public class CreatePlaylistMediaRequest
     
     [JsonPropertyName("MediaIdentifier")]
     public string MediaIdentifier { get; set; }
+}
+
+public class CreateSettingRequest
+{
+    [JsonPropertyName("UserIdentifier")]
+    public string UserIdentifier { get; set; }
+    
+    [JsonPropertyName("DefaultDownloadPath")]
+    public string DefaultDownloadPath { get; set; }
+    
+    [JsonPropertyName("DarkModeEnabled")]
+    public bool DarkModeEnabled { get; set; }
+    
+    [JsonPropertyName("ServerUrl")]
+    public string? ServerUrl { get; set; }
+    
+    [JsonPropertyName("ScanFolderOnStartup")]
+    public bool ScanFolderOnStartup { get; set; }
+}
+
+public class LoginRequest
+{
+    [JsonPropertyName("Username")]
+    public string Username { get; set; }
+    
+    [JsonPropertyName("Password")]
+    public string Password { get; set; }
 }
