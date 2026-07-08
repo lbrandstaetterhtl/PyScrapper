@@ -52,6 +52,8 @@ public class ApiClient : Interfaces.IApiClient
         var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/download", content);
         var responseData = await response.Content.ReadAsStringAsync();
 
+        _logger.LogDebugMessage(new Massage($"Sent scrap request to server: {jsonContent} | response: {responseData}", DateTime.Now, "DEBUG"));
+        
         if (response.IsSuccessStatusCode)
         {
             var deserializedResponse = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);

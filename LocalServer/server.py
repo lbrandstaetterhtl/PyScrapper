@@ -431,7 +431,7 @@ def create_app_tables():
                    (
                        Identifier TEXT NOT NULL PRIMARY KEY,
                        UserIdentifier TEXT NOT NULL,
-                       DefaultDownloadPath TEXT NOT NULL,
+                       DownloadPath TEXT NOT NULL,
                        ServerUrl TEXT NOT NULL,
                        DarkModeEnabled BOOLEAN NOT NULL,
                        ScanFolderOnStartup BOOLEAN NOT NULL,
@@ -668,7 +668,7 @@ async def get_all_downloaded_media(key: str):
 
     return [dict(row) for row in rows]
 
-@app.post("/create/setting/{key}")
+@app.post("/create/settings/{key}")
 async def handle_create_setting_req(key: str, req: CreateSettingsRequest):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
@@ -684,7 +684,7 @@ async def handle_create_setting_req(key: str, req: CreateSettingsRequest):
     conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute("""INSERT INTO Settings (Identifier, UserIdentifier, DefaultDownloadPath, DarkModeEnabled, ScanFolderOnStartup, ServerUrl) VALUES (?, ?, ?, ?, ?, ?)""", (identifier, user_identifier, default_download_path, dark_mode_enabled, scan_folder_on_startup, server_url))
+    cursor.execute("""INSERT INTO Settings (Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup, ServerUrl) VALUES (?, ?, ?, ?, ?, ?)""", (identifier, user_identifier, default_download_path, dark_mode_enabled, scan_folder_on_startup, server_url))
     conn.commit()
     conn.close()
 
@@ -693,7 +693,7 @@ async def handle_create_setting_req(key: str, req: CreateSettingsRequest):
         "identifier": identifier
     }
 
-@app.post("/delete/setting/{key}")
+@app.post("/delete/settings/{key}")
 async def handle_delete_setting_req(key: str, identifier: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
@@ -709,19 +709,23 @@ async def handle_delete_setting_req(key: str, identifier: str):
         "message": "Setting deleted successfully"
     }
 
-@app.get("/get/setting/{user_identifier}")
+@app.get("/get/settings/{user_identifier}")
 async def get_setting(user_identifier: str):
     conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, UserIdentifier, DefaultDownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings WHERE UserIdentifier = ?", (user_identifier,))
+    cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings WHERE UserIdentifier = ?", (user_identifier,))
     row = cursor.fetchone()
     conn.close()
 
     if row is None:
         raise fastapi.HTTPException(status_code=404, detail="Setting not found")
 
-    return dict(row)
+    result = dict(row)
+    result["DarkModeEnabled"] = bool(result["DarkModeEnabled"])
+    result["ScanFolderOnStartup"] = bool(result["ScanFolderOnStartup"])
+
+    return result
 
 @app.get("/getall/settings/{key}")
 async def get_all_settings(key: str):
@@ -731,7 +735,7 @@ async def get_all_settings(key: str):
     conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, UserIdentifier, DefaultDownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings")
+    cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings")
     rows = cursor.fetchall()
     conn.close()
 

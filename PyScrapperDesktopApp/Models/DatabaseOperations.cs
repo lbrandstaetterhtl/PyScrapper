@@ -24,7 +24,7 @@ public class Database
 
             using var client = new HttpClient();
 
-            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getall/downloadedmedias");
+            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getall/downloadedmedias/{AppData.AdminKey}");
             var json = await response.Content.ReadAsStringAsync();
             
             _logger.LogDebugMessage(new Massage($"Response from API: {json}", DateTime.Now, "INFO"));
@@ -67,7 +67,7 @@ public class Database
 
             using var client = new HttpClient();
 
-            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getall/playlists");
+            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getall/playlists/{AppData.AdminKey}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -108,9 +108,12 @@ public class Database
 
             var response = await client.GetAsync($"http://127.0.0.1:8765/get/settings/{AppData.CurrentUser.Identifier}");
 
+            var json = await response.Content.ReadAsStringAsync();
+            
+            _logger.LogDebugMessage(new Massage($"Response from API: {json}", DateTime.Now, "INFO"));
+            
             if (response.IsSuccessStatusCode)
             {
-                var json = await response.Content.ReadAsStringAsync();
                 var settings = JsonSerializer.Deserialize<Settings>(json);
 
                 if (settings != null)
@@ -143,7 +146,7 @@ public class Database
 
             using var client = new HttpClient();
 
-            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/get/playlistmedia/{playlistIdentifier}");
+            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/get/playlistmedias/{playlistIdentifier}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -392,13 +395,12 @@ public class Database
     {
         try
         {
-
             var content = new StringContent(JsonSerializer.Serialize(req), System.Text.Encoding.UTF8,
                 "application/json");
             var client = new HttpClient();
             //TODO: not hardcoded url
             var response =
-                await client.PostAsync($"http://127.0.0.1:8765/create/setting/{AppData.AdminKey}", content);
+                await client.PostAsync($"http://127.0.0.1:8765/create/settings/{AppData.AdminKey}", content);
             var json = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)

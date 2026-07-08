@@ -184,19 +184,17 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     continue;
                 }
 
-                var requestData = new DownloadRequestData()
+                var requestData = new DownloadRequestData
                 {
                     Provider = _selectedProvider,
                     Url = item.url,
                     Mediatype = SelectedMediaType,
                     Filename = filename,
-                    Download_path = AppData.Settings.DownloadPath!
+                    Download_path = folder.Path.ToString(),
                 };
 
                 requestsDates.Add(requestData);
             }
-            
-            var toplevel = TopLevel.GetTopLevel(_scrapWindow);
 
             var result = await client.SendListScrapRequest(requestsDates, _cts.Token);
 

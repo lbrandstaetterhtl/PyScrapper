@@ -105,10 +105,7 @@ public partial class App : Application
                 return;
             }
 
-            // --- Ab hier ist AppData.CurrentUser garantiert gesetzt ---
             var settings = await Database.LoadSettingsFromApi();
-
-            var defaultSettings = new Settings("");
             if (settings == null)
             {
                 log = new Massage("Failed to load settings from database, using default settings", DateTime.Now, "WARN");
@@ -116,17 +113,17 @@ public partial class App : Application
 
                 var settingReq = new CreateSettingRequest
                 {
-                    DefaultDownloadPath = AppData.DataPath,
+                    DefaultDownloadPath = AppData.PyScrapperPath,
                     DarkModeEnabled = false,
                     ScanFolderOnStartup = true,
                     UserIdentifier = AppData.CurrentUser.Identifier,
                     ServerUrl = "http://127.0.0.1:8765",
                 };
 
-                defaultSettings = await Database.CreateSettings(settingReq);
+                settings = await Database.CreateSettings(settingReq);
             }
 
-            AppData.Settings = settings ?? defaultSettings;
+            AppData.Settings = settings ;
 
             RequestedThemeVariant = AppData.Settings.DarkModeEnabled ? ThemeVariant.Dark : ThemeVariant.Light;
 
