@@ -21,7 +21,7 @@ public class DownloadRequestData
     public string Filename { get; set; }
         
     [JsonPropertyName("download_path")]
-    public string Download_path { get; set; }
+    public string? Download_path { get; set; }
 }
 
 /// <summary>
@@ -51,7 +51,7 @@ public class CreateDownloadedMediaRequest
     [JsonPropertyName("download_path")]
     public string DownloadPath { get; set; }
     
-    [JsonPropertyName("media_type")]
+    [JsonPropertyName("mediatype")]
     public string MediaType { get; set; }
     
     [JsonPropertyName("downloaded_at")]

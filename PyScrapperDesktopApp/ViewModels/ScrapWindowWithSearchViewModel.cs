@@ -122,12 +122,14 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             var topLevel = TopLevel.GetTopLevel(_scrapWindow);
             var storageService = new StorageService(topLevel!);
             var folder = await topLevel.StorageProvider.TryGetFolderFromPathAsync(AppData.Settings.DownloadPath!);
+            string downloadPath = "";
             
             foreach (var item in SelectedItems)
             {
                 _cts.Token.ThrowIfCancellationRequested();
                 
                 var filename = item.title;
+                
 
                 if (SelectedItems.Count == 1)
                 {
@@ -149,10 +151,12 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     if (file == null) continue;
                     
                     filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
+                    downloadPath = file.Path.LocalPath;
                 }
                 
                 
                 var validFilename = DownloadedMedia.TryValidateFileName(filename, out var errorMessage);
+                
                 
                 while (!validFilename)
                 {
@@ -177,6 +181,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     
                     filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
                     validFilename = DownloadedMedia.TryValidateFileName(filename, out errorMessage);
+                    downloadPath = file.Path.LocalPath;
                 }
 
                 if (filename == null)
@@ -190,7 +195,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     Url = item.url,
                     Mediatype = SelectedMediaType,
                     Filename = filename,
-                    Download_path = folder.Path.ToString(),
+                    Download_path = string.IsNullOrEmpty(downloadPath) ? AppData.Settings.DownloadPath : downloadPath
                 };
 
                 requestsDates.Add(requestData);

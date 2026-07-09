@@ -52,7 +52,7 @@ class CreateDownloadedMediaRequest(BaseModel):
     downloaded_at: str
     is_playable: bool
     url: str
-    media_type: str
+    mediatype: str
     title: str
 
 class CreateSettingsRequest(BaseModel):

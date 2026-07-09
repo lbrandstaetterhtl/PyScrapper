@@ -278,7 +278,8 @@ public class ApiClient : Interfaces.IApiClient
                             DownloadPath = downloadFilePath,
                             MediaType = mediaType,
                             DownloadedAt = downloadedAt.ToString("o"),
-                            IsPlayable = isPlayable
+                            IsPlayable = isPlayable,
+                            Title = requestData.Filename
                         };
                         
                         DownloadedMedia media = await Database.CreateDownloadedMedia(createRequest);

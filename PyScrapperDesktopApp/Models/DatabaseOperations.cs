@@ -24,7 +24,7 @@ public class Database
 
             using var client = new HttpClient();
 
-            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getall/downloadedmedias/{AppData.AdminKey}");
+            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getuser/downloadedmedias/{AppData.AdminKey}?user_identifier={AppData.CurrentUser.Identifier}");
             var json = await response.Content.ReadAsStringAsync();
             
             _logger.LogDebugMessage(new Massage($"Response from API: {json}", DateTime.Now, "INFO"));
@@ -37,10 +37,7 @@ public class Database
                 {
                     foreach (var media in medias)
                     {
-                        if (media.UserIdentifier == AppData.CurrentUser.Identifier)
-                        {
-                            downloadedMedias.Add(media);
-                        }
+                        downloadedMedias.Add(media);
                     }
                 }
             }
@@ -67,21 +64,19 @@ public class Database
 
             using var client = new HttpClient();
 
-            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getall/playlists/{AppData.AdminKey}");
+            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getuser/playlists/{AppData.AdminKey}?user_identifier={AppData.CurrentUser.Identifier}");
 
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                var apiPlaylists = JsonSerializer.Deserialize<List<Playlist>>(json);
+                var apiPlaylists = JsonSerializer.Deserialize<List<GetPlaylistResponse>>(json);
 
                 if (apiPlaylists != null)
                 {
                     foreach (var playlist in apiPlaylists)
                     {
-                        if (playlist.UserIdentifier == AppData.CurrentUser.Identifier)
-                        {
-                            playlists.Add(playlist);
-                        }
+                        var newPlaylist = new Playlist(playlist.Name, playlist.Description, playlist.Identifier, playlist.UserIdentifier);
+                        playlists.Add(newPlaylist);
                     }
                 }
             }
@@ -200,7 +195,7 @@ public class Database
             
             var json = await response.Content.ReadAsStringAsync();
             
-            _logger.LogDebugMessage(new Massage($"Response from API: {json}", DateTime.Now, "INFO"));
+            _logger.LogDebugMessage(new Massage($"Response from API CreateDownloadedMedia: {json}, request: {content}", DateTime.Now, "INFO"));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -217,7 +212,7 @@ public class Database
                 
                 DateTime downloadedAt = DateTime.Parse(req.DownloadedAt);
                 
-                result = new DownloadedMedia(AppData.CurrentUser.Identifier, req.Url, req.MediaType, downloadedAt, req.DownloadPath, req.IsPlayable, identifier);
+                result = new DownloadedMedia(AppData.CurrentUser.Identifier, req.Title, req.Url, req.MediaType, downloadedAt, req.DownloadPath, req.IsPlayable, identifier);
                 
                 return result;
             }
@@ -314,11 +309,11 @@ public class Database
     {
         try
         {
-            var content = new StringContent(JsonSerializer.Serialize(new { Identifier = identifier }), System.Text.Encoding.UTF8, "application/json");
-            
             using var client = new HttpClient();
 
-            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/delete/downloadedmedia/{AppData.AdminKey}", content);
+            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/delete/downloadedmedia/{AppData.AdminKey}?identifier={identifier}", null);
+            var json = await response.Content.ReadAsStringAsync();
+            _logger.LogDebugMessage(new Massage($"Response from API DeleteDownloadedMedia: {json}", DateTime.Now, "INFO"));
 
             if (!response.IsSuccessStatusCode)
             {

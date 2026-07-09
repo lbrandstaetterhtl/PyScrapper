@@ -273,8 +273,6 @@ public partial class App : Application
 
             foreach (var media in medias)
             {
-                media.SetTitle();
-
                 bool exists = File.Exists(media.DownloadPath);
                 bool isSupported = false;
                 if (exists)
@@ -324,6 +322,18 @@ public partial class App : Application
             foreach (var playlist in playlists)
             {
                 AppData.AddPlaylist(playlist);
+            }
+            
+            foreach (var playlist in playlists)
+            {
+                var playlistMedias = await Database.LoadPlaylistMediaFromApi(playlist.Identifier);
+
+                foreach (var media in playlistMedias)
+                {
+                    AppData.PlaylistMedias.Add(media);
+                }
+                
+                playlist.FindMedias();
             }
 
             if (AppData.Settings.ScanFolderOnStartup)
@@ -413,9 +423,15 @@ public partial class App : Application
                 {
                     DownloadPath = file,
                     UserIdentifier = AppData.CurrentUser.Identifier,
-                    DownloadedAt = File.GetCreationTime(file).ToLongDateString(),
-                    MediaType = Path.GetExtension(file)
+                    DownloadedAt = File.GetCreationTime(file).ToString("O"),
+                    MediaType = Path.GetExtension(file),
+                    Url = "N/A",
+                    Title = Path.GetFileName(file),
+                    IsPlayable = true,
                 };
+                
+                if (AppData.MediaAlreadyExists(file))
+                    continue;
 
                 var media = await Database.CreateDownloadedMedia(req);
 

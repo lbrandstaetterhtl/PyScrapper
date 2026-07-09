@@ -137,16 +137,16 @@ public class AppData : Interfaces.IAppDataService
 /// <param name="downloadPath"></param>
 /// <param name="isPlayable"></param>
 /// <param name="identifier"></param>
-public partial class DownloadedMedia(string userIdentifier, string url, string mediaType, DateTime downloadedAt, string downloadPath, bool isPlayable, string identifier) : ObservableObject
+public partial class DownloadedMedia(string userIdentifier, string title, string url, string mediaType, DateTime downloadedAt, string downloadPath, bool isPlayable, string identifier) : ObservableObject
 {
     [ObservableProperty]
     private string _identifier = identifier;
     
     [ObservableProperty]
     private string _userIdentifier = userIdentifier;
-    
-    [ObservableProperty]
-    private string _title = string.Empty;
+
+    [ObservableProperty] 
+    private string _title = title;
     
     [ObservableProperty]
     private string _url = url;
@@ -164,14 +164,7 @@ public partial class DownloadedMedia(string userIdentifier, string url, string m
     private bool _isPlayable = isPlayable;
 
     private static readonly AppLogger _logger = new();
-
-    /// <summary>
-    /// Sets the title property of the media item to the file name without the extension from the download path, providing a user-friendly name for the media item based on its file name.
-    /// </summary>
-    public void SetTitle()
-    {
-        Title = Path.GetFileNameWithoutExtension(DownloadPath);
-    }
+    
     
      private static readonly HashSet<string> ReservedWindowsNames = new(StringComparer.OrdinalIgnoreCase)
         {

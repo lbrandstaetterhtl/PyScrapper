@@ -138,3 +138,18 @@ public class LoginResponse
     [JsonPropertyName("identifier")]
     public string Identifier { get; set; }
 }
+
+public class GetPlaylistResponse
+{
+    [JsonPropertyName("Identifier")]
+    public string Identifier { get; set; }
+    
+    [JsonPropertyName("UserIdentifier")]
+    public string UserIdentifier { get; set; }
+    
+    [JsonPropertyName("Name")]
+    public string Name { get; set; }
+    
+    [JsonPropertyName("Description")]
+    public string Description { get; set; }
+}

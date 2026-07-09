@@ -1,9 +1,20 @@
 ﻿import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-
 import fastapi
 from PythonModule.models.settings import PROGRESSDICT
+from PythonModule.models.responses import (
+    MessageResponse,
+    CreateResponse,
+    CreatePlaylistMediaResponse,
+    LoginResponse,
+    UserResponse,
+    UserWithCreatedAtResponse,
+    PlaylistResponse,
+    DownloadedMediaResponse,
+    SettingsResponse,
+    PlaylistMediaResponse,
+)
 from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest, CreateUserRequest, CreatePlaylistRequest, CreateDownloadedMediaRequest, CreateSettingsRequest, CreatePlaylistMediaRequest, DeletePlaylistMediaRequest
 from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
 from PythonModule import Session
@@ -11,10 +22,11 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional, List
 import sys, time, re, json, uuid
 from datetime import datetime
 import bcrypt
-
 
 import urllib.error, urllib.request
 import platform, subprocess
@@ -29,22 +41,15 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_path)
 db_path = os.path.join(current_path, "Data", "data.db")
 load_dotenv()
-print(repr(os.getenv("ADMIN_KEY")))
 ADMIN_KEY = os.getenv("ADMIN_KEY")
 
-#Runtime Logs will be saved under this path
 log_dir = os.path.join(project_root, "LocalServer", "logs")
 log_file = os.path.join(log_dir, "server_runtime.log")
-#Make sure it exists and if it doesn't it will create it
 os.makedirs(log_dir, exist_ok=True)
 
-
-#Session for cookies and stuff which will be used to request ressources
 ses = Session.Session()
 
-#The app
 app = FastAPI()
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -57,20 +62,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#Queues
 log_queue = asyncio.Queue(maxsize=5000)
-
-
-#Events
 quit_event = asyncio.Event()
 
-#Sets
 download_jobs = set()
 search_jobs = set()
 download_progress = {}
-
-
-
 
 
 class SearchError(Exception): ...
@@ -78,17 +75,11 @@ class CommandError(Exception): ...
 class DownloadError(Exception): ...
 
 
-async def logger(
-        quit_event: asyncio.Event,
-        log_queue: asyncio.Queue
-        ):
-#Setting up files where logs will be written to
+async def logger(quit_event: asyncio.Event, log_queue: asyncio.Queue):
     global log_file
-
 
     while not quit_event.is_set():
         try:
-#Waits till something gets put into the queue
             message = await log_queue.get()
 
             if not isinstance(message, str):
@@ -101,32 +92,11 @@ async def logger(
 
         except asyncio.CancelledError:
             break
-#Just in case something will break the logger it will be output in terminal and not crash the server
         except Exception as e:
             print(e)
-    
 
 
-
-
-#Processes the commands from a user
-
-            
-
-
-                
-
-
-#Limits the parralel downloads to 50 at a time, change value for more or less downlaods
 download_limiter = asyncio.Semaphore(50)
-#Starts download from a user
-
-        
-        
-        
-
-
-
 
 
 @app.get("/")
@@ -136,32 +106,19 @@ async def root():
     }
 
 
-
-
-
 @app.on_event("startup")
 async def startup_event():
     global quit_event, log_queue
-   
+
     asyncio.create_task(logger(quit_event, log_queue))
-
     log_queue.put_nowait("[INFO] Server started successfully")
-
     create_app_tables()
-
-    
-
-
-
-
-
 
 
 @app.post("/command")
 async def receive_command(data: CommandRequest):
     global log_file, log_queue, quit_event
     try:
-    
         await commandProcessor.CommandProcessor(
             command=data.command,
             logFile=log_file,
@@ -169,12 +126,11 @@ async def receive_command(data: CommandRequest):
             quitEvent=quit_event
         ).run()
 
+        log_queue.put_nowait(f"[INFO] Command '{data.command}' executed successfully")
+
     except Exception as e:
-        log_queue.put_nowait([f"[ERROR] Error handling command {data.command}.\nError Message: {str(e)}"])
+        log_queue.put_nowait(f"[ERROR] Error handling command {data.command}.\nError Message: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
 
 
 @app.post("/download")
@@ -182,10 +138,7 @@ async def receive_download(data: DownloadRequest):
     global log_queue, ses, download_limiter
     task_id = str(uuid.uuid4())
     try:
-        
         utils.validate_url(session=ses, url=data.url)
-        
-        
 
         download_progress[task_id] = PROGRESSDICT.copy()
         download_progress[task_id]['id'] = task_id
@@ -196,10 +149,9 @@ async def receive_download(data: DownloadRequest):
             session=ses,
             downloadLimiter=download_limiter,
             logQueue=log_queue
-            ).run()
-            ,
+            ).run(),
             name=task_id)
-        
+
         def done(t: asyncio.Task):
             download_jobs.discard(t)
             asyncio.create_task(utils.cleanup_progress(
@@ -211,27 +163,16 @@ async def receive_download(data: DownloadRequest):
         task.add_done_callback(done)
         download_jobs.add(task)
 
-
         log_queue.put_nowait(f"[INFO] Created download task with id {task_id} for provider {data.provider} with url {data.url}")
         return {"id": task_id, "message": f"Request received for download, you can view progress under /download/progress/{task_id}"}
-        
-    
+
     except (ValueError, TypeError) as e:
         log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.url}, filepath {data.download_path}.\nError Message: Invalid type for {str(e)}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid type for {str(e)}"
-        )
-        
+        raise HTTPException(status_code=400, detail=f"Invalid type for {str(e)}")
 
     except Exception as e:
         log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.url}, filepath {data.download_path}.\nError Message: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
-
-
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/download/progress/{task_id}")
@@ -239,50 +180,26 @@ async def get_download_progress(task_id: str):
     progress = download_progress.get(task_id)
     if not progress:
         log_queue.put_nowait(f"[ERROR] Tried to access resource /download/progress/{task_id} which doesn't exist")
-
-        raise HTTPException(
-            status_code=404,
-            detail=f"No such ressource /download/progress/{task_id}"
-        )
+        raise HTTPException(status_code=404, detail=f"No such ressource /download/progress/{task_id}")
     return progress
 
 
-
-
-
-
-
 @app.post("/search")
-
 async def receive_search(data: SearchRequest):
     global ses
     search_id = str(uuid.uuid4())
     try:
-        
         response = await searchProcessor.SearchProcessor(
             searchRequest=data,
             session=ses,
             ).run()
-        
 
         log_queue.put_nowait(f"[INFO] Search succesfull for job {search_id} with query {data.search} and provider {data.provider}")
         return response
-    
+
     except Exception as e:
         log_queue.put_nowait(f"[ERROR] Failed search task with given arguments: id {search_id} provider {data.provider} and searchinput {data.search}.\n Error Message:{str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
-
-
-
-
-
-
-
-
-
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 start_time = time.time()
@@ -293,15 +210,13 @@ def health():
         uptime_seconds = time.time() - start_time
         try:
             mem = self_memory_mb()
-        except Exception as e:
+        except Exception:
             mem = None
-        
-        active_downloads = [v for v in download_progress.values() if v["status"] not in ("complete", "error")]
 
+        active_downloads = [v for v in download_progress.values() if v["status"] not in ("complete", "error")]
         downloads_with_errors = [v for v in download_progress.values() if v["status"] == "error"]
-    
         error_messages = [v["errorMessage"] for v in downloads_with_errors if v["errorMessage"]]
-    
+
         return {
             "ok": True,
             "uptime_seconds": round(uptime_seconds, 2),
@@ -312,10 +227,8 @@ def health():
             "error_messages": error_messages
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 def self_memory_mb():
     pid = os.getpid()
@@ -332,7 +245,6 @@ def self_memory_mb():
                 return None
             return round(int(digits) / 1024, 2)
         else:
-            # Linux: /proc/{pid}/status auslesen
             with open(f"/proc/{pid}/status") as f:
                 for line in f:
                     if line.startswith("VmRSS:"):
@@ -341,6 +253,7 @@ def self_memory_mb():
             return None
     except Exception:
         return None
+
 
 def list_python_processes():
     if platform.system() != "Windows":
@@ -360,9 +273,7 @@ ConvertTo-Json
 
     out = subprocess.check_output(
         ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
-        text=True,
-        encoding="utf-8",
-        errors="replace"
+        text=True, encoding="utf-8", errors="replace"
     ).strip()
 
     if not out:
@@ -374,22 +285,21 @@ ConvertTo-Json
 
     return [{"pid": int(p["ProcessId"]), "name": p["Name"]} for p in data]
 
+
 #---------------- DB management ------------------------
 
 def create_app_tables():
-
-    if not os.path.exists(db_path):
-        mkdir(os.path.dirname(db_path))
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
     conn = connect_db()
     cursor = conn.cursor()
 
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS Users (
-                                                        Identifier TEXT NOT NULL PRIMARY KEY,
-                                                        Username TEXT NOT NULL,
-                                                        PasswordHash TEXT NOT NULL,
-                                                        CreatedAt TEXT NOT NULL)""")
+                        Identifier TEXT NOT NULL PRIMARY KEY,
+                        Username TEXT NOT NULL UNIQUE,
+                        PasswordHash TEXT NOT NULL,
+                        CreatedAt TEXT NOT NULL)""")
 
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS DownloadedMedias
@@ -397,16 +307,16 @@ def create_app_tables():
                        Identifier TEXT NOT NULL PRIMARY KEY,
                        UserIdentifier TEXT NOT NULL,
                        Url TEXT,
-                       Titel TEXT NOT NULL,
+                       Title TEXT NOT NULL UNIQUE,
                        MediaType TEXT NOT NULL,
                        DownloadedAt TEXT,
-                       DownloadPath TEXT NOT NULL,
+                       DownloadPath TEXT NOT NULL UNIQUE,
                        IsPlayable BOOLEAN NOT NULL,
                        FOREIGN KEY (UserIdentifier) REFERENCES Users (Identifier) ON DELETE CASCADE
                    )""")
 
     cursor.execute("""
-                   Create table IF NOT EXISTS Playlists
+                   CREATE TABLE IF NOT EXISTS Playlists
                    (
                        Identifier TEXT NOT NULL PRIMARY KEY,
                        UserIdentifier TEXT NOT NULL,
@@ -430,7 +340,7 @@ def create_app_tables():
                    CREATE TABLE IF NOT EXISTS Settings
                    (
                        Identifier TEXT NOT NULL PRIMARY KEY,
-                       UserIdentifier TEXT NOT NULL,
+                       UserIdentifier TEXT NOT NULL UNIQUE,
                        DownloadPath TEXT NOT NULL,
                        ServerUrl TEXT NOT NULL,
                        DarkModeEnabled BOOLEAN NOT NULL,
@@ -441,6 +351,7 @@ def create_app_tables():
     conn.commit()
     conn.close()
 
+
 def create_user(username: str, password: str, identifier: str, created_at: str):
     conn = connect_db()
     cursor = conn.cursor()
@@ -449,380 +360,521 @@ def create_user(username: str, password: str, identifier: str, created_at: str):
     conn.commit()
     conn.close()
 
+
 def connect_db():
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA foreign_keys = ON")
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.get("/get/user/{identifier}")
+
+# ---------------- User Endpoints ----------------
+
+@app.get("/get/user/{identifier}", response_model=UserResponse)
 async def get_users(identifier: str):
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, Username FROM Users WHERE Identifier = ?", (identifier,))
-
-    row = cursor.fetchone()
-
-    if row is None:
-        cursor.execute("SELECT Identifier, Username FROM Users WHERE Username = ?", (identifier,))
+        cursor.execute("SELECT Identifier, Username FROM Users WHERE Identifier = ?", (identifier,))
         row = cursor.fetchone()
-        
+
         if row is None:
-            raise fastapi.HTTPException(status_code=404, detail="User not found")
+            cursor.execute("SELECT Identifier, Username FROM Users WHERE Username = ?", (identifier,))
+            row = cursor.fetchone()
 
-    conn.close()
-    return dict(row)
+            if row is None:
+                conn.close()
+                log_queue.put_nowait(f"[ERROR] User lookup failed for identifier/username '{identifier}'")
+                raise fastapi.HTTPException(status_code=404, detail="User not found")
 
-@app.get("/getall/users/{key}")
+        conn.close()
+        log_queue.put_nowait(f"[INFO] User '{identifier}' retrieved successfully")
+        return dict(row)
+    except fastapi.HTTPException:
+        raise
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving user '{identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/getall/users/{key}", response_model=List[UserWithCreatedAtResponse])
 async def get_all_users(key: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, Username, CreatedAt FROM Users")
-    rows = cursor.fetchall()
-    conn.close()
+        cursor.execute("SELECT Identifier, Username, CreatedAt FROM Users")
+        rows = cursor.fetchall()
+        conn.close()
 
-    return [dict(row) for row in rows]
+        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} users")
+        return [dict(row) for row in rows]
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving all users: {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.post("/create-tables/{key}")
+
+@app.post("/create-tables/{key}", response_model=MessageResponse)
 async def create_table(key: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-    create_app_tables()
 
-    return {
-        "message": "Tables created successfully"
-    }
+    try:
+        create_app_tables()
+        log_queue.put_nowait("[INFO] Tables created successfully")
+        return {"message": "Tables created successfully"}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error creating tables: {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.post("/create/user/{key}")
+
+@app.post("/create/user/{key}", response_model=CreateResponse)
 async def handle_create_user_req(key: str, req: CreateUserRequest):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    identifier = str(uuid.uuid4())
-    username = req.username
-    password = req.password
-    created_at = datetime.now().isoformat()
+    try:
+        identifier = str(uuid.uuid4())
+        username = req.username
+        password = req.password
+        created_at = datetime.now().isoformat()
 
-    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-    create_user(username, password_hash, identifier, created_at)
+        create_user(username, password_hash, identifier, created_at)
 
-    return {
-        "message": "User created successfully",
-        "identifier": identifier
-    }
+        log_queue.put_nowait(f"[INFO] User '{username}' created successfully with id {identifier}")
+        return {"message": "User created successfully", "identifier": identifier}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error creating user '{req.username}': {str(e)}")
+        raise fastapi.HTTPException(status_code=400, detail=str(e))
 
-@app.post("/delete/user/{key}")
+
+@app.post("/delete/user/{key}", response_model=MessageResponse)
 async def handle_delete_user_req(key: str, identifier: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("""DELETE FROM Users WHERE Identifier = ?""", (identifier,))
-    conn.commit()
-    conn.close()
+        cursor.execute("""DELETE FROM Users WHERE Identifier = ?""", (identifier,))
+        conn.commit()
+        conn.close()
 
-    return {
-        "message": "User deleted successfully"
-    }
+        log_queue.put_nowait(f"[INFO] User '{identifier}' deleted successfully")
+        return {"message": "User deleted successfully"}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error deleting user '{identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.get("/get/playlists/{identifier}")
+
+# ---------------- Playlist Endpoints ----------------
+
+@app.get("/get/playlists/{identifier}", response_model=List[PlaylistResponse])
 async def get_playlists(identifier: str):
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, Name, Description FROM Playlists WHERE Identifier = ?", (identifier,))
-    rows = cursor.fetchall()
-    conn.close()
+        cursor.execute("SELECT Identifier, UserIdentifier, Name, Description FROM Playlists WHERE Identifier = ?", (identifier,))
+        rows = cursor.fetchall()
+        conn.close()
 
-    return [dict(row) for row in rows]
+        log_queue.put_nowait(f"[INFO] Retrieved playlist(s) for identifier '{identifier}'")
+        return [dict(row) for row in rows]
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving playlists for '{identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.post("/create/playlist/{key}")
+
+@app.post("/create/playlist/{key}", response_model=CreateResponse)
 async def handle_create_playlist_req(key: str, req: CreatePlaylistRequest):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    identifier = str(uuid.uuid4())
+    try:
+        identifier = str(uuid.uuid4())
 
-    user_identifier = req.user_identifier
-    name = req.name
-    description = req.description
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    conn = connect_db()
-    cursor = conn.cursor()
+        cursor.execute("""INSERT INTO Playlists (Identifier, UserIdentifier, Name, Description) VALUES (?, ?, ?, ?)""", (identifier, req.user_identifier, req.name, req.description))
+        conn.commit()
+        conn.close()
 
-    cursor.execute("""INSERT INTO Playlists (Identifier, UserIdentifier, Name, Description) VALUES (?, ?, ?, ?)""", (identifier, user_identifier, name, description))
-    conn.commit()
-    conn.close()
+        log_queue.put_nowait(f"[INFO] Playlist '{req.name}' created successfully with id {identifier}")
+        return {"message": "Playlist created successfully", "identifier": identifier}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error creating playlist '{req.name}': {str(e)}")
+        raise fastapi.HTTPException(status_code=400, detail=str(e))
 
-    return {
-        "message": "Playlist created successfully",
-        "identifier": identifier
-    }
 
-@app.post("/delete/playlist/{key}")
+@app.post("/delete/playlist/{key}", response_model=MessageResponse)
 async def handle_delete_playlist_req(key: str, identifier: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("""DELETE FROM Playlists WHERE Identifier = ?""", (identifier,))
-    conn.commit()
-    conn.close()
+        cursor.execute("""DELETE FROM Playlists WHERE Identifier = ?""", (identifier,))
+        conn.commit()
+        conn.close()
 
-    return {
-        "message": "Playlist deleted successfully"
-    }
+        log_queue.put_nowait(f"[INFO] Playlist '{identifier}' deleted successfully")
+        return {"message": "Playlist deleted successfully"}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error deleting playlist '{identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.get("/getall/playlists/{key}")
+
+@app.get("/getall/playlists/{key}", response_model=List[PlaylistResponse])
 async def get_all_playlists(key: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, UserIdentifier, Name, Description FROM Playlists")
-    rows = cursor.fetchall()
-    conn.close()
+        cursor.execute("SELECT Identifier, UserIdentifier, Name, Description FROM Playlists")
+        rows = cursor.fetchall()
+        conn.close()
 
-    return [dict(row) for row in rows]
+        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} playlists")
+        return [dict(row) for row in rows]
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving all playlists: {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.post("/create/downloadedmedia/{key}")
+
+# ---------------- DownloadedMedia Endpoints ----------------
+
+@app.post("/create/downloadedmedia/{key}", response_model=CreateResponse)
 async def handle_create_downloaded_media_req(key: str, req: CreateDownloadedMediaRequest):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    identifier = str(uuid.uuid4())
+    try:
+        identifier = str(uuid.uuid4())
 
-    user_identifier = req.user_identifier
-    download_path = req.download_path
-    downloaded_at = req.downloaded_at
-    is_playable = req.is_playable
-    url = req.url
-    mediatype = req.mediatype
-    titel = req.titel
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    conn = connect_db()
-    cursor = conn.cursor()
+        cursor.execute(
+            """INSERT INTO DownloadedMedias (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Title) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (identifier, req.user_identifier, req.url, req.mediatype, req.downloaded_at, req.download_path, req.is_playable, req.title)
+        )
+        conn.commit()
+        conn.close()
 
-    cursor.execute("""INSERT INTO DownloadedMedias (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Titel) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", (identifier, user_identifier, url, mediatype, downloaded_at, download_path, is_playable, titel))
-    conn.commit()
-    conn.close()
+        log_queue.put_nowait(f"[INFO] Downloaded media '{req.title}' created successfully with id {identifier}")
+        return {"message": "Downloaded media created successfully", "identifier": identifier}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error creating downloaded media '{req.title}': {str(e)}")
+        raise fastapi.HTTPException(status_code=400, detail=str(e))
 
-    return {
-        "message": "Downloaded media created successfully",
-        "identifier": identifier
-    }
 
-@app.post("/delete/downloadedmedia/{key}")
+@app.post("/delete/downloadedmedia/{key}", response_model=MessageResponse)
 async def handle_delete_downloaded_media_req(key: str, identifier: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("""DELETE FROM DownloadedMedias WHERE Identifier = ?""", (identifier,))
-    conn.commit()
-    conn.close()
+        cursor.execute("""DELETE FROM DownloadedMedias WHERE Identifier = ?""", (identifier,))
+        conn.commit()
+        conn.close()
 
-    return {
-        "message": "Downloaded media deleted successfully"
-    }
+        log_queue.put_nowait(f"[INFO] Downloaded media '{identifier}' deleted successfully")
+        return {"message": "Downloaded media deleted successfully"}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error deleting downloaded media '{identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.get("/get/downloadedmedia/{identifier}")
+
+@app.get("/get/downloadedmedia/{identifier}", response_model=DownloadedMediaResponse)
 async def get_downloaded_media(identifier: str):
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias WHERE Identifier = ?", (identifier,))
-    row = cursor.fetchone()
-    conn.close()
+        cursor.execute("SELECT Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Title FROM DownloadedMedias WHERE Identifier = ?", (identifier,))
+        row = cursor.fetchone()
+        conn.close()
 
-    if row is None:
-        raise fastapi.HTTPException(status_code=404, detail="Downloaded media not found")
+        if row is None:
+            log_queue.put_nowait(f"[ERROR] Downloaded media '{identifier}' not found")
+            raise fastapi.HTTPException(status_code=404, detail="Downloaded media not found")
 
-    return dict(row)
+        log_queue.put_nowait(f"[INFO] Downloaded media '{identifier}' retrieved successfully")
+        return dict(row)
+    except fastapi.HTTPException:
+        raise
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving downloaded media '{identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.get("/getall/downloadedmedias/{key}")
+
+@app.get("/getall/downloadedmedias/{key}", response_model=List[DownloadedMediaResponse])
 async def get_all_downloaded_media(key: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias")
-    rows = cursor.fetchall()
-    conn.close()
+        cursor.execute("SELECT Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Title FROM DownloadedMedias")
+        rows = cursor.fetchall()
+        conn.close()
 
-    return [dict(row) for row in rows]
+        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} downloaded medias")
+        return [dict(row) for row in rows]
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving all downloaded medias: {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.post("/create/settings/{key}")
+
+@app.get("/getuser/downloadedmedias/{key}", response_model=List[DownloadedMediaResponse])
+async def get_user_downloaded_medias(key: str, user_identifier: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT Identifier, UserIdentifier, Title, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias WHERE UserIdentifier = ?", (user_identifier,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} downloaded medias for user '{user_identifier}'")
+        return [dict(row) for row in rows]
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving downloaded medias for user '{user_identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------- Settings Endpoints ----------------
+
+@app.post("/create/settings/{key}", response_model=CreateResponse)
 async def handle_create_setting_req(key: str, req: CreateSettingsRequest):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    identifier = str(uuid.uuid4())
+    try:
+        identifier = str(uuid.uuid4())
 
-    user_identifier = req.user_identifier
-    default_download_path = req.default_download_path
-    dark_mode_enabled = req.dark_mode_enabled
-    scan_folder_on_startup = req.scan_folder_on_startup
-    server_url = req.server_url
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    conn = connect_db()
-    cursor = conn.cursor()
+        cursor.execute(
+            """INSERT INTO Settings (Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup, ServerUrl) VALUES (?, ?, ?, ?, ?, ?)""",
+            (identifier, req.user_identifier, req.default_download_path, req.dark_mode_enabled, req.scan_folder_on_startup, req.server_url)
+        )
+        conn.commit()
+        conn.close()
 
-    cursor.execute("""INSERT INTO Settings (Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup, ServerUrl) VALUES (?, ?, ?, ?, ?, ?)""", (identifier, user_identifier, default_download_path, dark_mode_enabled, scan_folder_on_startup, server_url))
-    conn.commit()
-    conn.close()
+        log_queue.put_nowait(f"[INFO] Settings created successfully for user '{req.user_identifier}' with id {identifier}")
+        return {"message": "Setting created successfully", "identifier": identifier}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error creating settings for user '{req.user_identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=400, detail=str(e))
 
-    return {
-        "message": "Setting created successfully",
-        "identifier": identifier
-    }
 
-@app.post("/delete/settings/{key}")
+@app.post("/delete/settings/{key}", response_model=MessageResponse)
 async def handle_delete_setting_req(key: str, identifier: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("""DELETE FROM Settings WHERE Identifier = ?""", (identifier,))
-    conn.commit()
-    conn.close()
+        cursor.execute("""DELETE FROM Settings WHERE Identifier = ?""", (identifier,))
+        conn.commit()
+        conn.close()
 
-    return {
-        "message": "Setting deleted successfully"
-    }
+        log_queue.put_nowait(f"[INFO] Settings '{identifier}' deleted successfully")
+        return {"message": "Setting deleted successfully"}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error deleting settings '{identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.get("/get/settings/{user_identifier}")
+
+@app.get("/get/settings/{user_identifier}", response_model=SettingsResponse)
 async def get_setting(user_identifier: str):
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings WHERE UserIdentifier = ?", (user_identifier,))
-    row = cursor.fetchone()
-    conn.close()
+        cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, ServerUrl, DarkModeEnabled, ScanFolderOnStartup FROM Settings WHERE UserIdentifier = ?", (user_identifier,))
+        row = cursor.fetchone()
+        conn.close()
 
-    if row is None:
-        raise fastapi.HTTPException(status_code=404, detail="Setting not found")
+        if row is None:
+            log_queue.put_nowait(f"[INFO] No settings found for user '{user_identifier}' (expected for new users)")
+            raise fastapi.HTTPException(status_code=404, detail="Setting not found")
 
-    result = dict(row)
-    result["DarkModeEnabled"] = bool(result["DarkModeEnabled"])
-    result["ScanFolderOnStartup"] = bool(result["ScanFolderOnStartup"])
+        log_queue.put_nowait(f"[INFO] Settings retrieved for user '{user_identifier}'")
+        return dict(row)
+    except fastapi.HTTPException:
+        raise
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving settings for user '{user_identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-    return result
 
-@app.get("/getall/settings/{key}")
+@app.get("/getall/settings/{key}", response_model=List[SettingsResponse])
 async def get_all_settings(key: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings")
-    rows = cursor.fetchall()
-    conn.close()
+        cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, ServerUrl, DarkModeEnabled, ScanFolderOnStartup FROM Settings")
+        rows = cursor.fetchall()
+        conn.close()
 
-    return [dict(row) for row in rows]
+        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} settings entries")
+        return [dict(row) for row in rows]
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving all settings: {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.post("/create/playlistmedia/{key}")
+
+# ---------------- PlaylistMedia Endpoints ----------------
+
+@app.post("/create/playlistmedia/{key}", response_model=CreatePlaylistMediaResponse)
 async def handle_create_playlist_media_req(key: str, req: CreatePlaylistMediaRequest):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    playlist_identifier = req.playlist_identifier
-    media_identifier = req.media_identifier
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    conn = connect_db()
-    cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?", (req.playlist_identifier, req.media_identifier))
+        count = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?", (playlist_identifier, media_identifier))
-    count = cursor.fetchone()[0]
+        if count > 0:
+            conn.close()
+            log_queue.put_nowait(f"[ERROR] Media '{req.media_identifier}' already exists in playlist '{req.playlist_identifier}'")
+            raise fastapi.HTTPException(status_code=400, detail="Media already exists in the playlist")
 
-    if count > 0:
-        raise fastapi.HTTPException(status_code=400, detail="Media already exists in the playlist")
+        cursor.execute("SELECT MAX(Position) FROM PlaylistMedias WHERE PlaylistIdentifier = ?", (req.playlist_identifier,))
+        max_position_row = cursor.fetchone()
+        max_position = max_position_row[0] if max_position_row[0] is not None else 0
+        new_position = max_position + 1
 
-    cursor.execute("SELECT MAX(Position) FROM PlaylistMedias WHERE PlaylistIdentifier = ?", (playlist_identifier,))
-    max_position_row = cursor.fetchone()
-    max_position = max_position_row[0] if max_position_row[0] is not None else 0
-    new_position = max_position + 1
+        cursor.execute("""INSERT INTO PlaylistMedias (PlaylistIdentifier, MediaIdentifier, Position) VALUES (?, ?, ?)""", (req.playlist_identifier, req.media_identifier, new_position))
+        conn.commit()
+        conn.close()
 
-    cursor.execute("""INSERT INTO PlaylistMedias (PlaylistIdentifier, MediaIdentifier, Position) VALUES (?, ?, ?)""", (playlist_identifier, media_identifier, new_position))
-    conn.commit()
-    conn.close()
+        log_queue.put_nowait(f"[INFO] Media '{req.media_identifier}' added to playlist '{req.playlist_identifier}' at position {new_position}")
+        return {"message": "Media added to playlist successfully", "position": new_position}
+    except fastapi.HTTPException:
+        raise
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error adding media '{req.media_identifier}' to playlist '{req.playlist_identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=400, detail=str(e))
 
-    return {
-        "message": "Media added to playlist successfully",
-        "position": new_position
-    }
 
-@app.post("/delete/playlistmedia/{key}")
+@app.post("/delete/playlistmedia/{key}", response_model=MessageResponse)
 async def handle_delete_playlist_media_req(key: str, req: DeletePlaylistMediaRequest):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
 
-    playlist_identifier = req.playlist_identifier
-    media_identifier = req.media_identifier
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    conn = connect_db()
-    cursor = conn.cursor()
+        cursor.execute("DELETE FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?", (req.playlist_identifier, req.media_identifier))
+        conn.commit()
+        conn.close()
 
-    cursor.execute("DELETE FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?", (playlist_identifier, media_identifier))
-    conn.commit()
-    conn.close()
+        log_queue.put_nowait(f"[INFO] Media '{req.media_identifier}' removed from playlist '{req.playlist_identifier}'")
+        return {"message": "Media removed from playlist successfully"}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error removing media '{req.media_identifier}' from playlist '{req.playlist_identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-    return {
-        "message": "Media removed from playlist successfully",
-    }
 
-@app.get("/get/playlistmedias/{playlist_identifier}")
+@app.get("/get/playlistmedias/{playlist_identifier}", response_model=List[PlaylistMediaResponse])
 async def get_playlist_medias(playlist_identifier: str):
-    conn = connect_db()
-    cursor = conn.cursor()
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT PlaylistIdentifier, MediaIdentifier, Position FROM PlaylistMedias WHERE PlaylistIdentifier = ? ORDER BY Position", (playlist_identifier,))
-    rows = cursor.fetchall()
-    conn.close()
+        cursor.execute("SELECT PlaylistIdentifier, MediaIdentifier, Position FROM PlaylistMedias WHERE PlaylistIdentifier = ? ORDER BY Position", (playlist_identifier,))
+        rows = cursor.fetchall()
+        conn.close()
 
-    return [dict(row) for row in rows]
+        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} media entries for playlist '{playlist_identifier}'")
+        return [dict(row) for row in rows]
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving media for playlist '{playlist_identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-@app.post("/login")
+
+@app.get("/getuser/playlists/{key}", response_model=List[PlaylistResponse])
+async def get_user_playlists(key: str, user_identifier: str):
+    if key != ADMIN_KEY:
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT Identifier, UserIdentifier, Name, Description FROM Playlists WHERE UserIdentifier = ?", (user_identifier,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} playlists for user '{user_identifier}'")
+        return [dict(row) for row in rows]
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error retrieving playlists for user '{user_identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------- Login ----------------
+
+@app.post("/login", response_model=LoginResponse)
 async def handle_login_req(req: CreateUserRequest):
-    username = req.username
-    password = req.password
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
 
-    conn = connect_db()
-    cursor = conn.cursor()
+        cursor.execute("SELECT Identifier, PasswordHash FROM Users WHERE Username = ?", (req.username,))
+        row = cursor.fetchone()
+        conn.close()
 
-    cursor.execute("SELECT Identifier, PasswordHash FROM Users WHERE Username = ?", (username,))
-    row = cursor.fetchone()
-    conn.close()
+        if row is None:
+            log_queue.put_nowait(f"[ERROR] Login failed: user '{req.username}' not found")
+            raise fastapi.HTTPException(status_code=404, detail="User not found")
 
-    if row is None:
-        raise fastapi.HTTPException(status_code=404, detail="User not found")
+        identifier, password_hash = row["Identifier"], row["PasswordHash"]
 
-    identifier, password_hash = row["Identifier"], row["PasswordHash"]
+        if not bcrypt.checkpw(req.password.encode("utf-8"), password_hash.encode("utf-8")):
+            log_queue.put_nowait(f"[ERROR] Login failed: invalid password for user '{req.username}'")
+            raise fastapi.HTTPException(status_code=401, detail="Invalid password")
 
-    if not bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
-        raise fastapi.HTTPException(status_code=401, detail="Invalid password")
-
-    return {
-        "message": "Login successful",
-        "identifier": identifier
-    }
+        log_queue.put_nowait(f"[INFO] User '{req.username}' logged in successfully")
+        return {"message": "Login successful", "identifier": identifier}
+    except fastapi.HTTPException:
+        raise
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error during login for user '{req.username}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
