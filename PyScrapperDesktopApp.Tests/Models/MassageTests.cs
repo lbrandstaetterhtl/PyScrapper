@@ -6,7 +6,7 @@ namespace PyScrapperDesktopApp.Tests.Models;
 
 public class MassageTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void Constructor_SetsPropertiesCorrectly()
     {
         var text = "Test message";
@@ -31,7 +31,7 @@ public class MassageTests
         Assert.Equal(type, massage.Type);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Constructor_EmptyText_IsAllowed()
     {
         var massage = new Massage("", DateTime.Now, "INFO");
@@ -39,7 +39,7 @@ public class MassageTests
         Assert.Equal("", massage.Text);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Constructor_NullText_IsAllowed()
     {
         var massage = new Massage(null!, DateTime.Now, "INFO");
@@ -47,4 +47,5 @@ public class MassageTests
         Assert.Null(massage.Text);
     }
 }
+
 

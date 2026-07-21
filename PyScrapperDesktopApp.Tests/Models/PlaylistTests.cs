@@ -18,7 +18,7 @@ public class PlaylistTests
         AppData.PlayableMedias.Clear();
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Constructor_SetsAllPropertiesCorrectly()
     {
         var mediaIds = new List<int> { 1, 2, 3 };
@@ -34,7 +34,7 @@ public class PlaylistTests
         Assert.Empty(playlist.PlayableMediaIds);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetHighestId_EmptyCollection_SetsIdTo1()
     {
         var playlist = new Playlist(new List<int>(), "Test", "Description");
@@ -45,7 +45,7 @@ public class PlaylistTests
         Assert.Equal(1, playlist.Id);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetHighestId_CollectionWithItems_SetsIdToMaxPlusOne()
     {
         var existing1 = new Playlist(new List<int>(), "P1", "Desc1") { Id = 3 };
@@ -60,7 +60,7 @@ public class PlaylistTests
         Assert.Equal(8, newPlaylist.Id);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetPlayableMediaIds_MatchesPlayableMediasInCollection()
     {
         var playable1 = new DownloadedMedia("url1", ".mp3", DateTime.Now, "path1", true, "id1") { Id = 1 };
@@ -78,7 +78,7 @@ public class PlaylistTests
         Assert.DoesNotContain(3, playlist.PlayableMediaIds);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetPlayableMediaIds_EmptyPlayableMedias_EmptyPlayableMediaIds()
     {
         var playableMedias = new ObservableCollection<DownloadedMedia>();
@@ -89,7 +89,7 @@ public class PlaylistTests
         Assert.Empty(playlist.PlayableMediaIds);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AddMedia_NewMediaId_AddsToMediaIds()
     {
         var playlist = new Playlist(new List<int> { 1, 2 }, "Test", "Description");
@@ -102,7 +102,7 @@ public class PlaylistTests
         Assert.Equal(3, playlist.Count);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AddMedia_ExistingMediaId_DoesNotAddDuplicate()
     {
         var playlist = new Playlist(new List<int> { 1, 2 }, "Test", "Description");
@@ -114,7 +114,7 @@ public class PlaylistTests
         Assert.Equal(2, playlist.Count);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RemoveMedia_ExistingMediaId_RemovesFromMediaIds()
     {
         var playlist = new Playlist(new List<int> { 1, 2, 3 }, "Test", "Description");
@@ -127,7 +127,7 @@ public class PlaylistTests
         Assert.Equal(2, playlist.Count);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RemoveMedia_NonExistentMediaId_DoesNothing()
     {
         var playlist = new Playlist(new List<int> { 1, 2, 3 }, "Test", "Description");
@@ -139,7 +139,7 @@ public class PlaylistTests
         Assert.Equal(3, playlist.Count);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AddPlaylist_AddsToCollection()
     {
         var playlist = new Playlist(new List<int> { 1 }, "Test", "Description");
@@ -150,7 +150,7 @@ public class PlaylistTests
         Assert.Contains(playlist, AppData.Playlists);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RemovePlaylist_RemovesFromCollection()
     {
         var playlist = new Playlist(new List<int> { 1 }, "Test", "Description");
@@ -161,7 +161,7 @@ public class PlaylistTests
         Assert.Empty(AppData.Playlists);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MultipleAddMedia_SequentialUpdates()
     {
         var playlist = new Playlist(new List<int> { 1 }, "Test", "Description");

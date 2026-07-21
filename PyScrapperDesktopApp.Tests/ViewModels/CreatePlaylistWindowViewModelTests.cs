@@ -7,7 +7,6 @@ using Xunit;
 
 namespace PyScrapperDesktopApp.Tests.ViewModels;
 
-[Collection("Avalonia")]
 public class CreatePlaylistWindowViewModelTests
 {
     private CreatePlaylistWindowViewModel CreateVm()

@@ -111,3 +111,12 @@ public class LoginRequest
     [JsonPropertyName("password")]
     public string Password { get; set; }
 }
+
+public class RegisterRequest
+{
+    [JsonPropertyName("username")]
+    public string Username { get; set; }
+    
+    [JsonPropertyName("password")]
+    public string Password { get; set; }
+}

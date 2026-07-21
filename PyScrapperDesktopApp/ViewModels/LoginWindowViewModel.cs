@@ -65,4 +65,27 @@ public partial class LoginWindowViewModel : ObservableObject
         _window.Result = LoginResult.Cancelled;
         _window.Close();
     }
+
+    [RelayCommand]
+    private async Task Register()
+    {
+        var client = new ApiClient(_dialogService);
+
+        var req = new RegisterRequest()
+        {
+            Username = Username,
+            Password = Password
+        };
+
+        var result = await client.Register(req);
+
+        if (result)
+        {
+            await Login();
+        }
+        else
+        {
+            await _dialogService.ShowAlertAsync("Registration failed. Please check your username and password.");
+        }
+    }
 }

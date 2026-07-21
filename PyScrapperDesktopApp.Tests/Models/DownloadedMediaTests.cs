@@ -8,7 +8,7 @@ namespace PyScrapperDesktopApp.Tests.Models;
 
 public class DownloadedMediaTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void Constructor_SetsAllPropertiesCorrectly()
     {
         var url = "https://example.com/video";
@@ -28,7 +28,7 @@ public class DownloadedMediaTests
         Assert.Equal(identifier, media.Identifier);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetHighestId_EmptyCollection_SetsIdTo1()
     {
         var media = new DownloadedMedia("url", ".mp3", DateTime.Now, "path", true, "id1");
@@ -39,7 +39,7 @@ public class DownloadedMediaTests
         Assert.Equal(1, media.Id);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetHighestId_CollectionWithItems_SetsIdToMaxPlusOne()
     {
         var existing1 = new DownloadedMedia("url1", ".mp3", DateTime.Now, "path1", true, "id1") { Id = 3 };
@@ -54,7 +54,7 @@ public class DownloadedMediaTests
         Assert.Equal(8, newMedia.Id);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetHighestId_SingleItemCollection_SetsIdToItemIdPlusOne()
     {
         var existing = new DownloadedMedia("url", ".mp3", DateTime.Now, "path", true, "id1") { Id = 1 };
@@ -66,7 +66,7 @@ public class DownloadedMediaTests
         Assert.Equal(2, newMedia.Id);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Properties_CanBeModifiedAfterConstruction()
     {
         var media = new DownloadedMedia("url", ".mp3", DateTime.Now, "path", true, "id");
@@ -86,7 +86,7 @@ public class DownloadedMediaTests
         Assert.Equal("new-id", media.Identifier);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetTitle_ExtractsFileNameWithoutExtension()
     {
         var media = new DownloadedMedia("url", ".mp3", DateTime.Now, @"C:\Downloads\my-song.mp3", true, "id");
@@ -96,7 +96,7 @@ public class DownloadedMediaTests
         Assert.Equal("my-song", media.Title);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetTitle_HandlesPathWithMultipleDots()
     {
         var media = new DownloadedMedia("url", ".mp3", DateTime.Now, @"C:\Downloads\my.cool.song.mp3", true, "id");
@@ -106,7 +106,7 @@ public class DownloadedMediaTests
         Assert.Equal("my.cool.song", media.Title);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetTitle_WindowsPath()
     {
         var media = new DownloadedMedia("url", ".mp4", DateTime.Now, @"C:\Users\Documents\video.mp4", true, "id");
@@ -116,7 +116,7 @@ public class DownloadedMediaTests
         Assert.Equal("video", media.Title);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetTitle_ComplexPath()
     {
         var media = new DownloadedMedia("url", ".wav", DateTime.Now, @"C:\Music\Genre\Subfolder\audio-file.wav", true, "id");
@@ -126,4 +126,5 @@ public class DownloadedMediaTests
         Assert.Equal("audio-file", media.Title);
     }
 }
+
 

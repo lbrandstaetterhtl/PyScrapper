@@ -7,7 +7,7 @@ namespace PyScrapperDesktopApp.Tests.Models;
 
 public class AppLoggerTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void LogNewMassage_WritesToFile()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"test_logs_{Guid.NewGuid()}");
@@ -31,7 +31,7 @@ public class AppLoggerTests
         }
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void LogFormat_WarningType_FormatsCorrectly()
     {
         var massage = new Massage("Warning message", new DateTime(2025, 6, 1, 8, 0, 0), "WARNING");
@@ -41,7 +41,7 @@ public class AppLoggerTests
         Assert.Equal("2025-06-01 08:00:00 [WARNING] Warning message", logEntry);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void LogFormat_ErrorType_FormatsCorrectly()
     {
         var massage = new Massage("Error occurred", new DateTime(2025, 12, 31, 23, 59, 59), "ERROR");
@@ -51,7 +51,7 @@ public class AppLoggerTests
         Assert.Equal("2025-12-31 23:59:59 [ERROR] Error occurred", logEntry);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AppLogger_CanBeInstantiated()
     {
         var logger = new AppLogger();
@@ -59,4 +59,5 @@ public class AppLoggerTests
         Assert.NotNull(logger);
     }
 }
+
 

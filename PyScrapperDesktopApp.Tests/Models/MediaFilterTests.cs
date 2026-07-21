@@ -7,7 +7,7 @@ namespace PyScrapperDesktopApp.Tests.Models;
 
 public class MediaFilterTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void BuildMediaFilter_SetsPropertiesCorrectly()
     {
         var query = "test";
@@ -25,7 +25,7 @@ public class MediaFilterTests
         Assert.Equal(playable, filter.IsPlayable);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task ApplyAndClearFilter_WorksCorrectly()
     {
         // Setup
@@ -57,3 +57,4 @@ public class MediaFilterTests
         Assert.Equal(2, AppData.DownloadedMedias.Count);
     }
 }
+

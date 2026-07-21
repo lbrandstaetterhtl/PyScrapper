@@ -1,4 +1,5 @@
 ﻿import sys, os
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import fastapi
@@ -13,9 +14,9 @@ from PythonModule.models.responses import (
     PlaylistResponse,
     DownloadedMediaResponse,
     SettingsResponse,
-    PlaylistMediaResponse,
+    PlaylistMediaResponse
 )
-from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest, CreateUserRequest, CreatePlaylistRequest, CreateDownloadedMediaRequest, CreateSettingsRequest, CreatePlaylistMediaRequest, DeletePlaylistMediaRequest
+from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest, CreateUserRequest, CreatePlaylistRequest, CreateDownloadedMediaRequest, CreateSettingsRequest, CreatePlaylistMediaRequest, DeletePlaylistMediaRequest, RegisterRequest, LoginRequest
 from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
 from PythonModule import Session
 from dotenv import load_dotenv
@@ -852,7 +853,7 @@ async def get_user_playlists(key: str, user_identifier: str):
 # ---------------- Login ----------------
 
 @app.post("/login", response_model=LoginResponse)
-async def handle_login_req(req: CreateUserRequest):
+async def handle_login_req(req: LoginRequest):
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -877,4 +878,19 @@ async def handle_login_req(req: CreateUserRequest):
         raise
     except Exception as e:
         log_queue.put_nowait(f"[ERROR] Error during login for user '{req.username}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
+
+@app.post("/register")
+async def handle_register_req(req: RegisterRequest):
+    try:
+        create_user_req = CreateUserRequest(username=req.username, password=req.password)
+        response = await handle_create_user_req(ADMIN_KEY, create_user_req)
+
+        if response:
+            log_queue.put_nowait(f"[INFO] User '{req.username}' registered successfully")
+            return {"message": "User registered successfully", "identifier" : response["identifier"]}
+    except fastapi.HTTPException:
+        raise
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error during registration for user '{req.username}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))

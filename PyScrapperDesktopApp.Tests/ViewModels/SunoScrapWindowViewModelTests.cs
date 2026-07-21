@@ -6,7 +6,6 @@ using Avalonia.Headless.XUnit;
 
 namespace PyScrapperDesktopApp.Tests.ViewModels;
 
-[Collection("Avalonia")]
 public class SunoScrapWindowViewModelTests
 {
     private SunoScrapWindowViewModel CreateVm()

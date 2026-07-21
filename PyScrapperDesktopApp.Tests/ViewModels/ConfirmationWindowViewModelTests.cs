@@ -5,7 +5,6 @@ using Xunit;
 
 namespace PyScrapperDesktopApp.Tests.ViewModels;
 
-[Collection("Avalonia")]
 public class ConfirmationWindowViewModelTests
 {
     [AvaloniaFact]

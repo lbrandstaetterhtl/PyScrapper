@@ -12,7 +12,7 @@ public class ApiClientDtoTests
 
     #region DownloadRequestData Tests
 
-    [Fact]
+    [AvaloniaFact]
     public void DownloadRequestData_Serialization_UsesJsonPropertyNames()
     {
         var request = new DownloadRequestData
@@ -32,7 +32,7 @@ public class ApiClientDtoTests
         Assert.Contains("youtube", json);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DownloadRequestData_Deserialization_WorksCorrectly()
     {
         var json = """
@@ -57,7 +57,7 @@ public class ApiClientDtoTests
 
     #region NormalResponse Tests
 
-    [Fact]
+    [AvaloniaFact]
     public void NormalResponse_Deserialization_WorksCorrectly()
     {
         var json = """
@@ -74,7 +74,7 @@ public class ApiClientDtoTests
         Assert.Equal("Download started successfully", response.Message);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void NormalResponse_ErrorDeserialization_WorksCorrectly()
     {
         var json = """
@@ -91,7 +91,7 @@ public class ApiClientDtoTests
         Assert.Equal("Video not found", response.Message);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void NormalResponse_Serialization_UsesJsonPropertyNames()
     {
         var response = new NormalResponse
@@ -106,7 +106,7 @@ public class ApiClientDtoTests
         Assert.Contains("\"message\"", json);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void NormalResponse_RoundTrip_PreservesData()
     {
         var original = new NormalResponse
@@ -127,7 +127,7 @@ public class ApiClientDtoTests
 
     #region HealthResponse Tests
 
-    [Fact]
+    [AvaloniaFact]
     public void HealthResponse_Deserialization_WorksCorrectly()
     {
         var json = """
@@ -156,7 +156,7 @@ public class ApiClientDtoTests
         Assert.Equal(111, response.Processes[0].Pid);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void HealthResponse_EmptyProcesses_DeserializesCorrectly()
     {
         var json = """
@@ -179,7 +179,7 @@ public class ApiClientDtoTests
 
     #region HealthErrorResponse Tests
 
-    [Fact]
+    [AvaloniaFact]
     public void HealthErrorResponse_Deserialization_WorksCorrectly()
     {
         var json = """
@@ -200,7 +200,7 @@ public class ApiClientDtoTests
 
     #region SearchRequestData Tests
 
-    [Fact]
+    [AvaloniaFact]
     public void SearchRequestData_Serialization_UsesJsonPropertyNames()
     {
         var request = new SearchRequestData
@@ -219,7 +219,7 @@ public class ApiClientDtoTests
         Assert.Contains("funny cats", json);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SearchRequestData_Deserialization_WorksCorrectly()
     {
         var json = """
@@ -242,7 +242,7 @@ public class ApiClientDtoTests
 
     #region SearchSuccessResponse Tests
 
-    [Fact]
+    [AvaloniaFact]
     public void SearchSuccessResponse_Deserialization_WorksCorrectly()
     {
         var json = """
@@ -271,7 +271,7 @@ public class ApiClientDtoTests
         Assert.Equal("Test Video", response.Results[0].title);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SearchSuccessResponse_EmptyResults_DeserializesCorrectly()
     {
         var json = """
@@ -290,7 +290,7 @@ public class ApiClientDtoTests
         Assert.Empty(response.Results);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SearchSuccessResponse_MultipleResults_DeserializesCorrectly()
     {
         var json = """
@@ -326,7 +326,7 @@ public class ApiClientDtoTests
 
     #region ProgressSuccessResponse Tests
 
-    [Fact]
+    [AvaloniaFact]
     public void ProgressSuccessResponse_Deserialization_WorksCorrectly()
     {
         var json = """
@@ -354,7 +354,7 @@ public class ApiClientDtoTests
         Assert.Equal(1024.5f, response.Speed);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ProgressSuccessResponse_CompletedDownload_DeserializesCorrectly()
     {
         var json = """
@@ -378,7 +378,7 @@ public class ApiClientDtoTests
         Assert.Equal(response.TotalBytes, response.DownloadedBytes);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ProgressSuccessResponse_WithError_DeserializesCorrectly()
     {
         var json = """
@@ -402,7 +402,7 @@ public class ApiClientDtoTests
         Assert.Equal(0f, response.DownloadProgress);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ProgressSuccessResponse_Properties_CanBeSetAndRead()
     {
         var response = new ProgressSuccessResponse
@@ -429,7 +429,7 @@ public class ApiClientDtoTests
     
     #region YoutubeVideoItem Tests
 
-    [Fact]
+    [AvaloniaFact]
     public void YoutubeVideoItem_Properties_CanBeSetAndRead()
     {
         var item = new SearchResultItem()
@@ -451,7 +451,7 @@ public class ApiClientDtoTests
 
     #region ServerProcess Tests
 
-    [Fact]
+    [AvaloniaFact]
     public void ServerProcess_Properties_CanBeSetAndRead()
     {
         var process = new ServerProcess
@@ -468,7 +468,7 @@ public class ApiClientDtoTests
 
     #region Roundtrip Serialization Tests
 
-    [Fact]
+    [AvaloniaFact]
     public void DownloadRequestData_RoundTrip_PreservesData()
     {
         var original = new DownloadRequestData
@@ -489,7 +489,7 @@ public class ApiClientDtoTests
         Assert.Equal(original.Download_path, deserialized.Download_path);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SearchRequestData_RoundTrip_PreservesData()
     {
         var original = new SearchRequestData
@@ -508,7 +508,7 @@ public class ApiClientDtoTests
         Assert.Equal(original.Top, deserialized.Top);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ProgressSuccessResponse_RoundTrip_PreservesData()
     {
         var original = new ProgressSuccessResponse
@@ -537,4 +537,5 @@ public class ApiClientDtoTests
 
     #endregion
 }
+
 

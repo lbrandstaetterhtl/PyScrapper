@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PyScrapper - Datenmodelle & Architektur</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom/dist/svg-pan-zoom.min.js"></script>
@@ -171,14 +172,6 @@
             margin-bottom: 40px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
-        .mermaid-container {
-            width: 100%;
-            height: 600px;
-            cursor: grab;
-        }
-        .mermaid-container:active {
-            cursor: grabbing;
-        }
         .tech-stack {
             background-color: #0f3460;
             border: 1px solid #1a5f7a;
@@ -224,25 +217,41 @@
 <body>
     <div class="container">
         <h1>PyScrapper - Datenmodelle & Architektur</h1>
-        <div class="subtitle">Technische Dokumentation der Applikations-Struktur</div>
+        <div class="subtitle">Technische Dokumentation der aktuellen Applikationsstruktur</div>
 
         <div class="intro-box">
-            <strong>Architektur-Übersicht:</strong> Die Anwendung folgt dem MVVM-Pattern (Model-View-ViewModel).
-            Benutzer interagieren mit der View (UI), die über ViewModels mit Datenmodellen kommuniziert.
-            Alle Daten werden in einer lokalen SQLite-Datenbank gespeichert.
+            <strong>Architektur-Übersicht:</strong> PyScrapper folgt dem MVVM-Pattern (Model-View-ViewModel).
+            Die Desktop-App kommuniziert über ViewModels mit den Datenmodellen und dem `ApiClient`.
+            Lokale Medien, Playlists und Einstellungen werden in SQLite persistiert.
         </div>
 
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="info-card-title">Kernschichten</div>
+                <div class="info-card-content">Views → ViewModels → Models → lokale Datenbank / HTTP-API</div>
+            </div>
+            <div class="info-card">
+                <div class="info-card-title">Persistenz</div>
+                <div class="info-card-content">SQLite-Datenbank für Medien, Playlists und Settings</div>
+            </div>
+            <div class="info-card">
+                <div class="info-card-title">Backend</div>
+                <div class="info-card-content">Python-Server mit Endpunkten für Suche, Download, Fortschritt und Health</div>
+            </div>
+        </div>
+
+        <a id="entities"></a>
         <h2>1. Kernentitäten (Datenmodelle)</h2>
-        <p>Die Hauptobjekte, die das System verwaltet:</p>
+        <p>Die wichtigsten Domänenobjekte der Anwendung:</p>
         <div class="mermaid-wrapper"><pre>
  classDiagram
      class DownloadedMedia {
          +int Id
+         +string Url
          +string Title
-         +string URL
-         +string FilePath
          +string MediaType
          +DateTime DownloadedAt
+         +string DownloadPath
          +bool IsPlayable
          +string Identifier
      }
@@ -251,8 +260,7 @@
          +int Id
          +string Name
          +string Description
-         +List MediaIds
-         +List PlayableMediaIds
+         +List<int> MediaIds
          +int Count
      }
      
@@ -266,9 +274,9 @@
      
      class MediaFilter {
          +string SearchQuery
-         +List MediaTypes
-         +DateTime StartDate
-         +DateTime EndDate
+         +ObservableCollection<string> MediaTypes
+         +DateTimeOffset StartDate
+         +DateTimeOffset EndDate
          +bool IsPlayable
      }
      
@@ -280,22 +288,26 @@
             <div class="info-card">
                 <div class="info-card-title">DownloadedMedia</div>
                 <div class="info-card-content">
-                    Ein heruntergeladenes Video oder Audio-File
+                    Ein heruntergeladenes Medienobjekt aus dem Backend oder Dateisystem.
                     <div class="property">
                         <span class="property-name">Id</span>
                         <span class="property-value">Eindeutige Nummer</span>
                     </div>
                     <div class="property">
+                        <span class="property-name">Url</span>
+                        <span class="property-value">Quelle des Downloads</span>
+                    </div>
+                    <div class="property">
                         <span class="property-name">Title</span>
-                        <span class="property-value">Angezeigter Name</span>
+                        <span class="property-value">Angezeigter Titel</span>
                     </div>
                     <div class="property">
-                        <span class="property-name">FilePath</span>
-                        <span class="property-value">C:\Downloads\song.mp3</span>
+                        <span class="property-name">DownloadPath</span>
+                        <span class="property-value">Lokaler Speicherort</span>
                     </div>
                     <div class="property">
-                        <span class="property-name">IsPlayable</span>
-                        <span class="property-value">true/false</span>
+                        <span class="property-name">Identifier</span>
+                        <span class="property-value">Provider-spezifische ID</span>
                     </div>
                 </div>
             </div>
@@ -303,7 +315,7 @@
             <div class="info-card">
                 <div class="info-card-title">Playlist</div>
                 <div class="info-card-content">
-                    Eine Sammlung von Videos
+                    Eine Sammlung ausgewählter Medien-IDs.
                     <div class="property">
                         <span class="property-name">Name</span>
                         <span class="property-value">z.B. "Meine Favoriten"</span>
@@ -322,13 +334,13 @@
             <div class="info-card">
                 <div class="info-card-title">Settings</div>
                 <div class="info-card-content">
-                    Benutzer-Einstellungen
+                    Persistente App-Einstellungen
                     <div class="property">
                         <span class="property-name">DownloadPath</span>
                         <span class="property-value">C:\Users\...\Downloads</span>
                     </div>
                     <div class="property">
-                        <span class="property-name">DarkMode</span>
+                        <span class="property-name">DarkModeEnabled</span>
                         <span class="property-value">true/false</span>
                     </div>
                 </div>
@@ -340,17 +352,17 @@
         <div class="mermaid-wrapper"><pre>
  graph TB
      User["Benutzer"]
-     UI["View Layer<br/>Fenster & Controls"]
-     VM["ViewModel Layer<br/>Logik & Commands"]
+      UI["View Layer<br/>Fenster & Controls"]
+      VM["ViewModel Layer<br/>Logik & Commands"]
      Models["Model Layer<br/>Datenklassen"]
      API["API Client<br/>HTTP Requests"]
      DB["Database Layer<br/>SQLite"]
-     Server["Python Backend<br/>http://127.0.0.1:8765"]
+      Server["Python Backend<br/>API-Endpunkte für Suche, Download, Progress, Health"]
      Files["Dateisystem<br/>Videos/Audios"]
      
      User -->|interagiert mit| UI
      UI -->|Commands| VM
-     VM -->|erstellt/ändert| Models
+      VM -->|erstellt/ändert| Models
      VM -->|speichert| DB
      VM -->|HTTP| API
      API -->|JSON| Server
@@ -374,21 +386,21 @@
         <p>Datenstrukturen für die Kommunikation mit dem Backend:</p>
         <div class="mermaid-wrapper"><pre>
  classDiagram
-     class DownloadRequest {
+      class DownloadRequestData {
          +string Provider
-         +string URL
-         +string MediaType
+         +string Url
+         +string Mediatype
          +string Filename
          +string Download_path
-     }
+      }
      
-     class SearchRequest {
+      class SearchRequestData {
          +string Provider
          +string Search
          +int Top
      }
      
-     class ProgressResponse {
+      class ProgressSuccessResponse {
          +string Id
          +string Status
          +float DownloadProgress
@@ -396,7 +408,7 @@
          +float Speed
      }
      
-     class SearchResponse {
+      class SearchSuccessResponse {
          +string Provider
          +string Query
          +List Results
@@ -444,48 +456,43 @@
             <div class="info-card">
                 <div class="info-card-title">MainWindowViewModel</div>
                 <div class="info-card-content">
-                    Zentrale ViewModel des Hauptfensters.
-                    Verwaltet: Video-Liste, Playlists, Filter, Sortierung
+                    Zentrales ViewModel des Hauptfensters.
+                    Verwaltet Medienliste, Playlists, Navigation und globale Aktionen.
                 </div>
             </div>
 
             <div class="info-card">
-                <div class="info-card-title">ScrapWindowViewModel</div>
+                <div class="info-card-title">ScrapWindowWithSearchViewModel</div>
                 <div class="info-card-content">
-                    Verwaltet Suche und Download.
-                    Befehle: Search, Scrap, Validierung
+                    Suche nach Medien über Provider, Auswahl der Treffer und Start der Download-Prozesse.
                 </div>
             </div>
 
             <div class="info-card">
-                <div class="info-card-title">MediaPlayerViewModel</div>
+                <div class="info-card-title">SunoScrapWindowViewModel</div>
                 <div class="info-card-content">
-                    Steuert Musik-Abspieler.
-                    Befehle: Play, Pause, Next, Volume
+                    Direkt-Download über URL für Suno-Inhalte.
                 </div>
             </div>
 
             <div class="info-card">
                 <div class="info-card-title">FilterWindowViewModel</div>
                 <div class="info-card-content">
-                    Verwaltung der Filter-Dialog.
-                    Befehle: Apply, Cancel
+                    Verwaltung des Filter-Dialogs inklusive Anwenden und Zurücksetzen.
                 </div>
             </div>
 
             <div class="info-card">
-                <div class="info-card-title">ProgressBarViewModel</div>
+                <div class="info-card-title">ProgressBarWindowViewModel</div>
                 <div class="info-card-content">
-                    Zeigt Download-Fortschritt.
-                    Polling der API: GetDownloadProgress
+                    Fortschrittsanzeige mit Polling über den Download-Status.
                 </div>
             </div>
 
             <div class="info-card">
-                <div class="info-card-title">HealthViewModel</div>
+                <div class="info-card-title">GetServerHealthWindowViewModel</div>
                 <div class="info-card-content">
-                    Zeigt Server-Status an.
-                    Periodische Health-Checks
+                    Zeigt Server-Status, Speicherverbrauch und Uptime an.
                 </div>
             </div>
         </div>
@@ -506,7 +513,7 @@
             </div>
             <div class="tech-stack-item">
                 <div class="tech-category">Backend</div>
-                <div class="tech-description">Python 3.x (FastAPI/Flask)</div>
+                <div class="tech-description">Python-Backend mit Search-, Download-, Progress- und Health-Endpunkten</div>
             </div>
             <div class="tech-stack-item">
                 <div class="tech-category">Audio/Video</div>
@@ -519,26 +526,20 @@
         </div>
 
         <h2>7. Datenfluss: Ein Beispiel</h2>
-        <p><strong>Szenario:</strong> Benutzer sucht ein YouTube-Video und lädt es herunter</p>
+        <p><strong>Szenario:</strong> Benutzer sucht ein Medium und startet einen Download</p>
         <div class="code-block">
-1. Benutzer gibt "Lofi Beats" ein und klickt "Suchen"<br>
-2. MainWindowViewModel.SearchCommand aufgerufen<br>
-3. ScrapWindowViewModel.Search() erstellt SearchRequestData<br>
-4. ApiClient.SendSearchRequest() sendet HTTP POST /search<br>
-5. Python-Server verarbeitet Anfrage und gibt JSON zurück<br>
-6. ApiClient deserializado JSON zu SearchResponse<br>
-7. Ergebnisse in ObservableCollection gespeichert<br>
-8. UI bindet an Collection, zeigt Videos mit Thumbnails<br>
-9. Benutzer wählt Video und klickt "Download"<br>
-10. DownloadRequestData erstellt<br>
-11. ApiClient.SendScrapRequest() HTTP POST /download<br>
-12. Python-Server startet Download, gibt ID zurück<br>
-13. ProgressBarWindow zeigt Fortschritt<br>
-14. ProgressBarViewModel.StartProgress(id) startet Polling<br>
-15. Jede Sekunde: HTTP GET /download/progress/{id}<br>
-16. Wenn fertig: DownloadedMedia-Objekt erstellt<br>
-17. In Datenbank gespeichert<br>
-18. UI aktualisiert automatisch (Binding)
+1. Benutzer gibt Suchtext ein und startet die Suche<br>
+2. `ScrapWindowWithSearchViewModel.Search()` erstellt `SearchRequestData`<br>
+3. `ApiClient.SendSearchRequest()` sendet `POST /search`<br>
+4. Backend liefert `SearchSuccessResponse` mit Treffern<br>
+5. UI bindet die Trefferliste an die Oberfläche<br>
+6. Benutzer wählt ein oder mehrere Medien aus<br>
+7. `DownloadRequestData` wird pro Medium erzeugt<br>
+8. `ApiClient.SendScrapRequest()` sendet `POST /download`<br>
+9. Backend startet den Download und liefert eine Download-ID zurück<br>
+10. `ProgressBarWindowViewModel.StartProgress(id)` fragt `GET /download/progress/{id}` ab<br>
+11. Nach Abschluss wird ein `DownloadedMedia`-Eintrag erzeugt<br>
+12. Eintrag wird in SQLite gespeichert und über Binding in der UI sichtbar
         </div>
 
     </div>

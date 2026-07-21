@@ -16,7 +16,7 @@ public class AppDataTests
         AppData.PlayableMedias.Clear();
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AddDownloadedMedia_PlayableMedia_AddsToDownloadedAndPlayable()
     {
         var media = new DownloadedMedia("url", ".mp3", DateTime.Now, "path", true, "id1");
@@ -29,7 +29,7 @@ public class AppDataTests
         Assert.Contains(media, AppData.PlayableMedias);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AddDownloadedMedia_NonPlayableMedia_AddsOnlyToDownloaded()
     {
         var media = new DownloadedMedia("url", ".mp4", DateTime.Now, "path", false, "id1");
@@ -41,7 +41,7 @@ public class AppDataTests
         Assert.Contains(media, AppData.DownloadedMedias);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RemoveDownloadedMedia_PlayableMedia_RemovesFromBothCollections()
     {
         var media = new DownloadedMedia("url", ".mp3", DateTime.Now, "path", true, "id1");
@@ -53,7 +53,7 @@ public class AppDataTests
         Assert.Empty(AppData.PlayableMedias);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RemoveDownloadedMedia_NonPlayableMedia_RemovesOnlyFromDownloaded()
     {
         var playableMedia = new DownloadedMedia("url1", ".mp3", DateTime.Now, "path1", true, "id1");
@@ -69,7 +69,7 @@ public class AppDataTests
         Assert.Contains(playableMedia, AppData.DownloadedMedias);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AddMultipleMedias_CorrectCounts()
     {
         var m1 = new DownloadedMedia("url1", ".mp3", DateTime.Now, "p1", true, "id1");
@@ -84,7 +84,7 @@ public class AppDataTests
         Assert.Equal(2, AppData.PlayableMedias.Count);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MediaAlreadyExists_ExistingFilePath_ReturnsTrue()
     {
         var media = new DownloadedMedia("url", ".mp3", DateTime.Now, "C:\\Downloads\\test.mp3", true, "id1");
@@ -95,7 +95,7 @@ public class AppDataTests
         Assert.True(exists);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MediaAlreadyExists_NonExistentFilePath_ReturnsFalse()
     {
         var media = new DownloadedMedia("url", ".mp3", DateTime.Now, "C:\\Downloads\\test.mp3", true, "id1");
@@ -106,7 +106,7 @@ public class AppDataTests
         Assert.False(exists);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MediaAlreadyExists_EmptyCollection_ReturnsFalse()
     {
         var exists = AppData.MediaAlreadyExists("C:\\Downloads\\test.mp3");
@@ -114,7 +114,7 @@ public class AppDataTests
         Assert.False(exists);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MediaAlreadyExists_MultipleMedias_CorrectlyIdentifies()
     {
         var m1 = new DownloadedMedia("url1", ".mp3", DateTime.Now, "C:\\Downloads\\song1.mp3", true, "id1");
@@ -130,4 +130,5 @@ public class AppDataTests
         Assert.False(AppData.MediaAlreadyExists("C:\\Downloads\\nonexistent.mp3"));
     }
 }
+
 

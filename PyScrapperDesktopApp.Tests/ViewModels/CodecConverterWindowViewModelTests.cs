@@ -1,4 +1,5 @@
 using System.IO;
+using Avalonia.Headless.XUnit;
 using PyScrapperDesktopApp.ViewModels;
 using Xunit;
 
@@ -6,7 +7,7 @@ namespace PyScrapperDesktopApp.Tests.ViewModels;
 
 public class CodecConverterWindowViewModelTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void SetOutputPath_GeneratesCorrectPath()
     {
         var inputPath = @"C:\Downloads\test.webm";
@@ -17,7 +18,7 @@ public class CodecConverterWindowViewModelTests
         Assert.Equal(expectedOutput, actualOutput);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetOutputPath_HandlesEmptyDirectory()
     {
         var inputPath = "test.webm";

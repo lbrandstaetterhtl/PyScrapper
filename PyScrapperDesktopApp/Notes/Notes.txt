@@ -3,5 +3,4 @@
 
 Next steps:
 server db management not finished and client not adjusted
-login works, loadaing user data works, bug in creating downloaded media, and new winnerror filname breaks some rules (idk why)
 https://deepwiki.com/videolan/libvlcsharp/2.3-best-practices-and-common-patterns

@@ -33,6 +33,7 @@
                                 <TextBox Text="{Binding Password}" Width="200" PasswordChar="*"/>
                         </StackPanel>
                         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                                <Button Content="Register and Login" Command="{Binding RegisterCommand}" Classes="primary" Padding="28,10" IsEnabled="True"/>
                                 <Button Content="Login" Command="{Binding LoginCommand}" Classes="primary" Padding="28,10" IsEnabled="True"/>
                                 <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="primary" Padding="28,10" IsEnabled="True"/>
                         </StackPanel>

@@ -130,7 +130,7 @@ public class CreatePlaylistMediaResponse
     public int Position { get; set; }
 }
 
-public class LoginResponse
+public class DefaultDbResponse
 {
     [JsonPropertyName("message")]
     public string Message { get; set; }

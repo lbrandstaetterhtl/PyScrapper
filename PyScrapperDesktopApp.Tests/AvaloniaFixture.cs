@@ -3,8 +3,6 @@ using Avalonia.Headless;
 using Avalonia.Themes.Fluent;
 using Xunit;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
-
 namespace PyScrapperDesktopApp.Tests;
 
 /// <summary>
@@ -30,7 +28,4 @@ public class TestApp : Application
         })
         .WithInterFont();
 }
-
-[CollectionDefinition("Avalonia")]
-public class AvaloniaCollection : ICollectionFixture<AvaloniaFixture> { }
 

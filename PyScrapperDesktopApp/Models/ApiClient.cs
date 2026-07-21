@@ -317,7 +317,7 @@ public class ApiClient : Interfaces.IApiClient
         var response = await client.PostAsync($"http://127.0.0.1:8765/login", content);
         var responseData = await response.Content.ReadAsStringAsync();
         
-        var deserializedResponse = JsonSerializer.Deserialize<LoginResponse>(responseData, JsonOptions);
+        var deserializedResponse = JsonSerializer.Deserialize<DefaultDbResponse>(responseData, JsonOptions);
         
         if (response.IsSuccessStatusCode)
         {
@@ -340,7 +340,34 @@ public class ApiClient : Interfaces.IApiClient
         }
     }
 
-
+    public async Task<bool> Register(RegisterRequest req)
+    {
+        var client = new HttpClient();
+        var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
+        var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"http://127.0.0.1:8765/register", content);
+        var responseData = await response.Content.ReadAsStringAsync();
+        
+        var deserializedResponse = JsonSerializer.Deserialize<DefaultDbResponse>(responseData, JsonOptions);
+        
+        if (response.IsSuccessStatusCode)
+        {
+            var log = new Massage($"Registration successful for user: \"{req.Username}\"", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            
+            return true;
+        }
+        else
+        {
+            var log = new Massage($"Registration failed for user: \"{req.Username}\", error: " + deserializedResponse?.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
+            var massageBox = new MessageBox($"Registration failed: {deserializedResponse?.Message}");
+            await massageBox.ShowDialog(App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
+            
+            return false;
+        }
+    }
 
     /// <summary>
     /// ServerProcess represents a process running on the server, with its PID and name.

@@ -6,7 +6,7 @@ namespace PyScrapperDesktopApp.Tests.Models;
 
 public class SettingsTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void Constructor_SetsDefaultValues()
     {
         var settings = new Settings();
@@ -17,7 +17,7 @@ public class SettingsTests
         Assert.Equal("http://127.0.0.1:8765", settings.ServerUrl);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ServerUrl_ReturnsCorrectValue()
     {
         var settings = new Settings();
@@ -25,7 +25,7 @@ public class SettingsTests
         Assert.Equal("http://127.0.0.1:8765", settings.ServerUrl);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetDefaultSettings_SetsDownloadPath()
     {
         var settings = new Settings();
@@ -37,7 +37,7 @@ public class SettingsTests
         Assert.True(settings.DownloadPath.EndsWith("Downloads"));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SetDefaultSettings_DownloadPathContainsDownloadsFolder()
     {
         var settings = new Settings();
@@ -47,7 +47,7 @@ public class SettingsTests
         Assert.EndsWith("Downloads", settings.DownloadPath);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DarkModeEnabled_CanBeToggled()
     {
         var settings = new Settings();
@@ -61,7 +61,7 @@ public class SettingsTests
         Assert.False(settings.DarkModeEnabled);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DownloadPath_CanBeModified()
     {
         var settings = new Settings();

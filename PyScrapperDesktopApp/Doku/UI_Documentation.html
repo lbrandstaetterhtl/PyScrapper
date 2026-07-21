@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PyScrapper - Benutzeroberfläche & Fenster</title>
     <style>
         * {
@@ -207,7 +208,14 @@
 <body>
     <div class="container">
         <h1>PyScrapper - Benutzeroberfläche</h1>
-        <div class="subtitle">Dokumentation aller Fenster und Dialoge</div>
+        <div class="subtitle">Dokumentation der zentralen Fenster, Dialoge und Mockups</div>
+
+        <div class="window-description">
+            <strong>Hinweis:</strong> Diese Seite konzentriert sich auf die wichtigsten UI-Bausteine der aktuellen Anwendung,
+            darunter <code>MainWindow</code>, <code>ScrapWindowWithSearch</code>, <code>SunoScrapWindow</code>,
+            <code>FilterWindow</code>, <code>CreatePlaylistWindow</code>, <code>CodecConverterWindow</code>,
+            <code>ProgressBarWindow</code> und <code>GetServerHealthWindow</code>.
+        </div>
 
         <div class="windows-grid">
             <!-- 1. HAUPTFENSTER -->
@@ -279,10 +287,10 @@
 
             <!-- 2. SUCHE & DOWNLOAD -->
             <div class="window-section">
-                <div class="window-header">Suche & Download Dialog (ScrapWindow)</div>
+                <div class="window-header">Suche & Download Dialog (ScrapWindowWithSearch)</div>
                 <div class="window-description">
-                    Dialog-Fenster zum Suchen nach Videos auf verschiedenen Plattformen (YouTube, Bandcamp, etc.)
-                    und zum Starten des Downloads. Zeigt Sucherergebnisse mit Vorschaubildern.
+                    Dialog-Fenster zum Suchen nach Medien auf verschiedenen Plattformen (YouTube, Bandcamp, Archive etc.)
+                    und zum Starten des Downloads. Zeigt Suchergebnisse mit Vorschaubildern.
                 </div>
                 
                 <div class="window-content">
@@ -291,15 +299,15 @@
                         <div class="frame-body">
                             <div class="frame-section">
                                 <div class="frame-label">Search Query</div>
-                                <input class="frame-input" value="lofi beats" />
+                                <input class="frame-input" value="lofi beats" aria-label="Suchtext" />
                             </div>
                             <div class="frame-section">
                                 <div class="frame-label">Result Count (1-25)</div>
-                                <input class="frame-input" value="10" style="width: 40%" />
+                                <input class="frame-input" value="10" style="width: 40%" aria-label="Ergebnisanzahl" />
                             </div>
                             <div class="frame-section">
                                 <div class="frame-label">Format</div>
-                                <select class="frame-input">
+                                <select class="frame-input" aria-label="Formatauswahl">
                                     <option>MP3 (Audio)</option>
                                     <option>MP4 (Video)</option>
                                 </select>
@@ -319,6 +327,7 @@
                         <div class="features-list">
                             <h4>Funktionen:</h4>
                             <div class="feature-item">Suchtext eingeben</div>
+                            <div class="feature-item">Provider auswählen</div>
                             <div class="feature-item">Ergebnis-Anzahl (1-25)</div>
                             <div class="feature-item">Format-Auswahl (MP3/MP4)</div>
                             <div class="feature-item">Suche Button: API aufrufen</div>
@@ -356,7 +365,7 @@
                         <div class="frame-body">
                             <div class="frame-section">
                                 <div class="frame-label">Search Text</div>
-                                <input class="frame-input" placeholder="e.g. 'Lofi'" />
+                                <input class="frame-input" placeholder="e.g. 'Lofi'" aria-label="Filter-Suchtext" />
                             </div>
                             <div class="frame-section">
                                 <div class="frame-label">Media Type</div>
@@ -424,11 +433,11 @@
                         <div class="frame-body">
                             <div class="frame-section">
                                 <div class="frame-label">Playlist Name</div>
-                                <input class="frame-input" placeholder="e.g. My Favorites" />
+                                <input class="frame-input" placeholder="e.g. My Favorites" aria-label="Playlist-Name" />
                             </div>
                             <div class="frame-section">
                                 <div class="frame-label">Description</div>
-                                <input class="frame-input" placeholder="..." style="width: 95%; height: 30px;" />
+                                <input class="frame-input" placeholder="..." style="width: 95%; height: 30px;" aria-label="Playlist-Beschreibung" />
                             </div>
                             <div class="frame-section">
                                 <div class="frame-label">Select Medias</div>
@@ -491,7 +500,7 @@
                             </div>
                             <div class="frame-section">
                                 <div class="frame-label">Convert to</div>
-                                <select class="frame-input">
+                                <select class="frame-input" aria-label="Zielformat">
                                     <option>H.264 (MP4)</option>
                                     <option>H.265 (Modern)</option>
                                 </select>
@@ -604,7 +613,7 @@
 
             <!-- 7. SERVER STATUS -->
             <div class="window-section">
-                <div class="window-header">Server Health Check (HealthWindow)</div>
+                <div class="window-header">Server Health Check (GetServerHealthWindow)</div>
                 <div class="window-description">
                     Fenster zur Überwachung des Python-Backends.
                     Zeigt: Online-Status, Uptime, RAM-Nutzung, aktive Downloads und Fehler.
@@ -672,6 +681,24 @@
                 </div>
             </div>
 
+        </div>
+
+        <div class="window-section" style="margin-top: 40px;">
+            <div class="window-header">Weitere Fenster und Dialoge</div>
+            <div class="window-description">
+                Ergänzend zu den Hauptdialogen existieren weitere spezialisierte Fenster, die für Bedienkomfort
+                und Fehlermanagement sorgen.
+            </div>
+            <div class="features-list">
+                <h4>Zusätzliche UI-Bausteine:</h4>
+                <div class="feature-item">SunoScrapWindow – Direkt-Download über URL</div>
+                <div class="feature-item">PlaylistDetailsWindow – Details und Inhalte einer Playlist</div>
+                <div class="feature-item">LauncherWindow – Start-/Launcher-Ansicht</div>
+                <div class="feature-item">InputWindow – einfache Texteingabe</div>
+                <div class="feature-item">ConfirmationWindow – Bestätigungsdialog</div>
+                <div class="feature-item">MessageBox – generische Meldungen/Fehlerhinweise</div>
+                <div class="feature-item">LogsWindow – Anzeige von App-Logs</div>
+            </div>
         </div>
 
     </div>

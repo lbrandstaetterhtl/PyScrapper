@@ -4,7 +4,6 @@ using PyScrapperDesktopApp.ViewModels;
 
 namespace PyScrapperDesktopApp.Tests.ViewModels;
 
-[Collection("Avalonia")]
 public class InputWindowViewModelTests
 {
     [AvaloniaFact]

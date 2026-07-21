@@ -2,175 +2,123 @@
 
 ## Überblick
 
-Dieser Ordner enthält die vollständige technische Dokumentation der PyScrapper-Anwendung. 
-Die Dokumentation ist in mehrere HTML-Dateien aufgeteilt, um leichte Lesbarkeit und professionelle Präsentation zu gewährleisten.
+Dieser Ordner enthält die aktuelle technische Dokumentation der PyScrapper-Desktopanwendung.
+Die HTML-Seiten sind aufeinander abgestimmt und decken Architektur, Workflows und UI-Fenster ab.
 
 ## Datei-Struktur
 
-### 🎯 Startpunkt
-- **Index.html** - Haupt-Dokumentations-Portal mit Links zu allen anderen Dokumenten
+### Startpunkt
+- **`Index.html`** – zentrales Dokumentations-Portal mit Verweisen auf alle Hauptdokumente
 
-### 📚 Hauptdokumentation (Professionell)
+### Hauptdokumentation
 
-#### 1. Architecture_Professional.html
+#### 1. `Architecture_Professional.html`
 **Inhalte:**
-- Kern-Datenmodelle (DownloadedMedia, Playlist, Settings, MediaFilter)
-- System-Architektur Übersicht (MVVM Pattern)
-- Request/Response Modelle für API-Kommunikation
-- SQLite Datenbankstruktur
-- Alle ViewModels und deren Aufgaben
-- Technologie-Stack
-- Beispiel: Datenfluss beim Download
+- Kern-Datenmodelle: `DownloadedMedia`, `Playlist`, `Settings`, `MediaFilter`
+- MVVM-Architektur und Zuständigkeiten der Schichten
+- Request-/Response-Modelle für die API-Kommunikation
+- SQLite-Datenbankstruktur und Persistenz
+- Wichtige ViewModels und ihre Aufgaben
+- Technologie-Stack der Desktop-App
 
 **Zielgruppe:** Entwickler, Architekten
 
----
-
-#### 2. Workflows_Professional.html
+#### 2. `Workflows_Professional.html`
 **Inhalte:**
-- Download Workflow (Suche → Download → Fortschritt)
-- Anwendungs-Initialisierung (Boot Sequence)
-- Filter-Anwendung Logik
-- Musik-Player State Machine
-- MVVM Data Binding Mechanism
+- Such- und Download-Workflow
+- Initialisierung der Anwendung
+- Filter-Anwendung und Rücksetzen
+- Audio-/Video-Wiedergabe als Zustandsmodell
+- MVVM-Data-Binding und UI-Aktualisierung
 
 **Zielgruppe:** Entwickler, Projektmanager
 
----
-
-#### 3. UI_Documentation.html
+#### 3. `UI_Documentation.html`
 **Inhalte:**
-- Hauptfenster (MainWindow) - Layout & Funktionen
-- Suche & Download Dialog (ScrapWindow)
-- Filter Dialog (FilterWindow)
-- Playlist Erstellen Dialog
-- Video Konverter Window (FFmpeg)
-- Download-Fortschritt Window
-- Server Health Monitor Window
+- Hauptfenster (`MainWindow`)
+- Such- und Download-Fenster (`ScrapWindowWithSearch`)
+- Filter-Dialog (`FilterWindow`)
+- Playlist-Erstellung, Codec-Konvertierung, Fortschritt und Health-Check
+- Zusätzliche Fenster wie `LauncherWindow`, `InputWindow`, `MessageBox`
 
-**Zielgruppe:** UI/UX Entwickler, Produktmanager
-
----
-
-### 📖 Zusätzliche Dokumentation (Vereinfacht)
-
-#### 4. Frontend_Flowchart_Improved.html
-- Verbesserte Versionen der Workflows mit besserer Struktur
-- Farb-Legende für verschiedene Prozesstypen
-
-#### 5. UI_Windows_Guide.html
-- Benutzerfreundliche Ansicht aller Fenster
-- Mit Mock-ups und Beschreibungen
-
-#### 6. DataModels_Simplified.html
-- Vereinfachte Erklärung der Datenmodelle
-- Mit Beispielen und visuellen Diagrammen
-
----
-
-### 📋 Original Dokumentation (Legacy)
-
-Diese Dateien sind noch vorhanden für Rückwärts-Kompatibilität:
-- **AllDataModels.html** - Original Klassendiagramme
-- **Frontend_Flowchart_Detailed.html** - Detaillierte Workflows (alte Version)
-- **WindowTreesWithMockups.html** - Fenster mit Mock-ups (alte Version)
-- **Frontend_Doku.md** - Markdown Dokumentation
-
----
+**Zielgruppe:** UI/UX-Entwickler, Produktmanager
 
 ## Wie man die Dokumentation nutzt
 
-### 1. Für neue Entwickler
-```
-Starten Sie mit: Index.html
-↓
-Architecture_Professional.html (Verstehen Sie die Struktur)
-↓
-Workflows_Professional.html (Verstehen Sie die Prozesse)
-↓
-UI_Documentation.html (Kennen Sie die Fenster)
-```
+### Für neue Entwickler
+1. `Index.html`
+2. `Architecture_Professional.html`
+3. `Workflows_Professional.html`
+4. `UI_Documentation.html`
 
-### 2. Für Feature-Entwicklung
-```
-1. Architecture_Professional.html (Wo speichern die Daten?)
-2. Workflows_Professional.html (Welcher Prozess ist relevant?)
-3. UI_Documentation.html (Welche Fenster sind involviert?)
-```
+### Für Feature-Entwicklung
+1. Architektur prüfen: Daten, Modelle, API
+2. Workflows prüfen: betroffene Prozesse und Zustände
+3. UI prüfen: betroffene Fenster und Dialoge
 
-### 3. Für Bug-Fixes
-```
-1. Workflows_Professional.html (Wo kann das Problem sein?)
-2. Architecture_Professional.html (Datenfluss prüfen)
-3. UI_Documentation.html (UI-spezifisches Problem?)
-```
-
----
+### Für Bug-Fixes
+1. `Workflows_Professional.html` – Prozesskette eingrenzen
+2. `Architecture_Professional.html` – Datenfluss und Persistenz prüfen
+3. `UI_Documentation.html` – betroffene Oberfläche identifizieren
 
 ## Technologien in den Diagrammen
 
-### Mermaid Diagramme
-- **Flowcharts:** Prozessabläufe visualisieren
-- **Class Diagrams:** Datenmodelle und Beziehungen
-- **Graph TD:** Hierarchische Strukturen
+### Mermaid-Diagramme
+- Flowcharts für Prozessabläufe
+- Class-Diagramme für Datenmodelle
+- Graph-Darstellungen für Systemstrukturen
 
-### Features
-- **Pan & Zoom:** Mit Maus scrollen und zoomen möglich
-- **Responsive:** Funktioniert auf allen Bildschirmgrößen
-- **Dark Theme:** Professionelle dunkle Farbgebung
-
----
+### Darstellung
+- Pan & Zoom für größere Diagramme
+- Responsives Layout für verschiedene Bildschirmgrößen
+- Dunkles, konsistentes Doku-Design
 
 ## Design-Prinzipien
 
-✓ **Professionell:** Business-gerechte Ästhetik
-✓ **Klar:** Strukturiert und leicht zu folgen
-✓ **Komplett:** Alle Aspekte abgedeckt
-✓ **Wartbar:** Einfach zu aktualisieren
-✓ **Zugänglich:** Für alle Erfahrungsstufen geeignet
-
----
+✓ Professionell und ruhig lesbar
+✓ Klar strukturiert und schnell navigierbar
+✓ Inhaltlich an der aktuellen Codebasis orientiert
+✓ Wartbar und leicht erweiterbar
 
 ## Schnelle Referenz
 
 ### API-Endpoints
 ```
-POST /search           - Video suchen
-POST /download         - Download starten
-GET /download/progress/{id} - Fortschritt abrufen
-GET /health           - Server-Status prüfen
+POST /search                  - Suche an den Server senden
+POST /download                - Download starten
+GET  /download/progress/{id}  - Download-Fortschritt abrufen
+GET  /health                  - Serverstatus prüfen
 ```
 
 ### Wichtige Klassen
 ```
-DownloadedMedia       - Ein heruntergeladenes Video
-Playlist              - Sammlung von Videos
-Settings              - App-Konfiguration
-MediaFilter           - Filter für Video-Suche
-ApiClient             - HTTP Kommunikation
+DownloadedMedia   - Ein gespeicherter Medien-Eintrag
+Playlist          - Sammlung von Medien-IDs
+Settings          - App-Konfiguration
+MediaFilter       - Filterkriterien für die Medienliste
+ApiClient         - HTTP-Kommunikation mit dem Backend
 ```
 
-### ViewModels
+### Wichtige ViewModels
 ```
-MainWindowViewModel           - Hauptfenster Logik
-ScrapWindowViewModel          - Suche & Download
-MediaPlayerControlViewModel   - Musik-Abspieler
-FilterWindowViewModel         - Filter-Dialog
-ProgressBarWindowViewModel    - Download-Fortschritt
+MainWindowViewModel            - Hauptfenster-Logik
+ScrapWindowWithSearchViewModel - Suche & Download mit Provider-Auswahl
+SunoScrapWindowViewModel       - Direkt-Download über URL
+FilterWindowViewModel          - Filter-Dialog
+ProgressBarWindowViewModel     - Fortschrittsanzeige
+GetServerHealthWindowViewModel - Server-Health-Ansicht
+MediaPlayerControlViewModel    - Medienwiedergabe
 ```
-
----
 
 ## Kontakt & Support
 
-Bei Fragen zur Dokumentation oder Problemen mit den Diagrammen:
-- Prüfen Sie zuerst Index.html
-- Konsultieren Sie Architecture_Professional.html
-- Wenden Sie sich an das Entwicklungsteam
+Bei Fragen zur Doku:
+- zuerst `Index.html` öffnen
+- dann `Architecture_Professional.html` lesen
+- anschließend bei Bedarf `Workflows_Professional.html` und `UI_Documentation.html` prüfen
 
 ---
 
-**Dokumentation Version:** 1.0
-**Aktualisiert:** 27. Mai 2026
-**Format:** HTML5 + Mermaid Diagramme + CSS
+**Dokumentationsstand:** aktualisiert am 5. Juni 2026
+**Format:** HTML5 + CSS + Mermaid
 

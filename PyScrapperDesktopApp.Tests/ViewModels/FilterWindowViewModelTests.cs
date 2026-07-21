@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Avalonia.Headless.XUnit;
 using PyScrapperDesktopApp.ViewModels;
 using Xunit;
 
@@ -9,7 +10,7 @@ namespace PyScrapperDesktopApp.Tests.ViewModels;
 
 public class FilterWindowViewModelTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void InitialValues_AreCorrect()
     {
         var vm = new FilterWindowViewModel();
@@ -20,7 +21,7 @@ public class FilterWindowViewModelTests
         Assert.False(vm.IsPlayable);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CancelCommand_InvokesCloseRequested()
     {
         var vm = new FilterWindowViewModel();
@@ -32,7 +33,7 @@ public class FilterWindowViewModelTests
         Assert.True(closeRequestedCalled);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SelectedMediaTypes_CanBeModified()
     {
         var vm = new FilterWindowViewModel();
