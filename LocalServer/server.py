@@ -363,7 +363,8 @@ def create_user(username: str, password: str, identifier: str, created_at: str):
 
 
 def connect_db():
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=20.0)
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys = ON")
     conn.row_factory = sqlite3.Row
     return conn
@@ -883,6 +884,7 @@ async def handle_login_req(req: LoginRequest):
 @app.post("/register")
 async def handle_register_req(req: RegisterRequest):
     try:
+
         create_user_req = CreateUserRequest(username=req.username, password=req.password)
         response = await handle_create_user_req(ADMIN_KEY, create_user_req)
 
