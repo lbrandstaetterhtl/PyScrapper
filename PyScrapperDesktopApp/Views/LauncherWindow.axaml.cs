@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
+using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
 namespace PyScrapperDesktopApp.Views;
@@ -23,7 +24,7 @@ public partial class LauncherWindow : Window
 
         InitializeComponent();
 
-        _vm = new LauncherWindowViewModel();
+        _vm = new LauncherWindowViewModel(new DialogService(this));
         DataContext = _vm;
 
         Opened += (s, e) =>

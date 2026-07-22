@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
+using Avalonia.Logging;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using LibVLCSharp.Shared;
@@ -87,6 +88,7 @@ public partial class App : Application
             */
 
             // --- Login-Fenster zeigen und wirklich darauf warten (ShowDialog geht hier nicht, kein Owner vorhanden) ---
+            
             var loginWindow = new LoginWindow();
             desktop.MainWindow = loginWindow;
 
@@ -100,7 +102,6 @@ public partial class App : Application
             {
                 log = new Massage("Login was cancelled or failed, shutting down", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
-                StopServer();
                 desktop.Shutdown(0);
                 return;
             }
@@ -143,7 +144,6 @@ public partial class App : Application
                     case LauncherResult.Cancelled:
                         log = new Massage("Launcher was cancelled by the user", DateTime.Now, "INFO");
                         _logger.LogNewMassage(log);
-                        StopServer();
                         desktop.Shutdown(0);
                         break;
 
@@ -151,7 +151,6 @@ public partial class App : Application
                     default:
                         log = new Massage("Launcher failed with an error", DateTime.Now, "ERROR");
                         _logger.LogNewMassage(log);
-                        StopServer();
                         desktop.Shutdown(1);
                         break;
                 }
@@ -380,14 +379,6 @@ public partial class App : Application
         _logger.LogNewMassage(log);
 
         //TODO: Update all data / update only changed data
-
-        log = new Massage("Shutting down local server...", DateTime.Now, "INFO");
-        _logger.LogNewMassage(log);
-
-        StopServer();
-
-        log = new Massage("Local server is shutdown", DateTime.Now, "INFO");
-        _logger.LogNewMassage(log);
     }
 
     /// <summary>
@@ -476,25 +467,5 @@ public partial class App : Application
         Current!.RequestedThemeVariant = AppData.Settings.DarkModeEnabled
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
-    }
-
-    /// <summary>
-    /// Stops the underlying local Python server by sending a 'quit' command via HTTP POST. 
-    /// Uses a short timeout since the server might already be down or unreachable.
-    /// </summary>
-    public static void StopServer()
-    {
-        try
-        {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
-            http.PostAsync(
-                "http://127.0.0.1:8765/command",
-                new StringContent("{\"command\":\"quit\"}", Encoding.UTF8, "application/json")
-            ).Wait();
-        }
-        catch
-        {
-            var log = new Massage("Server was not reachable while trying to send quit command", DateTime.Now, "WARN");
-        }
     }
 }

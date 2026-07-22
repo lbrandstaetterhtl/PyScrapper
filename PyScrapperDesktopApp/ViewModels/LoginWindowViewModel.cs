@@ -29,6 +29,14 @@ public partial class LoginWindowViewModel : ObservableObject
     public async Task Login()
     {
         var client = new ApiClient(_dialogService);
+        
+        var healthResponse = await client.GetHealth();
+
+        if (!healthResponse.Ok)
+        {
+            await _dialogService.ShowAlertAsync("Health check failed. Please check your connection or contact your admin.");
+            return;
+        }
 
         var req = new LoginRequest()
         {
@@ -70,6 +78,14 @@ public partial class LoginWindowViewModel : ObservableObject
     private async Task Register()
     {
         var client = new ApiClient(_dialogService);
+        
+        var healthResponse = await client.GetHealth();
+
+        if (!healthResponse.Ok)
+        {
+            await _dialogService.ShowAlertAsync("Health check failed. Please check your connection or contact your admin.");
+            return;
+        }
 
         var req = new RegisterRequest()
         {

@@ -85,47 +85,63 @@ public class ApiClient : Interfaces.IApiClient
     /// <returns name="health"></returns>
     public async Task<HealthResponse> GetHealth(bool loogHealthResponse = true)
     {
-        HttpClient client = new();
-
-        var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/health");
-        var responseData = await response.Content.ReadAsStringAsync();
-
-        if (response.IsSuccessStatusCode)
+        try
         {
-            try
-            {
-                var health = JsonSerializer.Deserialize<HealthResponse>(responseData, JsonOptions);
 
-                if (loogHealthResponse)
+            HttpClient client = new();
+
+            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/health");
+            var responseData = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                try
                 {
-                    var text =
-                        $"Server health check successful: Uptime {health?.UptimeSeconds} seconds, Memory {health?.MemoryMb} MB, PID {health?.Pid}, Processes {health?.Processes.Count}";
+                    var health = JsonSerializer.Deserialize<HealthResponse>(responseData, JsonOptions);
 
-                    var log = new Massage(text, DateTime.Now, "INFO");
-                    _logger.LogNewMassage(log);
+                    if (loogHealthResponse)
+                    {
+                        var text =
+                            $"Server health check successful: Uptime {health?.UptimeSeconds} seconds, Memory {health?.MemoryMb} MB, PID {health?.Pid}, Processes {health?.Processes.Count}";
+
+                        var log = new Massage(text, DateTime.Now, "INFO");
+                        _logger.LogNewMassage(log);
+                    }
+
+                    return health;
                 }
+                catch (Exception ex)
+                {
+                    var log = new Massage($"Error sending health request: {ex.Message}", DateTime.Now, "ERROR");
+                    _logger.LogNewMassage(log);
 
-                return health;
+                    return null;
+                }
             }
-            catch (Exception ex)
+            else
             {
-                var log = new Massage($"Error sending health request: {ex.Message}", DateTime.Now, "ERROR");
+                var errorResponse = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
+
+                var log = new Massage("Server gave this error while requesting health:" + errorResponse!.Detail,
+                    DateTime.Now, "ERROR");
                 _logger.LogNewMassage(log);
+
+                var massageBox = new MessageBox($"Error requesting server health: {errorResponse.Detail}");
+                await massageBox.ShowDialog(
+                    App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                        ? desktop.MainWindow
+                        : null);
 
                 return null;
             }
         }
-        else
+        catch (Exception ex)
         {
-            var errorResponse = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
-
-            var log = new Massage("Server gave this error while requesting health:" + errorResponse!.Detail, DateTime.Now,"ERROR");
-            _logger.LogNewMassage(log);
-            
-            var massageBox = new MessageBox($"Error requesting server health: {errorResponse.Detail}");
-            await massageBox.ShowDialog(App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
-            
-            return null;
+            var response = new HealthResponse()
+            {
+                Ok = false
+            };
+            return response;
         }
     }
     

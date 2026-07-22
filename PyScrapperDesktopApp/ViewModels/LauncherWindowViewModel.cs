@@ -48,13 +48,16 @@ public partial class LauncherWindowViewModel : ObservableObject
     
     private string _installerUrl  = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe";
     private string _installerPath = Path.Combine(Path.GetTempPath(), "python-3.12.10-installer.exe");
+    private DialogService _dialogService;
 
     /// <summary>
     /// Constructor for the LauncherWindowViewModel. Checks for design mode to avoid executing runtime code in the designer.
     /// </summary>
-    public LauncherWindowViewModel()
+    public LauncherWindowViewModel(DialogService dialogService)
     {
         if (Design.IsDesignMode) return;
+        
+        _dialogService = dialogService;
     }
 
     /// <summary>
@@ -86,9 +89,9 @@ public partial class LauncherWindowViewModel : ObservableObject
             var log = new Massage("Checking if server is already running...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            if (await IsServerAlreadyRunning())
+            if (await IsServerRunning())
             {
-                log = new Massage("Server is already running, skipping startup sequence", DateTime.Now, "INFO");
+                log = new Massage("Server is running", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
@@ -102,25 +105,24 @@ public partial class LauncherWindowViewModel : ObservableObject
                 });
 
                 await FinishSuccess();
-                return;
+                
+                await Task.WhenAll(
+                    Task.Run(EnsureVcRedist),
+                    Task.Run(EnsureFfmpeg),
+                    Task.Run(EnsurePython),
+                    Task.Run(EnsureVenv),
+                    Task.Run(() => { RunProcess("python", "-m pip install --upgrade pip", LocalServer).Wait();}),
+                    Task.Run(() => {RunProcess("python", $"-m pip install -r \"{Requirements}\"", LocalServer).Wait(); }),
+                    Task.Run(() => RunProcess(VenvPython, " -m playwright install", LocalServer).Wait() ),
+                    RestoreDotnetPackages()
+                );
+                
+                await FinishSuccess();
             }
-
-            await Task.WhenAll(
-                Task.Run(EnsureVcRedist),
-                Task.Run(EnsureFfmpeg),
-                Task.Run(EnsurePython),
-                Task.Run(EnsureVenv),
-                Task.Run(() => { RunProcess("python", "-m pip install --upgrade pip", LocalServer).Wait();}),
-                Task.Run(() => {RunProcess("python", $"-m pip install -r \"{Requirements}\"", LocalServer).Wait(); }),
-                Task.Run(() => RunProcess(VenvPython, " -m playwright install", LocalServer).Wait() ),
-                RestoreDotnetPackages()
-            );
-            
-            //StartServerProcess();
-            
-            //await WaitForServerReady();
-
-            await FinishSuccess();
+            else
+            {
+                throw new Exception($"Server is not running. Retry in a few minutes or contact your admin.");
+            }
         }
         catch (Exception ex)
         {
@@ -205,39 +207,19 @@ public partial class LauncherWindowViewModel : ObservableObject
     /// This is used to skip the startup sequence if the server was already started from a previous session.
     /// </summary>
     /// <returns></returns>
-    private async Task<bool> IsServerAlreadyRunning()
+    private async Task<bool> IsServerRunning()
     {
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-            var response = await http.GetAsync("http://127.0.0.1:8765/docs");
-            return response.IsSuccessStatusCode;
+            var client = new ApiClient(_dialogService);
+            var response = await client.GetHealth();
+
+            return response.Ok;
         }
         catch
         {
             return false;
         }
-    }
-
-    /// <summary>
-    /// Starts the Python uvicorn server as a background process. The process is kept alive and referenced
-    /// by the _serverProcess field so it can be cleaned up if needed. Output and error streams are redirected
-    /// and logged so that server startup errors are visible in the application log.
-    /// </summary>
-    private void StartServerProcess()
-    {
-        var psi = BuildProcessInfo(
-            VenvPython,
-            "-m uvicorn LocalServer.server:app --host 127.0.0.1 --port 8765",
-            RepoRoot,
-            false
-        );
-
-        _serverProcess = new Process { StartInfo = psi };
-
-        _serverProcess.Start();
-        _serverProcess.BeginOutputReadLine();
-        _serverProcess.BeginErrorReadLine();
     }
 
     /// <summary>
