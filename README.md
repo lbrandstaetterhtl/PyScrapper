@@ -221,5 +221,3 @@ PyScrapper is intended for **local development/use**. The current LocalServer se
 ## License
 
 No license file is currently defined in this repository.
-
-If you plan to distribute PyScrapper, add a `LICENSE` file and update this section accordingly.
