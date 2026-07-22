@@ -107,6 +107,35 @@ Persistent app data is stored in:
 
 A browser UI for interacting with the same local backend (`127.0.0.1:8765`).
 
+### 5) Datenbank-Management
+
+PyScrapper nutzt aktuell eine **hybride Persistenzstrategie**:
+
+- **JSON-basierte Persistenz** in der Desktop-App (z. B. `downloadedMedias.json`)
+- **In-memory/Datei-orientierte Laufzeitdaten** im LocalServer
+- **SQLite-Bezug in der technischen Desktop-Dokumentation** (`PyScrapperDesktopApp/Doku`)
+
+#### Zuständigkeiten
+
+- Speicherung und Wiederherstellung heruntergeladener Medien
+- Verwaltung von Playlists und app-spezifischen Zuständen
+- Grundlage für zukünftige, konsistente DB-Migrationen
+
+#### Aktueller Stand
+
+- Primärer sichtbarer Persistenzpfad im Code: `PyScrapperDesktopApp/data/downloadedMedias.json`
+- Erweiterte DB-Konzepte sind in der Desktop-Dokumentation beschrieben
+- Für produktive DB-Szenarien (Backups, Migration, Integritätsprüfungen) wird empfohlen,
+  ein einheitliches SQLite-Schema als Single Source of Truth zu etablieren
+
+#### Empfehlungen für den Ausbau
+
+1. Einheitliche Datenzugriffsschicht (Repository/Service Layer)
+2. Versionierte Migrationen (z. B. mit klaren Schema-Versionen)
+3. Validierung + Integrity Checks beim Start
+4. Optionaler Export/Import für JSON ↔ SQLite
+5. Regelmäßige Backup-Strategie für lokale Nutzerdaten
+
 ---
 
 ## Requirements
