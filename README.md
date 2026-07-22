@@ -6,17 +6,18 @@ PyScrapper is a local-first media scraping and download toolkit with three main 
 - **Cross-platform desktop app** (**C# / Avalonia / .NET 9**)
 - **Web interface** (**React / TypeScript / Vite**)
 
-It helps you search and download media from supported providers, monitor download progress, and manage your downloaded media locally.
+It helps you search and download media from supported providers, monitor download progress, and manage downloaded media locally.
 
 ---
 
 ## What’s new (latest project state)
 
 - Unified architecture with a dedicated **LocalServer** and reusable **PythonModule** core.
-- Expanded desktop workflow with dedicated windows for search/download, health, logs, playlists, media playback, and codec conversion.
-- Added/maintained **web frontend** (`PyScrapperWebInterface`) for browser-based interaction with the local backend.
-- Runtime and diagnostics improvements via server logging (`LocalServer/logs/server_runtime.log`) and `/health` endpoint.
-- Current tested stack includes **.NET 9**, **Avalonia 11.3.8**, **LibVLCSharp**, **FastAPI**, **yt-dlp**, and **Playwright**.
+- Expanded desktop workflow with windows for search/download, health, logs, playlists, media playback, and codec conversion.
+- Included **web frontend** (`PyScrapperWebInterface`) for browser-based interaction with the local backend.
+- Runtime and diagnostics via server logging (`LocalServer/logs/server_runtime.log`) and `/health` endpoint.
+- Current stack includes **.NET 9**, **Avalonia 11.3.8**, **LibVLCSharp**, **FastAPI**, **yt-dlp**, and **Playwright**.
+- ✅ **No startup/install scripts required anymore** (script directory removed).
 
 ---
 
@@ -27,9 +28,6 @@ PyScrapper/
 ├── LocalServer/                  # FastAPI backend (Python)
 │   ├── server.py
 │   ├── requirements.txt
-│   ├── scripts/
-│   │   ├── WinScripts/
-│   │   └── LinuxScripts/
 │   └── logs/
 │
 ├── PythonModule/                 # Core scraping/search/download logic
@@ -123,7 +121,7 @@ A browser UI for interacting with the same local backend (`127.0.0.1:8765`).
 
 ### Python dependencies
 
-Defined in `LocalServer/requirements.txt`, including:
+Defined in `LocalServer/requirements.txt`:
 
 - `fastapi`
 - `uvicorn[standard]`
@@ -131,32 +129,42 @@ Defined in `LocalServer/requirements.txt`, including:
 - `certifi`
 - `yt-dlp`
 - `playwright`
+- `bcrypt`
+- `dotenv`
 
 ---
 
-## Quick start
+## Quick start (scriptless)
 
 ## 1) Start LocalServer
 
 ### Windows (PowerShell)
 
 ```powershell
-.\LocalServer\scripts\WinScripts\StartServer.ps1
+cd LocalServer
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python -m uvicorn server:app --host 127.0.0.1 --port 8765
 ```
 
-### Linux (Bash)
+### Linux / macOS (Bash)
 
 ```bash
-./LocalServer/scripts/LinuxScripts/StartServer.sh
+cd LocalServer
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn server:app --host 127.0.0.1 --port 8765
 ```
-
-This script-based start is recommended because it handles virtual environment setup, missing dependencies, and runtime preparation.
 
 Server URLs:
 
 - `http://127.0.0.1:8765/`
 - `http://127.0.0.1:8765/docs`
 - `http://127.0.0.1:8765/health`
+
+To stop the server, press `Ctrl+C` in the terminal.
 
 ---
 
@@ -192,7 +200,6 @@ Default dev URL: `http://localhost:5173`
 
 ## Operational notes
 
-- The desktop app can auto-start the LocalServer on launch (depending on current app flow/config).
 - FFmpeg must be available in PATH for YouTube and conversion-related operations.
 - For Playwright-based fallback browser support, run once after dependency install:
 
