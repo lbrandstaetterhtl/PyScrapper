@@ -1,27 +1,91 @@
 # PyScrapper
 
-PyScrapper is a local-first media scraping and download toolkit with three main parts:
+PyScrapper is a local-first media scraping and download toolkit with three primary components:
 
-- **Python FastAPI backend** (`LocalServer` + `PythonModule`)
-- **Cross-platform desktop app** (**C# / Avalonia / .NET 9**)
-- **Web interface** (**React / TypeScript / Vite**)
+- **Backend API** (`LocalServer`) built with **FastAPI** (Python)
+- **Desktop client** (`PyScrapperDesktopApp`) built with **C# / Avalonia / .NET 9**
+- **Web client** (`PyScrapperWebInterface`) built with **React / TypeScript / Vite**
 
-It helps you search and download media from supported providers, monitor download progress, and manage downloaded media locally.
-
----
-
-## What’s new (latest project state)
-
-- Unified architecture with a dedicated **LocalServer** and reusable **PythonModule** core.
-- Expanded desktop workflow with windows for search/download, health, logs, playlists, media playback, and codec conversion.
-- Included **web frontend** (`PyScrapperWebInterface`) for browser-based interaction with the local backend.
-- Runtime and diagnostics via server logging (`LocalServer/logs/server_runtime.log`) and `/health` endpoint.
-- Current stack includes **.NET 9**, **Avalonia 11.3.8**, **LibVLCSharp**, **FastAPI**, **yt-dlp**, and **Playwright**.
-- ✅ **No startup/install scripts required anymore** (script directory removed).
+It provides a unified workflow for searching media, starting downloads, tracking progress, and managing downloaded content locally.
 
 ---
 
-## Repository structure
+## Table of Contents
+
+- [Project Goals](#project-goals)
+- [Current Architecture](#current-architecture)
+- [Repository Structure](#repository-structure)
+- [Core Features](#core-features)
+- [Technology Stack](#technology-stack)
+- [Requirements](#requirements)
+- [Quick Start](#quick-start)
+- [API Overview](#api-overview)
+- [Data Storage & Database Management](#data-storage--database-management)
+- [Operational Notes](#operational-notes)
+- [Troubleshooting](#troubleshooting)
+- [Development Notes](#development-notes)
+- [Security Scope](#security-scope)
+- [License](#license)
+
+---
+
+## Project Goals
+
+- Offer a **local-first** media workflow (search → download → manage → play).
+- Keep scraping/provider logic reusable through a dedicated Python core module.
+- Support multiple frontends (desktop + web) against one local backend API.
+- Maintain practical diagnostics (`/health`, runtime logs) for local operation.
+
+---
+
+## Current Architecture
+
+### 1) `LocalServer` (FastAPI)
+
+Local API server running on `127.0.0.1:8765`.
+
+Responsibilities:
+
+- Accept search/download/command requests
+- Queue and process tasks asynchronously
+- Report task progress and server health
+- Write runtime logs
+
+### 2) `PythonModule`
+
+Reusable scraping core and service layer.
+
+Responsibilities:
+
+- Provider-specific integrations
+- Shared HTTP/session utilities
+- Fallback browser handling via Playwright
+- Server-side processors for command/search/download
+
+### 3) `PyScrapperDesktopApp` (Avalonia)
+
+Cross-platform desktop UI consuming the local API.
+
+Responsibilities:
+
+- Search and download UX
+- Playlist/media management
+- Playback (LibVLCSharp)
+- Health/log visualization
+- Conversion workflows
+
+### 4) `PyScrapperWebInterface` (React + Vite)
+
+Browser-based UI consuming the same local API.
+
+Responsibilities:
+
+- Web search/download interaction
+- Local backend connectivity during development
+
+---
+
+## Repository Structure
 
 ```text
 PyScrapper/
@@ -47,108 +111,53 @@ PyScrapper/
 
 ---
 
-## Architecture overview
+## Core Features
 
-### 1) LocalServer (FastAPI)
+- Multi-provider search (current providers include `suno`, `youtube`, `archive`, `bandcamp`)
+- Download task creation and progress tracking
+- Queue-based backend request processing
+- Desktop media list persistence
+- Playlist and playback support
+- Optional codec/conversion workflows
+- Health endpoint and runtime log visibility
 
-Local API server on `127.0.0.1:8765`.
+---
 
-Main endpoints:
+## Technology Stack
 
-- `GET /` – service root
-- `GET /health` – uptime, memory, PID, running Python processes
-- `POST /command` – queued commands (e.g. `quit`)
-- `POST /download` – create download task
-- `GET /download/progress/{task_id}` – task progress
-- `POST /search` – provider search
+### Backend
 
-Technical notes:
+- Python 3.10+
+- FastAPI + Uvicorn
+- Pydantic
+- yt-dlp
+- Playwright
 
-- Request handling is queue-based (`asyncio` queues).
-- Concurrency is controlled with `asyncio.Semaphore(50)`.
-- Server runtime logs are written to `LocalServer/logs/server_runtime.log`.
-- Designed for **local use**, not hardened for public internet deployment.
+### Desktop
 
-Supported providers (current):
+- .NET 9
+- Avalonia 11.3.8
+- LibVLCSharp
 
-- `suno`, `suno.com`
-- `youtube`, `youtube.com`
-- `archive`, `archive.org`
-- `bandcamp`
+### Web
 
-### 2) PythonModule
-
-Reusable backend core with provider integrations and server processors.
-
-Key modules:
-
-- `Session.py` – shared HTTP session management
-- `core.py` – HTTP helper utilities
-- `emergencyBrowser.py` – Playwright fallback for protected pages
-- `providers/` – provider-specific implementations
-- `serverservices/` – server-side processors for command/search/download
-
-### 3) Desktop App (Avalonia)
-
-The desktop client communicates with LocalServer over HTTP and includes:
-
-- Search and download workflows
-- Downloaded media list and persistence
-- Media playback via **LibVLCSharp**
-- Playlist creation and management
-- Codec conversion
-- Health and logs views
-
-Persistent app data is stored in:
-
-- `PyScrapperDesktopApp/data/downloadedMedias.json`
-
-### 4) Web Interface (React + Vite)
-
-A browser UI for interacting with the same local backend (`127.0.0.1:8765`).
-
-### 5) Datenbank-Management
-
-PyScrapper nutzt aktuell eine **hybride Persistenzstrategie**:
-
-- **JSON-basierte Persistenz** in der Desktop-App (z. B. `downloadedMedias.json`)
-- **In-memory/Datei-orientierte Laufzeitdaten** im LocalServer
-- **SQLite-Bezug in der technischen Desktop-Dokumentation** (`PyScrapperDesktopApp/Doku`)
-
-#### Zuständigkeiten
-
-- Speicherung und Wiederherstellung heruntergeladener Medien
-- Verwaltung von Playlists und app-spezifischen Zuständen
-- Grundlage für zukünftige, konsistente DB-Migrationen
-
-#### Aktueller Stand
-
-- Primärer sichtbarer Persistenzpfad im Code: `PyScrapperDesktopApp/data/downloadedMedias.json`
-- Erweiterte DB-Konzepte sind in der Desktop-Dokumentation beschrieben
-- Für produktive DB-Szenarien (Backups, Migration, Integritätsprüfungen) wird empfohlen,
-  ein einheitliches SQLite-Schema als Single Source of Truth zu etablieren
-
-#### Empfehlungen für den Ausbau
-
-1. Einheitliche Datenzugriffsschicht (Repository/Service Layer)
-2. Versionierte Migrationen (z. B. mit klaren Schema-Versionen)
-3. Validierung + Integrity Checks beim Start
-4. Optionaler Export/Import für JSON ↔ SQLite
-5. Regelmäßige Backup-Strategie für lokale Nutzerdaten
+- React
+- TypeScript
+- Vite
 
 ---
 
 ## Requirements
 
-### Core
+### Core Tools
 
 - **Git**
 - **Python 3.10+**
 - **.NET SDK 9.0**
-- **Node.js + npm** (for web interface)
-- **FFmpeg** (required for some download/conversion workflows)
+- **Node.js + npm**
+- **FFmpeg** (required for selected download/conversion flows)
 
-### Python dependencies
+### Python Dependencies
 
 Defined in `LocalServer/requirements.txt`:
 
@@ -163,11 +172,11 @@ Defined in `LocalServer/requirements.txt`:
 
 ---
 
-## Quick start (scriptless)
+## Quick Start
 
-## 1) Start LocalServer
+### 1) Start LocalServer
 
-### Windows (PowerShell)
+#### Windows (PowerShell)
 
 ```powershell
 cd LocalServer
@@ -177,7 +186,7 @@ pip install -r requirements.txt
 python -m uvicorn server:app --host 127.0.0.1 --port 8765
 ```
 
-### Linux / macOS (Bash)
+#### Linux / macOS (Bash)
 
 ```bash
 cd LocalServer
@@ -193,11 +202,11 @@ Server URLs:
 - `http://127.0.0.1:8765/docs`
 - `http://127.0.0.1:8765/health`
 
-To stop the server, press `Ctrl+C` in the terminal.
+Stop with `Ctrl+C`.
 
 ---
 
-## 2) Run Desktop App
+### 2) Run Desktop App
 
 ```powershell
 cd PyScrapperDesktopApp
@@ -215,7 +224,7 @@ dotnet test
 
 ---
 
-## 3) Run Web Interface
+### 3) Run Web Interface
 
 ```bash
 cd PyScrapperWebInterface
@@ -227,23 +236,103 @@ Default dev URL: `http://localhost:5173`
 
 ---
 
-## Operational notes
+## API Overview
 
-- FFmpeg must be available in PATH for YouTube and conversion-related operations.
-- For Playwright-based fallback browser support, run once after dependency install:
+Main local endpoints:
+
+- `GET /` – service root
+- `GET /health` – uptime, memory, PID, active Python processes
+- `POST /command` – queue command events (e.g. `quit`)
+- `POST /search` – provider search
+- `POST /download` – create download task
+- `GET /download/progress/{task_id}` – fetch task progress
+
+Notes:
+
+- Request processing is queue-based.
+- Concurrency is limited with `asyncio.Semaphore(50)`.
+
+---
+
+## Data Storage & Database Management
+
+PyScrapper currently follows a **hybrid persistence approach**:
+
+1. **JSON persistence** (desktop-visible state), currently including:
+   - `PyScrapperDesktopApp/data/downloadedMedias.json`
+2. **Runtime/log-based backend state** in `LocalServer`
+3. **Documented SQLite-oriented architecture concepts** in desktop technical docs (`PyScrapperDesktopApp/Doku`)
+
+### Current Practical Behavior
+
+- Downloaded media metadata is persisted in JSON for desktop usage.
+- Server runtime behavior is traceable via log output.
+- Database concepts are documented but not yet enforced as a single runtime source everywhere.
+
+### Recommended Evolution Path
+
+To standardize long-term data management:
+
+1. Introduce a single DB access layer (repository/service pattern).
+2. Define schema versions and migration scripts.
+3. Add startup integrity checks + safe recovery paths.
+4. Support import/export between JSON and SQLite.
+5. Add backup/restore workflow for local user data.
+
+---
+
+## Operational Notes
+
+- Ensure **FFmpeg** is available in `PATH` for YouTube/conversion workflows.
+- For Playwright fallback browser support, run once after installing dependencies:
 
 ```bash
 playwright install
 ```
 
-- CORS is configured for local web dev origins (`localhost:5173` / `127.0.0.1:5173`).
-- Default media output folder: `PyScrapper/Downloads/` (overridable via request parameter `download_path`).
+- CORS is configured for local web development origins (`localhost:5173`, `127.0.0.1:5173`).
+- Default media output folder: `PyScrapper/Downloads/` (can be overridden via `download_path` in request payload).
 
 ---
 
-## Security and scope
+## Troubleshooting
 
-PyScrapper is intended for **local development/use**. The current LocalServer setup is not hardened for public deployment.
+### Server does not start
+
+- Verify Python version (`3.10+`)
+- Recreate virtual environment
+- Reinstall requirements
+
+### Web UI cannot reach backend
+
+- Confirm LocalServer is running on `127.0.0.1:8765`
+- Check browser console/network errors
+- Verify CORS/dev URL is unchanged
+
+### Downloads fail for provider content
+
+- Update `yt-dlp`
+- Ensure FFmpeg is installed and available
+- Run `playwright install` if fallback browser paths are used
+
+### Desktop playback issues
+
+- Check LibVLC runtime availability on your platform
+- Validate file paths of downloaded media
+
+---
+
+## Development Notes
+
+- This repository recently converged into a cleaner architecture with explicit LocalServer + PythonModule separation.
+- Legacy startup/install scripts were removed; manual, explicit setup is now the default.
+- Keep API contracts stable between backend, desktop app, and web UI to reduce integration regressions.
+
+---
+
+## Security Scope
+
+PyScrapper is designed for **local development/use** and is **not hardened for public internet deployment** in its current form.
 
 ---
 
