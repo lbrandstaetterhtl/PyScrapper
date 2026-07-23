@@ -1,351 +1,748 @@
-# PyScrapper – Developer README
+# PyScrapper – Entwickler-README
 
-Diese Datei richtet sich **ausschließlich an Entwickler**.  
-Sie beschreibt Architektur, Setup, typische Workflows und bekannte Stolperfallen.
+Diese Datei richtet sich **ausschließlich an Entwickler**. Sie beschreibt den aktuellen Stand der Codebasis, die Architektur, die echten Einstiegspunkte, die verfügbaren Funktionen und die wichtigsten Abweichungen zwischen Dokumentation und Code.
 
 ---
 
-## Projektstruktur (High Level)
+## Kurzfazit zum aktuellen Stand
 
-```
+**Was aktuell tatsächlich im Code steckt:**
+
+- ein lokaler **FastAPI-Server** in `LocalServer/server.py`
+- eine gemeinsame Python-Business-Logik in `PythonModule/`
+- eine **Desktop-App mit Avalonia / .NET 9** in `PyScrapperDesktopApp/`
+- ein **React / TypeScript / Vite**-Web-Frontend in `PyScrapperWebInterface/`
+- ein **SQLite-Datenmodell** im Backend (`LocalServer/Data/data.db`)
+- lokale Laufzeit- und App-Logs
+- ViewModel-Tests für die Desktop-App in `PyScrapperDesktopApp.Tests/`
+
+**Wichtige Code-Realität, die man kennen muss:**
+
+- Die Desktop-App startet den LocalServer **nicht mehr automatisch** im aktiven Codepfad. Die Startlogik existiert noch in `App.axaml.cs`, ist aber kommentiert bzw. nicht aktiv.
+- Das Web-Frontend verwendet seine Fetch-URLs derzeit fest auf `http://127.0.0.1:8000`, während Backend und Desktop-Client standardmäßig mit **8765** arbeiten.
+- Die Suno-Suche ist im Backend aktuell ein **Platzhalter** und liefert leere Ergebnisse.
+- `/command` unterstützt aktuell nur `quit`.
+- Mehrere Admin-/CRUD-Endpunkte sind über `ADMIN_KEY` abgesichert, der aus einer `.env` geladen wird.
+- Der Server ist **nur lokal gedacht** und nicht für öffentliches Deployment gehärtet.
+
+---
+
+## Projektstruktur im aktuellen Snapshot
+
+```text
 PyScrapper/
-├── LocalServer/                  # FastAPI Backend (Python)
-│   ├── server.py                 # Einstiegspunkt (uvicorn app)
-│   ├── requirements.txt          # Python-Abhängigkeiten
-│   ├── scripts/
-│   │   ├── WinScripts/           # PowerShell-Skripte (Windows)
-│   │   │   ├── StartServer.ps1
-│   │   │   ├── StopServer.ps1
-│   │   │   ├── InstallRequirementsBackend.ps1
-│   │   │   ├── InstallRequirementsFrontend.ps1
-│   │   │   ├── InstallFFMPEG.ps1
-│   │   │   ├── ActivateVirtualEnvironment.ps1
-│   │   │   └── Common.ps1
-│   │   └── LinuxScripts/         # Shell-Skripte (Linux)
-│   │       ├── StartServer.sh
-│   │       ├── StopServer.sh
-│   │       ├── install_backend_requirements.sh
-│   │       ├── install_ffmpeg.sh
-│   │       ├── InstallRequirementsFrontend.sh
-│   │       └── activate_venv.sh
-│   ├── logs/                     # Runtime-Logs des Servers
-│   └── .venv/                    # Virtuelle Umgebung (lokal, nicht eingecheckt)
+├── LocalServer/
+│   ├── server.py                # FastAPI-Backend und DB-Endpunkte
+│   ├── requirements.txt         # Python-Abhängigkeiten
+│   ├── Data/
+│   │   └── data.db              # SQLite-Datenbank
+│   ├── logs/
+│   │   └── server_runtime.log   # Server-Runtime-Log
+│   ├── cookies.txt              # Cookie-Jar der gemeinsamen Session
+│   ├── .env                     # Backend-Umgebung, u. a. ADMIN_KEY
+│   ├── server_backup.py         # Legacy-/Sicherungsstand
+│   └── server_OLD.py           # Legacy-/Sicherungsstand
 │
-├── PythonModule/                 # Core-Logik (Sessions, Scraping, Downloads)
-│   ├── Session.py                # Gemeinsame HTTP-Session
-│   ├── core.py                   # Gemeinsame HTTP-Hilfsfunktionen
-│   ├── emergencyBrowser.py       # Playwright-basierter Fallback-Browser
-│   ├── models/                   # Datenmodelle & Einstellungen
-│   │   ├── requests.py
-│   │   ├── settings.py
-│   │   └── exceptions.py
-│   ├── providers/                # Provider-spezifische Download-/Such-Logik
-│   │   ├── Archive.py            # Internet Archive
-│   │   ├── Bandcamp.py           # Bandcamp
-│   │   ├── Suno.py               # suno.com
-│   │   └── Youtube.py            # YouTube (via yt-dlp)
-│   └── serverservices/           # Server-seitige Prozessoren
-│       ├── downloadProcessor.py
-│       ├── searchProcessor.py
-│       ├── commandProcessor.py
-│       └── utils.py
+├── PythonModule/
+│   ├── core.py                  # HTTP-Helper
+│   ├── Session.py               # Gemeinsame HTTP-Session mit Cookie-Jar
+│   ├── emergencyBrowser.py      # Playwright-Fallback für geschützte Seiten
+│   ├── models/
+│   ├── providers/
+│   └── serverservices/
 │
-├── PyScrapperDesktopApp/         # Desktop Client (C# / Avalonia / .NET 9)
-│   ├── *.sln / *.csproj
-│   ├── Models/                   # ApiClient, AppData, AppLogger, AudioPlayer
-│   ├── ViewModels/               # MVVM ViewModels
-│   ├── Views/                    # Avalonia AXAML Windows
-│   └── data/                     # Persistente App-Daten (downloadedMedias.json)
+├── PyScrapperDesktopApp/
+│   ├── PyScrapperDesktopApp.csproj
+│   ├── App.axaml / App.axaml.cs
+│   ├── Models/
+│   ├── ViewModels/
+│   ├── Views/
+│   ├── Assets/
+│   └── logs/
 │
-├── PyScrapperDesktopApp.Tests/   # C# Unit Tests (xUnit / Avalonia)
-│   ├── ViewModels/               # ViewModel-Tests
+├── PyScrapperDesktopApp.Tests/
+│   ├── ViewModels/
+│   ├── Models/
 │   └── AvaloniaFixture.cs
 │
-├── PyScrapperWebInterface/       # Web Frontend (React / TypeScript / Vite)
+├── PyScrapperWebInterface/
 │   ├── src/
-│   │   ├── components/           # React-Komponenten
-│   │   ├── App.tsx
-│   │   └── main.tsx
 │   ├── package.json
-│   └── vite.config.ts
+│   ├── vite.config.ts
+│   └── README.md
 │
-├── Downloads/                    # Standard-Downloadordner für Medien
-└── Notes/                        # Projektnotizen & Statistiken
+├── cookies.txt                  # zusätzliche Cookie-Datei im Repo-Root
+└── Notes/
 ```
 
 ---
 
 ## Architektur-Überblick
 
-### LocalServer (Python / FastAPI)
+### 1) `LocalServer` – FastAPI-Backend
 
-- Läuft lokal via **uvicorn**
-- Stellt folgende HTTP-Endpunkte bereit:
+Das Backend ist der zentrale Dienst für Suche, Download, Login/Registrierung und Datenbankzugriffe.
 
-| Methode | Pfad                          | Beschreibung                                         |
-|---------|-------------------------------|------------------------------------------------------|
-| GET     | `/`                           | Root – Startbestätigung                              |
-| GET     | `/health`                     | Uptime, RAM-Verbrauch, PID, laufende Python-Prozesse |
-| POST    | `/command`                    | Queue-basierte Kommandos (z.B. `quit`)               |
-| POST    | `/download`                   | Download-Job für einen URL                           |
-| GET     | `/download/progress/{task_id}`| Fortschritt eines laufenden Download-Jobs            |
-| POST    | `/search`                     | Suche mit konfigurierbarer Trefferanzahl             |
+**Technik:**
 
-- Nutzt **asyncio Queues**, um Requests von der Verarbeitung zu entkoppeln
-- Parallele Downloads durch `asyncio.Semaphore(50)` begrenzt
-- Runtime-Logs werden in `LocalServer/logs/server_runtime.log` geschrieben
-- Importiert Logik aus `PythonModule`
+- Python
+- FastAPI + Uvicorn
+- Pydantic
+- SQLite
+- `asyncio`
+- `yt-dlp`
+- `playwright`
+- `bcrypt`
+- `dotenv`
 
-**Unterstützte Provider:** `suno`, `suno.com`, `youtube`, `youtube.com`, `archive`, `archive.org`, `bandcamp`
+**Laufzeitverhalten:**
 
-**Wichtig:**  
-Der Server ist nicht gehärtet und **nicht für öffentliches Deployment gedacht**.
+- Der Server erzeugt beim Start seine Tabellen automatisch, falls sie fehlen.
+- Es gibt eine globale `Session`-Instanz mit Cookie-Persistenz.
+- Downloads laufen als asynchrone Jobs und werden über UUIDs verfolgt.
+- Parallel-Downloads sind über `asyncio.Semaphore(50)` begrenzt.
+- Laufzeitlogs werden in `LocalServer/logs/server_runtime.log` geschrieben.
 
----
+**CORS:**
 
-### PythonModule
+Erlaubt sind derzeit nur:
 
-- Enthält die eigentliche Business-Logik
-- Kein Web-Code – wird direkt vom LocalServer importiert
-- Module:
-  - `Session.py` – gemeinsame HTTP-Session (Cookies etc.)
-  - `core.py` – gemeinsame HTTP-Hilfsfunktionen
-  - `emergencyBrowser.py` – Playwright-basierter Fallback-Browser für Seiten mit Bot-Schutz
-- Unterverzeichnisse:
-  - `models/` – Datenmodelle (`requests.py`, `settings.py`, `exceptions.py`)
-  - `providers/` – Provider-spezifische Logik:
-    - `Archive.py` – Download & Suche auf archive.org
-    - `Bandcamp.py` – Download & Suche auf bandcamp.com
-    - `Suno.py` – Download von suno.com
-    - `Youtube.py` – Download (Audio/Video) und Suche via `yt-dlp`
-  - `serverservices/` – Server-seitige Prozessoren (`downloadProcessor.py`, `searchProcessor.py`, `commandProcessor.py`, `utils.py`)
-- Kann unabhängig getestet/erweitert werden
-
-Empfehlung:
-- Keine Side-Effects beim Import
-- Keine globalen Netzwerk-Calls
-- Exceptions sauber nach oben werfen
+- `http://localhost:5173`
+- `http://127.0.0.1:5173`
 
 ---
 
-### Desktop App (C# / Avalonia / .NET 9)
+### 2) `PythonModule` – gemeinsame Logik
 
-- Cross-platform Desktop-Client, gebaut mit **Avalonia UI** und **MVVM**-Pattern
-- Kommuniziert über HTTP mit dem LocalServer (`127.0.0.1:8765`)
-- **Windows-Fenster / Views:**
-  - `MainWindow` – Übersicht, Health-Check, Liste heruntergeladener Medien
-  - `SunoScrapWindow` – Suno-Download per URL
-  - `ScrapWindowWithSearch` – Suche & Download mit Sucheingabe (z.B. YouTube, Bandcamp, Archive)
-  - `MediaPlayerWindow` – integrierter Medienplayer
-  - `CodecConverterWindow` – Audio-/Video-Konvertierung
-  - `CreatePlaylistWindow` – Playlist erstellen
-  - `PlaylistDetailsWindow` – Playlist-Details & Verwaltung
-  - `GetServerHealthWindow` – Server-Status & Health-Anzeige
-  - `LogsWindow` – Server-Log-Anzeige
-  - `ProgressBarWindow` – Fortschrittsanzeige für laufende Operationen
-  - `ConfirmationWindow` – generisches Bestätigungsdialog-Fenster
-  - `InputWindow` – generisches Eingabedialog-Fenster
-  - `MessageBox` – benutzerdefinierte Message-Box
-- **Medien-Wiedergabe** via **LibVLCSharp** (Audio & Video)
-- Heruntergeladene Medien werden in `data/downloadedMedias.json` persistiert
-- Datenbank-Unterstützung via **Microsoft.Data.Sqlite**
+Hier steckt die eigentliche Business-Logik, die sowohl vom Server als auch indirekt vom Backend-Flow genutzt wird.
 
-**NuGet-Pakete:**
+Enthalten sind:
 
-| Paket                        | Version |
-|------------------------------|---------|
-| Avalonia                     | 11.3.8  |
-| Avalonia.Desktop             | 11.3.8  |
-| Avalonia.Themes.Fluent       | 11.3.8  |
-| Avalonia.Fonts.Inter         | 11.3.8  |
-| Avalonia.Diagnostics         | 11.3.8  |
-| CommunityToolkit.Mvvm        | 8.4.0   |
-| FluentAvaloniaUI             | 2.0.5   |
-| LibVLCSharp                  | 3.9.6   |
-| LibVLCSharp.Avalonia         | 3.9.6   |
-| VideoLAN.LibVLC.Windows      | 3.0.23  |
-| Microsoft.Data.Sqlite        | 10.0.5  |
+- `core.py` – HTML-Fetching und Datei-Download-Helper
+- `Session.py` – Cookie-Jar, SSL-Context über `certifi`, gemeinsame `urllib`-Session
+- `emergencyBrowser.py` – Fallback-Browser für Seiten mit Bot-Schutz
+- `models/` – Requests, Responses, Exceptions, Settings
+- `providers/` – provider-spezifische Suche und Downloads
+- `serverservices/` – Search-/Download-/Command-Orchestrierung und Hilfsfunktionen
+
+**Prinzipien im Code:**
+
+- keine globalen Netzwerkaufrufe beim Import
+- Exceptions werden an die aufrufende Schicht durchgereicht
+- Provider-Logik ist getrennt und testbar
 
 ---
 
-## Entwicklungs-Setup
+### 3) `PyScrapperDesktopApp` – Desktop-Client
 
-### Voraussetzungen
+Die Desktop-App ist ein Avalonia-Client für Windows / .NET 9.
 
-- Python **3.10+**
-- Git
-- .NET SDK **9.0**
-- FFmpeg (wird automatisch via Skript installiert, falls nicht vorhanden)
-- Windows oder Linux (PowerShell-Skripte für Windows, Shell-Skripte für Linux)
+**Technik:**
+
+- Avalonia 11.3.8
+- .NET 9
+- CommunityToolkit.Mvvm
+- FluentAvaloniaUI
+- LibVLCSharp
+- Microsoft.Data.Sqlite
+- VideoLAN.LibVLC.Windows
+- DotNetEnv
+
+**Wichtige Besonderheit:**
+
+Die aktive Codebasis geht aktuell davon aus, dass der LocalServer bereits läuft. Die frühere automatische Server-Startlogik ist im Code zwar noch vorhanden, wird aber nicht mehr aktiv genutzt.
 
 ---
 
-## LocalServer – Setup
+### 4) `PyScrapperWebInterface` – Web-Frontend
 
-### 1. Virtuelle Umgebung & Abhängigkeiten
+Ein experimentelles Web-Frontend auf Basis von React, TypeScript und Vite.
 
-Am einfachsten über das Start-Skript – es legt die `.venv` automatisch an,
-aktiviert sie und installiert fehlende Pakete:
+**Aktueller Funktionsumfang im UI:**
 
-**Windows (PowerShell):**
+- Suchformular
+- Ergebnisliste
+- Download-Anfragepanel
+- Fortschrittsanzeige
+- Infotext / Home-Panel
+
+**Aktuelle Einschränkung:**
+
+Die Fetch-Requests sind im Snapshot fest auf Port `8000` verdrahtet, obwohl das Backend in den restlichen Komponenten auf `8765` läuft.
+
+---
+
+## Backend-Dokumentation (`LocalServer/server.py`)
+
+### Start / Runtime
+
+Der Server wird direkt mit Uvicorn gestartet. Es gibt im aktuellen Snapshot **keine** eingebauten Start-/Stop-Skripte im Ordner `LocalServer/scripts/...`.
+
+Empfohlener Start aus `LocalServer/`:
 
 ```powershell
-.\LocalServer\scripts\WinScripts\StartServer.ps1
-```
-
-**Linux (Bash):**
-
-```bash
-./LocalServer/scripts/LinuxScripts/StartServer.sh
-```
-
-Oder manuell (PowerShell):
-
-```powershell
-cd LocalServer
+Set-Location C:\Users\p50232\RiderProjects\PyScrapper\LocalServer
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+python -m uvicorn server:app --host 127.0.0.1 --port 8765
 ```
 
-**Python-Abhängigkeiten (`requirements.txt`):**
+Falls Bandcamp-/Browser-Fallback benötigt wird, einmalig zusätzlich:
 
-```
-fastapi
-uvicorn[standard]
-pydantic
-certifi
-yt-dlp
-playwright
-```
-
-### 2. Server starten
-
-Über Script (empfohlen – verwaltet venv, ffmpeg und Logging automatisch):
-
-**Windows:**
 ```powershell
-.\LocalServer\scripts\WinScripts\StartServer.ps1
+python -m playwright install
 ```
-
-**Linux:**
-```bash
-./LocalServer/scripts/LinuxScripts/StartServer.sh
-```
-
-Direkt (wenn venv bereits aktiv):
-
-```
-uvicorn LocalServer.server:app --host 127.0.0.1 --port 8765
-```
-
-### 3. Server stoppen
-
-**Windows:**
-```powershell
-.\LocalServer\scripts\WinScripts\StopServer.ps1
-```
-
-**Linux:**
-```bash
-./LocalServer/scripts/LinuxScripts/StopServer.sh
-```
-
-### 4. Wichtige URLs
-
-| URL                              | Beschreibung          |
-|----------------------------------|-----------------------|
-| `http://127.0.0.1:8765/`        | Root                  |
-| `http://127.0.0.1:8765/docs`    | Swagger UI            |
-| `http://127.0.0.1:8765/health`  | Health / Monitoring   |
 
 ---
 
-## Desktop App – Development
+### Backend-Umgebung
+
+`server.py` lädt per `load_dotenv()` eine `.env` und erwartet dort mindestens:
+
+- `ADMIN_KEY`
+
+Zusätzlich verwendet die Server-Session eine `cookies.txt`-Datei als Cookie-Jar.
+
+**Wichtig:**
+
+- Der Server ist auf lokale Nutzung ausgelegt.
+- Admin-Endpunkte prüfen `ADMIN_KEY`.
+- Der Server arbeitet mit HTTPS-Validierung; `http://`-URLs werden abgewiesen.
+
+---
+
+### Datenbank
+
+Die SQLite-Datenbank liegt hier:
+
+- `LocalServer/Data/data.db`
+
+Beim Start werden folgende Tabellen angelegt, falls nicht vorhanden:
+
+- `Users`
+- `DownloadedMedias`
+- `Playlists`
+- `PlaylistMedias`
+- `Settings`
+
+**Bemerkungen:**
+
+- Foreign Keys sind aktiv.
+- Journal Mode ist auf `WAL` gesetzt.
+- `create_app_tables()` läuft beim Startup und kann zusätzlich per Admin-Endpoint aufgerufen werden.
+
+---
+
+### Antwort- und Statuslogik
+
+Der Server führt pro Download-Job eine Fortschrittsstruktur, deren Felder u. a. sind:
+
+- `id`
+- `status`
+- `downloadProgress`
+- `errorMessage`
+- `totalBytes`
+- `downloadedBytes`
+- `speed`
+- `eta`
+
+Abgeschlossene oder fehlerhafte Jobs werden nach etwa **60 Sekunden** aus dem Progress-Cache entfernt.
+
+---
+
+### Öffentliche Haupt-Endpunkte
+
+| Methode | Pfad | Zweck | Hinweis |
+|---|---|---|---|
+| GET | `/` | Startbestätigung | Gibt `Server startup successful!` zurück |
+| GET | `/health` | Health / Monitoring | Uptime, RAM, PID, Prozesse, aktive Downloads, Fehlertexte |
+| POST | `/command` | Steuerkommando | Aktuell nur `quit` |
+| POST | `/download` | Download-Job starten | Gibt Job-ID zurück |
+| GET | `/download/progress/{task_id}` | Fortschritt eines Jobs | Liefert die aktuelle Progress-Struktur |
+| POST | `/search` | Suche | Provider-spezifische Suche |
+| POST | `/login` | Login | Gegen die `Users`-Tabelle |
+| POST | `/register` | Registrierung | Legt einen User über denselben Mechanismus wie Create-User an |
+
+**Hinweis zu `/command`:**
+
+Aktuell ist nur `quit` erlaubt. Andere Kommandos führen zu `CommandError`.
+
+---
+
+### Admin- und CRUD-Endpunkte
+
+Die folgenden Endpunkte sind durch `ADMIN_KEY` geschützt oder dienen DB-Verwaltungszwecken:
+
+#### Users
+
+- `GET /get/user/{identifier}` – User per Identifier **oder** Username laden
+- `GET /getall/users/{key}` – alle Users laden
+- `POST /create-tables/{key}` – Tabellen neu anlegen
+- `POST /create/user/{key}` – User anlegen
+- `POST /delete/user/{key}` – User löschen
+
+#### Playlists
+
+- `GET /get/playlists/{identifier}` – Playlist per Identifier laden
+- `GET /getall/playlists/{key}` – alle Playlists laden
+- `GET /getuser/playlists/{key}` – alle Playlists eines Users laden
+- `POST /create/playlist/{key}` – Playlist anlegen
+- `POST /delete/playlist/{key}` – Playlist löschen
+
+#### Downloaded Medias
+
+- `GET /get/downloadedmedia/{identifier}` – einzelnes Medium laden
+- `GET /getall/downloadedmedias/{key}` – alle Medien laden
+- `GET /getuser/downloadedmedias/{key}` – Medien eines Users laden
+- `POST /create/downloadedmedia/{key}` – Medium anlegen
+- `POST /delete/downloadedmedia/{key}` – Medium löschen
+
+#### Settings
+
+- `GET /get/settings/{user_identifier}` – Settings eines Users laden
+- `GET /getall/settings/{key}` – alle Settings laden
+- `POST /create/settings/{key}` – Settings anlegen
+- `POST /delete/settings/{key}` – Settings löschen
+
+#### Playlist-Medien
+
+- `GET /get/playlistmedias/{playlist_identifier}` – Medien einer Playlist laden
+- `POST /create/playlistmedia/{key}` – Medium zur Playlist hinzufügen
+- `POST /delete/playlistmedia/{key}` – Medium aus Playlist entfernen
+
+---
+
+### Download-/Search-Validierung
+
+Der Backend-Code prüft vor dem Download unter anderem:
+
+- Provider-Namen über Alias-Listen
+- erlaubte Media-Typen pro Provider
+- HTTPS-URLs
+- ob die Ziel-Datei schon existiert
+- ob die URL überhaupt erreichbar ist
+
+**Provider-Aliases im Code:**
+
+- `archive`: `archive`, `archive.org`, `www.archive.org`, `internetarchive`
+- `youtube`: `youtube`, `youtube.com`, `www.youtube.com`
+- `suno`: `suno`, `suno.com`, `www.suno.com`
+- `bandcamp`: `bandcamp`, `band-camp`, `bandcamp.com`, plus ein aktuell falsch geschriebener Legacy-Alias im Code
+
+**Hinweis:**
+
+Im Zweifel immer die kanonischen Provider-Namen verwenden:
+
+- `archive`
+- `bandcamp`
+- `youtube`
+- `suno`
+
+---
+
+### Unterstützte Provider und Formate
+
+| Provider | Suche | Download | Unterstützte Formate | Bemerkungen |
+|---|---:|---:|---|---|
+| `archive` | Ja | Ja | `.mp3`, `.mp4`, `.wav`, `.mkv` | Suche via archive.org advanced search, Download über Metadata |
+| `youtube` | Ja | Ja | `.mp3`, `.mp4` | Audio-Download mit FFmpeg-Extraktion, Video-Download via `yt-dlp` |
+| `bandcamp` | Ja | Ja | `.mp3` | Bei 403 kann ein Playwright-Fallback ausgelöst werden; Album-URLs sind aktuell nicht unterstützt |
+| `suno` | Download ja, Suche aktuell nein | Ja | Code validiert `.mp3`, `.mp4`, `.wav` | Die Suche liefert aktuell leere Ergebnisse; WAV-Unterstützung ist im Code inkonsistent und eher experimentell |
+
+---
+
+### Provider-Details
+
+#### `archive`
+
+- Suchfunktion nutzt die Archive-Advanced-Search API
+- Download nutzt Metadaten und lädt die erste passende Datei mit gewünschtem Suffix
+- Fortschritt wird anhand der Content-Length berechnet
+
+#### `youtube`
+
+- Suche parst `ytInitialData`
+- Download via `yt-dlp`
+- Audio-Only wird nach MP3 extrahiert
+- Video-Download wird als MP4 gemerged
+- FFmpeg wird automatisch gesucht (`PATH` / WinGet-Installation)
+
+#### `bandcamp`
+
+- Suche parst die Suchergebnisseite von Bandcamp
+- Track-URLs werden auf Streaming-URLs aufgelöst
+- Bei 403 kann ein Playwright-basierter Fallback die Wiedergabe initialisieren
+- Album-URLs sind im Downloadpfad aktuell explizit nicht unterstützt
+
+#### `suno`
+
+- Download sucht Song-Medien direkt auf der Suno-Seite
+- Creator-Seiten werden unterstützt
+- Suche ist im aktuellen `SearchProcessor` noch ein Platzhalter und liefert `{}`
+
+---
+
+## Gemeinsame Python-Module (`PythonModule/`)
+
+### `core.py`
+
+Enthält zwei wichtige Helfer:
+
+- `get_html(...)` – holt HTML über die gemeinsame Session
+- `download_to_file(...)` – streamt Daten in eine Datei und aktualisiert Progress-Werte
+
+### `Session.py`
+
+Die Session verwendet:
+
+- `MozillaCookieJar`
+- `certifi`-basierten SSL-Context
+- gemeinsame Headers / User-Agent
+
+Cookies werden persistiert, sobald die Session benutzt wird.
+
+### `serverservices/`
+
+- `searchProcessor.py` – routet Suche auf Provider
+- `downloadProcessor.py` – routet Downloads auf Provider und hält den Semaphore-Mechanismus
+- `commandProcessor.py` – verarbeitet Steuerkommandos, aktuell nur `quit`
+- `utils.py` – Provider- und URL-Validierung, Dateipfad-Erzeugung, Cleanup
+
+### `models/`
+
+- `requests.py` – Request-Modelle für Download, Search, Login, Register, CRUD
+- `responses.py` – Antwortmodelle für API-Responses
+- `settings.py` – Provider-/Dateityp-Listen, Progress-Default, Kommandos
+- `exceptions.py` – gemeinsame Exception-Typen
+
+---
+
+## Desktop-App-Dokumentation (`PyScrapperDesktopApp/`)
+
+### Tech-Stack
+
+- `net9.0`
+- Avalonia UI
+- MVVM via CommunityToolkit.Mvvm
+- LibVLCSharp / VideoLAN.LibVLC.Windows
+- SQLite via `Microsoft.Data.Sqlite`
+- `DotNetEnv` für `.env`-Laden
+- `FluentAvaloniaUI`
+
+### Projektverhalten beim Start
+
+Die App geht im aktuellen Stand in dieser Reihenfolge vor:
+
+1. Login-Fenster anzeigen
+2. Benutzer gegen den LocalServer anmelden oder registrieren
+3. Settings vom Backend laden
+4. Falls keine Settings existieren, Default-Settings anlegen
+5. Launcher-Fenster zur Umgebungsvorbereitung anzeigen
+6. Danach Main Window öffnen
+
+**Wichtig:**
+
+- Wenn der Backend-Server nicht erreichbar ist, schlägt der Launcher aktuell fehl.
+- Die ehemals kommentierte Auto-Start-Logik für den Server ist nicht aktiv.
+
+### Was die Launcher-Phase prüft / vorbereitet
+
+- ob der Server erreichbar ist
+- Visual C++ Redistributable-Check
+- FFmpeg-Check
+- Python-Installation / Version
+- `pip`
+- virtuelle Umgebung
+- Python-Requirements
+- Playwright-Browser
+- `dotnet restore` für die .NET-Projekte
+
+### Wichtige Fenster / Views
+
+Aktuell existieren u. a. diese Views:
+
+- `LoginWindow`
+- `LauncherWindow`
+- `MainWindow`
+- `SunoScrapWindow`
+- `ScrapWindowWithSearch`
+- `ProgressBarWindow`
+- `GetServerHealthWindow`
+- `LogsWindow`
+- `CodecConverterWindow`
+- `CreatePlaylistWindow`
+- `PlaylistDetailsWindow`
+- `FilterWindow`
+- `ConfirmationWindow`
+- `InputWindow`
+- `MessageBox`
+- `MediaPlayerControl` als wiederverwendbare Kontrolle
+
+### Hauptfunktionen der Desktop-App
+
+- Login / Registrierung gegen das Backend
+- lokale Anzeige der heruntergeladenen Medien
+- Suche + Download für YouTube, Bandcamp und Archive
+- Suno-Download per Direkt-URL
+- Health-Ansicht des Servers
+- Log-Viewer für App- und Server-Logs
+- Playlist-Erstellung und Playlist-Verwaltung
+- Medienfilter und Sortierung
+- Theme-Umschaltung (Dark/Light)
+- Folder-Scan-Option beim Start
+- integrierte Medienwiedergabe über LibVLC
+- Codec-Konvertierung via FFmpeg / FFprobe
+
+### Medienplayer / Konvertierung
+
+**Medienplayer:**
+
+- basiert auf LibVLCSharp
+- unterstützt Audio und Video
+- Shuffle / nächste / vorherige Titel / Seek / Volume / Compact-Mode etc.
+
+**Codec-Konverter:**
+
+- nutzt `ffprobe` zur Laufzeitbestimmung der Mediendauer
+- startet `ffmpeg`
+- konvertiert inkompatible Medien nach H.264 / AAC MP4
+- speichert das Ergebnis als neuen Medien-Datensatz in der App-Datenbank
+
+### Lokale Desktop-Daten
+
+Die App nutzt keine JSON-Dauerpersistenz für die Medienbibliothek; sie arbeitet mit der Backend-DB und hält Laufzeitdaten in `AppData`.
+
+Wichtige lokale Pfade:
+
+- `PyScrapperDesktopApp/logs/app.log`
+- `PyScrapperDesktopApp/Assets/`
+- `PyScrapperDesktopApp/data/` ist im Code als Datenpfad vorgesehen
+
+### Environment / `.env`
+
+Die Desktop-App lädt per `DotNetEnv` die `.env` aus dem Repository-Root und erwartet dort `ADMIN_KEY`.
+
+Wenn dieser Wert fehlt, wirft `AppData` beim Initialisieren eine Exception.
+
+---
+
+## Web-Frontend-Dokumentation (`PyScrapperWebInterface/`)
+
+### Aktueller Funktionsumfang
+
+Das Web-Frontend ist ein schlanker UI-Shell für:
+
+- Suche
+- Ergebnisanzeige
+- Auswahl eines Suchtreffers
+- Download-Anfrage
+- Fortschrittsanzeige
+- Infobox / Home-Text
+
+### Aktuell unterstützte Provider im Web UI
+
+Im Web-Frontend sind derzeit nur diese Provider modelliert:
+
+- `youtube`
+- `archive`
+- `bandcamp`
+
+### Aktuelle technische Details
+
+- React 19
+- TypeScript
+- Vite
+- `npm run dev` startet den Dev-Server mit Host `0.0.0.0`
+- `npm run build` kompiliert TypeScript und erzeugt den Vite-Build
+
+### Wichtige Mismatch-Stelle
+
+Die Web-Fetch-Helfer sind derzeit fest auf `http://127.0.0.1:8000` verdrahtet:
+
+- `src/components/fetchRequests/searchRequest.ts`
+- `src/components/fetchRequests/downloadRequest.ts`
+- `src/components/fetchRequests/downloadProgressRequest.ts`
+
+Das bedeutet:
+
+- Entweder muss der Backend-Port angepasst werden,
+- oder das Web-Frontend braucht einen Proxy / eine Umverdrahtung auf `8765`.
+
+### Web-Setup
 
 ```powershell
-cd PyScrapperDesktopApp
+Set-Location C:\Users\p50232\RiderProjects\PyScrapper\PyScrapperWebInterface
+npm install
+npm run dev
+```
+
+Build:
+
+```powershell
+npm run build
+```
+
+Optional lint:
+
+```powershell
+npm run lint
+```
+
+---
+
+## Empfohlene Setup-Schritte
+
+### 1) Python-Backend vorbereiten
+
+```powershell
+Set-Location C:\Users\p50232\RiderProjects\PyScrapper\LocalServer
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python -m playwright install
+```
+
+Start:
+
+```powershell
+python -m uvicorn server:app --host 127.0.0.1 --port 8765
+```
+
+### 2) Desktop-App starten
+
+```powershell
+Set-Location C:\Users\p50232\RiderProjects\PyScrapper\PyScrapperDesktopApp
 dotnet restore
 dotnet build
 dotnet run
 ```
 
-Oder direkt über **JetBrains Rider** oder **Visual Studio**.
+**Hinweis:** Der Backend-Server muss dafür bereits laufen.
 
-### NuGet-Pakete installieren (Skript)
-
-**Windows:**
-```powershell
-.\LocalServer\scripts\WinScripts\InstallRequirementsFrontend.ps1
-```
-
-**Linux:**
-```bash
-./LocalServer/scripts/LinuxScripts/InstallRequirementsFrontend.sh
-```
-
-Das Skript prüft, welche Pakete bereits vorhanden sind, und installiert nur fehlende.
-
-### Build-Ausgabe (kompilierte `.exe`)
-
-```
-PyScrapperDesktopApp\bin\Debug\net9.0\PyScrapperDesktopApp.exe      # Debug
-PyScrapperDesktopApp\bin\Release\net9.0\PyScrapperDesktopApp.exe    # Release
-```
-
-Release-Build:
+### 3) Web-Frontend starten
 
 ```powershell
-dotnet publish -c Release
-```
-
----
-
-## Web Interface – Development
-
-Das Web-Frontend ist eine **React / TypeScript**-Applikation, die via **Vite** gebaut wird und über den Browser auf den LocalServer zugreift.
-
-### Voraussetzungen
-
-- Node.js (aktuell)
-- npm
-
-### Setup & Start
-
-```bash
-cd PyScrapperWebInterface
+Set-Location C:\Users\p50232\RiderProjects\PyScrapper\PyScrapperWebInterface
 npm install
 npm run dev
 ```
 
-Die App läuft dann standardmäßig auf `http://localhost:5173` und kommuniziert mit dem LocalServer auf `http://127.0.0.1:8765`.
-
-### Build
-
-```bash
-npm run build
-```
+Falls das Frontend gegen das Backend sprechen soll, beachte die Port-Mismatch-Stelle (`8000` vs. `8765`).
 
 ---
 
-## Tests – Desktop App
+## Tests
 
-Unit Tests für die Desktop App befinden sich in `PyScrapperDesktopApp.Tests/`.
+### Desktop-App-Tests
+
+Die Unit-Tests liegen in `PyScrapperDesktopApp.Tests/` und decken vor allem ViewModels ab.
+
+Ausführen:
 
 ```powershell
-cd PyScrapperDesktopApp.Tests
+Set-Location C:\Users\p50232\RiderProjects\PyScrapper\PyScrapperDesktopApp.Tests
 dotnet test
 ```
 
+### Hinweis zu Python-Tests
+
+Im aktuellen Snapshot ist im sichtbaren Repo-Baum keine separate Python-Test-Suite enthalten.
+
 ---
 
-## Bekannte Stolperfallen
+## Wichtige Logs, Daten und Dateien
 
-- Die Desktop-App **startet den LocalServer automatisch** beim App-Start. Ein manueller Server-Start ist nicht notwendig.
-- **FFmpeg** wird für YouTube-Downloads benötigt und muss im PATH liegen. Das jeweilige `StartServer`-Skript installiert es automatisch.
-- **Playwright** wird für Seiten mit Bot-Schutz (z.B. Bandcamp) als Fallback-Browser benötigt. Nach Installation der Python-Abhängigkeiten einmalig `playwright install` ausführen.
-- **LibVLC / VideoLAN.LibVLC.Windows** muss für den integrierten Medienplayer vorhanden sein – wird über NuGet bereitgestellt.
-- `Avalonia.Diagnostics` ist nur im **Debug**-Build aktiv (bewusst so konfiguriert im `.csproj`).
-- Downloads landen standardmäßig im Ordner `PyScrapper/Downloads/` (konfigurierbar per Request-Parameter `download_path`).
-- Die Desktop-App persistiert heruntergeladene Medien in `data/downloadedMedias.json` – diese Datei nicht manuell löschen ohne Datenverlust.
-- Der LocalServer erlaubt CORS-Anfragen von `http://localhost:5173` und `http://127.0.0.1:5173` (Web Interface Dev-Server).
+| Pfad | Zweck |
+|---|---|
+| `LocalServer/server.py` | Backend-Einstiegspunkt |
+| `LocalServer/requirements.txt` | Backend-Dependencies |
+| `LocalServer/Data/data.db` | SQLite-Datenbank |
+| `LocalServer/logs/server_runtime.log` | Backend-Runtime-Log |
+| `LocalServer/cookies.txt` | Session-Cookie-Jar |
+| `PyScrapperDesktopApp/logs/app.log` | App-Log |
+| `PyScrapperDesktopApp/PyScrapperDesktopApp.csproj` | Desktop-Projekt / NuGet-Pakete |
+| `PyScrapperWebInterface/package.json` | Web-Scripts / Dependencies |
+| `PyScrapperWebInterface/src/components/fetchRequests/*.ts` | Web-API-URLs |
+
+---
+
+## Bekannte Stolperfallen und aktuelle Einschränkungen
+
+- Die Desktop-App startet den LocalServer aktuell **nicht** mehr selbst.
+- Der Web-Client nutzt aktuell **Port 8000**, nicht 8765.
+- `Suno`-Suche ist im Backend aktuell ein Platzhalter.
+- Bandcamp-Album-Downloads sind aktuell nicht implementiert.
+- Einige Provider-Alias-Listen enthalten Tippfehler oder Legacy-Aliases; deshalb besser die kanonischen Provider-Namen nutzen.
+- `HTTP://`-Downloads werden abgelehnt, nur `HTTPS://` ist erlaubt.
+- Der Server ist nur lokal gedacht und hat keine Sicherheits-Härtung für öffentliches Deployment; es fehlen u. a. Rate-Limits, harte AuthZ/ACLs und Abuse-Schutz.
+- `download/progress`-Einträge werden nach dem Abschluss verzögert entfernt; wenn du Jobs debuggen willst, schau zeitnah nach.
+- `ADMIN_KEY` muss sowohl im Backend- als auch im Desktop-Umfeld verfügbar sein, wenn die jeweiligen Admin-/DB-Flows genutzt werden.
+- `Playwright`-Browser sind für geschützte Seiten notwendig; ohne `python -m playwright install` sind Bandcamp-Fallbacks fehleranfällig.
+- `FFmpeg` / `ffprobe` werden für YouTube-Downloads und Codec-Konvertierung benötigt.
+- Die frühere README verwies auf Skripte unter `LocalServer/scripts/...`; diese sind im aktuellen Snapshot nicht vorhanden.
+- `PlaylistDetailsWindow` ist vorhanden, aber das direkte Play-/Lookup-Wiring ist im aktuellen Stand noch nicht vollständig verdrahtet.
+
+---
+
+## Security Audit (kurz)
+
+Das Projekt ist aktuell ein **lokales Entwickler-Tool** und kein gehärteter Internetdienst.
+
+### Auffälligkeiten im aktuellen Stand
+
+- `ADMIN_KEY` kommt aus einer lokalen `.env` und schützt mehrere Verwaltungs-Endpunkte.
+- Es gibt CRUD-Endpunkte für Users, Playlists, Medien, Settings und Playlist-Medien.
+- `/command` kann mit `quit` einen Shutdown auslösen.
+- `/download` und `/search` erlauben externe Netzwerkzugriffe und potenziell hohen Ressourcenverbrauch.
+- Es sind keine erkennbaren Schutzmechanismen wie Rate-Limits, Quotas, IP-Allowlisting oder ein dediziertes Auth-/Session-Modell pro Benutzer eingebaut.
+
+### Warum man es nicht public hosten sollte
+
+1. Die API enthält sensible Verwaltungsfunktionen, die bei Fehlkonfiguration direkt missbraucht werden könnten.
+2. Das Backend verlässt sich stark auf lokale Vertrauensannahmen statt auf eine harte Sicherheitsgrenze.
+3. Externe Scraping-/Download-Flows können schnell zu Last, Fehlern oder unerwünschtem Traffic führen.
+4. Ohne zusätzliche Härtung ist die Angriffsfläche für unautorisierte Zugriffe und Missbrauch zu groß.
+
+### Was für Public Hosting fehlen würde
+
+- echte Authentifizierung und Autorisierung pro Route
+- Request-Rate-Limits und Quoten
+- zentrale Audit-Logs mit Zugriffskontrolle
+- Secret-Management statt lokaler `.env`
+- Proxy-/Firewall-/Reverse-Proxy-Härtung
+- Input-Validation und Allowlist-Strategien für alle externen Targets
+
+---
+
+## Praktische Schnellkommandos
+
+### Backend-Health prüfen
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8765/health
+```
+
+### Backend-Docs öffnen
+
+```powershell
+Start-Process http://127.0.0.1:8765/docs
+```
+
+### Server-Log ansehen
+
+```powershell
+Get-Content C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\logs\server_runtime.log -Tail 100
+```
+
+### App-Log ansehen
+
+```powershell
+Get-Content C:\Users\p50232\RiderProjects\PyScrapper\PyScrapperDesktopApp\logs\app.log -Tail 100
+```
+
+---
+
+## Schlussbemerkung
+
+Diese README ist bewusst auf den **aktuellen Codezustand** ausgerichtet. Wenn du den Backend-Port, die Suno-Suche, den Desktop-Startflow oder die Web-Frontend-URLs änderst, sollte diese Datei als erstes mitgezogen werden.
