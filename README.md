@@ -49,6 +49,7 @@ Responsibilities:
 - Accept search/download/command requests
 - Queue and process tasks asynchronously
 - Report task progress and server health
+- Manage the application database lifecycle and CRUD APIs
 - Write runtime logs
 
 ### 2) `PythonModule`
@@ -92,6 +93,8 @@ PyScrapper/
 ├── LocalServer/                  # FastAPI backend (Python)
 │   ├── server.py
 │   ├── requirements.txt
+│   ├── Data/
+│   │   └── data.db               # SQLite database (runtime-managed by server)
 │   └── logs/
 │
 ├── PythonModule/                 # Core scraping/search/download logic
@@ -116,7 +119,7 @@ PyScrapper/
 - Multi-provider search (current providers include `suno`, `youtube`, `archive`, `bandcamp`)
 - Download task creation and progress tracking
 - Queue-based backend request processing
-- Desktop media list persistence
+- Server-managed user, playlist, media, and settings persistence (SQLite)
 - Playlist and playback support
 - Optional codec/conversion workflows
 - Health endpoint and runtime log visibility
@@ -130,6 +133,8 @@ PyScrapper/
 - Python 3.10+
 - FastAPI + Uvicorn
 - Pydantic
+- sqlite3
+- bcrypt
 - yt-dlp
 - Playwright
 
@@ -247,37 +252,57 @@ Main local endpoints:
 - `POST /download` – create download task
 - `GET /download/progress/{task_id}` – fetch task progress
 
-Notes:
+Server-managed SQLite-related endpoints include:
 
-- Request processing is queue-based.
-- Concurrency is limited with `asyncio.Semaphore(50)`.
+- User APIs (create/get/list/delete/login/register)
+- Playlist APIs (create/get/list/delete)
+- Downloaded media APIs (create/get/list/delete)
+- Settings APIs (create/get/list/delete)
+- Playlist-media relation APIs (create/get/delete with position management)
+
+Note: several management endpoints are protected via an admin key.
 
 ---
 
 ## Data Storage & Database Management
 
-PyScrapper currently follows a **hybrid persistence approach**:
+PyScrapper now uses a **single SQLite database managed by LocalServer**.
 
-1. **JSON persistence** (desktop-visible state), currently including:
-   - `PyScrapperDesktopApp/data/downloadedMedias.json`
-2. **Runtime/log-based backend state** in `LocalServer`
-3. **Documented SQLite-oriented architecture concepts** in desktop technical docs (`PyScrapperDesktopApp/Doku`)
+### Database Location
 
-### Current Practical Behavior
+- `LocalServer/Data/data.db`
 
-- Downloaded media metadata is persisted in JSON for desktop usage.
-- Server runtime behavior is traceable via log output.
-- Database concepts are documented but not yet enforced as a single runtime source everywhere.
+The server ensures the directory exists and initializes tables on startup.
 
-### Recommended Evolution Path
+### Initialization & Connection Behavior (from `server.py`)
 
-To standardize long-term data management:
+- On startup, `create_app_tables()` is executed.
+- DB connections are opened through `connect_db()`.
+- Connection settings:
+  - `PRAGMA journal_mode=WAL`
+  - `PRAGMA foreign_keys = ON`
+  - `sqlite3.Row` row factory
 
-1. Introduce a single DB access layer (repository/service pattern).
-2. Define schema versions and migration scripts.
-3. Add startup integrity checks + safe recovery paths.
-4. Support import/export between JSON and SQLite.
-5. Add backup/restore workflow for local user data.
+### Managed Schema
+
+The server creates/maintains these tables:
+
+- `Users`
+- `DownloadedMedias`
+- `Playlists`
+- `PlaylistMedias`
+- `Settings`
+
+Key relational properties:
+
+- Foreign keys with `ON DELETE CASCADE`
+- Composite key for playlist-media mapping
+- Position-based ordering for playlist entries
+
+### Important Clarification
+
+- There is **no JSON file persistence path as primary storage anymore**.
+- Persistent app/domain data is handled through the server-managed SQLite database.
 
 ---
 
@@ -292,6 +317,7 @@ playwright install
 
 - CORS is configured for local web development origins (`localhost:5173`, `127.0.0.1:5173`).
 - Default media output folder: `PyScrapper/Downloads/` (can be overridden via `download_path` in request payload).
+- Runtime logs are written to `LocalServer/logs/server_runtime.log`.
 
 ---
 
@@ -302,6 +328,13 @@ playwright install
 - Verify Python version (`3.10+`)
 - Recreate virtual environment
 - Reinstall requirements
+
+### Database issues (SQLite)
+
+- Ensure `LocalServer/Data/` is writable
+- Check if `data.db` exists after server startup
+- Verify no external process locks the DB file aggressively
+- Confirm the server can set WAL mode in your environment
 
 ### Web UI cannot reach backend
 
@@ -324,9 +357,9 @@ playwright install
 
 ## Development Notes
 
-- This repository recently converged into a cleaner architecture with explicit LocalServer + PythonModule separation.
-- Legacy startup/install scripts were removed; manual, explicit setup is now the default.
+- Architecture is centered around one local API and one local SQLite database.
 - Keep API contracts stable between backend, desktop app, and web UI to reduce integration regressions.
+- If schema evolves, update both server logic and client expectations together.
 
 ---
 
