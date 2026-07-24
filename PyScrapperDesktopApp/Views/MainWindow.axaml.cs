@@ -76,7 +76,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            var log = new Massage("An error occurred while trying to play the media: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Message("An error occurred while trying to play the media: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
             
@@ -93,7 +93,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            var log = new Massage("An error occurred while trying to copy: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Message("An error occurred while trying to copy: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
             await _ds.ShowAlertAsync("An error occurred while trying to copy: " + ex.Message);
@@ -125,7 +125,7 @@ public partial class MainWindow : Window
 
                 await Database.DeleteDownloadedMedia(media.Identifier);
 
-                var log = new Massage("Media removed: " + media.Url, DateTime.Now, "INFO");
+                var log = new Message("Media removed: " + media.Url, DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
                 await _ds.ShowAlertAsync("Media removed from the list: " + media.Url);
@@ -133,7 +133,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            var log = new Massage("Error removing media: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error removing media: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
             await _ds.ShowAlertAsync("An error occured while trying to remove the media: " + ex.Message);
@@ -153,7 +153,7 @@ public partial class MainWindow : Window
                     File.Delete(media.DownloadPath);
                     media.IsPlayable = false;
 
-                    var log = new Massage("File deleted: " + media.DownloadPath, DateTime.Now, "INFO");
+                    var log = new Message("File deleted: " + media.DownloadPath, DateTime.Now, "INFO");
                     _logger.LogNewMassage(log);
 
                     await _ds.ShowAlertAsync("File deleted: " + media.DownloadPath);
@@ -166,7 +166,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            var log = new Massage("Error deleting file: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error deleting file: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
             await _ds.ShowAlertAsync("An error occured while trying to delete the file: " + ex.Message);
@@ -199,7 +199,7 @@ public partial class MainWindow : Window
             {
                 AppData.RemovePlaylist(playlist);
 
-                var log = new Massage("Playlist removed: " + playlist.Name, DateTime.Now, "INFO");
+                var log = new Message("Playlist removed: " + playlist.Name, DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
                 await _ds.ShowAlertAsync("Playlist removed: " + playlist.Name);
@@ -207,7 +207,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            var log = new Massage("Error removing playlist: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error removing playlist: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             
             await _ds.ShowAlertAsync("An error occured while trying to remove the playlist: " + ex.Message);
@@ -226,12 +226,12 @@ public partial class MainWindow : Window
 
             await _ds.ShowAlertAsync($"Added {media.Title} to {playlist.Name}");
 
-            var log = new Massage($"Added {media.Title} to {playlist.Name}", DateTime.Now, "INFO");
+            var log = new Message($"Added {media.Title} to {playlist.Name}", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
         }
         catch (Exception ex)
         {
-            var log = new Massage("An error occured while trying to add media to playlist: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Message("An error occured while trying to add media to playlist: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
             await _ds.ShowAlertAsync("An error occured while trying to add media to playlist: " + ex.Message);

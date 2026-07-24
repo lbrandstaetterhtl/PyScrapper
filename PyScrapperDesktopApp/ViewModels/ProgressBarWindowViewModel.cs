@@ -81,7 +81,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                                 if (progressData.ErrorMessage is not "")
                                 {
                                     Status = $"Error: {progressData.ErrorMessage}";
-                                    var log = new Massage(progressData.ErrorMessage, DateTime.Now, "ERROR");
+                                    var log = new Message(progressData.ErrorMessage, DateTime.Now, "ERROR");
                                     new AppLogger().LogNewMassage(log);
                                     errorWhileDownloading = true;
                                     StopProgress();
@@ -105,7 +105,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                         }
                         catch (OperationCanceledException)
                         {
-                            var log = new Massage("Progress tracking cancelled", DateTime.Now, "INFO");
+                            var log = new Message("Progress tracking cancelled", DateTime.Now, "INFO");
                             new AppLogger().LogNewMassage(log);
                             break;
                         }
@@ -120,7 +120,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                         }
                         catch (OperationCanceledException)
                         {
-                            var log = new Massage("Progress tracking cancelled during delay", DateTime.Now, "INFO");
+                            var log = new Message("Progress tracking cancelled during delay", DateTime.Now, "INFO");
                             new AppLogger().LogNewMassage(log);
                             break;
                         }
@@ -131,7 +131,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
             }
             catch (Exception e)
             {
-                var log = new Massage("Error while tracking progress: " + e.Message, DateTime.Now, "ERROR");
+                var log = new Message("Error while tracking progress: " + e.Message, DateTime.Now, "ERROR");
                 new AppLogger().LogNewMassage(log);
             
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => { Status = $"Error: {e.Message}"; });

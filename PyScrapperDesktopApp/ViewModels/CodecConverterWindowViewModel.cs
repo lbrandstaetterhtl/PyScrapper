@@ -60,7 +60,7 @@ public partial class CodecConverterWindowViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while killing process: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while killing process: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             StatusMessage = "Error while killing process: " + e.Message;
         }
@@ -175,7 +175,7 @@ public partial class CodecConverterWindowViewModel : ObservableObject
                 StatusMessage = "Conversion finished.";
             });
             
-            var log = new Massage("Conversion completed successfully!", DateTime.Now, "INFO");
+            var log = new Message("Conversion completed successfully!", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
             var req = new CreateDownloadedMediaRequest()

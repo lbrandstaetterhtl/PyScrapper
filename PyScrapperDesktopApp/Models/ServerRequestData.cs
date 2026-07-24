@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace PyScrapperDesktopApp.Models;
 
@@ -119,4 +120,22 @@ public class RegisterRequest
     
     [JsonPropertyName("password")]
     public string Password { get; set; }
+}
+
+public class SaveDataRequest
+{
+    [JsonPropertyName("user_identifier")]
+    public string UserIdentifier { get; set; }
+    
+    [JsonPropertyName("playlists")]
+    public List<Playlist> Playlists { get; set; }
+    
+    [JsonPropertyName("medias")]
+    public List<DownloadedMedia> DownloadedMedias { get; set; }
+    
+    [JsonPropertyName("playlist_medias")]
+    public List<PlaylistMedia> PlaylistMedias { get; set; }
+    
+    [JsonPropertyName("setting")]
+    public Settings Setting { get; set; }
 }

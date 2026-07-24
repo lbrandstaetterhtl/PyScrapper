@@ -325,7 +325,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (!finished)
         {
-            var log = new Massage($"Codec conversion for file '{path}' was cancelled.", DateTime.Now, "WARNING");
+            var log = new Message($"Codec conversion for file '{path}' was cancelled.", DateTime.Now, "WARNING");
             new AppLogger().LogNewMassage(log);
         }
         else
@@ -363,7 +363,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            var log = new Massage($"Error while scanning folder: {ex.Message}", DateTime.Now, "ERROR");
+            var log = new Message($"Error while scanning folder: {ex.Message}", DateTime.Now, "ERROR");
             new AppLogger().LogNewMassage(log);
             await _dialogService.ShowAlertAsync($"An error occurred while scanning the folder: {ex.Message}");
         }

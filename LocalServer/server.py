@@ -1,5 +1,7 @@
 ﻿import sys, os
 
+from server_backup import connect_db
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import fastapi
@@ -36,6 +38,7 @@ import os
 import asyncio
 import sqlite3
 from contextlib import asynccontextmanager
+import secrets
 
 #Global Variables
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -352,6 +355,137 @@ def create_app_tables():
     conn.commit()
     conn.close()
 
+def connect_db():
+    conn = sqlite3.connect(db_path, timeout=20.0)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+class PlaylistModel(BaseModel):
+    Identifier: str
+    Name: str
+    Description: Optional[str] = None
+
+class MediaModel(BaseModel):
+    Identifier: str
+    Url: str
+    MediaType: str
+    DownloadedAt: str
+    DownloadPath: str
+    IsPlayable: bool
+    Title: str
+
+class PlaylistMediaModel(BaseModel):
+    PlaylistIdentifier: str
+    MediaIdentifier: str
+    Position: int
+
+class SettingsModel(BaseModel):
+    Identifier: str
+    DownloadPath: str
+    ServerUrl: str
+    DarkModeEnabled: bool
+    ScanFolderOnStartup: bool
+
+class SaveUserDataRequest(BaseModel):
+    user_identifier: str
+    playlists: List[PlaylistModel]
+    medias: List[MediaModel]
+    playlist_medias: List[PlaylistMediaModel]
+    setting: SettingsModel
+
+
+def save_user_data(request: SaveUserDataRequest):
+    user_identifier = request.user_identifier
+    playlists = request.playlists
+    medias = request.medias
+    playlist_medias = request.playlist_medias
+    setting = request.setting
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    try:
+        # Delete old data
+        cursor.execute("DELETE FROM Playlists WHERE UserIdentifier = ?", (user_identifier,))
+        cursor.execute("DELETE FROM DownloadedMedias WHERE UserIdentifier = ?", (user_identifier,))
+        cursor.execute("DELETE FROM Settings WHERE UserIdentifier = ?", (user_identifier,))
+        cursor.execute(
+            "DELETE FROM PlaylistMedias WHERE PlaylistIdentifier IN (SELECT Identifier FROM Playlists WHERE UserIdentifier = ?)",
+            (user_identifier,)
+        )
+
+        # Insert medias - verwende .Attribut statt ["Key"]
+        for media in medias:
+            cursor.execute(
+                """INSERT INTO DownloadedMedias
+                   (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Title)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (media.Identifier, user_identifier, media.Url, media.MediaType,
+                 media.DownloadedAt, media.DownloadPath, media.IsPlayable, media.Title)
+            )
+
+        # Insert playlists
+        for playlist in playlists:
+            cursor.execute(
+                """INSERT INTO Playlists (Identifier, UserIdentifier, Name, Description)
+                   VALUES (?, ?, ?, ?)""",
+                (playlist.Identifier, user_identifier, playlist.Name, playlist.Description)
+            )
+
+        # Insert playlist medias
+        for playlist_media in playlist_medias:
+            cursor.execute(
+                """INSERT INTO PlaylistMedias (PlaylistIdentifier, MediaIdentifier, Position)
+                   VALUES (?, ?, ?)""",
+                (playlist_media.PlaylistIdentifier, playlist_media.MediaIdentifier, playlist_media.Position)
+            )
+
+        # Insert settings
+        cursor.execute(
+            """INSERT INTO Settings
+               (Identifier, UserIdentifier, DownloadPath, ServerUrl, DarkModeEnabled, ScanFolderOnStartup)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (setting.Identifier, user_identifier, setting.DownloadPath, setting.ServerUrl,
+             setting.DarkModeEnabled, setting.ScanFolderOnStartup)
+        )
+
+        conn.commit()
+        conn.close()
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise
+
+
+@app.post("/save/{key}")
+async def handle_save_user_data(key: str, req: SaveUserDataRequest):
+    # Validiere ADMIN_KEY mit constant-time comparison
+    if not secrets.compare_digest(key, ADMIN_KEY or ""):
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+    # Validiere user_identifier
+    if not req.user_identifier or len(req.user_identifier) > 100:
+        raise fastapi.HTTPException(status_code=400, detail="Invalid user identifier")
+
+    # Validiere Größen (DoS Prevention)
+    if len(req.playlists) > 1000:
+        raise fastapi.HTTPException(status_code=400, detail="Too many playlists")
+
+    if len(req.medias) > 10000:
+        raise fastapi.HTTPException(status_code=400, detail="Too many medias")
+
+    try:
+        save_user_data(req)
+        log_queue.put_nowait(f"[INFO] User data for '{req.user_identifier}' saved successfully")
+        return {"message": "User data saved successfully"}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error saving user data for '{req.user_identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
+
+# ---------------- User Endpoints ----------------
 
 def create_user(username: str, password: str, identifier: str, created_at: str):
     conn = connect_db()
@@ -360,17 +494,6 @@ def create_user(username: str, password: str, identifier: str, created_at: str):
     cursor.execute("""INSERT INTO Users (Username, PasswordHash, Identifier, CreatedAt) VALUES (?, ?, ?, ?)""", (username, password, identifier, created_at))
     conn.commit()
     conn.close()
-
-
-def connect_db():
-    conn = sqlite3.connect(db_path, timeout=20.0)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-# ---------------- User Endpoints ----------------
 
 @app.get("/get/user/{identifier}", response_model=UserResponse)
 async def get_users(identifier: str):

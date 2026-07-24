@@ -333,7 +333,7 @@ public class MediaFilter
         }
         catch (Exception ex)
         {
-            var log = new Massage("An error occurred while applying the media filter: " + ex.InnerException!.Message, DateTime.Now, "ERROR");
+            var log = new Message("An error occurred while applying the media filter: " + ex.InnerException!.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             
             var messageBox = new MessageBox("An error occurred while applying the media filter: " + ex.Message);
@@ -367,7 +367,7 @@ public class MediaFilter
         }
         catch (Exception ex)
         {
-            var log = new Massage("An error occurred while clearing the filter: " + ex.InnerException!.Message, DateTime.Now, "ERROR");
+            var log = new Message("An error occurred while clearing the filter: " + ex.InnerException!.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             
             var messageBox = new MessageBox("An error occurred while clearing the filter: " + ex.Message);

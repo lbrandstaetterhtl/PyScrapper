@@ -37,8 +37,8 @@ public static class Interfaces
     /// </summary>
     public interface IAppLogger
     {
-        void LogNewMassage(Massage massage);
-        void LogDebugMessage(Massage massage);
+        void LogNewMassage(Message massage);
+        void LogDebugMessage(Message massage);
     }
 
     public interface IAppDataService

@@ -27,7 +27,7 @@ public class Database
             var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getuser/downloadedmedias/{AppData.AdminKey}?user_identifier={AppData.CurrentUser.Identifier}");
             var json = await response.Content.ReadAsStringAsync();
             
-            _logger.LogDebugMessage(new Massage($"Response from API: {json}", DateTime.Now, "INFO"));
+            _logger.LogDebugMessage(new Message($"Response from API: {json}", DateTime.Now, "INFO"));
 
             if (response.IsSuccessStatusCode)
             {
@@ -50,7 +50,7 @@ public class Database
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while loading downloaded medias from API: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while loading downloaded medias from API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             return new ObservableCollection<DownloadedMedia>();
         }
@@ -89,7 +89,7 @@ public class Database
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while loading playlists from API: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while loading playlists from API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             return new ObservableCollection<Playlist>();
         }
@@ -105,7 +105,7 @@ public class Database
 
             var json = await response.Content.ReadAsStringAsync();
             
-            _logger.LogDebugMessage(new Massage($"Response from API: {json}", DateTime.Now, "INFO"));
+            _logger.LogDebugMessage(new Message($"Response from API: {json}", DateTime.Now, "INFO"));
             
             if (response.IsSuccessStatusCode)
             {
@@ -127,7 +127,7 @@ public class Database
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while loading settings from API: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while loading settings from API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             return null;
         }
@@ -162,7 +162,7 @@ public class Database
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while loading playlist media from API: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while loading playlist media from API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             return null;
         }
@@ -195,7 +195,7 @@ public class Database
             
             var json = await response.Content.ReadAsStringAsync();
             
-            _logger.LogDebugMessage(new Massage($"Response from API CreateDownloadedMedia: {json}, request: {content}", DateTime.Now, "INFO"));
+            _logger.LogDebugMessage(new Message($"Response from API CreateDownloadedMedia: {json}, request: {content}", DateTime.Now, "INFO"));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -203,7 +203,7 @@ public class Database
             }
             else
             {
-                var log = new Massage("Downloaded media created successfully via API.", DateTime.Now, "INFO");
+                var log = new Message("Downloaded media created successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
                 
                 var deserialized = JsonSerializer.Deserialize<CreateResponse>(json);
@@ -219,7 +219,7 @@ public class Database
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while creating downloaded media via API: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while creating downloaded media via API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             return null;
         }
@@ -244,7 +244,7 @@ public class Database
             }
             else
             {
-                var log = new Massage("Playlist created successfully via API.", DateTime.Now, "INFO");
+                var log = new Message("Playlist created successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
                 
                 var json = await response.Content.ReadAsStringAsync();
@@ -259,7 +259,7 @@ public class Database
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while creating playlist via API: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while creating playlist via API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             return null;
         }
@@ -284,7 +284,7 @@ public class Database
             }
             else
             {
-                var log = new Massage("Playlist media created successfully via API.", DateTime.Now, "INFO");
+                var log = new Message("Playlist media created successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
                 
                 var json = await response.Content.ReadAsStringAsync();
@@ -299,7 +299,7 @@ public class Database
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while creating playlist media via API: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while creating playlist media via API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             return null;
         }
@@ -313,7 +313,7 @@ public class Database
 
             var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/delete/downloadedmedia/{AppData.AdminKey}?identifier={identifier}", null);
             var json = await response.Content.ReadAsStringAsync();
-            _logger.LogDebugMessage(new Massage($"Response from API DeleteDownloadedMedia: {json}", DateTime.Now, "INFO"));
+            _logger.LogDebugMessage(new Message($"Response from API DeleteDownloadedMedia: {json}", DateTime.Now, "INFO"));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -321,13 +321,13 @@ public class Database
             }
             else
             {
-                var log = new Massage("Downloaded media deleted successfully via API.", DateTime.Now, "INFO");
+                var log = new Message("Downloaded media deleted successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
             }
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while deleting downloaded media via API: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while deleting downloaded media via API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
         }
     }
@@ -348,13 +348,13 @@ public class Database
             }
             else
             {
-                var log = new Massage("Playlist deleted successfully via API.", DateTime.Now, "INFO");
+                var log = new Message("Playlist deleted successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
             }
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while deleting playlist via API: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while deleting playlist via API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
         }
     }
@@ -375,13 +375,13 @@ public class Database
             }
             else
             {
-                var log = new Massage("Playlist media deleted successfully via API.", DateTime.Now, "INFO");
+                var log = new Message("Playlist media deleted successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
             }
         }
         catch (Exception e)
         {
-            var log = new Massage("Error while deleting playlist media via API: " + e.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while deleting playlist media via API: " + e.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
         }
     }
@@ -400,12 +400,12 @@ public class Database
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogDebugMessage(new Massage(json, DateTime.Now, "ERROR"));
+                _logger.LogDebugMessage(new Message(json, DateTime.Now, "ERROR"));
                 throw new Exception(response.ReasonPhrase);
             }
             else
             {
-                var log = new Massage("Default settings created successfully via API.", DateTime.Now, "INFO");
+                var log = new Message("Default settings created successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
                 var deserialized = JsonSerializer.Deserialize<CreateResponse>(json);
@@ -429,7 +429,7 @@ public class Database
         }
         catch (Exception ex)
         {
-            var log = new Massage("Error while creating settings via API: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Message("Error while creating settings via API: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             return null;
         }
@@ -441,7 +441,7 @@ public class Database
         var client = new HttpClient();
         var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/get/user/{identifier}");
         
-        _logger.LogDebugMessage(new Massage(response.ReasonPhrase, DateTime.Now, "INFO"));
+        _logger.LogDebugMessage(new Message(response.ReasonPhrase, DateTime.Now, "INFO"));
         
         if (!response.IsSuccessStatusCode)
         {
@@ -449,7 +449,7 @@ public class Database
         }
         else
         {
-            var log = new Massage("User retrieved successfully via API.", DateTime.Now, "INFO");
+            var log = new Message("User retrieved successfully via API.", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
             var json = await response.Content.ReadAsStringAsync();
@@ -464,6 +464,28 @@ public class Database
                 throw new Exception("Failed to deserialize user from API response.");
             }
         }
+    }
+
+    public static async Task<bool> SaveUserData(SaveDataRequest req)
+    {
+            using var client  = new HttpClient();
+            
+            var content = new StringContent(JsonSerializer.Serialize(req), System.Text.Encoding.UTF8, "application/json");
+            
+            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/save/{AppData.AdminKey}", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(response.ReasonPhrase);
+            }
+            
+            var log = new Message("User data saved successfully via API.", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            
+            var json = await response.Content.ReadAsStringAsync();
+            log = new Message($"Response from API SaveUserData: {json}", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            return true;
     }
 }
 

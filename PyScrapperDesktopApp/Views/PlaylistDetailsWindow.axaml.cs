@@ -47,7 +47,7 @@ public partial class PlaylistDetailsWindow : Window
         }
         catch (Exception ex)
         {
-            var log = new Massage("An error occurred while trying to play the media: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Message("An error occurred while trying to play the media: " + ex.Message, DateTime.Now, "ERROR");
             var logger = new AppLogger();
             logger.LogNewMassage(log);
 
@@ -89,7 +89,7 @@ public partial class PlaylistDetailsWindow : Window
         }
         catch (Exception ex)
         {
-            var log = new Massage("An error occurred while trying to remove the media: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Message("An error occurred while trying to remove the media: " + ex.Message, DateTime.Now, "ERROR");
             var logger = new AppLogger();
             logger.LogNewMassage(log);
 

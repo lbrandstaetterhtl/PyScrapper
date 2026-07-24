@@ -52,13 +52,13 @@ public class ApiClient : Interfaces.IApiClient
         var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/download", content);
         var responseData = await response.Content.ReadAsStringAsync();
 
-        _logger.LogDebugMessage(new Massage($"Sent scrap request to server: {jsonContent} | response: {responseData}", DateTime.Now, "DEBUG"));
+        _logger.LogDebugMessage(new Message($"Sent scrap request to server: {jsonContent} | response: {responseData}", DateTime.Now, "DEBUG"));
         
         if (response.IsSuccessStatusCode)
         {
             var deserializedResponse = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);
 
-            var log = new Massage($"Server received request and sent message: {deserializedResponse?.Message}", DateTime.Now, "INFO");
+            var log = new Message($"Server received request and sent message: {deserializedResponse?.Message}", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
             return deserializedResponse?.Id!;
@@ -66,7 +66,7 @@ public class ApiClient : Interfaces.IApiClient
         else
         {
             var deserializedError = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
-            var log = new Massage($"Error sending download request. Server gave error: " + deserializedError?.Detail, DateTime.Now, "ERROR");
+            var log = new Message($"Error sending download request. Server gave error: " + deserializedError?.Detail, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             
             var massageBox = new MessageBox($"Error sending download request: {deserializedError?.Detail}");
@@ -104,7 +104,7 @@ public class ApiClient : Interfaces.IApiClient
                         var text =
                             $"Server health check successful: Uptime {health?.UptimeSeconds} seconds, Memory {health?.MemoryMb} MB, PID {health?.Pid}, Processes {health?.Processes.Count}";
 
-                        var log = new Massage(text, DateTime.Now, "INFO");
+                        var log = new Message(text, DateTime.Now, "INFO");
                         _logger.LogNewMassage(log);
                     }
 
@@ -112,7 +112,7 @@ public class ApiClient : Interfaces.IApiClient
                 }
                 catch (Exception ex)
                 {
-                    var log = new Massage($"Error sending health request: {ex.Message}", DateTime.Now, "ERROR");
+                    var log = new Message($"Error sending health request: {ex.Message}", DateTime.Now, "ERROR");
                     _logger.LogNewMassage(log);
 
                     return null;
@@ -122,7 +122,7 @@ public class ApiClient : Interfaces.IApiClient
             {
                 var errorResponse = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
 
-                var log = new Massage("Server gave this error while requesting health:" + errorResponse!.Detail,
+                var log = new Message("Server gave this error while requesting health:" + errorResponse!.Detail,
                     DateTime.Now, "ERROR");
                 _logger.LogNewMassage(log);
 
@@ -165,7 +165,7 @@ public class ApiClient : Interfaces.IApiClient
         {
             var deserializedResponse = JsonSerializer.Deserialize<SearchSuccessResponse>(responseData, JsonOptions);
 
-            var log = new Massage($"Search successful for query: \"{deserializedResponse?.Query}\", found {deserializedResponse?.Results.Count} results", DateTime.Now, "INFO");
+            var log = new Message($"Search successful for query: \"{deserializedResponse?.Query}\", found {deserializedResponse?.Results.Count} results", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
             return deserializedResponse?.Results ?? new List<SearchResultItem>();
@@ -173,7 +173,7 @@ public class ApiClient : Interfaces.IApiClient
         else
         {
             var deserializedError = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
-            var log = new Massage($"Search failed for query: \"{requestData.Search}\", error: " + deserializedError?.Detail, DateTime.Now,
+            var log = new Message($"Search failed for query: \"{requestData.Search}\", error: " + deserializedError?.Detail, DateTime.Now,
                 "ERROR");
             _logger.LogNewMassage(log);
             
@@ -204,7 +204,7 @@ public class ApiClient : Interfaces.IApiClient
             {
                 var progressResponse = JsonSerializer.Deserialize<ProgressSuccessResponse>(responseData, JsonOptions);
 
-                var log = new Massage(
+                var log = new Message(
                     $"Download progress for ID: \"{downloadId}\": {progressResponse?.Status}, {progressResponse?.DownloadProgress}%, {progressResponse?.Speed} MB/s",
                     DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
@@ -213,7 +213,7 @@ public class ApiClient : Interfaces.IApiClient
             }
             catch (Exception ex)
             {
-                var log = new Massage($"Error parsing progress response for ID: \"{downloadId}\": {ex.Message}", DateTime.Now, "ERROR");
+                var log = new Message($"Error parsing progress response for ID: \"{downloadId}\": {ex.Message}", DateTime.Now, "ERROR");
                 _logger.LogNewMassage(log);
                 return null;
             }
@@ -223,7 +223,7 @@ public class ApiClient : Interfaces.IApiClient
             
             var errorResponse = JsonSerializer.Deserialize<HttpErrorResponse>(responseData, JsonOptions);
 
-            var log = new Massage(errorResponse?.Detail!, DateTime.Now,
+            var log = new Message(errorResponse?.Detail!, DateTime.Now,
                 "ERROR");
             _logger.LogNewMassage(log);
 
@@ -313,13 +313,13 @@ public class ApiClient : Interfaces.IApiClient
         }
         catch (OperationCanceledException ex)
         {
-            var log = new Massage($"Scrap request cancelled: {ex.Message}", DateTime.Now, "INFO");
+            var log = new Message($"Scrap request cancelled: {ex.Message}", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             return null;
         }
         catch (Exception ex)
         {
-            var log = new Massage($"Error sending scrap request: {ex.Message}", DateTime.Now, "ERROR");
+            var log = new Message($"Error sending scrap request: {ex.Message}", DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             return null;
         }
@@ -337,7 +337,7 @@ public class ApiClient : Interfaces.IApiClient
         
         if (response.IsSuccessStatusCode)
         {
-            var log = new Massage($"Login successful for user: \"{req.Username}\"", DateTime.Now, "INFO");
+            var log = new Message($"Login successful for user: \"{req.Username}\"", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             
             AppData.CurrentUser = await Database.GetUser(req.Username);
@@ -346,7 +346,7 @@ public class ApiClient : Interfaces.IApiClient
         }
         else
         {
-            var log = new Massage($"Login failed for user: \"{req.Username}\", error: " + deserializedResponse?.Message, DateTime.Now, "ERROR");
+            var log = new Message($"Login failed for user: \"{req.Username}\", error: " + deserializedResponse?.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             
             var massageBox = new MessageBox($"Login failed: {deserializedResponse?.Message}");
@@ -368,14 +368,14 @@ public class ApiClient : Interfaces.IApiClient
         
         if (response.IsSuccessStatusCode)
         {
-            var log = new Massage($"Registration successful for user: \"{req.Username}\"", DateTime.Now, "INFO");
+            var log = new Message($"Registration successful for user: \"{req.Username}\"", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             
             return true;
         }
         else
         {
-            var log = new Massage($"Registration failed for user: \"{req.Username}\", error: " + deserializedResponse?.Message, DateTime.Now, "ERROR");
+            var log = new Message($"Registration failed for user: \"{req.Username}\", error: " + deserializedResponse?.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             
             var massageBox = new MessageBox($"Registration failed: {deserializedResponse?.Message}");

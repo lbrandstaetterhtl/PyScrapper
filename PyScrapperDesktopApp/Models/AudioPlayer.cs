@@ -107,7 +107,7 @@ public class AudioPlayer : IDisposable
 
             if (media == null)
             {
-                var log = new Massage($"Playlist media with id {playlist.MediaIdentifiers[0]} is not playable or does not exist", DateTime.Now, "WARN");
+                var log = new Message($"Playlist media with id {playlist.MediaIdentifiers[0]} is not playable or does not exist", DateTime.Now, "WARN");
                 _logger.LogNewMassage(log);
                 return;
             }
@@ -127,7 +127,7 @@ public class AudioPlayer : IDisposable
             _playlistTracks.AddRange(list);
             _currentIndex = -1;
 
-            var log = new Massage($"Loaded playlist '{playlist.Name}' with {_playlistTracks.Count} playable tracks",
+            var log = new Message($"Loaded playlist '{playlist.Name}' with {_playlistTracks.Count} playable tracks",
                 DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
@@ -212,7 +212,7 @@ public class AudioPlayer : IDisposable
 
             if (!finished)
             {
-                var logg = new Massage($"User canceled the codec conversion for file '{filePath}'", DateTime.Now, "INFO");
+                var logg = new Message($"User canceled the codec conversion for file '{filePath}'", DateTime.Now, "INFO");
                 _logger.LogNewMassage(logg);
                 return;
             }
@@ -234,7 +234,7 @@ public class AudioPlayer : IDisposable
         _mediaPlayer.Media = _currentMedia;
         _mediaPlayer.Play();
         
-        var log = new Massage($"Playing file: {CurrentFile}", DateTime.Now, "INFO");
+        var log = new Message($"Playing file: {CurrentFile}", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
 
         TrackChanged?.Invoke(this, CurrentFile);
@@ -282,7 +282,7 @@ public class AudioPlayer : IDisposable
             (_playlistTracks[i], _playlistTracks[j]) = (_playlistTracks[j], _playlistTracks[i]);
         }
         
-        var log = new Massage($"Playlist shuffled", DateTime.Now, "INFO");
+        var log = new Message($"Playlist shuffled", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
     }
 
@@ -372,7 +372,7 @@ private static async Task<string?> GetVideoCodec(string path)
 
     if (!string.IsNullOrWhiteSpace(error))
     {
-        var log = new Massage($"Error checking codec for file '{path}': {error}", DateTime.Now, "ERROR");
+        var log = new Message($"Error checking codec for file '{path}': {error}", DateTime.Now, "ERROR");
         _logger.LogNewMassage(log);
 
         if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)

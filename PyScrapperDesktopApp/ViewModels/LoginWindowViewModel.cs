@@ -48,7 +48,7 @@ public partial class LoginWindowViewModel : ObservableObject
 
         if (response)
         {
-            var log = new Massage("User logged in successfully", DateTime.Now, "INFO");
+            var log = new Message("User logged in successfully", DateTime.Now, "INFO");
             var logger = new AppLogger();
 
             logger.LogNewMassage(log);
@@ -58,7 +58,7 @@ public partial class LoginWindowViewModel : ObservableObject
         }
         else
         {
-            var log = new Massage("User login failed", DateTime.Now, "ERROR");
+            var log = new Message("User login failed", DateTime.Now, "ERROR");
             var logger = new AppLogger();
 
             logger.LogNewMassage(log);

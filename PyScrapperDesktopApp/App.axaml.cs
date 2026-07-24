@@ -20,6 +20,7 @@ using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 using PyScrapperDesktopApp.Views;
 using Tmds.DBus.Protocol;
+using Message = PyScrapperDesktopApp.Models.Message;
 
 namespace PyScrapperDesktopApp;
 
@@ -55,7 +56,7 @@ public partial class App : Application
 
             base.OnFrameworkInitializationCompleted();
 
-            var log = new Massage("Application initializing...", DateTime.Now, "INFO");
+            var log = new Message("Application initializing...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
             if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
@@ -100,7 +101,7 @@ public partial class App : Application
 
             if (loginResult != LoginResult.Success || AppData.CurrentUser == null)
             {
-                log = new Massage("Login was cancelled or failed, shutting down", DateTime.Now, "INFO");
+                log = new Message("Login was cancelled or failed, shutting down", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
                 desktop.Shutdown(0);
                 return;
@@ -109,7 +110,7 @@ public partial class App : Application
             var settings = await Database.LoadSettingsFromApi();
             if (settings == null)
             {
-                log = new Massage("Failed to load settings from database, using default settings", DateTime.Now, "WARN");
+                log = new Message("Failed to load settings from database, using default settings", DateTime.Now, "WARN");
                 _logger.LogNewMassage(log);
 
                 var settingReq = new CreateSettingRequest
@@ -135,21 +136,21 @@ public partial class App : Application
                 switch (launcher.Result)
                 {
                     case LauncherResult.Success:
-                        log = new Massage("Launcher completed successfully, loading application data...", DateTime.Now, "INFO");
+                        log = new Message("Launcher completed successfully, loading application data...", DateTime.Now, "INFO");
                         _logger.LogNewMassage(log);
 
                         await LoadApplicationData(desktop);
                         break;
 
                     case LauncherResult.Cancelled:
-                        log = new Massage("Launcher was cancelled by the user", DateTime.Now, "INFO");
+                        log = new Message("Launcher was cancelled by the user", DateTime.Now, "INFO");
                         _logger.LogNewMassage(log);
                         desktop.Shutdown(0);
                         break;
 
                     case LauncherResult.Error:
                     default:
-                        log = new Massage("Launcher failed with an error", DateTime.Now, "ERROR");
+                        log = new Message("Launcher failed with an error", DateTime.Now, "ERROR");
                         _logger.LogNewMassage(log);
                         desktop.Shutdown(1);
                         break;
@@ -161,7 +162,7 @@ public partial class App : Application
         }
         catch (Exception e)
         {
-            var log = new Massage($"Application failed to start: {e.Message}", DateTime.Now, "ERROR");
+            var log = new Message($"Application failed to start: {e.Message}", DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
@@ -182,7 +183,7 @@ public partial class App : Application
 
         if (!File.Exists(pythonPath))
         {
-            var errorLog = new Massage($"Python venv not found at expected path: {pythonPath}", DateTime.Now, "ERROR");
+            var errorLog = new Message($"Python venv not found at expected path: {pythonPath}", DateTime.Now, "ERROR");
             logger.LogNewMassage(errorLog);
             throw new FileNotFoundException($"Python venv not found at: {pythonPath}");
         }
@@ -205,7 +206,7 @@ public partial class App : Application
         {
             if (!string.IsNullOrEmpty(e.Data))
             {
-                var log = new Massage($"[Server] {e.Data}", DateTime.Now, "INFO");
+                var log = new Message($"[Server] {e.Data}", DateTime.Now, "INFO");
                 logger.LogNewMassage(log);
             }
         };
@@ -214,7 +215,7 @@ public partial class App : Application
         {
             if (!string.IsNullOrEmpty(e.Data))
             {
-                var log = new Massage($"[Server ERROR] {e.Data}", DateTime.Now, "ERROR");
+                var log = new Message($"[Server ERROR] {e.Data}", DateTime.Now, "ERROR");
                 logger.LogNewMassage(log);
             }
         };
@@ -263,7 +264,7 @@ public partial class App : Application
         {
             desktop.Exit += OnExit;
 
-            var log = new Massage("Loading Data...", DateTime.Now, "INFO");
+            var log = new Message("Loading Data...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
             var medias = await Database.LoadDownloadedMediasFromApi() ?? new ObservableCollection<DownloadedMedia>();
@@ -293,7 +294,7 @@ public partial class App : Application
                     }
                     else
                     {
-                        log = new Massage(
+                        log = new Message(
                             $"Media with id {media.Identifier} has an unsupported codec and will be set to not playable",
                             DateTime.Now, "WARN");
                         _logger.LogNewMassage(log);
@@ -305,7 +306,7 @@ public partial class App : Application
             {
                 medias.Remove(mediaToRemove);
 
-                log = new Massage(
+                log = new Message(
                     $"Media with id {mediaToRemove.Identifier} removed from the list because it does not exist",
                     DateTime.Now, "WARN");
                 _logger.LogNewMassage(log);
@@ -339,17 +340,17 @@ public partial class App : Application
             {
                 var diff = await ScanFolder(AppData.Settings.DownloadPath);
 
-                log = new Massage($"Scanned download folder for new media, found {diff} new media items", DateTime.Now,
+                log = new Message($"Scanned download folder for new media, found {diff} new media items", DateTime.Now,
                     "INFO");
                 _logger.LogNewMassage(log);
             }
 
-            log = new Massage(
+            log = new Message(
                 $"Application started with {AppData.DownloadedMedias.Count} listed medias and {AppData.PlayableMedias.Count} playable medias | deleted {mediasToRemove.Count} medias",
                 DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            log = new Massage($"Application started with {AppData.Playlists.Count} playlists", DateTime.Now,
+            log = new Message($"Application started with {AppData.Playlists.Count} playlists", DateTime.Now,
                 "INFO");
             _logger.LogNewMassage(log);
 
@@ -361,7 +362,7 @@ public partial class App : Application
         }
         catch (Exception e)
         {
-            var log = new Massage($"Application failed to load data: {e.Message}", DateTime.Now, "ERROR");
+            var log = new Message($"Application failed to load data: {e.Message}", DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
             desktop.Shutdown(1);
         }
@@ -373,12 +374,31 @@ public partial class App : Application
     /// </summary>
     /// <param name="sender">Event sender.</param>
     /// <param name="e">Event arguments.</param>
-    private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
+    private async void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
-        var log = new Massage("Saving Data...", DateTime.Now, "INFO");
-        _logger.LogNewMassage(log);
+        try
+        {
+            var log = new Message("Saving Data...", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
 
-        //TODO: Update all data / update only changed data
+            var desktop = ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+
+            var req = new SaveDataRequest()
+            {
+                UserIdentifier = AppData.CurrentUser.Identifier,
+                Playlists = AppData.Playlists.ToList(),
+                DownloadedMedias = AppData.DownloadedMedias.ToList(),
+                PlaylistMedias = AppData.PlaylistMedias.ToList(),
+                Setting = AppData.Settings
+            };
+
+            await Database.SaveUserData(req);
+        }
+        catch (Exception ex)
+        {
+            var log = new Message("An error occurred while saving data: " + ex.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+        }
     }
 
     /// <summary>
@@ -450,7 +470,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            var log = new Massage("An error occurred while scanning the folder: " + ex.Message, DateTime.Now, "ERROR");
+            var log = new Message("An error occurred while scanning the folder: " + ex.Message, DateTime.Now, "ERROR");
             new AppLogger().LogNewMassage(log);
         }
 

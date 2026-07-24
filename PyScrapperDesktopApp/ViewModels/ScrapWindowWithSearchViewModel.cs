@@ -81,7 +81,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            var log = new Massage($"Error initializing ScrapWindowWithSearchViewModel: {ex.Message}", DateTime.Now, "ERROR");
+            var log = new Message($"Error initializing ScrapWindowWithSearchViewModel: {ex.Message}", DateTime.Now, "ERROR");
             new AppLogger().LogNewMassage(log);
 
             if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
@@ -162,7 +162,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 {
                     await _dialogService.ShowAlertAsync($"The filename \"{filename}\" is invalid: {errorMessage} Please rename the file and try again.");
                     
-                    var log = new Massage($"Invalid filename \"{filename}\" for item \"{item.title}\": {errorMessage}", DateTime.Now, "ERROR");
+                    var log = new Message($"Invalid filename \"{filename}\" for item \"{item.title}\": {errorMessage}", DateTime.Now, "ERROR");
                     new AppLogger().LogNewMassage(log);
                     
                     var options = new FilePickerSaveOptions()
@@ -218,7 +218,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            var log = new Massage($"An error occurred during the scrap process: {ex.Message}", DateTime.Now, "ERROR");
+            var log = new Message($"An error occurred during the scrap process: {ex.Message}", DateTime.Now, "ERROR");
             new AppLogger().LogNewMassage(log);
 
             await _dialogService.ShowAlertAsync("An error occurred during the scrap process: " + ex.Message);
@@ -248,13 +248,13 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         
         var results = await client.SendSearchRequest(requestData);
 
-        var log = new Massage("", DateTime.Now, "Init");
+        var log = new Message("", DateTime.Now, "Init");
         
         if (results.Count == 0)
         {
             await _dialogService.ShowAlertAsync($"No results found for the given search query \"{SearchQuery}\".");
             
-            log = new Massage("No results found for query: " + SearchQuery, DateTime.Now, "INFO");
+            log = new Message("No results found for query: " + SearchQuery, DateTime.Now, "INFO");
             new AppLogger().LogNewMassage(log);
             
             return;
@@ -298,7 +298,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
         _cts.Cancel();
         _cts.Dispose();
-        var log = new Massage("Scrap operation was canceled by the user.", DateTime.Now, "INFO");
+        var log = new Message("Scrap operation was canceled by the user.", DateTime.Now, "INFO");
         new AppLogger().LogNewMassage(log);
         
         RequestClose?.Invoke();

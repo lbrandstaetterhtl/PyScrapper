@@ -125,7 +125,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
                 {
                     Avalonia.Threading.Dispatcher.UIThread.Post(SetOffline);
                     
-                    var log = new Massage("Health check failed: " + e.Message, DateTime.Now, "ERROR");
+                    var log = new Message("Health check failed: " + e.Message, DateTime.Now, "ERROR");
                     _logger.LogNewMassage(log);
                 }
 

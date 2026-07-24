@@ -15,7 +15,7 @@ public class AppLogger : Interfaces.IAppLogger
     /// Each log entry is formatted with a timestamp, message type, and message text.
     /// </summary>
     /// <param name="massage"></param>
-    public void LogNewMassage(Massage massage)
+    public void LogNewMassage(Message massage)
     {
         var logFilePath = Path.Combine(AppData.AppLogsPath, @"app.log");
         
@@ -37,7 +37,7 @@ public class AppLogger : Interfaces.IAppLogger
     /// The log entry is formatted with a timestamp, message type, and message text, and is printed to the console for real-time debugging purposes.
     /// </summary>
     /// <param name="massage"></param>
-    public void LogDebugMessage(Massage massage)
+    public void LogDebugMessage(Message massage)
     {
         var logger = new AppLogger();
         var logEntry = $"{massage.Timestamp:yyyy-MM-dd HH:mm:ss} [{massage.Type}] {massage.Text}";
@@ -53,7 +53,7 @@ public class AppLogger : Interfaces.IAppLogger
 /// <param name="text"></param>
 /// <param name="timestamp"></param>
 /// <param name="type"></param>
-public class Massage (string text, DateTime timestamp, string type)
+public class Message (string text, DateTime timestamp, string type)
 {
     public string Text => text;
     public DateTime Timestamp => timestamp;

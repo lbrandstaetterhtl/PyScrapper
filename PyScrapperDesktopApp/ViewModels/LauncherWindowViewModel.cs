@@ -86,12 +86,12 @@ public partial class LauncherWindowViewModel : ObservableObject
                 });
             });
 
-            var log = new Massage("Checking if server is already running...", DateTime.Now, "INFO");
+            var log = new Message("Checking if server is already running...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
             if (await IsServerRunning())
             {
-                log = new Massage("Server is running", DateTime.Now, "INFO");
+                log = new Message("Server is running", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
@@ -126,7 +126,7 @@ public partial class LauncherWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            var log = new Massage($"Launcher error: {ex.Message}", DateTime.Now, "ERROR");
+            var log = new Message($"Launcher error: {ex.Message}", DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
             await ShowError(ex.Message);
@@ -305,12 +305,12 @@ public partial class LauncherWindowViewModel : ObservableObject
                 });
             });
 
-            var log = new Massage("VCRUNTIME140.dll found, skipping Visual C++ Redistributable install", DateTime.Now, "INFO");
+            var log = new Message("VCRUNTIME140.dll found, skipping Visual C++ Redistributable install", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             return;
         }
 
-        var warnLog = new Massage("VCRUNTIME140.dll not found, downloading Visual C++ Redistributable...", DateTime.Now, "WARN");
+        var warnLog = new Message("VCRUNTIME140.dll not found, downloading Visual C++ Redistributable...", DateTime.Now, "WARN");
         _logger.LogNewMassage(warnLog);
 
         Dispatcher.UIThread.Post(() => Messages.Add(new LauncherMessage()
@@ -349,7 +349,7 @@ public partial class LauncherWindowViewModel : ObservableObject
                 "Note: installation may require administrator privileges."
             );
 
-        var doneLog = new Massage("Visual C++ Redistributable installed successfully", DateTime.Now, "INFO");
+        var doneLog = new Message("Visual C++ Redistributable installed successfully", DateTime.Now, "INFO");
         _logger.LogNewMassage(doneLog);
     }
 
@@ -376,12 +376,12 @@ public partial class LauncherWindowViewModel : ObservableObject
                 });
             });
 
-            var log = new Massage("ffmpeg found, skipping install", DateTime.Now, "INFO");
+            var log = new Message("ffmpeg found, skipping install", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             return;
         }
 
-        var warnLog = new Massage("ffmpeg not found, installing via WinGet (yt-dlp.FFmpeg)...", DateTime.Now, "WARN");
+        var warnLog = new Message("ffmpeg not found, installing via WinGet (yt-dlp.FFmpeg)...", DateTime.Now, "WARN");
         _logger.LogNewMassage(warnLog);
 
         Dispatcher.UIThread.Post(() => Messages.Add(new LauncherMessage()
@@ -408,7 +408,7 @@ public partial class LauncherWindowViewModel : ObservableObject
                 "Please install it manually: winget install yt-dlp.FFmpeg"
             );
 
-        var doneLog = new Massage("ffmpeg installed successfully via WinGet", DateTime.Now, "INFO");
+        var doneLog = new Message("ffmpeg installed successfully via WinGet", DateTime.Now, "INFO");
         _logger.LogNewMassage(doneLog);
     }
 
@@ -568,7 +568,7 @@ public partial class LauncherWindowViewModel : ObservableObject
 
         if (check.ExitCode == 0) return;
 
-        var log = new Massage("pip not found, attempting bootstrap via ensurepip...", DateTime.Now, "WARN");
+        var log = new Message("pip not found, attempting bootstrap via ensurepip...", DateTime.Now, "WARN");
         _logger.LogNewMassage(log);
 
         Dispatcher.UIThread.Post(() => Messages.Add(new LauncherMessage()
@@ -669,7 +669,7 @@ public partial class LauncherWindowViewModel : ObservableObject
                 p.OutputDataReceived += (s, e) =>
                 {
                     if (e.Data == null) return;
-                    var logMessage = new Massage(e.Data, DateTime.Now, "INFO");
+                    var logMessage = new Message(e.Data, DateTime.Now, "INFO");
                     _logger.LogNewMassage(logMessage);
 
                     Messages.Add(new LauncherMessage()
@@ -683,7 +683,7 @@ public partial class LauncherWindowViewModel : ObservableObject
                 p.ErrorDataReceived += (s, e) =>
                 {
                     if (e.Data == null) return;
-                    var logMessage = new Massage(e.Data, DateTime.Now, "ERROR");
+                    var logMessage = new Message(e.Data, DateTime.Now, "ERROR");
                     _logger.LogNewMassage(logMessage);
 
                     Messages.Add(new LauncherMessage()
