@@ -263,6 +263,7 @@ Abgeschlossene oder fehlerhafte Jobs werden nach etwa **60 Sekunden** aus dem Pr
 | POST | `/search` | Suche | Provider-spezifische Suche |
 | POST | `/login` | Login | Gegen die `Users`-Tabelle |
 | POST | `/register` | Registrierung | Legt einen User über denselben Mechanismus wie Create-User an |
+| POST | `/save/{key}` | User Daten speichern | Speichert die Daten eines Users per user_identifier (ist nicht fertig und sehr instabil) 
 
 **Hinweis zu `/command`:**
 
