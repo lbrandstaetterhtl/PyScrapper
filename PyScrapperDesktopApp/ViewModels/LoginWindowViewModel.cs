@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PyScrapperDesktopApp.Models;
@@ -8,33 +7,24 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
-public partial class LoginWindowViewModel : ObservableObject
+public partial class LoginWindowViewModel(DialogService dialogService, LoginWindow window) : ObservableObject
 {
-    [ObservableProperty]
-    public string _username;
+    [ObservableProperty] 
+    private string _username = "";
 
-    [ObservableProperty]
-    public string _password;
-
-    private readonly DialogService _dialogService;
-    private readonly LoginWindow _window;
-
-    public LoginWindowViewModel(DialogService dialogService, LoginWindow window)
-    {
-        _dialogService = dialogService;
-        _window = window;
-    }
+    [ObservableProperty] 
+    private string _password = "";
 
     [RelayCommand]
-    public async Task Login()
+    private async Task Login()
     {
-        var client = new ApiClient(_dialogService);
+        var client = new ApiClient(dialogService);
         
         var healthResponse = await client.GetHealth();
 
         if (!healthResponse.Ok)
         {
-            await _dialogService.ShowAlertAsync("Health check failed. Please check your connection or contact your admin.");
+            await dialogService.ShowAlertAsync("Health check failed. Please check your connection or contact your admin.");
             return;
         }
 
@@ -53,8 +43,8 @@ public partial class LoginWindowViewModel : ObservableObject
 
             logger.LogNewMassage(log);
 
-            _window.Result = LoginResult.Success;
-            _window.Close();
+            window.Result = LoginResult.Success;
+            window.Close();
         }
         else
         {
@@ -63,27 +53,27 @@ public partial class LoginWindowViewModel : ObservableObject
 
             logger.LogNewMassage(log);
 
-            await _dialogService.ShowAlertAsync("Login failed. Please check your username and password.");
+            await dialogService.ShowAlertAsync("Login failed. Please check your username and password.");
         }
     }
 
     [RelayCommand]
-    public void Cancel()
+    private void Cancel()
     {
-        _window.Result = LoginResult.Cancelled;
-        _window.Close();
+        window.Result = LoginResult.Cancelled;
+        window.Close();
     }
 
     [RelayCommand]
     private async Task Register()
     {
-        var client = new ApiClient(_dialogService);
+        var client = new ApiClient(dialogService);
         
         var healthResponse = await client.GetHealth();
 
         if (!healthResponse.Ok)
         {
-            await _dialogService.ShowAlertAsync("Health check failed. Please check your connection or contact your admin.");
+            await dialogService.ShowAlertAsync("Health check failed. Please check your connection or contact your admin.");
             return;
         }
 
@@ -101,7 +91,7 @@ public partial class LoginWindowViewModel : ObservableObject
         }
         else
         {
-            await _dialogService.ShowAlertAsync("Registration failed. Please check your username and password.");
+            await dialogService.ShowAlertAsync("Registration failed. Please check your username and password.");
         }
     }
 }

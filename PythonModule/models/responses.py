@@ -18,11 +18,7 @@ class LoginResponse(BaseModel):
     message: str
     identifier: str
 
-class UserResponse(BaseModel):
-    Identifier: str
-    Username: str
-
-class UserWithCreatedAtResponse(BaseModel):
+class UserWithResponse(BaseModel):
     Identifier: str
     Username: str
     CreatedAt: str

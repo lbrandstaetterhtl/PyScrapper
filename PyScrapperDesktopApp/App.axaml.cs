@@ -381,8 +381,6 @@ public partial class App : Application
             var log = new Message("Saving Data...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            var desktop = ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
-
             var req = new SaveDataRequest()
             {
                 UserIdentifier = AppData.CurrentUser.Identifier,

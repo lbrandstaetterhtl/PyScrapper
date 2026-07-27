@@ -1,5 +1,7 @@
 ﻿import sys, os
 
+from uvicorn import lifespan
+
 from server_backup import connect_db
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,22 +24,21 @@ from PythonModule.models.requests import SearchRequest, DownloadRequest, Command
 from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
 from PythonModule import Session
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
-import sys, time, re, json, uuid
+import  time, re, json, uuid
 from datetime import datetime
 import bcrypt
 
-import urllib.error, urllib.request
 import platform, subprocess
 
 import os
 import asyncio
 import sqlite3
-from contextlib import asynccontextmanager
 import secrets
 
 #Global Variables
@@ -110,14 +111,23 @@ async def root():
     }
 
 
-@app.on_event("startup")
-async def startup_event():
-    global quit_event, log_queue
+#'@app.on_event("startup")
+#async def startup_event():
+ #   global quit_event, log_queue
+#
+ #   asyncio.create_task(logger(quit_event, log_queue))
+  #  log_queue.put_nowait("[INFO] Server started successfully")
+   # create_app_tables()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global quit_event, log_queue
     asyncio.create_task(logger(quit_event, log_queue))
     log_queue.put_nowait("[INFO] Server started successfully")
     create_app_tables()
+    yield
 
+app = FastAPI(lifespan=lifespan)
 
 @app.post("/command")
 async def receive_command(data: CommandRequest):
@@ -501,11 +511,11 @@ async def get_users(identifier: str):
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, Username FROM Users WHERE Identifier = ?", (identifier,))
+        cursor.execute("SELECT Identifier, Username, CreatedAt FROM Users WHERE Identifier = ?", (identifier,))
         row = cursor.fetchone()
 
         if row is None:
-            cursor.execute("SELECT Identifier, Username FROM Users WHERE Username = ?", (identifier,))
+            cursor.execute("SELECT Identifier, Username, CreatedAt FROM Users WHERE Username = ?", (identifier,))
             row = cursor.fetchone()
 
             if row is None:
@@ -523,7 +533,7 @@ async def get_users(identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/getall/users/{key}", response_model=List[UserWithCreatedAtResponse])
+@app.get("/getall/users/{key}", response_model=List[UserResponse])
 async def get_all_users(key: str):
     if key != ADMIN_KEY:
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
