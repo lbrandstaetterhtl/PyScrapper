@@ -28,7 +28,7 @@ public partial class LauncherWindowViewModel : ObservableObject
 {
     private Window _window;
     private Process _serverProcess;
-    private readonly AppLogger _logger = new AppLogger();
+    private readonly AppLogger _logger = AppLogger.Instance;
 
     private string RepoRoot     => AppData.PyScrapperPath;
     private string LocalServer  => Path.Combine(RepoRoot, "LocalServer");

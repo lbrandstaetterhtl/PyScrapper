@@ -12,9 +12,9 @@ using SQLitePCL;
 
 namespace PyScrapperDesktopApp.Models;
 
-public class Database
+public abstract class Database
 {
-    private static readonly AppLogger _logger = new();
+    private static readonly AppLogger _logger = AppLogger.Instance;
     
     public static async Task<ObservableCollection<DownloadedMedia>> LoadDownloadedMediasFromApi()
     {
@@ -24,10 +24,8 @@ public class Database
 
             using var client = new HttpClient();
 
-            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getuser/downloadedmedias/{AppData.AdminKey}?user_identifier={AppData.CurrentUser.Identifier}");
+            var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/getuser/downloadedmedias/{AppData.Config.ApiKey}?user_identifier={AppData.CurrentUser.Identifier}");
             var json = await response.Content.ReadAsStringAsync();
-            
-            _logger.LogDebugMessage(new Message($"Response from API: {json}", DateTime.Now, "INFO"));
 
             if (response.IsSuccessStatusCode)
             {
@@ -64,7 +62,7 @@ public class Database
 
             using var client = new HttpClient();
 
-            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/getuser/playlists/{AppData.AdminKey}?user_identifier={AppData.CurrentUser.Identifier}");
+            var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/getuser/playlists/{AppData.Config.ApiKey}?user_identifier={AppData.CurrentUser.Identifier}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -101,11 +99,9 @@ public class Database
         {
             using var client = new HttpClient();
 
-            var response = await client.GetAsync($"http://127.0.0.1:8765/get/settings/{AppData.CurrentUser.Identifier}");
+            var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/settings/{AppData.CurrentUser.Identifier}");
 
             var json = await response.Content.ReadAsStringAsync();
-            
-            _logger.LogDebugMessage(new Message($"Response from API: {json}", DateTime.Now, "INFO"));
             
             if (response.IsSuccessStatusCode)
             {
@@ -141,7 +137,7 @@ public class Database
 
             using var client = new HttpClient();
 
-            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/get/playlistmedias/{playlistIdentifier}");
+            var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/playlistmedias/{playlistIdentifier}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -189,13 +185,11 @@ public class Database
             var jsonContent = JsonSerializer.Serialize(req);
             var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/create/downloadedmedia/{AppData.AdminKey}", content);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/downloadedmedia/{AppData.Config.ApiKey}", content);
 
             DownloadedMedia result;
             
             var json = await response.Content.ReadAsStringAsync();
-            
-            _logger.LogDebugMessage(new Message($"Response from API CreateDownloadedMedia: {json}, request: {content}", DateTime.Now, "INFO"));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -234,7 +228,7 @@ public class Database
             var jsonContent = JsonSerializer.Serialize(req);
             var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/create/playlist/{AppData.AdminKey}", content);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/playlist/{AppData.Config.ApiKey}", content);
 
             Playlist result;
 
@@ -274,7 +268,7 @@ public class Database
             var jsonContent = JsonSerializer.Serialize(req);
             var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/create/playlistmedia/{AppData.AdminKey}", content);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/playlistmedia/{AppData.Config.ApiKey}", content);
 
             PlaylistMedia result;
 
@@ -311,9 +305,8 @@ public class Database
         {
             using var client = new HttpClient();
 
-            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/delete/downloadedmedia/{AppData.AdminKey}?identifier={identifier}", null);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/downloadedmedia/{AppData.Config.ApiKey}?identifier={identifier}", null);
             var json = await response.Content.ReadAsStringAsync();
-            _logger.LogDebugMessage(new Message($"Response from API DeleteDownloadedMedia: {json}", DateTime.Now, "INFO"));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -340,7 +333,7 @@ public class Database
             
             using var client = new HttpClient();
 
-            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/delete/playlist/{AppData.AdminKey}", content);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/playlist/{AppData.Config.ApiKey}", content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -367,7 +360,7 @@ public class Database
             
             using var client = new HttpClient();
 
-            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/delete/playlistmedia/{AppData.AdminKey}", content);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/playlistmedia/{AppData.Config.ApiKey}", content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -395,12 +388,11 @@ public class Database
             var client = new HttpClient();
             //TODO: not hardcoded url
             var response =
-                await client.PostAsync($"http://127.0.0.1:8765/create/settings/{AppData.AdminKey}", content);
+                await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/settings/{AppData.Config.ApiKey}", content);
             var json = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogDebugMessage(new Message(json, DateTime.Now, "ERROR"));
                 throw new Exception(response.ReasonPhrase);
             }
             else
@@ -439,9 +431,7 @@ public class Database
     public static async Task<User> GetUser(string identifier)
     {
         var client = new HttpClient();
-        var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/get/user/{identifier}");
-        
-        _logger.LogDebugMessage(new Message(response.ReasonPhrase, DateTime.Now, "INFO"));
+        var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/user/{identifier}");
         
         if (!response.IsSuccessStatusCode)
         {
@@ -472,7 +462,7 @@ public class Database
             
             var content = new StringContent(JsonSerializer.Serialize(req), System.Text.Encoding.UTF8, "application/json");
             
-            var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/save/{AppData.AdminKey}", content);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/save/{AppData.Config.ApiKey}", content);
 
             if (!response.IsSuccessStatusCode)
             {

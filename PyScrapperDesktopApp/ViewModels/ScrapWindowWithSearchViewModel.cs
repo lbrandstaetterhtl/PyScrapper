@@ -54,6 +54,8 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     
     public event Action? RequestClose;
     
+    private readonly AppLogger _logger = AppLogger.Instance;
+    
     
     /// <summary>
     /// Constructor for the ScrapWindowWithSearchViewModel class, which initializes the view model with the provided scrap window and provider.
@@ -82,7 +84,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         catch (Exception ex)
         {
             var log = new Message($"Error initializing ScrapWindowWithSearchViewModel: {ex.Message}", DateTime.Now, "ERROR");
-            new AppLogger().LogNewMassage(log);
+            _logger.LogNewMassage(log);
 
             if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
                 return;
@@ -163,7 +165,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     await _dialogService.ShowAlertAsync($"The filename \"{filename}\" is invalid: {errorMessage} Please rename the file and try again.");
                     
                     var log = new Message($"Invalid filename \"{filename}\" for item \"{item.title}\": {errorMessage}", DateTime.Now, "ERROR");
-                    new AppLogger().LogNewMassage(log);
+                    _logger.LogNewMassage(log);
                     
                     var options = new FilePickerSaveOptions()
                     {
@@ -195,7 +197,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     Url = item.url,
                     Mediatype = SelectedMediaType,
                     Filename = filename,
-                    Download_path = string.IsNullOrEmpty(downloadPath) ? AppData.Settings.DownloadPath : downloadPath
+                    Download_path = string.IsNullOrEmpty(downloadPath) ? AppData.Settings.DownloadPath : Path.GetDirectoryName(downloadPath),
                 };
 
                 requestsDates.Add(requestData);
@@ -219,7 +221,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         catch (Exception ex)
         {
             var log = new Message($"An error occurred during the scrap process: {ex.Message}", DateTime.Now, "ERROR");
-            new AppLogger().LogNewMassage(log);
+            _logger.LogNewMassage(log);
 
             await _dialogService.ShowAlertAsync("An error occurred during the scrap process: " + ex.Message);
         }
@@ -255,7 +257,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             await _dialogService.ShowAlertAsync($"No results found for the given search query \"{SearchQuery}\".");
             
             log = new Message("No results found for query: " + SearchQuery, DateTime.Now, "INFO");
-            new AppLogger().LogNewMassage(log);
+            _logger.LogNewMassage(log);
             
             return;
         }
@@ -299,7 +301,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         _cts.Cancel();
         _cts.Dispose();
         var log = new Message("Scrap operation was canceled by the user.", DateTime.Now, "INFO");
-        new AppLogger().LogNewMassage(log);
+        _logger.LogNewMassage(log);
         
         RequestClose?.Invoke();
     }

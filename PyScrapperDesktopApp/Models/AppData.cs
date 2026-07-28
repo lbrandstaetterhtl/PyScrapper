@@ -37,7 +37,6 @@ public class AppData : Interfaces.IAppDataService
     public static User CurrentUser = null;
     public static Settings Settings = new("default");
     public static List<PlaylistMedia> PlaylistMedias = new();
-    public static string AdminKey;
     public static string PyScrapperPath { get;} = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
     public static string AppLogsPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
     public static string ServerLogsPath { get; set; } = Path.Combine(PyScrapperPath, "LocalServer", "logs");
@@ -57,6 +56,8 @@ public class AppData : Interfaces.IAppDataService
 
     public static List<string> ValidMediaTypes = [".mp3", ".mp4"];
     public static List<string> ValidProviders = ["suno", "youtube", "bandcamp", "archive"];
+
+    public static AppConfig Config;
     
     static AppData()
     {
@@ -64,7 +65,6 @@ public class AppData : Interfaces.IAppDataService
         Console.WriteLine($"Looking for .env at: {envPath}");
         Console.WriteLine($"File exists: {File.Exists(envPath)}");
         Env.Load(Path.Combine(PyScrapperPath, ".env"));
-        AdminKey = Environment.GetEnvironmentVariable("ADMIN_KEY") ?? throw new Exception("ADMIN_KEY not found in .env file.");
     }
     
     /// <summary>
@@ -163,7 +163,7 @@ public partial class DownloadedMedia(string userIdentifier, string title, string
     [ObservableProperty]
     private bool _isPlayable = isPlayable;
 
-    private static readonly AppLogger _logger = new();
+    private static readonly AppLogger _logger = AppLogger.Instance;
     
     
      private static readonly HashSet<string> ReservedWindowsNames = new(StringComparer.OrdinalIgnoreCase)
@@ -265,11 +265,6 @@ public class Settings(string identifier)
 {
     public string Identifier { get; set; } = identifier;
     public string? DownloadPath { get; set; }
-    public string ServerUrl
-    {
-        get => "http://127.0.0.1:8765";
-    }
-
     public bool DarkModeEnabled { get; set; }
     public bool ScanFolderOnStartup { get; set; }
     public void SetDefaultSettings()
@@ -296,7 +291,7 @@ public class MediaFilter
     
     public bool IsPlayable { get; set; } = false;
     
-    private static readonly AppLogger _logger = new();
+    private static readonly AppLogger _logger = AppLogger.Instance;
 
     /// <summary>
     /// Applies the provided media filter to the DownloadedMedias collection, filtering the media items based on the specified criteria such as search query, media types, date range, and playability status.
@@ -310,7 +305,7 @@ public class MediaFilter
         {
             if (AppData.FilterEnabled)
             {
-                
+                return;
             }
 
             AppData.FilterEnabled = true;

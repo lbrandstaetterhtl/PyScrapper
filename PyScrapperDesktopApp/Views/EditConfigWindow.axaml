@@ -1,0 +1,46 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PyScrapperDesktopApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="PyScrapperDesktopApp.Views.EditConfigWindow"
+        x:DataType="vm:EditConfigWindowViewModel"
+        SizeToContent="WidthAndHeight"
+        MaxHeight="600"
+        MaxWidth="600"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        Icon="/Assets/PyScrapperLogo.ico"
+        Title="PyScrapperDesktopApp">
+    
+    <Grid RowDefinitions="35,*">
+        
+        <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
+        
+        <Grid Grid.Row="1" Classes="RootGrid">
+            <Border Classes="Cell">
+                <StackPanel HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Classes="UICell">
+                        <TextBlock Text="Server Url: " Classes="UILabel"/>
+                        <TextBox Text="{Binding ServerUrl}" Classes="UI"/>
+                    </StackPanel>
+                    
+                    <StackPanel Orientation="Horizontal" Classes="UICell">
+                        <TextBlock Text="Server Port: " Classes="UILabel"/>
+                        <TextBox Text="{Binding ServerPort}" Classes="UI"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Classes="UICell">
+                        <TextBlock Text="Api Key: " Classes="UILabel"/>
+                        <TextBox Text="{Binding ApiKey}" Classes="UI"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+        
+</Window>

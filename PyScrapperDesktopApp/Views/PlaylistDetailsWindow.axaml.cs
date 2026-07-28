@@ -13,6 +13,7 @@ namespace PyScrapperDesktopApp.Views;
 public partial class PlaylistDetailsWindow : Window
 {
     private readonly Window _mainWindow;
+    private readonly AppLogger _logger = AppLogger.Instance;
 
     public PlaylistDetailsWindow(Playlist playlist)
     {
@@ -48,8 +49,7 @@ public partial class PlaylistDetailsWindow : Window
         catch (Exception ex)
         {
             var log = new Message("An error occurred while trying to play the media: " + ex.Message, DateTime.Now, "ERROR");
-            var logger = new AppLogger();
-            logger.LogNewMassage(log);
+            _logger.LogNewMassage(log);
 
             var messageBox = new MessageBox("An error occurred while trying to play the media: " + ex.Message);
             _ = messageBox.ShowDialog(this);
@@ -90,8 +90,7 @@ public partial class PlaylistDetailsWindow : Window
         catch (Exception ex)
         {
             var log = new Message("An error occurred while trying to remove the media: " + ex.Message, DateTime.Now, "ERROR");
-            var logger = new AppLogger();
-            logger.LogNewMassage(log);
+            _logger.LogNewMassage(log);
 
             var messageBox = new MessageBox("An error occurred while trying to remove the media: " + ex.Message);
             _ = messageBox.ShowDialog(this);

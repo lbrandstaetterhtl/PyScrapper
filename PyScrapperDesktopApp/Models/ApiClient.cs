@@ -21,17 +21,11 @@ namespace PyScrapperDesktopApp.Models;
 /// Client for communicating with the server API.
 /// It provides methods for sending scrap requests, getting server health, sending search requests, and getting download progress.
 /// </summary>
-public class ApiClient : Interfaces.IApiClient
+public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
 {
-    private readonly AppLogger _logger = new();
+    private readonly AppLogger _logger = AppLogger.Instance;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly DialogService _dialogService;
-    
-    public ApiClient(DialogService dialogService)
-    {
-        _dialogService = dialogService;
-    }
 
     /// <summary>
     /// Sends a scrap request to the server and returns the download ID if successful, or "-1" if there was an error.
@@ -49,10 +43,8 @@ public class ApiClient : Interfaces.IApiClient
         
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/download", content);
+        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/download", content);
         var responseData = await response.Content.ReadAsStringAsync();
-
-        _logger.LogDebugMessage(new Message($"Sent scrap request to server: {jsonContent} | response: {responseData}", DateTime.Now, "DEBUG"));
         
         if (response.IsSuccessStatusCode)
         {
@@ -90,7 +82,7 @@ public class ApiClient : Interfaces.IApiClient
 
             HttpClient client = new();
 
-            var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/health");
+            var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/health");
             var responseData = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
@@ -158,7 +150,7 @@ public class ApiClient : Interfaces.IApiClient
 
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync($"{AppData.Settings.ServerUrl}/search", content);
+        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/search", content);
         var responseData = await response.Content.ReadAsStringAsync();
 
         if (response.IsSuccessStatusCode)
@@ -195,7 +187,7 @@ public class ApiClient : Interfaces.IApiClient
     {
         HttpClient client = new();
 
-        var response = await client.GetAsync($"{AppData.Settings.ServerUrl}/download/progress/{downloadId}");
+        var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/download/progress/{downloadId}");
         var responseData = await response.Content.ReadAsStringAsync();
 
         if (response.IsSuccessStatusCode)
@@ -269,7 +261,7 @@ public class ApiClient : Interfaces.IApiClient
 
                     if (vm == null)
                     {
-                        await _dialogService.ShowAlertAsync(
+                        await dialogService.ShowAlertAsync(
                             "An error occurred while initializing the progress window.");
                         continue;
                     }
@@ -283,7 +275,7 @@ public class ApiClient : Interfaces.IApiClient
                         var userIdentifier = AppData.CurrentUser.Identifier;
                         var url = requestData.Url;
                         var mediaType = requestData.Mediatype;
-                        var downloadFilePath = requestData.Download_path;
+                        var downloadFilePath = Path.Combine(requestData.Download_path ?? AppData.Settings.DownloadPath, requestData.Filename + mediaType);
                         var downloadedAt = DateTime.Now;
                         var isPlayable = File.Exists(downloadFilePath) && await AudioPlayer.IsSupportedCodec(downloadFilePath);
                         
@@ -304,7 +296,7 @@ public class ApiClient : Interfaces.IApiClient
                     }
                     else
                     {
-                        await _dialogService.ShowAlertAsync("Download failed, check logs for more details");
+                        await dialogService.ShowAlertAsync("Download failed, check logs for more details");
                     }
                 }
             }
@@ -330,7 +322,7 @@ public class ApiClient : Interfaces.IApiClient
         var client = new HttpClient();
         var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync($"http://127.0.0.1:8765/login", content);
+        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/login", content);
         var responseData = await response.Content.ReadAsStringAsync();
         
         var deserializedResponse = JsonSerializer.Deserialize<DefaultDbResponse>(responseData, JsonOptions);
@@ -361,7 +353,7 @@ public class ApiClient : Interfaces.IApiClient
         var client = new HttpClient();
         var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync($"http://127.0.0.1:8765/register", content);
+        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/register", content);
         var responseData = await response.Content.ReadAsStringAsync();
         
         var deserializedResponse = JsonSerializer.Deserialize<DefaultDbResponse>(responseData, JsonOptions);

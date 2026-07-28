@@ -31,7 +31,7 @@ namespace PyScrapperDesktopApp;
 /// </summary>
 public partial class App : Application
 {
-    private readonly AppLogger _logger = new AppLogger();
+    private static readonly AppLogger _logger = AppLogger.Instance;
     private static System.Diagnostics.Process? _serverProcess;
 
     /// <summary>
@@ -63,32 +63,11 @@ public partial class App : Application
             {
                 return;
             }
+            
+            var config = AppConfig.Load();
+            AppData.Config = config;
 
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-
-            /*
-            // --- Lokalen Server starten ---
-            StartLocalServer();
-
-            // --- Warten, bis der Server tatsächlich erreichbar ist ---
-            log = new Massage("Waiting for local server to become ready...", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            bool serverReady = await WaitForServerReady("http://127.0.0.1:8765");
-
-            if (!serverReady)
-            {
-                log = new Massage("Local server did not start in time, shutting down", DateTime.Now, "ERROR");
-                _logger.LogNewMassage(log);
-                desktop.Shutdown(1);
-                return;
-            }
-
-            log = new Massage("Local server is ready", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-            */
-
-            // --- Login-Fenster zeigen und wirklich darauf warten (ShowDialog geht hier nicht, kein Owner vorhanden) ---
             
             var loginWindow = new LoginWindow();
             desktop.MainWindow = loginWindow;
@@ -119,7 +98,6 @@ public partial class App : Application
                     DarkModeEnabled = false,
                     ScanFolderOnStartup = true,
                     UserIdentifier = AppData.CurrentUser.Identifier,
-                    ServerUrl = "http://127.0.0.1:8765",
                 };
 
                 settings = await Database.CreateSettings(settingReq);
@@ -169,87 +147,6 @@ public partial class App : Application
                 desktop.Shutdown(1);
             }
         }
-    }
-
-    /// <summary>
-    /// Starts the local Python FastAPI server as a subprocess, using the interpreter 
-    /// from the project's virtual environment. Redirects stdout/stderr into the app log.
-    /// </summary>
-    private static void StartLocalServer()
-    {
-        var logger = new AppLogger();
-
-        string pythonPath = Path.Combine(AppData.PyScrapperPath, "LocalServer", ".venv", "Scripts", "python.exe");
-
-        if (!File.Exists(pythonPath))
-        {
-            var errorLog = new Message($"Python venv not found at expected path: {pythonPath}", DateTime.Now, "ERROR");
-            logger.LogNewMassage(errorLog);
-            throw new FileNotFoundException($"Python venv not found at: {pythonPath}");
-        }
-
-        _serverProcess = new System.Diagnostics.Process
-        {
-            StartInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = pythonPath,
-                Arguments = "-m uvicorn server:app --host 127.0.0.1 --port 8765",
-                WorkingDirectory = Path.Combine(AppData.PyScrapperPath, "LocalServer"),
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            }
-        };
-
-        _serverProcess.OutputDataReceived += (sender, e) =>
-        {
-            if (!string.IsNullOrEmpty(e.Data))
-            {
-                var log = new Message($"[Server] {e.Data}", DateTime.Now, "INFO");
-                logger.LogNewMassage(log);
-            }
-        };
-
-        _serverProcess.ErrorDataReceived += (sender, e) =>
-        {
-            if (!string.IsNullOrEmpty(e.Data))
-            {
-                var log = new Message($"[Server ERROR] {e.Data}", DateTime.Now, "ERROR");
-                logger.LogNewMassage(log);
-            }
-        };
-
-        _serverProcess.Start();
-        _serverProcess.BeginOutputReadLine();
-        _serverProcess.BeginErrorReadLine();
-    }
-
-    /// <summary>
-    /// Polls the given base URL until it responds successfully or the maximum number 
-    /// of attempts is reached. Used to ensure the local server is up before making API calls.
-    /// </summary>
-    private static async Task<bool> WaitForServerReady(string baseUrl, int maxAttempts = 40)
-    {
-        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
-
-        for (int i = 0; i < maxAttempts; i++)
-        {
-            try
-            {
-                var response = await client.GetAsync($"{baseUrl}/");
-                if (response.IsSuccessStatusCode)
-                    return true;
-            }
-            catch
-            {
-                // Server noch nicht bereit, weiter versuchen
-            }
-
-            await Task.Delay(250);
-        }
-
-        return false;
     }
 
     /// <summary>
@@ -391,6 +288,9 @@ public partial class App : Application
             };
 
             await Database.SaveUserData(req);
+            
+            AppData.Config.LastLoggedInUser = AppData.CurrentUser;
+            AppConfig.Save(AppData.Config);
         }
         catch (Exception ex)
         {
@@ -469,7 +369,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             var log = new Message("An error occurred while scanning the folder: " + ex.Message, DateTime.Now, "ERROR");
-            new AppLogger().LogNewMassage(log);
+            _logger.LogNewMassage(log);
         }
 
         return 0;

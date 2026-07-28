@@ -45,6 +45,8 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _scanFolderCheckBoxValue = AppData.Settings.ScanFolderOnStartup;
 
     private readonly DialogService _dialogService;
+    
+    private readonly AppLogger _logger = AppLogger.Instance;
 
     public void UpdateHideIcon()
     {
@@ -140,7 +142,8 @@ public partial class MainWindowViewModel : ObservableObject
             MediaType = mediaType,
             Url = "N/A",
             IsPlayable = true,
-            DownloadedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            DownloadedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            Title = Path.GetFileNameWithoutExtension(path)
         };
 
         var media = await Database.CreateDownloadedMedia(req);
@@ -326,7 +329,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (!finished)
         {
             var log = new Message($"Codec conversion for file '{path}' was cancelled.", DateTime.Now, "WARNING");
-            new AppLogger().LogNewMassage(log);
+            _logger.LogNewMassage(log);
         }
         else
         {
@@ -364,7 +367,7 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             var log = new Message($"Error while scanning folder: {ex.Message}", DateTime.Now, "ERROR");
-            new AppLogger().LogNewMassage(log);
+            _logger.LogNewMassage(log);
             await _dialogService.ShowAlertAsync($"An error occurred while scanning the folder: {ex.Message}");
         }
     }
@@ -477,5 +480,12 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task ClearFilter()
     {
         await MediaFilter.ClearFilter();
+    }
+
+    [RelayCommand]
+    private async Task EditAppConfig()
+    {
+        var editConfigWindow = new EditConfigWindow();
+        await editConfigWindow.ShowDialog(_window);
     }
 }

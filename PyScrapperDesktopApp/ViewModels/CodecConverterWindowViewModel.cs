@@ -42,7 +42,7 @@ public partial class CodecConverterWindowViewModel : ObservableObject
     
     private Process? _process;
     
-    private readonly AppLogger _logger = new();
+    private readonly AppLogger _logger = AppLogger.Instance;
 
     /// <summary>
     /// CancelConversion method that is executed when the user clicks the cancel button during the conversion process.

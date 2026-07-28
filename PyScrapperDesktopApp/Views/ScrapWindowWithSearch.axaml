@@ -32,33 +32,30 @@
                         <RowDefinition Height="*"/>      
                 </Grid.RowDefinitions>
                 
-                <Grid Grid.Row="0" Name="SearchGrid">
-                <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"></RowDefinition>
-                        <RowDefinition Height="Auto"></RowDefinition>
-                        <RowDefinition Height="Auto"></RowDefinition>
-                        <RowDefinition Height="*"></RowDefinition>
-                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Name="SearchGrid" HorizontalAlignment="Center" VerticalAlignment="Stretch" Margin="50">
+                        <Border Classes="Cell" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                                        <StackPanel Grid.Row="0" Classes="UICell">
+                                                <TextBlock Text="Enter Query: " Classes="UILabel"/>
+                                                <TextBox Classes="UI" Text="{Binding SearchQuery}"/>
+                                        </StackPanel>
                 
-                <StackPanel Grid.Row="0" Classes="UICell">
-                        <TextBlock Text="Enter Query: " Classes="UILabel"/>
-                        <TextBox Classes="UI" Text="{Binding SearchQuery}"/>
-                </StackPanel>
+                                        <StackPanel Grid.Row="1" Classes="UICell">
+                                                <TextBlock Text="Search results: " Classes="UILabel"/>
+                                                <NumericUpDown Minimum="1" Value="{Binding SearchResultsCount}" Maximum="25" AllowSpin="True" FormatString="0"/>
+                                        </StackPanel>
                 
-                <StackPanel Grid.Row="1" Classes="UICell">
-                        <TextBlock Text="Search results: " Classes="UILabel"/>
-                        <NumericUpDown Minimum="1" Value="{Binding SearchResultsCount}" Maximum="25" AllowSpin="True" FormatString="0"/>
-                </StackPanel>
+                                        <StackPanel Grid.Row="2" Classes="UICell" x:Name="MediaTypePanel">
+                                                <TextBlock Text="Select Mediatype: " Classes="UILabel"/>
+                                                <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
+                                        </StackPanel>
                 
-                <StackPanel Grid.Row="2" Classes="UICell" x:Name="MediaTypePanel">
-                        <TextBlock Text="Select Mediatype: " Classes="UILabel"/>
-                        <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
-                </StackPanel>
-                
-                <StackPanel Margin="5" Grid.Row="3" Classes="UICell">
-                        <Button Classes="primary" IsDefault="True" x:Name="EnterButton" Content="Search"/>
-                        <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
-                </StackPanel>
+                                        <StackPanel Margin="5" Grid.Row="3" Classes="UICell">
+                                                <Button Classes="primary" IsDefault="True" x:Name="EnterButton" Content="Search"/>
+                                                <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
+                                        </StackPanel>
+                                </StackPanel>
+                        </Border>
                 </Grid>
                 
         <ScrollViewer Name="ResultsScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left" IsVisible="False">
@@ -66,29 +63,27 @@
                 <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"></RowDefinition>
                         <RowDefinition Height="*"></RowDefinition>
-                        <RowDefinition Height="Auto"></RowDefinition>
                 </Grid.RowDefinitions>
                 
                 <StackPanel Grid.Row="0" Classes="UICell">
                         <TextBlock Text="Select videos to scrap: " Classes="UILabel"/>
                         <Button Classes="primary" IsDefault="True" Content="Done" Command="{Binding ScrapCommand}"/>
-                </StackPanel>
-                
-                <ListBox Grid.Row="1" SelectionMode="Multiple, Toggle" ItemsSource="{Binding Items}" SelectedItems="{Binding SelectedItems}">
-                        <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" Spacing="10">
-                                                <Image Stretch="Uniform" MaxHeight="100" MaxWidth="200" Source="{Binding ThumbnailBitmap}"/>
-                                                <TextBlock Text="{Binding title}" Classes="UIValue"/>
-                                                <TextBlock Text="{Binding url}" Classes="UIValue"/>
-                                        </StackPanel>
-                                </DataTemplate>
-                        </ListBox.ItemTemplate>
-                </ListBox>
-                
-                <StackPanel Margin="5" Grid.Row="2" Classes="UICell">
                         <Button Classes="primary" Name="BackToSearch" Content="Back"/>
                 </StackPanel>
+                
+                <Border Grid.Row="1" Classes="Cell">
+                        <ListBox SelectionMode="Multiple, Toggle" ItemsSource="{Binding Items}" SelectedItems="{Binding SelectedItems}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <Image Stretch="Uniform" MaxHeight="100" MaxWidth="200" Source="{Binding ThumbnailBitmap}"/>
+                                                        <TextBlock Text="{Binding title}" Classes="UIValue"/>
+                                                        <TextBlock Text="{Binding url}" Classes="UIValue"/>
+                                                </StackPanel>
+                                        </DataTemplate>
+                                </ListBox.ItemTemplate>
+                        </ListBox>
+                </Border>
         </Grid>
         </ScrollViewer>
                 

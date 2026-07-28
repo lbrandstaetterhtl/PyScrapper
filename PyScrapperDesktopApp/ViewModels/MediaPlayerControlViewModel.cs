@@ -85,7 +85,7 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
     public MediaPlayer MediaPlayer;
 
     public event EventHandler<bool>? VideoAvailableChanged;
-    private readonly AppLogger _logger = new();
+    private readonly AppLogger _logger = AppLogger.Instance;
     private bool _volumeInitialized = false;
     private Playlist _playlist;
 

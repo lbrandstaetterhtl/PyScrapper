@@ -14,7 +14,7 @@ namespace PyScrapperDesktopApp.Views;
 public partial class MainWindow : Window
 {
     private MainWindowViewModel _vm;
-    private readonly AppLogger _logger = new();
+    private readonly AppLogger _logger = AppLogger.Instance;
     
     private DialogService _ds;
 

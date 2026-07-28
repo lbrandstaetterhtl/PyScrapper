@@ -41,7 +41,7 @@ public class AudioPlayer : IDisposable
     public event EventHandler<bool> VideoAvailableChanged;
     
     private Media? _currentMedia;
-    private static readonly AppLogger _logger = new();
+    private static readonly AppLogger _logger = AppLogger.Instance;
 
     /// <summary>
     /// Initializes the AudioPlayer by setting up the LibVLC instance with specific options, creating a MediaPlayer, and subscribing to relevant events for handling track changes and video availability.

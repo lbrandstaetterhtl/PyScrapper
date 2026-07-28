@@ -1,59 +1,127 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
-using Tmds.DBus.Protocol;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PyScrapperDesktopApp.Models;
 
 /// <summary>
-/// Logger class responsible for logging messages to a file in the application's logs directory.
-/// It ensures that the logs directory exists before writing log entries, and formats log entries with a timestamp, message type, and message text.
+/// Thread-safe logger that queues messages and writes them to app.log on a single
+/// background thread. This prevents "file is being used by another process" errors
+/// that occur when multiple threads try to write to the same file at once.
 /// </summary>
-public class AppLogger : Interfaces.IAppLogger
+public class AppLogger : Interfaces.IAppLogger, IDisposable
 {
+    private static readonly Lazy<AppLogger> _instance = new(() => new AppLogger());
+    public static AppLogger Instance => _instance.Value;
+
+    private readonly ConcurrentQueue<string> _queue = new();
+
+    private readonly SemaphoreSlim _signal = new(0);
+
+    private readonly CancellationTokenSource _cts = new();
+
+    private readonly Task _worker;
+
+    private readonly string _logFilePath;
+    private AppLogger()
+    {
+        _logFilePath = Path.Combine(AppData.AppLogsPath, "app.log");
+        Directory.CreateDirectory(Path.GetDirectoryName(_logFilePath)!);
+
+        _worker = Task.Run(ProcessQueueAsync);
+    }
+
     /// <summary>
-    /// Logs a new message to the app.log file in the application's logs directory. If the logs directory does not exist, it creates it before writing the log entry.
-    /// Each log entry is formatted with a timestamp, message type, and message text.
+    /// Enqueues a message. Returns immediately — the caller does NOT wait for disk I/O.
+    /// Safe to call from any thread.
     /// </summary>
-    /// <param name="massage"></param>
     public void LogNewMassage(Message massage)
     {
-        var logFilePath = Path.Combine(AppData.AppLogsPath, @"app.log");
-        
-        if (Directory.Exists(Path.GetDirectoryName(logFilePath)))
+        var logEntry = $"{massage.Timestamp:yyyy-MM-dd HH:mm:ss} [{massage.Type}] {massage.Text}";
+        _queue.Enqueue(logEntry);
+        _signal.Release();
+    }
+
+    /// <summary>
+    /// Same as LogNewMassage but also prints to the console for real-time debugging.
+    /// </summary>
+    public void LogDebugMessage(Message massage)
+    {
+        var logEntry = $"{massage.Timestamp:yyyy-MM-dd HH:mm:ss} [{massage.Type}] {massage.Text}";
+        Console.WriteLine(logEntry);
+
+        _queue.Enqueue(logEntry);
+        _signal.Release();
+    }
+
+    /// <summary>
+    /// The single consumer loop. Runs until shutdown. This is the ONLY code
+    /// that touches the file, so there is never a write conflict.
+    /// </summary>
+    private async Task ProcessQueueAsync()
+    {
+        while (true)
         {
-            var logEntry = $"{massage.Timestamp:yyyy-MM-dd HH:mm:ss} [{massage.Type}] {massage.Text}";
-            File.AppendAllText(logFilePath, logEntry + Environment.NewLine);
+            try
+            {
+                await _signal.WaitAsync(_cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                break; 
+            }
+            
+            while (_queue.TryDequeue(out var entry))
+            {
+                try
+                {
+                    File.AppendAllText(_logFilePath, entry + Environment.NewLine);
+                }
+                catch (IOException)
+                {
+                    _queue.Enqueue(entry);
+                    await Task.Delay(50);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    
+                    Console.WriteLine($"[AppLogger] Failed to write log: {ex.Message}");
+                }
+            }
         }
-        else
+        
+        while (_queue.TryDequeue(out var entry))
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(logFilePath));
-            var logEntry = $"{massage.Timestamp:yyyy-MM-dd HH:mm:ss} [{massage.Type}] {massage.Text}";
-            File.AppendAllText(logFilePath, logEntry + Environment.NewLine);
+            try { File.AppendAllText(_logFilePath, entry + Environment.NewLine); }
+            catch {}
         }
     }
 
     /// <summary>
-    /// Logs a new debug message to the console and also to the app.log file using the LogNewMassage method.
-    /// The log entry is formatted with a timestamp, message type, and message text, and is printed to the console for real-time debugging purposes.
+    /// Call this on app shutdown to flush remaining logs and stop the background thread.
     /// </summary>
-    /// <param name="massage"></param>
-    public void LogDebugMessage(Message massage)
+    public void Dispose()
     {
-        var logger = new AppLogger();
-        var logEntry = $"{massage.Timestamp:yyyy-MM-dd HH:mm:ss} [{massage.Type}] {massage.Text}";
-        Console.WriteLine(logEntry);
-        
-        logger.LogNewMassage(massage);
+        _cts.Cancel();
+        _signal.Release();
+        try
+        {
+            _worker.Wait(TimeSpan.FromSeconds(5));
+        }
+        catch {}
+
+        _cts.Dispose();
+        _signal.Dispose();
     }
 }
 
 /// <summary>
-/// Class representing a log message, with properties for the message text, timestamp, and message type (e.g., INFO, ERROR, etc.).
+/// Represents a single log message with text, timestamp, and type (INFO, ERROR, etc.).
 /// </summary>
-/// <param name="text"></param>
-/// <param name="timestamp"></param>
-/// <param name="type"></param>
-public class Message (string text, DateTime timestamp, string type)
+public class Message(string text, DateTime timestamp, string type)
 {
     public string Text => text;
     public DateTime Timestamp => timestamp;

@@ -76,6 +76,7 @@
                         <MenuItem Header="Default Downloads Path" Command="{Binding EditDownloadsPathCommand}"/>
                         <CheckBox Content="Scan downloads folder at startup" IsChecked="{Binding ScanFolderCheckBoxValue}" x:Name="ScanFolderCheckBox" ToolTip.Tip="This option will slow down the startup of the application if checked!"/>
                         <MenuItem Header="Toggle Dark/Light Mode" Command="{Binding ToggleThemeCommand}"/>
+                        <MenuItem Header="Edit Application Config" Command="{Binding EditAppConfigCommand}"/>
                     </MenuItem>
                 </Menu>
 

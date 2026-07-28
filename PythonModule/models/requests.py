@@ -58,7 +58,6 @@ class CreateDownloadedMediaRequest(BaseModel):
 class CreateSettingsRequest(BaseModel):
     user_identifier: str
     default_download_path: str
-    server_url: str
     dark_mode_enabled: bool
     scan_folder_on_startup: bool
 

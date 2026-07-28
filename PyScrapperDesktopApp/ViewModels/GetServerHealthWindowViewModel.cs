@@ -20,7 +20,7 @@ namespace PyScrapperDesktopApp.ViewModels;
 public partial class GetServerHealthWindowViewModel : ObservableObject
 {
     private readonly ApiClient _apiClient;
-    private readonly AppLogger _logger = new();
+    private readonly AppLogger _logger = AppLogger.Instance;
 
     private CancellationTokenSource _cts;
     

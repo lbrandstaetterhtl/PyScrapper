@@ -51,7 +51,8 @@ class DownloadProcessor():
             ):
         try:
             out_path = self.downloadRequest.download_path
-            os.makedirs(out_path, exist_ok=True)
+            dir_path = os.path.dirname(out_path)
+            os.makedirs(dir_path, exist_ok=True)
 
             file = self.downloadRequest.filename
             self.downloadRequest.mediatype = utils.addpointtomediatype(mediatype=self.downloadRequest.mediatype)

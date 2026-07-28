@@ -33,6 +33,8 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     
     private DialogService _dialogService;
     
+    private readonly AppLogger _logger = AppLogger.Instance;
+    
     /// <summary>
     /// Constructor for the ProgressBarWindowViewModel class, which initializes the API client used for fetching download progress data. This class is responsible for managing the state and logic of a progress bar window that displays the download progress, status, and speed of a download operation.
     /// It also handles cancellation of the progress tracking when necessary.
@@ -82,7 +84,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                                 {
                                     Status = $"Error: {progressData.ErrorMessage}";
                                     var log = new Message(progressData.ErrorMessage, DateTime.Now, "ERROR");
-                                    new AppLogger().LogNewMassage(log);
+                                    _logger.LogNewMassage(log);
                                     errorWhileDownloading = true;
                                     StopProgress();
                                 }
@@ -106,7 +108,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                         catch (OperationCanceledException)
                         {
                             var log = new Message("Progress tracking cancelled", DateTime.Now, "INFO");
-                            new AppLogger().LogNewMassage(log);
+                            _logger.LogNewMassage(log);
                             break;
                         }
                         catch (Exception e)
@@ -121,7 +123,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                         catch (OperationCanceledException)
                         {
                             var log = new Message("Progress tracking cancelled during delay", DateTime.Now, "INFO");
-                            new AppLogger().LogNewMassage(log);
+                            _logger.LogNewMassage(log);
                             break;
                         }
                     }
@@ -132,7 +134,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
             catch (Exception e)
             {
                 var log = new Message("Error while tracking progress: " + e.Message, DateTime.Now, "ERROR");
-                new AppLogger().LogNewMassage(log);
+                _logger.LogNewMassage(log);
             
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => { Status = $"Error: {e.Message}"; });
 

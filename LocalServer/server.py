@@ -320,7 +320,7 @@ def create_app_tables():
                        Identifier TEXT NOT NULL PRIMARY KEY,
                        UserIdentifier TEXT NOT NULL,
                        Url TEXT,
-                       Title TEXT NOT NULL UNIQUE,
+                       Title TEXT NOT NULL,
                        MediaType TEXT NOT NULL,
                        DownloadedAt TEXT,
                        DownloadPath TEXT NOT NULL UNIQUE,
@@ -355,7 +355,6 @@ def create_app_tables():
                        Identifier TEXT NOT NULL PRIMARY KEY,
                        UserIdentifier TEXT NOT NULL UNIQUE,
                        DownloadPath TEXT NOT NULL,
-                       ServerUrl TEXT NOT NULL,
                        DarkModeEnabled BOOLEAN NOT NULL,
                        ScanFolderOnStartup BOOLEAN NOT NULL,
                        FOREIGN KEY (UserIdentifier) REFERENCES Users (Identifier) ON DELETE CASCADE
@@ -393,7 +392,6 @@ class PlaylistMediaModel(BaseModel):
 class SettingsModel(BaseModel):
     Identifier: str
     DownloadPath: str
-    ServerUrl: str
     DarkModeEnabled: bool
     ScanFolderOnStartup: bool
 
@@ -453,14 +451,13 @@ def save_user_data(request: SaveUserDataRequest):
 
         cursor.execute(
             """INSERT INTO Settings
-               (Identifier, UserIdentifier, DownloadPath, ServerUrl, DarkModeEnabled, ScanFolderOnStartup)
-               VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(Identifier) DO
+               (Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup)
+               VALUES (?, ?, ?, ?, ?) ON CONFLICT(Identifier) DO
             UPDATE SET
                 DownloadPath = excluded.DownloadPath,
-                ServerUrl = excluded.ServerUrl,
                 DarkModeEnabled = excluded.DarkModeEnabled,
                 ScanFolderOnStartup = excluded.ScanFolderOnStartup""",
-            (setting.Identifier, user_identifier, setting.DownloadPath, setting.ServerUrl,
+            (setting.Identifier, user_identifier, setting.DownloadPath,
              setting.DarkModeEnabled, setting.ScanFolderOnStartup)
         )
 
@@ -813,8 +810,8 @@ async def handle_create_setting_req(key: str, req: CreateSettingsRequest):
         cursor = conn.cursor()
 
         cursor.execute(
-            """INSERT INTO Settings (Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup, ServerUrl) VALUES (?, ?, ?, ?, ?, ?)""",
-            (identifier, req.user_identifier, req.default_download_path, req.dark_mode_enabled, req.scan_folder_on_startup, req.server_url)
+            """INSERT INTO Settings (Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup) VALUES (?, ?, ?, ?, ?)""",
+            (identifier, req.user_identifier, req.default_download_path, req.dark_mode_enabled, req.scan_folder_on_startup)
         )
         conn.commit()
         conn.close()
@@ -852,7 +849,7 @@ async def get_setting(user_identifier: str):
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, ServerUrl, DarkModeEnabled, ScanFolderOnStartup FROM Settings WHERE UserIdentifier = ?", (user_identifier,))
+        cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings WHERE UserIdentifier = ?", (user_identifier,))
         row = cursor.fetchone()
         conn.close()
 
@@ -878,7 +875,7 @@ async def get_all_settings(key: str):
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, ServerUrl, DarkModeEnabled, ScanFolderOnStartup FROM Settings")
+        cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings")
         rows = cursor.fetchall()
         conn.close()
 

@@ -14,6 +14,8 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
 
     [ObservableProperty] 
     private string _password = "";
+    
+    private readonly AppLogger _logger = AppLogger.Instance;
 
     [RelayCommand]
     private async Task Login()
@@ -39,9 +41,8 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
         if (response)
         {
             var log = new Message("User logged in successfully", DateTime.Now, "INFO");
-            var logger = new AppLogger();
 
-            logger.LogNewMassage(log);
+            _logger.LogNewMassage(log);
 
             window.Result = LoginResult.Success;
             window.Close();
@@ -49,9 +50,8 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
         else
         {
             var log = new Message("User login failed", DateTime.Now, "ERROR");
-            var logger = new AppLogger();
 
-            logger.LogNewMassage(log);
+            _logger.LogNewMassage(log);
 
             await dialogService.ShowAlertAsync("Login failed. Please check your username and password.");
         }

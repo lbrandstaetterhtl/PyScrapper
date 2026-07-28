@@ -43,7 +43,6 @@ class SettingsResponse(BaseModel):
     Identifier: str
     UserIdentifier: str
     DownloadPath: str
-    ServerUrl: str
     DarkModeEnabled: bool
     ScanFolderOnStartup: bool
 

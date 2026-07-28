@@ -97,9 +97,6 @@ public class CreateSettingRequest
     [JsonPropertyName("dark_mode_enabled")]
     public bool DarkModeEnabled { get; set; }
     
-    [JsonPropertyName("server_url")]
-    public string? ServerUrl { get; set; }
-    
     [JsonPropertyName("scan_folder_on_startup")]
     public bool ScanFolderOnStartup { get; set; }
 }
