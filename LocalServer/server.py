@@ -13,12 +13,11 @@ from PythonModule.models.responses import (
     CreateResponse,
     CreatePlaylistMediaResponse,
     LoginResponse,
-    UserResponse,
-    UserWithCreatedAtResponse,
     PlaylistResponse,
     DownloadedMediaResponse,
     SettingsResponse,
-    PlaylistMediaResponse
+    PlaylistMediaResponse,
+    UserResponse
 )
 from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest, CreateUserRequest, CreatePlaylistRequest, CreateDownloadedMediaRequest, CreateSettingsRequest, CreatePlaylistMediaRequest, DeletePlaylistMediaRequest, RegisterRequest, LoginRequest
 from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
@@ -417,58 +416,58 @@ def save_user_data(request: SaveUserDataRequest):
     cursor = conn.cursor()
 
     try:
-        # Delete old data
-        cursor.execute("DELETE FROM Playlists WHERE UserIdentifier = ?", (user_identifier,))
-        cursor.execute("DELETE FROM DownloadedMedias WHERE UserIdentifier = ?", (user_identifier,))
-        cursor.execute("DELETE FROM Settings WHERE UserIdentifier = ?", (user_identifier,))
-        cursor.execute(
-            "DELETE FROM PlaylistMedias WHERE PlaylistIdentifier IN (SELECT Identifier FROM Playlists WHERE UserIdentifier = ?)",
-            (user_identifier,)
-        )
-
-        # Insert medias - verwende .Attribut statt ["Key"]
         for media in medias:
             cursor.execute(
-                """INSERT INTO DownloadedMedias
+                """INSERT INTO DownloadedMedias 
                    (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Title)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(Identifier) DO UPDATE SET
+                   Url = excluded.Url,
+                   MediaType = excluded.MediaType,
+                   DownloadedAt = excluded.DownloadedAt,
+                   DownloadPath = excluded.DownloadPath,
+                   IsPlayable = excluded.IsPlayable,
+                   Title = excluded.Title""",
                 (media.Identifier, user_identifier, media.Url, media.MediaType,
                  media.DownloadedAt, media.DownloadPath, media.IsPlayable, media.Title)
             )
 
-        # Insert playlists
         for playlist in playlists:
             cursor.execute(
                 """INSERT INTO Playlists (Identifier, UserIdentifier, Name, Description)
-                   VALUES (?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?) ON CONFLICT(Identifier) DO
+                UPDATE SET
+                    Name = excluded.Name,
+                    Description = excluded.Description""",
                 (playlist.Identifier, user_identifier, playlist.Name, playlist.Description)
             )
 
-        # Insert playlist medias
         for playlist_media in playlist_medias:
             cursor.execute(
                 """INSERT INTO PlaylistMedias (PlaylistIdentifier, MediaIdentifier, Position)
-                   VALUES (?, ?, ?)""",
+                   VALUES (?, ?, ?) ON CONFLICT(PlaylistIdentifier, MediaIdentifier) DO
+                UPDATE SET
+                    Position = excluded.Position""",
                 (playlist_media.PlaylistIdentifier, playlist_media.MediaIdentifier, playlist_media.Position)
             )
 
-        # Insert settings
         cursor.execute(
             """INSERT INTO Settings
                (Identifier, UserIdentifier, DownloadPath, ServerUrl, DarkModeEnabled, ScanFolderOnStartup)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(Identifier) DO
+            UPDATE SET
+                DownloadPath = excluded.DownloadPath,
+                ServerUrl = excluded.ServerUrl,
+                DarkModeEnabled = excluded.DarkModeEnabled,
+                ScanFolderOnStartup = excluded.ScanFolderOnStartup""",
             (setting.Identifier, user_identifier, setting.DownloadPath, setting.ServerUrl,
              setting.DarkModeEnabled, setting.ScanFolderOnStartup)
         )
 
         conn.commit()
         conn.close()
-
     except Exception as e:
-        conn.rollback()
-        conn.close()
-        raise
-
+        raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 @app.post("/save/{key}")
 async def handle_save_user_data(key: str, req: SaveUserDataRequest):
