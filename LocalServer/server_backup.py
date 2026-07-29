@@ -6,7 +6,7 @@ import fastapi
 from PythonModule.models.settings import PROGRESSDICT
 from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest, CreateUserRequest, CreatePlaylistRequest, CreateDownloadedMediaRequest, CreateSettingsRequest, CreatePlaylistMediaRequest, DeletePlaylistMediaRequest
 from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
-from PythonModule import Session
+from PythonModule.core.request import Session
 from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException

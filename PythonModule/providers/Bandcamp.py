@@ -1,17 +1,18 @@
-from PythonModule.emergencyBrowser import BrowserButtonPress
 import PythonModule.core as core
+
 from PythonModule.models.requests import SearchFilters
 from PythonModule.models.exceptions import InvalidURL
 import urllib.parse, urllib.request, urllib.error
 import re
 
 
+class BandCampSearchError(Exception): ...
 
 
 def search(
         search: str,
         filters: SearchFilters,
-        session,
+        session: core.request.Session.Session,
         top: int = 5
 ) -> list[dict]:
     
@@ -19,28 +20,47 @@ def search(
     if not isinstance(filters, SearchFilters): raise ValueError("'filters' must be from type SearchFilters")
     if not isinstance(top, int) or top < 0: raise ValueError("'top' must be an integer above 0")
     
-    
-    
     searchURL = build_search_url(
-        search=search,
-    )
-
+                search=search,
+            )
     
-    html = core.get_html(
-        url=searchURL,
-        session=session
-    )
+    def _getSearchHtml():
+        html = core.general.Html.getHtml(
+            url=searchURL,
+            session=session
+        )
+        return html
          
     
-
     
     
-    results= get_searchResults(
-        html=html,
-        top=top,
-        filters=filters   
-    )
+    try:
+        results= get_searchResults(
+            html=_getSearchHtml(),
+            top=top,
+            filters=filters   
+        )
+#Sometimes Bandcamp hates python and wants javascript to be executed
+    except Exception:
+        
+        core.request.EmergencyBrowser.BrowserButtonPress(
+            url=searchURL,
+            button_name="",
+            headless=False,
+            wait_after_click_ms=20000,
+            wait_before_click_ms=20000
+        )
+        session.reloadCookies()
+        
+        results= get_searchResults(
+                    html=_getSearchHtml(),
+                    top=top,
+                    filters=filters
+                )
+        
 
+
+    print(results)
     return results
        
 
@@ -80,16 +100,28 @@ def get_searchResults(
     
 
 
-
+    
     result_items_pattern = r'<ul class="result-items">(.*?)</ul>'
 
+    
+    try:
+        allTracks = core.general.RegexFind.searchBlocks(
+            pattern=result_items_pattern,
+            searchBlock=html,
+            returnException=True
+        )
 
-    allTracks = searchBlocks(
-        pattern=result_items_pattern,
-        searchBlock=html
-    )
-    if allTracks is None:
-        raise ValueError("Didn't find tracks with given html")
+    except core.general.RegexFind.RegexSearchError as error:
+        raise BandCampSearchError(
+            "BandcampSearch: Search results were not found. "
+            "Bandcamp may have returned a JavaScript challenge."
+        ) from error
+
+    if not allTracks:
+        raise BandCampSearchError(
+            "BandcampSearch: Didn't find tracks with given HTML"
+        )
+
 
 
     tracks = re.findall(
@@ -101,22 +133,22 @@ def get_searchResults(
     
 
     for track in tracks:
+        
         if len(results) >= top:
             break
         type_pattern = r'data-search=.*?(?:&quot;|")type(?:&quot;|")\s*:\s*(?:&quot;|")(.*?)(?:&quot;|")'
     
         
        
-        trackType = searchBlocks(
+        trackType = core.general.RegexFind.searchBlocks(
             pattern=type_pattern,
             searchBlock=track
         )
         MyType = typeMapping(trackType)
-        if MyType is None:
-                
-            continue
-    
-        if filters.tags:
+        
+#Default "nothing" that gets sended for tags is [''] that's why filtering for that    
+        if filters.tags != ['']:
+            
             if MyType not in filters.tags:
                 continue
             
@@ -142,18 +174,18 @@ def buildResult(
     dictionary = {}
     thumbnail_pattern = r'<img src="(.*?)">'
 
-    dictionary['thumbnail'] = searchBlocks(
+    dictionary['thumbnail'] = core.general.RegexFind.searchBlocks(
         pattern=thumbnail_pattern,
         searchBlock=track
     )
     titel_pattern = r'<div class="heading">.*?<a.*?>(.*?)</a>'
-    dictionary['title'] = searchBlocks(
+    dictionary['title'] = core.general.RegexFind.searchBlocks(
         pattern=titel_pattern,
         searchBlock=track
     )
 
     url_pattern = r'<div class="heading">.*?<a href="(.*?)"'
-    dictionary['url'] = searchBlocks(
+    dictionary['url'] = core.general.RegexFind.searchBlocks(
         pattern=url_pattern,
         searchBlock=track
     )
@@ -166,7 +198,8 @@ def buildResult(
 def typeMapping(givenType: str) -> str:
     mapping = {
         "t" : "track",
-        "a" : "album"
+        "a" : "album",
+        "b" : "creator"
     }
     return mapping.get(givenType, None)
 
@@ -174,17 +207,6 @@ def typeMapping(givenType: str) -> str:
     
 
 
-def searchBlocks(
-        pattern: str,
-        searchBlock: str
-):
-    match = re.search(pattern, searchBlock, re.DOTALL)
-
-    if match:
-        result_block = match.group(1).strip()
-        return result_block
-    else:
-        return None
 
 
 
@@ -205,10 +227,10 @@ def validateURL(
         return "albumURL"
     
     else:
-        supported = ["streamURL", "trackURL", "albumURL"]
+
         raise InvalidURL(
             url=url,
-            supported=supported
+            supported=["streamURL", "trackURL", "albumURL"]
         )
     
 
@@ -227,7 +249,7 @@ def extractStreamingURL(
             return [streamingURL],[None]
         
         case "trackURL":
-            html = core.get_html(
+            html = core.general.Html.getHtml(
             url=url,
             session=session
             )
@@ -235,7 +257,7 @@ def extractStreamingURL(
 
             streamurl_pattern = r'(https://t4.bcbits.com/stream/.*?);}'
 
-            streamingUrl = searchBlocks(
+            streamingUrl = core.general.RegexFind.searchBlocks(
                 pattern=streamurl_pattern,
                 searchBlock=html
             )
@@ -289,7 +311,7 @@ def download(
 
 
         try:
-            core.download_to_file(
+            core.download.File._downloadToFile(
                 request=request,
                 session=session,
                 out_file=out_file,
@@ -300,23 +322,23 @@ def download(
             if e.code == 403 and retry and urlType !="streamURL":
                 retry = False
 
-                trackHTML = core.get_html(
+                trackHTML = core.general.Html.getHtml(
                     url=trackURL,
                     session=session
                 )
 
                 embeddedplayer_pattern = r'<meta property="og:video".*?content="(https://bandcamp.com/EmbeddedPlayer.*?)">'
-                embeddedPlayerUrl = searchBlocks(
+                embeddedPlayerUrl = core.general.RegexFind.searchBlocks(
                     pattern=embeddedplayer_pattern,
                     searchBlock=trackHTML
                 )
                 if not embeddedPlayerUrl:
                     raise Exception
 
-                BrowserButtonPress(url=embeddedPlayerUrl, button_name="#big_play_button")
+                core.request.EmergencyBrowser.BrowserButtonPress(url=embeddedPlayerUrl, button_name="#big_play_button")
 
 
-                core.download_to_file(
+                core.download.File._downloadToFile(
                     request=request,
                     session=session,
                     out_file=out_file,

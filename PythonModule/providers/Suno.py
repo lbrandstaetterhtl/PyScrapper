@@ -1,7 +1,7 @@
 import urllib.request, urllib.error, urllib.parse
 import re, os
 import time
-from PythonModule.core import get_html
+import PythonModule.core as core
 
 
 class SunoError(Exception): ...
@@ -76,7 +76,7 @@ def search_creator(
         )
     
     try:
-        with session.open(request) as response:
+        with session.open(request=request) as response:
             html = response.read(1024 * 512).decode("utf-8")
             return html
         
@@ -88,73 +88,7 @@ def search_creator(
         raise urllib.error.URLError(f"URL ERROR {e}")
     
 
-def download_to_file(
-        url: str,
-        out_file: str,
-        session = None,
-        chunk_size: int = 1024 * 512,
-        progress_dict: dict = None
 
-        
-):
-    if not url:
-        raise SunoNotEnoughArguments("No url was given")
-    if not out_file:
-        raise SunoNotEnoughArguments("Not enough arguments were given")
-    if not session:
-        raise SunoNotEnoughArguments("No session was given")
-    if not progress_dict:
-        raise SunoNotEnoughArguments("No progress dict was given")
-
-    request = urllib.request.Request(
-        url,
-        method="GET",
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-        )
-
-    try:
-        with session.open(request) as response, open(out_file, "wb") as f:
-            progress_dict['status'] = "downloading..."
-            total_size = response.headers.get("Content-Length")
-            downloaded: int = 0
-            start_time = time.time()
-
-            progress_dict['totalBytes'] = int(total_size)
-
-            if total_size is not None:
-                total_size = int(total_size)
-            
-            while True:
-                chunk = response.read(chunk_size)
-                if not chunk:
-                    break
-
-                f.write(chunk)
-
-                downloaded += len(chunk)
-                percent = 100 / total_size * downloaded
-                elapsed_time = time.time() - start_time
-                
-
-
-                progress_dict['downloadProgress'] = percent
-                progress_dict['downloadedBytes'] = downloaded
-
-                speed = downloaded / elapsed_time if elapsed_time > 0 else 0
-                if speed:
-                    progress_dict["speed"] = round(speed / 1024 / 1024, 2)
-                
-
-        progress_dict['status'] = "complete"
-
-    except urllib.error.HTTPError as e:
-        raise urllib.error.HTTPError(f"HTTP Error {e}")
-    
-    except urllib.error.URLError as e:
-        raise urllib.error.URLError(f"URL ERROR {e}")
-    
 
 
 
@@ -178,7 +112,7 @@ def download (
         raise SunoNotEnoughArguments("No progress dict was given")
     
 
-    html = get_html(url=url, session=session)
+    html = core.general.Html.getHtml(url=url, session=session)
 
     strip = url.replace("https://suno.com/song/", "")
     identifier = strip
@@ -188,5 +122,5 @@ def download (
         raise SunoError(f"Destination out file {out_file} already exists. No Download has started")
 
     
-    download_to_file(url=file, out_file=out_file, session=session, progress_dict=progress_dict)
+    core.download.File._downloadToFile(url=file, out_file=out_file, session=session, progress_dict=progress_dict)
 

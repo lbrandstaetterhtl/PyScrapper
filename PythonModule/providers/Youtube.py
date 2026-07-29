@@ -7,7 +7,7 @@ import re
 import os
 import shutil
 import pathlib
-from PythonModule.core import get_html
+from PythonModule.core.general.Html import getHtml
 
 
 def find_ffmpeg() -> str | None:
@@ -69,7 +69,7 @@ def search(
     
 
 
-    html:str = get_html(url=search_url, session=session)
+    html:str = getHtml(url=search_url, session=session)
     jsondata: dict = search_json(html=html, keyword="var ytInitialData = ")
 
 
@@ -226,17 +226,31 @@ def download(
 
 
     ydl_opts = {
-#bv = best video, ba = best audio
-        "format": "bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]",
+        # best video + best audio, fallback auf fertige mp4
+        "format": "bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b",
         "outtmpl": out_file,
         "merge_output_format": "mp4",
         "progress_hooks": [build_progress_hook(progress_dict)],
+
+        # Sehr hilfreich bei YouTube-Problemen
+        "cookiesfrombrowser": ("firefox",),
+
+        # Nur das einzelne Video, nicht versehentlich Playlist
+        "noplaylist": True,
+
+        # Robuster
+        "retries": 10,
+        "fragment_retries": 10,
+        "socket_timeout": 30,
+
+        # Gut zum Debuggen bei Problemen
+        "verbose": True,
+
+        # ffmpeg Postprocessing
         "postprocessors": [{
             "key": "FFmpegVideoConvertor",
             "preferedformat": "mp4",
         }],
-
-
     }
 
     ffmpeg = find_ffmpeg()

@@ -1,4 +1,4 @@
-from PythonModule.core import get_html
+import PythonModule.core as core
 import urllib.parse, urllib.request, urllib.error
 import json, os, time
 
@@ -13,7 +13,7 @@ def search(
         search: str,
         session=None,
         top=5,
-        chunk_size: int = 1024*512
+
 )-> list[dict]:
     
     if not search:
@@ -36,7 +36,7 @@ def search(
         url,
         method="GET"
     )
-    with session.open(request) as response:
+    with session.open(request=request) as response:
         data = json.loads(response.read().decode("utf-8"))
     docs = data.get('response', {}).get("docs", [])
     docs_new = []
@@ -64,14 +64,15 @@ def download(
 
     if not url:
         raise ArchiveArgumentError("No Url was given for Archive download")
+    
     if not isinstance(url, str) or not url.startswith(("https://archive.org/metadata", "https://www.archive.org/metadata", "www.archive.org/metadata", "archive.org/metadata")):
-        raise ArchiveArgumentError("Invalid URL was given, wanted: 'https://archive.org/metadata/{identifier}'")
+        raise ArchiveArgumentError("ArchiveDownload: Invalid URL was given, wanted: 'https://archive.org/metadata/{identifier}'")
     
     if not session:
-        raise ArchiveArgumentError("No session was given to open url with")
+        session = core.request.Session.Session()
     
-    if not progress_dict:
-        raise ArchiveArgumentError("No dict to write progress in was given")
+    if not progress_dict or not isinstance(progress_dict, dict):
+        raise ArchiveArgumentError("ArchiveDownload: Either no Dictionary to write to was given or given object wasn't a Python dictionary")
     
     
     metadata_url = url
@@ -84,7 +85,7 @@ def download(
         metadata_url,
         method="GET"
     )
-    with session.open(request) as response:
+    with session.open(request=request) as response:
         metadata = json.loads(response.read().decode("utf-8"))
 
     found=False
@@ -104,8 +105,15 @@ def download(
 
             
             progress_dict['status'] = "downloading..."
-            download_to_file(session=session, download_request=download_request, out_file=out_file, progress_dict=progress_dict)
+            core.download.File._downloadToFile(
+                request=download_request,
+                out_file=out_file,
+                session=session,
+                progress_dict=progress_dict,
+                chunk_size=chunk_size
+                )
             break
+
     if not found:
         raise ArchiveDownloadError(f"No file with mediatype {mediatype} found in archive metadata")
 
@@ -114,62 +122,6 @@ def download(
            
 
 
-        
-def download_to_file(
-        session,
-        download_request,
-        out_file: str,
-        progress_dict: dict,
-        chunk_size: int = 8096,
-    
-):
-    
-    if not session or not download_request or not progress_dict or not out_file:
-        raise ArchiveArgumentError("Download to file needs a session, download_request and progress_dict to work")
-    
-    try:
-        
-        with session.open(download_request) as response, open(out_file, "wb") as f:
-                total_size = response.headers.get("Content-Length")
-                if total_size:
-                    total_size = int(total_size)
-                    progress_dict['totalBytes'] = total_size
-                else:
-                    raise ArchiveDownloadError("No content length was given from soruce wtf")
-
-                downloaded:int = 0
-                start_time = time.time()
-
-                downloading = True
-        
-                while downloading:
-    
-                    chunk = response.read(chunk_size)
-                    if not chunk:
-                        downloading = False
-                        break
-                       
-                    
-                    f.write(chunk)
-
-                    downloaded += len(chunk)
-                    percent = 100 / total_size * downloaded
-                    elapsed_time = time.time() - start_time
-
-                    progress_dict['downloadProgress'] = percent
-                    progress_dict['downloadedBytes'] = downloaded
-
-                    speed = downloaded / elapsed_time if elapsed_time > 0 else 0
-                    if speed:
-                        progress_dict['speed'] = round(speed / 1024 / 1024, 2)
-            
-                progress_dict['status'] = "complete"
-        
-    except urllib.error.HTTPError as e:
-        raise
-    
-    except urllib.error.URLError as e:
-        raise
 
 
 

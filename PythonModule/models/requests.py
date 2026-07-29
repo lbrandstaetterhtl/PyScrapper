@@ -25,16 +25,14 @@ class CommandRequest(BaseModel):
     
 
 class SearchFilters(BaseModel):
-    creator: Optional[str] = ""
-    tags: Optional[list[str]] = None
-
+    creator: str = ""
+    tags: list[str] = Field(default_factory=list)
 
 
 class SearchRequest(BaseModel):
     provider: str
     search: str
     top: int = 5
-    
     filters: SearchFilters = Field(default_factory=SearchFilters)
 
 class CreateUserRequest(BaseModel):

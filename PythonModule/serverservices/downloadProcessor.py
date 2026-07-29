@@ -1,6 +1,6 @@
 from PythonModule.providers import Youtube, Suno, Archive, Bandcamp
 from PythonModule.models.requests import DownloadRequest
-from PythonModule.Session import Session
+from PythonModule.core.request.Session import Session
 from . import utils
 
 import asyncio

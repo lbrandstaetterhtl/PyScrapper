@@ -41,7 +41,7 @@ def validate_url(url: str, session):
     )
 
     try:
-        with session.open(request) as response:
+        with session.open(request=request) as response:
             if response:
                 print(response)
     

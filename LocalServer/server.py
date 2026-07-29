@@ -4,6 +4,7 @@ from uvicorn import lifespan
 
 from server_backup import connect_db
 
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import fastapi
@@ -21,7 +22,7 @@ from PythonModule.models.responses import (
 )
 from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest, CreateUserRequest, CreatePlaylistRequest, CreateDownloadedMediaRequest, CreateSettingsRequest, CreatePlaylistMediaRequest, DeletePlaylistMediaRequest, RegisterRequest, LoginRequest
 from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
-from PythonModule import Session
+from PythonModule.core.request import Session
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 
@@ -148,14 +149,19 @@ async def receive_command(data: CommandRequest):
 
 @app.post("/download")
 async def receive_download(data: DownloadRequest):
+ 
     global log_queue, ses, download_limiter
     task_id = str(uuid.uuid4())
     try:
+        ses.reloadCookies()
         utils.validate_url(session=ses, url=data.url)
 
         download_progress[task_id] = PROGRESSDICT.copy()
         download_progress[task_id]['id'] = task_id
 
+
+        
+    
         task = asyncio.create_task(downloadProcessor.DownloadProcessor(
             downloadRequest=data,
             progressDict=download_progress[task_id],
