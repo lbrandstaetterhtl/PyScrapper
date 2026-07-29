@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyScrapper — Dokumentationsportal</title>
+<style>
+    :root {
+        --bg-deep: #00112e;
+        --bg-panel: #051d44;
+        --bg-card: #0a2452;
+        --border: #12356f;
+        --border-bright: #1d4a91;
+        --gold: #fedd00;
+        --gold-dim: #d4b800;
+        --blue: #2f8fd8;
+        --blue-bright: #4fa8e8;
+        --text: #dce6f5;
+        --text-dim: #8aa0c2;
+        --text-faint: #5f759a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+        background: radial-gradient(ellipse at top, #0a2452 0%, var(--bg-deep) 60%), var(--bg-deep);
+        background-attachment: fixed;
+        color: var(--text);
+        line-height: 1.7;
+        min-height: 100vh;
+        padding: 48px 20px;
+    }
+    body::before {
+        content: '';
+        position: fixed; inset: 0;
+        background-image:
+            radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4), transparent),
+            radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,0.3), transparent),
+            radial-gradient(1px 1px at 40% 80%, rgba(254,221,0,0.3), transparent),
+            radial-gradient(1px 1px at 85% 20%, rgba(255,255,255,0.25), transparent),
+            radial-gradient(1px 1px at 55% 15%, rgba(79,168,232,0.3), transparent);
+        pointer-events: none; z-index: 0;
+    }
+    .container { max-width: 1180px; margin: 0 auto; position: relative; z-index: 1; }
+    header { text-align: center; margin-bottom: 48px; }
+    .logo {
+        width: 128px; height: 128px; margin: 0 auto 20px; display: block;
+        filter: drop-shadow(0 0 24px rgba(254,221,0,0.25));
+    }
+    h1 { font-size: 2.6em; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 10px; }
+    h1 .accent { color: var(--gold); }
+    .subtitle { color: var(--text-dim); font-size: 1.05em; }
+    .version-pill {
+        display: inline-block; margin-top: 16px; padding: 5px 16px;
+        background: rgba(254,221,0,0.1); border: 1px solid var(--gold-dim);
+        border-radius: 20px; color: var(--gold); font-size: 0.82em; font-weight: 600; letter-spacing: 0.5px;
+    }
+    .intro {
+        background: linear-gradient(135deg, var(--bg-panel), var(--bg-card));
+        border: 1px solid var(--border); border-left: 4px solid var(--gold);
+        border-radius: 10px; padding: 24px 28px; margin-bottom: 44px;
+    }
+    .intro strong { color: var(--gold); }
+    .intro .blue { color: var(--blue-bright); }
+    .grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 22px; margin-bottom: 44px;
+    }
+    .card {
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+        padding: 26px; text-decoration: none; color: inherit;
+        display: flex; flex-direction: column;
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        position: relative; overflow: hidden;
+    }
+    .card::after {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        background: linear-gradient(90deg, var(--gold), var(--blue));
+        transform: scaleX(0); transform-origin: left; transition: transform 0.25s ease;
+    }
+    .card:hover {
+        transform: translateY(-4px); border-color: var(--border-bright);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(254,221,0,0.1);
+    }
+    .card:hover::after { transform: scaleX(1); }
+    .card-icon { font-size: 2.2em; margin-bottom: 14px; }
+    .card-title { font-size: 1.3em; font-weight: 600; color: var(--gold); margin-bottom: 10px; }
+    .card-desc { color: var(--text-dim); font-size: 0.94em; flex-grow: 1; }
+    .card-meta {
+        margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);
+        font-size: 0.82em; color: var(--text-faint);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .card-arrow { color: var(--blue-bright); font-weight: 600; }
+    .section-label {
+        font-size: 0.8em; text-transform: uppercase; letter-spacing: 2px;
+        color: var(--text-faint); margin-bottom: 18px; font-weight: 600;
+    }
+    .ref-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px; margin-bottom: 44px;
+    }
+    .ref-box { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 22px; }
+    .ref-box h3 { color: var(--blue-bright); font-size: 1.05em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .ref-list { list-style: none; }
+    .ref-list li {
+        padding: 6px 0; border-bottom: 1px solid rgba(18,53,111,0.5);
+        display: flex; justify-content: space-between; gap: 12px;
+    }
+    .ref-list li:last-child { border-bottom: none; }
+    .ref-list .name { color: var(--gold); font-family: 'Cascadia Code','Consolas',monospace; font-size: 0.85em; }
+    .ref-list .desc { color: var(--text-dim); font-size: 0.85em; text-align: right; }
+    .method { display: inline-block; font-size: 0.72em; font-weight: 700; padding: 1px 7px; border-radius: 4px; margin-right: 6px; font-family: 'Cascadia Code','Consolas',monospace; }
+    .method.get { background: rgba(47,143,216,0.2); color: var(--blue-bright); }
+    .method.post { background: rgba(254,221,0,0.15); color: var(--gold); }
+    footer { text-align: center; color: var(--text-faint); font-size: 0.85em; padding-top: 28px; border-top: 1px solid var(--border); }
+    footer .accent { color: var(--gold-dim); }
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <img src="PyScrapperLogo.png" alt="PyScrapper Logo" class="logo">
+        <h1>Py<span class="accent">Scrapper</span></h1>
+        <p class="subtitle">Technische Dokumentation der Desktop-Anwendung</p>
+        <span class="version-pill">Desktop Client · Avalonia · .NET 9</span>
+    </header>
+
+    <div class="intro">
+        PyScrapper ist eine <strong>Media-Download- und Verwaltungs-Anwendung</strong>. Der
+        <span class="blue">C#/Avalonia-Desktop-Client</span> kommuniziert über HTTP mit einem lokalen
+        <span class="blue">Python/FastAPI-Backend</span>, das die eigentlichen Downloads von YouTube,
+        Bandcamp, Suno und Archive.org durchführt. Diese Dokumentation beschreibt Architektur, Abläufe
+        und Oberfläche des Desktop-Clients auf dem aktuellen Stand der Codebasis.
+    </div>
+
+    <p class="section-label">Hauptdokumente</p>
+    <div class="grid">
+        <a href="Architecture_Professional.html" class="card">
+            <div class="card-icon">🏛️</div>
+            <div class="card-title">Architektur</div>
+            <div class="card-desc">
+                Datenmodelle, MVVM-Schichten, API-Client, SQLite-Persistenz und der komplette
+                Technologie-Stack des Desktop-Clients.
+            </div>
+            <div class="card-meta"><span>Für Entwickler &amp; Architekten</span><span class="card-arrow">→</span></div>
+        </a>
+        <a href="Workflows_Professional.html" class="card">
+            <div class="card-icon">🔀</div>
+            <div class="card-title">Workflows</div>
+            <div class="card-desc">
+                Startsequenz vom Login über den Launcher bis zum Hauptfenster, Such- und Download-Ablauf,
+                Filter, Wiedergabe und die Speicherung beim Beenden.
+            </div>
+            <div class="card-meta"><span>Für Entwickler &amp; PM</span><span class="card-arrow">→</span></div>
+        </a>
+        <a href="UI_Documentation.html" class="card">
+            <div class="card-icon">🪟</div>
+            <div class="card-title">UI-Fenster</div>
+            <div class="card-desc">
+                Jedes Fenster im Detail: MainWindow, Login, Launcher, Scrap-Fenster, Filter, Playlists,
+                Codec-Konverter, Health-Ansicht und Konfiguration.
+            </div>
+            <div class="card-meta"><span>Für UI/UX &amp; Produkt</span><span class="card-arrow">→</span></div>
+        </a>
+        <a href="QuickStart.html" class="card">
+            <div class="card-icon">⚡</div>
+            <div class="card-title">Quick Start</div>
+            <div class="card-desc">
+                Einstieg in Dokumentation und Code — welche Datei für welche Aufgabe, und wie man sich
+                am schnellsten zurechtfindet.
+            </div>
+            <div class="card-meta"><span>Für neue Entwickler</span><span class="card-arrow">→</span></div>
+        </a>
+        <a href="Developer_Guide.html" class="card">
+            <div class="card-icon">🧰</div>
+            <div class="card-title">Entwickler-Guide</div>
+            <div class="card-desc">
+                Setup &amp; Build, Projektstruktur, Konventionen, Service-Layer, Datenfluss an echten Beispielen
+                und ein Glossar — alles zum tiefen Verstehen des Codes.
+            </div>
+            <div class="card-meta"><span>Für Contributor</span><span class="card-arrow">→</span></div>
+        </a>
+    </div>
+
+    <p class="section-label">Schnellreferenz</p>
+    <div class="ref-grid">
+        <div class="ref-box">
+            <h3>🌐 Wichtige API-Endpoints</h3>
+            <ul class="ref-list">
+                <li><span class="name"><span class="method post">POST</span>/login</span><span class="desc">Anmeldung</span></li>
+                <li><span class="name"><span class="method post">POST</span>/register</span><span class="desc">Registrierung</span></li>
+                <li><span class="name"><span class="method post">POST</span>/search</span><span class="desc">Suche</span></li>
+                <li><span class="name"><span class="method post">POST</span>/download</span><span class="desc">Download starten</span></li>
+                <li><span class="name"><span class="method get">GET</span>/download/progress/{id}</span><span class="desc">Fortschritt</span></li>
+                <li><span class="name"><span class="method post">POST</span>/save/{key}</span><span class="desc">Daten sichern</span></li>
+                <li><span class="name"><span class="method get">GET</span>/health</span><span class="desc">Serverstatus</span></li>
+            </ul>
+        </div>
+        <div class="ref-box">
+            <h3>📦 Kernklassen (Models)</h3>
+            <ul class="ref-list">
+                <li><span class="name">DownloadedMedia</span><span class="desc">Gespeicherter Eintrag</span></li>
+                <li><span class="name">Playlist</span><span class="desc">Sammlung von Medien</span></li>
+                <li><span class="name">PlaylistMedia</span><span class="desc">Zuordnung + Position</span></li>
+                <li><span class="name">Settings</span><span class="desc">Nutzer-Einstellungen</span></li>
+                <li><span class="name">MediaFilter</span><span class="desc">Filterkriterien</span></li>
+                <li><span class="name">AppConfig</span><span class="desc">App-Konfiguration</span></li>
+                <li><span class="name">User</span><span class="desc">Angemeldeter Nutzer</span></li>
+            </ul>
+        </div>
+        <div class="ref-box">
+            <h3>🧩 Zentrale ViewModels</h3>
+            <ul class="ref-list">
+                <li><span class="name">MainWindowVM</span><span class="desc">Hauptfenster</span></li>
+                <li><span class="name">LauncherWindowVM</span><span class="desc">Env-Bootstrap</span></li>
+                <li><span class="name">ScrapWindowVM</span><span class="desc">Suche &amp; Download</span></li>
+                <li><span class="name">SunoScrapWindowVM</span><span class="desc">Direkt-Download</span></li>
+                <li><span class="name">ProgressBarWindowVM</span><span class="desc">Fortschritt</span></li>
+                <li><span class="name">MediaPlayerControlVM</span><span class="desc">Wiedergabe</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>PyScrapper Desktop-Dokumentation · Format: HTML5 + CSS + Mermaid</p>
+        <p style="margin-top:6px;">Stand: <span class="accent">29. Juli 2026</span> · orientiert an der aktuellen Codebasis</p>
+    </footer>
+</div>
+</body>
+</html>

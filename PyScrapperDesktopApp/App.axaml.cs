@@ -220,19 +220,14 @@ public partial class App : Application
             {
                 AppData.AddPlaylist(playlist);
             }
-            
-            foreach (var playlist in playlists)
+
+            var playlistMedias = await Database.LoadAllPlaylistMedias(playlists.ToList());
+
+            foreach (var media in playlistMedias)
             {
-                var playlistMedias = await Database.LoadPlaylistMediaFromApi(playlist.Identifier);
-
-                foreach (var media in playlistMedias)
-                {
-                    AppData.PlaylistMedias.Add(media);
-                }
-                
-                playlist.FindMedias();
+                AppData.PlaylistMedias.Add(media);
             }
-
+            
             if (AppData.Settings.ScanFolderOnStartup)
             {
                 var diff = await ScanFolder(AppData.Settings.DownloadPath);

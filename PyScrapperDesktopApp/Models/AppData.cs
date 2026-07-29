@@ -36,7 +36,7 @@ public class AppData : Interfaces.IAppDataService
     public static readonly ObservableCollection<Playlist> Playlists = new();
     public static User CurrentUser = null;
     public static Settings Settings = new("default");
-    public static List<PlaylistMedia> PlaylistMedias = new();
+    public static readonly ObservableCollection<PlaylistMedia> PlaylistMedias = new();
     public static string PyScrapperPath { get;} = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
     public static string AppLogsPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
     public static string ServerLogsPath { get; set; } = Path.Combine(PyScrapperPath, "LocalServer", "logs");
@@ -64,7 +64,6 @@ public class AppData : Interfaces.IAppDataService
         var envPath = Path.Combine(PyScrapperPath, ".env");
         Console.WriteLine($"Looking for .env at: {envPath}");
         Console.WriteLine($"File exists: {File.Exists(envPath)}");
-        Env.Load(Path.Combine(PyScrapperPath, ".env"));
     }
     
     /// <summary>

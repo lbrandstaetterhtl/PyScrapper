@@ -367,6 +367,7 @@ def connect_db():
     conn = sqlite3.connect(db_path, timeout=20.0)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA busy_timeout=5000")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -466,11 +467,8 @@ def save_user_data(request: SaveUserDataRequest):
     except Exception as e:
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
-@app.post("/save/{key}")
-async def handle_save_user_data(key: str, req: SaveUserDataRequest):
-    # Validiere ADMIN_KEY mit constant-time comparison
-    if not secrets.compare_digest(key, ADMIN_KEY or ""):
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+@app.post("/save")
+async def handle_save_user_data(req: SaveUserDataRequest):
 
     # Validiere user_identifier
     if not req.user_identifier or len(req.user_identifier) > 100:
@@ -776,11 +774,8 @@ async def get_all_downloaded_media(key: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/getuser/downloadedmedias/{key}", response_model=List[DownloadedMediaResponse])
-async def get_user_downloaded_medias(key: str, user_identifier: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.get("/getuser/downloadedmedias/{user_identifier}", response_model=List[DownloadedMediaResponse])
+async def get_user_downloaded_medias(user_identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -959,12 +954,8 @@ async def get_playlist_medias(playlist_identifier: str):
         log_queue.put_nowait(f"[ERROR] Error retrieving media for playlist '{playlist_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-
-@app.get("/getuser/playlists/{key}", response_model=List[PlaylistResponse])
-async def get_user_playlists(key: str, user_identifier: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.get("/getuser/playlists/{user_identifier}", response_model=List[PlaylistResponse])
+async def get_user_playlists(user_identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()

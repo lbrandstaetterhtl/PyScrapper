@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyScrapper — Entwickler-Guide</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+    :root {
+        --bg-deep: #00112e; --bg-panel: #051d44; --bg-card: #0a2452;
+        --border: #12356f; --border-bright: #1d4a91;
+        --gold: #fedd00; --gold-dim: #d4b800; --blue: #2f8fd8; --blue-bright: #4fa8e8;
+        --text: #dce6f5; --text-dim: #8aa0c2; --text-faint: #5f759a;
+        --green: #4ade80; --red: #f87171; --purple: #a78bfa; --orange: #fb923c;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+        background: radial-gradient(ellipse at top, #0a2452 0%, var(--bg-deep) 55%), var(--bg-deep);
+        background-attachment: fixed; color: var(--text); line-height: 1.7; padding: 40px 20px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .topbar { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+    .topbar img { width: 52px; height: 52px; filter: drop-shadow(0 0 12px rgba(254,221,0,0.3)); }
+    .back { color: var(--blue-bright); text-decoration: none; font-size: 0.9em; }
+    .back:hover { color: var(--gold); }
+    h1 { font-size: 2.2em; font-weight: 700; margin-bottom: 4px; }
+    h1 .accent { color: var(--gold); }
+    .lead { color: var(--text-dim); margin-bottom: 20px; font-size: 1.02em; }
+    .toc { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 36px; }
+    .toc h3 { color: var(--blue-bright); font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .toc-links { display: flex; flex-wrap: wrap; gap: 8px; }
+    .toc-links a { color: var(--text-dim); text-decoration: none; font-size: 0.84em; padding: 4px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; transition: all 0.2s; }
+    .toc-links a:hover { color: var(--gold); border-color: var(--gold-dim); }
+    h2 { color: var(--gold); font-size: 1.5em; margin: 46px 0 16px; padding-bottom: 10px; border-bottom: 2px solid var(--border); scroll-margin-top: 20px; }
+    h3 { color: var(--blue-bright); font-size: 1.18em; margin: 28px 0 12px; }
+    h4 { color: var(--text); font-size: 1em; margin: 18px 0 8px; }
+    p { margin-bottom: 14px; color: var(--text); }
+    .mermaid { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin: 20px 0; text-align: center; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 0.9em; }
+    th { background: var(--bg-card); color: var(--gold); text-align: left; padding: 11px 14px; border-bottom: 2px solid var(--border-bright); }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-dim); vertical-align: top; }
+    td code, .ic { font-family: 'Cascadia Code','Consolas',monospace; font-size: 0.9em; color: var(--gold); background: rgba(254,221,0,0.08); padding: 1px 6px; border-radius: 4px; }
+    tr:hover td { background: rgba(10,36,82,0.4); }
+    .callout { border-left: 4px solid var(--blue); background: rgba(47,143,216,0.08); border-radius: 6px; padding: 14px 18px; margin: 18px 0; color: var(--text-dim); }
+    .callout.gold { border-left-color: var(--gold); background: rgba(254,221,0,0.06); }
+    .callout.warn { border-left-color: var(--red); background: rgba(248,113,113,0.07); }
+    .callout.tip { border-left-color: var(--green); background: rgba(74,222,128,0.07); }
+    .callout strong { color: var(--gold); }
+    .callout.warn strong { color: var(--red); }
+    .callout.tip strong { color: var(--green); }
+    ul, ol { margin: 0 0 14px 22px; color: var(--text-dim); }
+    li { margin-bottom: 6px; }
+    li strong { color: var(--text); }
+    .codeblock { background: #061125; border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin: 14px 0; overflow-x: auto; font-family: 'Cascadia Code','Consolas',monospace; font-size: 0.82em; line-height: 1.7; color: var(--text-dim); white-space: pre; }
+    .codeblock .k { color: var(--purple); }
+    .codeblock .s { color: var(--green); }
+    .codeblock .c { color: var(--text-faint); font-style: italic; }
+    .codeblock .a { color: var(--gold); }
+    .tree { background: #061125; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin: 14px 0; font-family: 'Cascadia Code','Consolas',monospace; font-size: 0.82em; line-height: 1.8; color: var(--text-dim); white-space: pre; }
+    .tree .dir { color: var(--blue-bright); }
+    .tree .cmt { color: var(--text-faint); }
+    .pill { display:inline-block; font-family:'Cascadia Code',monospace; font-size:0.8em; background: var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:2px 8px; color: var(--text-dim); margin: 2px 4px 2px 0; }
+    footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; color: var(--text-faint); font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="topbar">
+        <img src="PyScrapperLogo.png" alt="Logo">
+        <div>
+            <a href="Index.html" class="back">← Zurück zum Portal</a>
+            <h1>Py<span class="accent">Scrapper</span> — Entwickler-Guide</h1>
+        </div>
+    </div>
+    <p class="lead">Alles, was du zum Verstehen des Programms brauchst: Projektstruktur, Konventionen, Services, Datenfluss und Verhalten.</p>
+
+    <div class="toc">
+        <h3>Inhalt</h3>
+        <div class="toc-links">
+            <a href="#setup">Setup &amp; Build</a>
+            <a href="#structure">Projektstruktur</a>
+            <a href="#conventions">Konventionen</a>
+            <a href="#services">Service-Layer</a>
+            <a href="#interfaces">Interfaces</a>
+            <a href="#logging">Logging im Detail</a>
+            <a href="#audio">Audio &amp; Codec</a>
+            <a href="#addfeature">Neues Feature</a>
+            <a href="#dataflow">Datenfluss</a>
+            <a href="#behavior">Verhalten verstehen</a>
+            <a href="#glossary">Glossar</a>
+        </div>
+    </div>
+
+    <!-- ===================== SETUP ===================== -->
+    <h2 id="setup">🧰 Setup &amp; Build</h2>
+    <h3>Voraussetzungen</h3>
+    <ul>
+        <li><strong>.NET 9 SDK</strong> — die App zielt auf <span class="ic">net9.0</span> (<span class="ic">WinExe</span>).</li>
+        <li><strong>Windows</strong> für die volle Funktionalität — DPAPI (API-Key-Verschlüsselung) und der Launcher-Bootstrap sind Windows-orientiert. Avalonia selbst ist plattformübergreifend.</li>
+        <li>Eine IDE mit Avalonia-Support (Rider empfohlen; VS/VS Code gehen auch).</li>
+        <li>Das <strong>LocalServer</strong>-Backend muss im Repo-Root neben dem Client liegen — der Launcher richtet die Python-Umgebung selbst ein.</li>
+    </ul>
+    <div class="callout gold">
+        <strong>Ordnerstruktur ist Pflicht:</strong> <span class="ic">PyScrapperDesktopApp</span> und
+        <span class="ic">LocalServer</span> müssen nebeneinander im Repo-Root liegen. <span class="ic">AppData</span>
+        leitet alle Pfade relativ dazu ab (siehe <a href="Architecture_Professional.html#paths" style="color:var(--gold)">Architektur → Pfad-Auflösung</a>). Läuft die App aus einem anderen Verzeichnis, brechen die Pfade.
+    </div>
+    <h3>Build &amp; Start</h3>
+    <div class="codeblock"><span class="c"># Restore &amp; Build</span>
+dotnet restore
+dotnet build
+
+<span class="c"># Starten (Debug)</span>
+dotnet run --project PyScrapperDesktopApp
+
+<span class="c"># Release-Build</span>
+dotnet build -c Release</div>
+    <p>
+        Nach jedem Build läuft das Target <span class="ic">GenerateVlcCache</span> (in der
+        <span class="ic">.csproj</span>) und erzeugt den LibVLC-Plugin-Cache. In <span class="ic">Release</span>
+        wird das <span class="ic">Avalonia.Diagnostics</span>-Paket automatisch entfernt.
+    </p>
+
+    <!-- ===================== STRUCTURE ===================== -->
+    <h2 id="structure">📂 Projektstruktur</h2>
+    <div class="tree"><span class="dir">PyScrapperDesktopApp/</span>
+├── <span class="dir">Assets/</span>            <span class="cmt"># Logo, Icons (DarkMode/LightMode), MediaPlayer-Icons</span>
+├── <span class="dir">Design/</span>            <span class="cmt"># Design.axaml — zentrale Styles, Farben, Control-Themes</span>
+├── <span class="dir">Models/</span>            <span class="cmt"># Datenklassen + Services (kein UI)</span>
+│   ├── AppData.cs         <span class="cmt"># Zustand + Kernmodelle</span>
+│   ├── ApiClient.cs       <span class="cmt"># Aktionen: Download, Suche, Health, Login</span>
+│   ├── DatabaseOperations.cs <span class="cmt"># CRUD gegen die API</span>
+│   ├── AppConfig.cs       <span class="cmt"># Config + DPAPI (SecretProtector)</span>
+│   ├── AppLogger.cs       <span class="cmt"># Queue-basiertes Logging (Singleton)</span>
+│   ├── AudioPlayer.cs     <span class="cmt"># LibVLC-Wiedergabe + Codec-Check</span>
+│   ├── DialogService.cs   <span class="cmt"># Alert / Confirm / Input</span>
+│   ├── StorageService.cs  <span class="cmt"># File-/Folder-Picker</span>
+│   ├── Interfaces.cs      <span class="cmt"># Service-Contracts</span>
+│   ├── ServerRequestData.cs  <span class="cmt"># Request-DTOs</span>
+│   └── ServerResponses.cs    <span class="cmt"># Response-DTOs</span>
+├── <span class="dir">ViewModels/</span>        <span class="cmt"># Ein VM pro Fenster/Control</span>
+├── <span class="dir">Views/</span>             <span class="cmt"># XAML-Fenster + Code-Behind</span>
+│   └── <span class="dir">Controls/</span>         <span class="cmt"># TitleBarControl, MediaPlayerControl</span>
+├── <span class="dir">data/</span>              <span class="cmt"># config.json (zur Laufzeit)</span>
+├── <span class="dir">logs/</span>              <span class="cmt"># app.log</span>
+├── <span class="dir">Notes/</span>             <span class="cmt"># interne Entwickler-Notizen</span>
+├── App.axaml(.cs)        <span class="cmt"># Startsequenz &amp; Lifecycle</span>
+├── Program.cs            <span class="cmt"># Entry-Point, LibVLC Core.Initialize()</span>
+└── PyScrapperDesktopApp.csproj</div>
+
+    <!-- ===================== CONVENTIONS ===================== -->
+    <h2 id="conventions">📐 Konventionen</h2>
+    <h3>MVVM mit dem CommunityToolkit</h3>
+    <p>
+        Properties und Commands werden nicht von Hand geschrieben, sondern per Source-Generator erzeugt. Das
+        spart Boilerplate, hat aber eine Namenskonvention: aus einem privaten Feld mit Unterstrich-Präfix wird
+        eine öffentliche Property in PascalCase.
+    </p>
+    <div class="codeblock"><span class="c">// Feld _searchQuery  ->  generierte Property SearchQuery</span>
+[<span class="a">ObservableProperty</span>]
+<span class="k">private string</span> _searchQuery;
+
+<span class="c">// Methode wird zu SearchCommand (bindbar im XAML)</span>
+[<span class="a">RelayCommand</span>]
+<span class="k">private async Task</span> Search() { ... }</div>
+    <table>
+        <tr><th>Regel</th><th>Konvention</th></tr>
+        <tr><td>ViewModel-Feld</td><td><code>_camelCase</code> mit <code>[ObservableProperty]</code> → Property <code>PascalCase</code></td></tr>
+        <tr><td>Command</td><td>Methode <code>Xyz()</code> mit <code>[RelayCommand]</code> → <code>XyzCommand</code> im XAML</td></tr>
+        <tr><td>Ein VM pro Fenster</td><td><code>FooWindow.axaml</code> ↔ <code>FooWindowViewModel.cs</code></td></tr>
+        <tr><td>Design-Mode-Guard</td><td>ViewModels prüfen <code>Design.IsDesignMode</code>, um Laufzeit-Code im Designer zu vermeiden</td></tr>
+        <tr><td>DTO-Mapping</td><td>Jedes Request/Response-Feld trägt <code>[JsonPropertyName]</code> (snake_case)</td></tr>
+        <tr><td>Compiled Bindings</td><td><code>x:DataType</code> in Views gesetzt (<code>AvaloniaUseCompiledBindingsByDefault</code>)</td></tr>
+    </table>
+
+    <h3>Styling zentral im Design.axaml</h3>
+    <p>
+        Farben, Verläufe und Control-Themes liegen gebündelt in <span class="ic">Design/Design.axaml</span>.
+        Wiederkehrende Klassen wie <span class="ic">UILabel</span>, <span class="ic">UIValue</span>,
+        <span class="ic">UIHeader</span>, <span class="ic">Cell</span>, <span class="ic">CellInteractive</span>,
+        <span class="ic">SeparatorHorizontal</span>, <span class="ic">SplitterVertical</span> und
+        <span class="ic">primary</span> (Buttons) werden über <span class="ic">Classes="..."</span> zugewiesen.
+        Neue UI sollte diese Klassen wiederverwenden statt eigener Inline-Styles.
+    </p>
+    <div class="callout tip">
+        <strong>Theme:</strong> Hell/Dunkel wird über <span class="ic">App.ToggleTheme()</span> gesetzt, das den
+        <span class="ic">RequestedThemeVariant</span> ändert und in den Settings persistiert. Icons wechseln je
+        nach Modus zwischen den Ordnern <span class="ic">Assets/DarkMode</span> und <span class="ic">Assets/LightMode</span>.
+    </div>
+
+    <!-- ===================== SERVICES ===================== -->
+    <h2 id="services">🧩 Service-Layer</h2>
+    <p>Neben <span class="ic">ApiClient</span> und <span class="ic">Database</span> gibt es drei kleine Dienste, die die UI von Infrastruktur entkoppeln.</p>
+    <table>
+        <tr><th>Service</th><th>Aufgabe</th><th>Methoden</th></tr>
+        <tr><td><code>DialogService</code></td><td>Standarddialoge relativ zu einem Owner-Fenster</td><td><code>ShowAlertAsync</code>, <code>ConfirmAsync</code>, <code>AskInputAsync</code></td></tr>
+        <tr><td><code>StorageService</code></td><td>Datei-/Ordner-Picker über Avalonias <code>StorageProvider</code></td><td><code>OpenFilePickerAsync</code>, <code>SaveFilePickerAsync</code>, <code>OpenFolderPickerAsync</code></td></tr>
+        <tr><td><code>AppLogger</code></td><td>Thread-sicheres Logging (Singleton)</td><td><code>LogNewMassage</code>, <code>LogDebugMessage</code></td></tr>
+    </table>
+    <div class="callout warn">
+        <strong>StorageService braucht ein TopLevel:</strong> Er wird aus <span class="ic">TopLevel.GetTopLevel(window)</span>
+        erzeugt. Wird er angelegt, <em>bevor</em> das Fenster im Visual Tree hängt, ist <span class="ic">TopLevel</span>
+        null und der Zugriff wirft eine <span class="ic">InvalidOperationException</span>. Also erst nach dem
+        Öffnen des Fensters instanziieren.
+    </div>
+
+    <!-- ===================== INTERFACES ===================== -->
+    <h2 id="interfaces">🔌 Interfaces (Contracts)</h2>
+    <p>
+        In <span class="ic">Models/Interfaces.cs</span> sind die Verträge der Dienste gebündelt:
+        <span class="ic">IApiClient</span>, <span class="ic">IStorageService</span>,
+        <span class="ic">IAppLogger</span>, <span class="ic">IAppDataService</span> und
+        <span class="ic">IDialogService</span>. Sie sind die Basis für Testbarkeit — gegen ein Interface lässt
+        sich ein Mock einsetzen, gegen die statische <span class="ic">AppData</span> nicht.
+    </p>
+    <div class="callout">
+        In der Praxis wird <span class="ic">AppData</span> überwiegend <strong>statisch</strong> verwendet, während
+        die Dienste (<span class="ic">ApiClient</span>, <span class="ic">DialogService</span>,
+        <span class="ic">StorageService</span>) als Instanzen an die ViewModels übergeben werden. Die Interfaces
+        beschreiben also den Vertrag, den ein ViewModel erwartet — welche Methoden es aufrufen kann, ohne die
+        konkrete Implementierung kennen zu müssen.
+    </div>
+
+    <!-- ===================== LOGGING ===================== -->
+    <h2 id="logging">📝 Logging im Detail</h2>
+    <p>
+        <span class="ic">AppLogger</span> ist ein <strong>Lazy-Singleton</strong> mit einer
+        <span class="ic">ConcurrentQueue</span> und einem einzelnen Consumer-Thread. Aufrufer legen ihre Meldung
+        in die Queue (per <span class="ic">SemaphoreSlim</span> signalisiert) und kehren sofort zurück — nur der
+        eine Worker-Thread schreibt in die Datei. So kann es nie zu „file is being used by another process"-Fehlern
+        kommen.
+    </p>
+    <div class="mermaid">
+graph LR
+    T1["Thread A"] -->|Enqueue| Q["ConcurrentQueue"]
+    T2["Thread B"] -->|Enqueue| Q
+    T3["Thread C"] -->|Enqueue| Q
+    Q -->|1 Consumer| W["Worker-Thread"]
+    W -->|AppendAllText| F["logs/app.log"]
+    classDef n fill:#0a2452,stroke:#1d4a91,color:#dce6f5
+    classDef f fill:#051d44,stroke:#fedd00,color:#dce6f5
+    class T1,T2,T3,Q,W n
+    class F f
+    </div>
+    <h4>Verwendung</h4>
+    <div class="codeblock"><span class="k">private static readonly</span> AppLogger _logger = AppLogger.Instance;
+
+_logger.LogNewMassage(<span class="k">new</span> Message(<span class="s">"Etwas ist passiert"</span>, DateTime.Now, <span class="s">"INFO"</span>));
+<span class="c">// Typen: INFO · WARN · ERROR. Format: yyyy-MM-dd HH:mm:ss [TYPE] Text</span></div>
+    <div class="callout warn">
+        <strong>Robustheit:</strong> Bei einer <span class="ic">IOException</span> legt der Worker den Eintrag
+        zurück in die Queue und versucht es nach kurzer Pause erneut — es geht also nichts verloren, wenn die
+        Datei kurz gesperrt ist. Beim Shutdown flusht <span class="ic">Dispose()</span> die restliche Queue.
+        Tipp: <span class="ic">Dispose()</span> beim Beenden aufrufen, damit die letzten Zeilen sicher geschrieben
+        werden.
+    </div>
+    <div class="callout tip">
+        <strong>Debug-Variante:</strong> <span class="ic">LogDebugMessage()</span> macht dasselbe, schreibt die
+        Zeile aber zusätzlich auf die Konsole — praktisch beim lokalen Entwickeln.
+    </div>
+
+    <!-- ===================== AUDIO ===================== -->
+    <h2 id="audio">🎧 Audio &amp; Codec-Handling</h2>
+    <p>
+        <span class="ic">AudioPlayer</span> kapselt LibVLCSharp und bietet neben Wiedergabe (inkl. Playlist-Modus
+        und Shuffle) auch die Codec-Prüfung. Beim Abspielen einer <span class="ic">.mp4</span> wird über
+        <span class="ic">IsSupportedCodec()</span> geprüft, ob der Video-Codec unterstützt wird.
+    </p>
+    <ul>
+        <li>Wird ein nicht unterstützter Codec erkannt, fragt die App, ob nach <strong>H.264</strong> konvertiert werden soll (öffnet den <span class="ic">CodecConverterWindow</span>).</li>
+        <li>LibVLC wird bewusst mit <span class="ic">--avcodec-hw=none</span> initialisiert (Hardware-Decoding aus), um Kompatibilitätsprobleme zu vermeiden.</li>
+        <li>Das <span class="ic">IsPlayable</span>-Flag eines Mediums spiegelt das Ergebnis dieser Prüfung wider und steuert, ob ein Eintrag in <span class="ic">PlayableMedias</span> landet.</li>
+    </ul>
+    <div class="callout">
+        Der Codec-Check ist auch der Grund, warum das Datenladen beim Start etwas dauern kann: jede vorhandene
+        <span class="ic">.mp4</span> wird einmal geprüft (siehe <a href="Workflows_Professional.html#loaddata" style="color:var(--gold)">Workflows → Datenladen</a>).
+    </div>
+
+    <!-- ===================== ADD FEATURE ===================== -->
+    <h2 id="addfeature">➕ Ein neues Fenster/Feature hinzufügen</h2>
+    <ol>
+        <li><strong>View</strong> anlegen: <span class="ic">Views/FooWindow.axaml</span> (+ Code-Behind). Styles aus <span class="ic">Design.axaml</span> per <span class="ic">Classes</span> nutzen, <span class="ic">x:DataType</span> setzen.</li>
+        <li><strong>ViewModel</strong> anlegen: <span class="ic">ViewModels/FooWindowViewModel.cs</span>, von <span class="ic">ObservableObject</span> ableiten, Properties/Commands per Attribut.</li>
+        <li><strong>Öffnen</strong> vom aufrufenden VM per <span class="ic">[RelayCommand]</span> — als Dialog (<span class="ic">ShowDialog(owner)</span>) oder Fenster (<span class="ic">Show()</span>).</li>
+        <li>Braucht das Feature <strong>Serverdaten</strong>? Passenden Aufruf in <span class="ic">ApiClient</span> oder <span class="ic">Database</span> ergänzen, dazu ggf. neue DTOs mit <span class="ic">[JsonPropertyName]</span>.</li>
+        <li>Zustand über <span class="ic">AppData.Add.../Remove...</span> ändern, damit die UI-Bindings reagieren.</li>
+        <li>Wichtige Schritte über den <span class="ic">AppLogger</span> loggen.</li>
+    </ol>
+    <div class="callout gold">
+        <strong>Faustregel:</strong> Views zeigen nur an, ViewModels entscheiden, Models/Services reden mit der
+        Außenwelt. Kommt HTTP oder Dateizugriff ins ViewModel, gehört es wahrscheinlich in einen Service.
+    </div>
+
+    <!-- ===================== DATAFLOW ===================== -->
+    <h2 id="dataflow">🔄 Datenfluss an einem echten Beispiel</h2>
+    <p>
+        Um zu verstehen, wie die Schichten zusammenspielen, hilft ein konkreter Ablauf. Beim <strong>Löschen eines
+        Mediums</strong> über das Kontextmenü der Medien-Tabelle passiert Folgendes im Code-Behind des MainWindow:
+    </p>
+    <div class="codeblock"><span class="k">private async void</span> DeleteMedia(<span class="k">object</span> sender, RoutedEventArgs e) {
+    <span class="c">// 1. Das gemeinte Medium kommt aus dem DataContext des MenuItems</span>
+    <span class="k">if</span> (sender <span class="k">is</span> MenuItem { DataContext: DownloadedMedia media }) {
+        <span class="c">// 2. Nutzer bestätigen lassen (DialogService)</span>
+        <span class="k">var</span> result = <span class="k">await</span> _ds.ConfirmAsync(<span class="s">"...wirklich entfernen?"</span>);
+        <span class="k">if</span> (!result) <span class="k">return</span>;
+
+        <span class="c">// 3. Lokalen Zustand ändern -> UI aktualisiert sich automatisch</span>
+        AppData.RemoveDownloadedMedia(media);
+
+        <span class="c">// 4. Serverseitig löschen</span>
+        <span class="k">await</span> Database.DeleteDownloadedMedia(media.Identifier);
+
+        <span class="c">// 5. Vorgang protokollieren</span>
+        _logger.LogNewMassage(<span class="k">new</span> Message(<span class="s">"Media removed: "</span> + media.Url, DateTime.Now, <span class="s">"INFO"</span>));
+    }
+}</div>
+    <p>Dieses Muster zieht sich durch die ganze App und ist der Schlüssel zum Verständnis:</p>
+    <div class="mermaid">
+graph LR
+    A["Event im<br/>Code-Behind"] --> B["DataContext<br/>liefert das Objekt"]
+    B --> C["DialogService<br/>bestaetigen"]
+    C --> D["AppData ändern<br/>(UI reagiert)"]
+    D --> E["Database / ApiClient<br/>Server informieren"]
+    E --> F["AppLogger<br/>protokollieren"]
+    classDef n fill:#0a2452,stroke:#1d4a91,color:#dce6f5
+    class A,B,C,D,E,F n
+    </div>
+    <div class="callout tip">
+        <strong>Der wichtigste Mechanismus:</strong> Schritt 3 ändert nur eine
+        <span class="ic">ObservableCollection</span> in <span class="ic">AppData</span> — die Tabelle im Fenster
+        aktualisiert sich <em>von selbst</em>, weil sie an diese Collection gebunden ist. Niemand ruft „UI neu
+        zeichnen" auf. Das ist der Kern von MVVM in diesem Projekt.
+    </div>
+
+    <h3>Wie View und ViewModel verbunden werden</h3>
+    <p>
+        Die Verbindung entsteht im Code-Behind (Konstruktor) der View über den
+        <span class="ic">DataContext</span>. Dienste werden dabei hineingereicht:
+    </p>
+    <div class="codeblock"><span class="c">// LoginWindow.axaml.cs</span>
+DataContext = <span class="k">new</span> LoginWindowViewModel(<span class="k">new</span> DialogService(<span class="k">this</span>), <span class="k">this</span>);
+
+<span class="c">// MainWindow.axaml.cs</span>
+_ds = <span class="k">new</span> DialogService(<span class="k">this</span>);
+_vm = <span class="k">new</span> MainWindowViewModel(_ds);
+DataContext = _vm;</div>
+    <p>
+        Im XAML greifen die Bindings dann auf die Properties und Commands des ViewModels zu. Einzelne Zeilen einer
+        Liste haben ihren eigenen <span class="ic">DataContext</span> (das jeweilige <span class="ic">DownloadedMedia</span>
+        bzw. <span class="ic">Playlist</span>), weshalb Event-Handler ihn per Pattern-Matching auslesen können —
+        genau wie oben bei <span class="ic">DeleteMedia</span>.
+    </p>
+
+    <!-- ===================== BEHAVIOR ===================== -->
+    <h2 id="behavior">🧭 Verhalten verstehen</h2>
+    <p>
+        Ein paar Eigenheiten des Programms sind nicht sofort offensichtlich, aber wichtig, um es richtig zu lesen
+        und Fehler zu deuten. Sie sind Teil davon, wie die App <em>funktioniert</em> — nicht Bugs.
+    </p>
+    <table>
+        <tr><th>Verhalten</th><th>Erklärung</th></tr>
+        <tr><td><strong>Login ist Pflicht vor allem anderen</strong></td><td>Erst nach erfolgreichem Login ist <code>AppData.CurrentUser</code> gesetzt. Der Startablauf ist so gebaut, dass die App ohne gültigen Login herunterfährt, bevor Datenladen oder Speichern überhaupt erreicht werden — auf <code>CurrentUser</code> wird also bewusst erst danach zugegriffen.</td></tr>
+        <tr><td><strong>config.json ist an Rechner + Nutzer gebunden</strong></td><td>Der API-Key ist per DPAPI (Scope <code>CurrentUser</code>) verschlüsselt. Kopiert man die Datei auf einen anderen Rechner oder Nutzer, liefert die Entschlüsselung einen leeren Key. Die Datei ist absichtlich nicht portabel — das ist die Sicherheitseigenschaft.</td></tr>
+        <tr><td><strong>Pfade sind relativ zum Repo-Root</strong></td><td><code>AppData</code> löst alle Pfade über <code>Directory.GetParent(...)</code> auf. Deshalb müssen Client- und Server-Ordner nebeneinander liegen und die App aus dem erwarteten Verzeichnis laufen.</td></tr>
+        <tr><td><strong>StorageService braucht ein sichtbares Fenster</strong></td><td>Er wird aus dem <code>TopLevel</code> des Fensters erzeugt. Vor dem Attach ans Visual Tree ist dieses null — deshalb wird der Picker erst im geöffneten Fenster angelegt.</td></tr>
+        <tr><td><strong>Start kann etwas dauern</strong></td><td>Ist <code>ScanFolderOnStartup</code> aktiv, wird jede Datei im Download-Ordner per API angelegt und ihr Codec geprüft. Das ist gewollt gründlich — daher ist die Option standardmäßig aus und im Menü mit Hinweis versehen.</td></tr>
+        <tr><td><strong>IsPlayable ist ein Prüfergebnis</strong></td><td>Das Flag wird beim Laden und nach Downloads über <code>AudioPlayer.IsSupportedCodec()</code> gesetzt. Es entscheidet, ob ein Medium in <code>PlayableMedias</code> landet — es ist keine manuelle Einstellung.</td></tr>
+        <tr><td><strong>Speichern passiert gebündelt am Ende</strong></td><td>Während der Sitzung wird der Zustand in <code>AppData</code> gehalten; erst beim Schließen schreibt <code>OnExit</code> alles in einem <code>/save</code>-Aufruf. Wer den Prozess hart abbricht, verliert die Änderungen seit dem letzten Speichern.</td></tr>
+    </table>
+    <div class="callout gold">
+        <strong>Beim Debuggen zuerst hier schauen:</strong> Startet die App nicht bis zum MainWindow, hilft ein
+        Blick in <span class="ic">logs/app.log</span> (bzw. das LogsWindow) und in die Health-Ansicht — sie zeigen,
+        ob Login, Launcher-Bootstrap und Backend-Start jeweils durchgelaufen sind.
+    </div>
+
+    <!-- ===================== GLOSSARY ===================== -->
+    <h2 id="glossary">📖 Glossar</h2>
+    <table>
+        <tr><th>Begriff</th><th>Bedeutung</th></tr>
+        <tr><td><code>Provider</code></td><td>Quelle für Medien: <span class="pill">youtube</span><span class="pill">bandcamp</span><span class="pill">suno</span><span class="pill">archive</span></td></tr>
+        <tr><td><code>Scrap</code></td><td>Im Projekt-Sprech: einen Download vom Provider anstoßen</td></tr>
+        <tr><td><code>DownloadedMedia</code></td><td>Ein heruntergeladenes und in der Bibliothek geführtes Medium</td></tr>
+        <tr><td><code>PlaylistMedia</code></td><td>Zuordnung Medium↔Playlist mit Reihenfolge (<code>Position</code>)</td></tr>
+        <tr><td><code>IsPlayable</code></td><td>Ergebnis der Codec-/Existenzprüfung; steuert <code>PlayableMedias</code></td></tr>
+        <tr><td><code>Launcher</code></td><td>Bootstrap-Fenster, das die Python-Umgebung einrichtet &amp; das Backend startet</td></tr>
+        <tr><td><code>SecretProtector</code></td><td>DPAPI-Wrapper zur Ver-/Entschlüsselung des API-Keys</td></tr>
+        <tr><td><code>DialogService</code></td><td>Zentrale Standarddialoge (Alert/Confirm/Input)</td></tr>
+    </table>
+
+    <footer>
+        <p>PyScrapper Desktop-Dokumentation · Entwickler-Guide · Stand 29. Juli 2026</p>
+    </footer>
+</div>
+<script>
+    mermaid.initialize({
+        startOnLoad: true, theme: 'base',
+        themeVariables: {
+            background: '#0a2452', primaryColor: '#0a2452', primaryTextColor: '#dce6f5',
+            primaryBorderColor: '#1d4a91', lineColor: '#2f8fd8', secondaryColor: '#051d44',
+            tertiaryColor: '#0d2c63', fontFamily: 'Segoe UI, sans-serif'
+        }
+    });
+</script>
+</body>
+</html>

@@ -42,4 +42,21 @@ public partial class EditConfigWindowViewModel : ObservableObject
     {
         CloseRequested?.Invoke();
     }
+
+    [RelayCommand]
+    private void SaveConfig()
+    {
+        var config = new AppConfig
+        {
+            ServerUrl = ServerUrl,
+            ServerPort = ServerPort,
+            ApiKey = ApiKey,
+            LastLoggedInUser = AppData.Config.LastLoggedInUser
+        };
+        
+        AppData.Config = config;
+        AppConfig.Save(config);
+        
+        CloseRequested?.Invoke();
+    }
 }

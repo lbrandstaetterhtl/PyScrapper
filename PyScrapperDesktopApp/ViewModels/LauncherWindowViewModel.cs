@@ -94,16 +94,6 @@ public partial class LauncherWindowViewModel : ObservableObject
                 log = new Message("Server is running", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    Messages.Add(new LauncherMessage()
-                    {
-                        Message = "is already running",
-                        Title = "Server",
-                        Symbol = "✗"
-                    });
-                });
-
                 await FinishSuccess();
                 
                 await Task.WhenAll(
@@ -111,7 +101,7 @@ public partial class LauncherWindowViewModel : ObservableObject
                     Task.Run(EnsureFfmpeg),
                     Task.Run(EnsurePython),
                     Task.Run(EnsureVenv),
-                    Task.Run(() => { RunProcess("python", "-m pip install --upgrade pip", LocalServer).Wait();}),
+                    Task.Run(() => {RunProcess("python", "-m pip install --upgrade pip", LocalServer).Wait();}),
                     Task.Run(() => {RunProcess("python", $"-m pip install -r \"{Requirements}\"", LocalServer).Wait(); }),
                     Task.Run(() => RunProcess(VenvPython, " -m playwright install", LocalServer).Wait() ),
                     RestoreDotnetPackages()
@@ -222,33 +212,7 @@ public partial class LauncherWindowViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Waits for the server to respond to HTTP requests by polling the docs endpoint every second.
-    /// If the server does not respond within 30 seconds, or if the server process exits unexpectedly,
-    /// an exception is thrown which is caught by the calling method and displayed as an error in the UI.
-    /// </summary>
-    /// <returns></returns>
-    private async Task WaitForServerReady()
-    {
-        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-
-        for (int attempt = 0; attempt < 30; attempt++)
-        {
-            if (_serverProcess != null && _serverProcess.HasExited)
-                throw new Exception($"Server process exited unexpectedly (Exit Code: {_serverProcess.ExitCode}).");
-
-            try
-            {
-                var response = await http.GetAsync("http://127.0.0.1:8765/docs");
-                if (response.IsSuccessStatusCode) return;
-            }
-            catch { }
-
-            await Task.Delay(1000);
-        }
-
-        throw new Exception("Server did not respond within 30 seconds. Check your Python environment and server logs.");
-    }
+    
 
     /// <summary>
     /// Restores all .NET packages by finding all .csproj files in the repository root and running

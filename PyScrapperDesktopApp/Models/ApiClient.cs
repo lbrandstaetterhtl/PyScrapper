@@ -36,7 +36,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     /// <returns name="id"></returns>
     public async Task<string> SendScrapRequest(DownloadRequestData requestData)
     {
-        HttpClient client = new();
+        using HttpClient client = new();
         
         client.Timeout = TimeSpan.FromMinutes(30);
 
@@ -80,7 +80,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
         try
         {
 
-            HttpClient client = new();
+            using HttpClient client = new();
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/health");
             var responseData = await response.Content.ReadAsStringAsync();
@@ -146,7 +146,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     /// <returns name="results"></returns>
     public async Task<List<SearchResultItem>> SendSearchRequest(SearchRequestData requestData)
     {
-        HttpClient client = new();
+        using HttpClient client = new();
 
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
@@ -185,7 +185,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     /// <returns name="progressResponse"></returns>
     public async Task<ProgressSuccessResponse> GetDownloadProgress(string downloadId)
     {
-        HttpClient client = new();
+        using HttpClient client = new();
 
         var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/download/progress/{downloadId}");
         var responseData = await response.Content.ReadAsStringAsync();
@@ -236,7 +236,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     /// <exception cref="Exception"></exception>
     public async Task<List<bool>> SendListScrapRequest(List<DownloadRequestData> requestDataList, CancellationToken ct)
     {
-        HttpClient client = new();
+        using HttpClient client = new();
 
         client.Timeout = TimeSpan.FromMinutes(30);
 
@@ -319,7 +319,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
 
     public async Task<bool> Login(LoginRequest req)
     {
-        var client = new HttpClient();
+        using var client = new HttpClient();
         var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/login", content);
@@ -333,6 +333,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
             _logger.LogNewMassage(log);
             
             AppData.CurrentUser = await Database.GetUser(req.Username);
+            AppData.Config.LastLoggedInUser = AppData.CurrentUser;
             
             return true;
         }
@@ -350,7 +351,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
 
     public async Task<bool> Register(RegisterRequest req)
     {
-        var client = new HttpClient();
+        using var client = new HttpClient();
         var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/register", content);
