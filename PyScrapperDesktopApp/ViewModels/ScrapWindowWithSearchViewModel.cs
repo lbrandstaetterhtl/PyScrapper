@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -241,12 +242,24 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     {
         var client = new ApiClient(_dialogService);
 
+        List<string> tags = ["track"];
+        
+        var filters = new SearchFilter()
+        {
+            Creator = "",
+            Tags = tags
+        };
+
         var requestData = new SearchRequestData()
         {
             Search = SearchQuery,
             Provider = _selectedProvider,
             Top = SearchResultsCount,
+            Filters = filters
         };
+        
+        var json = JsonSerializer.Serialize(requestData);
+        _logger.LogDebugMessage(new Message($"Sending search request: {json}", DateTime.Now, "DEBUG"));
         
         var results = await client.SendSearchRequest(requestData);
 

@@ -39,6 +39,18 @@ public class SearchRequestData
         
     [JsonPropertyName("top")]
     public int Top { get; set; }
+    
+    [JsonPropertyName("filters")]
+    public SearchFilter Filters { get; set; }
+}
+
+public class SearchFilter
+{
+    [JsonPropertyName("creator")]
+    public string Creator { get; set; }
+    
+    [JsonPropertyName("tags")]
+    public List<string> Tags { get; set; }
 }
 
 public class CreateDownloadedMediaRequest

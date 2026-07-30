@@ -3,6 +3,7 @@
 from uvicorn import lifespan
 
 from server_backup import connect_db
+from datetime import datetime
 
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,7 +27,7 @@ from PythonModule.core.request import Session
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -318,7 +319,9 @@ def create_app_tables():
                         Identifier TEXT NOT NULL PRIMARY KEY,
                         Username TEXT NOT NULL UNIQUE,
                         PasswordHash TEXT NOT NULL,
-                        CreatedAt TEXT NOT NULL)""")
+                        CreatedAt TEXT NOT NULL,
+                        LoggedIn BOOLEAN NOT NULL,
+                        LastLoggedIn TEXT NOT NULL)""")
 
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS DownloadedMedias
@@ -501,9 +504,68 @@ def create_user(username: str, password: str, identifier: str, created_at: str):
     conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute("""INSERT INTO Users (Username, PasswordHash, Identifier, CreatedAt) VALUES (?, ?, ?, ?)""", (username, password, identifier, created_at))
+    date = datetime.now()
+    formatted = date.isoformat()
+
+    cursor.execute("""INSERT INTO Users (Username, PasswordHash, Identifier, CreatedAt, LoggedIn, LastLoggedIn) VALUES (?, ?, ?, ?, ?, ?)""", (username, password, identifier, created_at, False, formatted))
     conn.commit()
     conn.close()
+
+
+@app.post("/set/user/loggedIn/{key}")
+async def handle_set_logged_in(key: str, identifier: str = Query(...)):
+    try:
+        if key != ADMIN_KEY:
+            raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        cursor.execute("""SELECT LoggedIn FROM Users WHERE Identifier = ?""", (identifier,))
+        logged_in = cursor.fetchone()[0]
+
+        if logged_in is None:
+            log_queue.put_nowait(f"[ERROR] User with identifier '{identifier}' not found")
+            raise fastapi.HTTPException(status_code=404, detail=f"User with identifier '{identifier}' not found")
+
+        if logged_in:
+            cursor.execute("""UPDATE Users SET LoggedIn = 0 WHERE Identifier = ?""", (identifier,))
+            conn.commit()
+        else:
+            cursor.execute("""UPDATE Users SET LoggedIn = 1 WHERE Identifier = ?""", (identifier,))
+            conn.commit()
+
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error setting user logged-in status for '{identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/set/user/lastLoggedIn/{key}")
+async def handle_set_last_logged_in(key: str, identifier: str = Query(None)):
+    try:
+        if key != ADMIN_KEY:
+            raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+
+        conn = connect_db()
+        cursor = conn.cursor()
+        date = datetime.now()
+        formatted = date.isoformat()
+
+        cursor.execute("""SELECT Username FROM Users WHERE Identifier = ?""", (identifier,))
+        username = cursor.fetchone()
+
+        if username is None:
+            log_queue.put_nowait(f"[ERROR] User with identifier '{identifier}' not found")
+            raise fastapi.HTTPException(status_code=404, detail=f"User with identifier '{identifier}' not found")
+
+        cursor.execute("""UPDATE Users SET LastLoggedIn = ? WHERE Identifier = ?""", (formatted, identifier))
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error setting user last logged-in status for '{identifier}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/get/user/{identifier}", response_model=UserResponse)
 async def get_users(identifier: str):
@@ -1021,4 +1083,21 @@ async def handle_register_req(req: RegisterRequest):
         raise
     except Exception as e:
         log_queue.put_nowait(f"[ERROR] Error during registration for user '{req.username}': {str(e)}")
+        raise fastapi.HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/logout/{identifier}")
+async def handle_logout_req(identifier: str):
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        cursor.execute("""UPDATE Users SET LoggedIn = 0 WHERE Identifier = ?""", (identifier,))
+        conn.commit()
+        conn.close()
+
+        log_queue.put_nowait(f"[INFO] User '{identifier}' logged out successfully")
+        return {"message": "Logout successful"}
+    except Exception as e:
+        log_queue.put_nowait(f"[ERROR] Error during logout for user '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))

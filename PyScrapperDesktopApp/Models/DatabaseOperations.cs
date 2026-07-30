@@ -476,4 +476,32 @@ public abstract class Database
             _logger.LogNewMassage(log);
             return true;
     }
+
+    public static async Task SetUserLoggedIn()
+    {
+        using var client = new HttpClient();
+        
+        var content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/loggedIn/{AppData.Config.ApiKey}?identifier={AppData.CurrentUser.Identifier}",  content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception("Failed to set user as logged in on the server:  " + response.ReasonPhrase);
+        }
+            
+        response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/lastLoggedIn/{AppData.Config.ApiKey}?identifier={AppData.CurrentUser.Identifier}",  content);
+            
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"Failed to set user's last login time on the server: {response.ReasonPhrase}");
+        }
+    }
+    
+    public static async Task<bool> SetUserLoggedOut()
+    {
+        using var client = new HttpClient();
+        
+        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/logout/{AppData.CurrentUser.Identifier}", null);
+        return response.IsSuccessStatusCode;
+    }
 }

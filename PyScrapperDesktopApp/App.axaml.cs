@@ -259,14 +259,25 @@ public partial class App : Application
             desktop.Shutdown(1);
         }
     }
+    
+    private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
+    {
+        try
+        {
+            // Task.Run schiebt die Arbeit auf den Threadpool (kein UI-SyncContext),
+            // GetResult() blockiert den UI-Thread bis fertig.
+            // Blockieren ist hier OK - wir fahren eh runter.
+            bool ok = Task.Run(PerformExit).GetAwaiter().GetResult();
+            e.ApplicationExitCode = ok ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogNewMassage(new Message($"Fehler beim Exit: {ex.Message}", DateTime.Now, "ERROR"));
+            e.ApplicationExitCode = 1;
+        }
+    }
 
-    /// <summary>
-    /// Triggered upon application exit. Saves the current state of downloaded medias, 
-    /// playlists, and settings back to the database, and shuts down the local Python API server.
-    /// </summary>
-    /// <param name="sender">Event sender.</param>
-    /// <param name="e">Event arguments.</param>
-    private async void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
+    private async Task<bool> PerformExit()
     {
         try
         {
@@ -282,15 +293,31 @@ public partial class App : Application
                 Setting = AppData.Settings
             };
 
-            await Database.SaveUserData(req);
-            
+            if (!await Database.SaveUserData(req))
+            {
+                log = new Message("SaveUserData failed", DateTime.Now, "ERROR");
+                _logger.LogNewMassage(log);
+                return false;
+            }
+
+            var loggedOut = await Database.SetUserLoggedOut();
+            if (!loggedOut)
+            {
+                log = new Message("SetUserLoggedOut failed", DateTime.Now, "ERROR");
+                _logger.LogNewMassage(log);
+                return false;
+            }
+
             AppData.Config.LastLoggedInUser = AppData.CurrentUser;
             AppConfig.Save(AppData.Config);
+        
+            return true;
         }
         catch (Exception ex)
         {
             var log = new Message("An error occurred while saving data: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
+            return false;
         }
     }
 

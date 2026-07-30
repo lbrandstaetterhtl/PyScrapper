@@ -40,6 +40,8 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
 
         if (response)
         {
+            
+            
             var log = new Message("User logged in successfully", DateTime.Now, "INFO");
 
             _logger.LogNewMassage(log);

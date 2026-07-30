@@ -329,10 +329,13 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
         
         if (response.IsSuccessStatusCode)
         {
+            AppData.CurrentUser = await Database.GetUser(req.Username);
+            
+            await Database.SetUserLoggedIn();
+
             var log = new Message($"Login successful for user: \"{req.Username}\"", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             
-            AppData.CurrentUser = await Database.GetUser(req.Username);
             AppData.Config.LastLoggedInUser = AppData.CurrentUser;
             
             return true;
