@@ -295,18 +295,29 @@ public partial class App : Application
 
             if (!await Database.SaveUserData(req))
             {
-                log = new Message("SaveUserData failed", DateTime.Now, "ERROR");
+                log = new Message("Saving user data failed", DateTime.Now, "ERROR");
                 _logger.LogNewMassage(log);
                 return false;
             }
+            
+            log = new Message("Saved user data successfully", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+            
+            var desktop = ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
 
-            var loggedOut = await Database.SetUserLoggedIn();
+            var ds = new DialogService(desktop.MainWindow);
+            var client = new ApiClient(ds);
+            
+            var loggedOut = await client.Logout();
             if (!loggedOut)
             {
-                log = new Message("SetUserLoggedOut failed", DateTime.Now, "ERROR");
+                log = new Message("User logout failed", DateTime.Now, "ERROR");
                 _logger.LogNewMassage(log);
                 return false;
             }
+            
+            log = new Message("User logged out successfully", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
 
             AppData.Config.LastLoggedInUser = AppData.CurrentUser;
             AppConfig.Save(AppData.Config);

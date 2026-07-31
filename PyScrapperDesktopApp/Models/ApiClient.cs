@@ -358,6 +358,16 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
         }
     }
 
+    public async Task<bool> Logout()
+    {
+        using var  client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
+        
+        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/logout/{AppData.Config.LastLoggedInUser?.Identifier}", null);
+
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> Register(RegisterRequest req)
     {
         using var client = new HttpClient();

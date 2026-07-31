@@ -23,6 +23,7 @@ public abstract class Database
             var downloadedMedias = new ObservableCollection<DownloadedMedia>();
 
             using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/getuser/downloadedmedias/{AppData.CurrentUser.Identifier}");
             var json = await response.Content.ReadAsStringAsync();
@@ -61,6 +62,7 @@ public abstract class Database
             var playlists = new ObservableCollection<Playlist>();
 
             using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/getuser/playlists/{AppData.CurrentUser.Identifier}");
 
@@ -98,6 +100,7 @@ public abstract class Database
         try
         {
             using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/settings/{AppData.CurrentUser.Identifier}");
 
@@ -136,6 +139,7 @@ public abstract class Database
             var playlistMediaList = new List<PlaylistMedia>();
 
             using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/playlistmedias/{playlistIdentifier}");
 
@@ -437,6 +441,7 @@ public abstract class Database
     public static async Task<User> GetUser(string identifier)
     {
         var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
         var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/user/{identifier}");
 
         if (!response.IsSuccessStatusCode)
@@ -465,6 +470,7 @@ public abstract class Database
     public static async Task<bool> SaveUserData(SaveDataRequest req)
     {
             using var client  = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
 
             var content = new StringContent(JsonSerializer.Serialize(req), System.Text.Encoding.UTF8, "application/json");
 
@@ -476,10 +482,6 @@ public abstract class Database
             }
 
             var log = new Message("User data saved successfully via API.", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            var json = await response.Content.ReadAsStringAsync();
-            log = new Message($"Response from API SaveUserData: {json}", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             return true;
     }

@@ -2,7 +2,6 @@
 
 from uvicorn import lifespan
 
-from server_backup import connect_db
 from datetime import datetime
 from fastapi import Depends, Security
 from fastapi.security import APIKeyHeader
@@ -130,6 +129,16 @@ async def lifespan(app: FastAPI):
     create_app_tables()
     yield
 
+
+admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
+
+
+def require_admin(key: str | None = Security(admin_key_header)) -> bool:
+    # compare_digest = konstante Laufzeit -> kein Timing-Angriff
+    if not key or not secrets.compare_digest(key, ADMIN_KEY):
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+    return True
+
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/command")
@@ -150,7 +159,7 @@ async def receive_command(data: CommandRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/download")
+@app.post("/download", dependencies=[Depends(require_admin)])
 async def receive_download(data: DownloadRequest):
  
     global log_queue, ses, download_limiter
@@ -197,7 +206,7 @@ async def receive_download(data: DownloadRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/download/progress/{task_id}")
+@app.get("/download/progress/{task_id}", dependencies=[Depends(require_admin)])
 async def get_download_progress(task_id: str):
     progress = download_progress.get(task_id)
     if not progress:
@@ -206,7 +215,7 @@ async def get_download_progress(task_id: str):
     return progress
 
 
-@app.post("/search")
+@app.post("/search", dependencies=[Depends(require_admin)])
 async def receive_search(data: SearchRequest):
     global ses
     search_id = str(uuid.uuid4())
@@ -226,7 +235,7 @@ async def receive_search(data: SearchRequest):
 
 start_time = time.time()
 
-@app.get("/health")
+@app.get("/health", dependencies=[Depends(require_admin)])
 def health():
     try:
         uptime_seconds = time.time() - start_time
@@ -487,7 +496,7 @@ def save_user_data(request: SaveUserDataRequest):
     except Exception as e:
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
-@app.post("/save")
+@app.post("/save", dependencies=[Depends(require_admin)])
 async def handle_save_user_data(req: SaveUserDataRequest):
 
     # Validiere user_identifier
@@ -509,17 +518,7 @@ async def handle_save_user_data(req: SaveUserDataRequest):
         log_queue.put_nowait(f"[ERROR] Error saving user data for '{req.user_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
-# ---------------- User Endpoints ----------------
-
-admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
-
-
-def require_admin(key: str | None = Security(admin_key_header)) -> bool:
-    # compare_digest = konstante Laufzeit -> kein Timing-Angriff
-    if not key or not secrets.compare_digest(key, ADMIN_KEY):
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-    return True
-
+# ---------------- User Endpoints ---------------
 
 # ============================================================
 # User Endpoints
@@ -599,7 +598,7 @@ async def handle_set_last_logged_in(identifier: str = Query(None)):
 
 
 # --- get_users: KEIN Admin-Key, unverändert ---
-@app.get("/get/user/{identifier}", response_model=UserResponse)
+@app.get("/get/user/{identifier}", dependencies=[Depends(require_admin)], response_model=UserResponse)
 async def get_users(identifier: str):
     try:
         conn = connect_db()
@@ -698,7 +697,7 @@ async def handle_delete_user_req(identifier: str):
 # ============================================================
 
 # --- get_playlists: KEIN Admin-Key, unverändert ---
-@app.get("/get/playlists/{identifier}", response_model=List[PlaylistResponse])
+@app.get("/get/playlists/{identifier}", response_model=List[PlaylistResponse], dependencies=[Depends(require_admin)])
 async def get_playlists(identifier: str):
     try:
         conn = connect_db()
@@ -823,7 +822,7 @@ async def handle_delete_downloaded_media_req(identifier: str):
 
 
 # --- get_downloaded_media: KEIN Admin-Key, unverändert ---
-@app.get("/get/downloadedmedia/{identifier}", response_model=DownloadedMediaResponse)
+@app.get("/get/downloadedmedia/{identifier}", response_model=DownloadedMediaResponse, dependencies=[Depends(require_admin)])
 async def get_downloaded_media(identifier: str):
     try:
         conn = connect_db()
@@ -868,7 +867,7 @@ async def get_all_downloaded_media():
 
 
 # --- get_user_downloaded_medias: KEIN Admin-Key, unverändert ---
-@app.get("/getuser/downloadedmedias/{user_identifier}", response_model=List[DownloadedMediaResponse])
+@app.get("/getuser/downloadedmedias/{user_identifier}", response_model=List[DownloadedMediaResponse], dependencies=[Depends(require_admin)])
 async def get_user_downloaded_medias(user_identifier: str):
     try:
         conn = connect_db()
@@ -937,7 +936,7 @@ async def handle_delete_setting_req(identifier: str):
 
 
 # --- get_setting: KEIN Admin-Key, unverändert ---
-@app.get("/get/settings/{user_identifier}", response_model=SettingsResponse)
+@app.get("/get/settings/{user_identifier}", response_model=SettingsResponse, dependencies=[Depends(require_admin)])
 async def get_setting(user_identifier: str):
     try:
         conn = connect_db()
@@ -1042,7 +1041,7 @@ async def handle_delete_playlist_media_req(req: DeletePlaylistMediaRequest):
 
 
 # --- get_playlist_medias: KEIN Admin-Key, unverändert ---
-@app.get("/get/playlistmedias/{playlist_identifier}", response_model=List[PlaylistMediaResponse])
+@app.get("/get/playlistmedias/{playlist_identifier}", response_model=List[PlaylistMediaResponse], dependencies=[Depends(require_admin)])
 async def get_playlist_medias(playlist_identifier: str):
     try:
         conn = connect_db()
@@ -1062,7 +1061,7 @@ async def get_playlist_medias(playlist_identifier: str):
 
 
 # --- get_user_playlists: KEIN Admin-Key, unverändert ---
-@app.get("/getuser/playlists/{user_identifier}", response_model=List[PlaylistResponse])
+@app.get("/getuser/playlists/{user_identifier}", response_model=List[PlaylistResponse], dependencies=[Depends(require_admin)])
 async def get_user_playlists(user_identifier: str):
     try:
         conn = connect_db()
@@ -1085,7 +1084,7 @@ async def get_user_playlists(user_identifier: str):
 # ============================================================
 
 # --- login: unverändert ---
-@app.post("/login", response_model=LoginResponse)
+@app.post("/login", response_model=LoginResponse, dependencies=[Depends(require_admin)])
 async def handle_login_req(req: LoginRequest):
     try:
         conn = connect_db()
@@ -1136,7 +1135,7 @@ async def handle_register_req(req: RegisterRequest):
 
 
 # --- logout: unverändert ---
-@app.post("/logout/{identifier}")
+@app.post("/logout/{identifier}", dependencies=[Depends(require_admin)])
 async def handle_logout_req(identifier: str):
     try:
         conn = connect_db()
