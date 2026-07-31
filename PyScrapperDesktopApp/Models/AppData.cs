@@ -59,13 +59,6 @@ public class AppData : Interfaces.IAppDataService
 
     public static AppConfig Config;
     
-    static AppData()
-    {
-        var envPath = Path.Combine(PyScrapperPath, ".env");
-        Console.WriteLine($"Looking for .env at: {envPath}");
-        Console.WriteLine($"File exists: {File.Exists(envPath)}");
-    }
-    
     /// <summary>
     /// Adds a downloaded media to the DownloadedMedias collection and, if it's playable, also to the PlayableMedias collection.
     /// </summary>

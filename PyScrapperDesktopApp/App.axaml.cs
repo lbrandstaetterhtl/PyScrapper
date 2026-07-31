@@ -42,33 +42,48 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
+    public override void OnFrameworkInitializationCompleted()
+    {
+        if (Design.IsDesignMode)
+        {
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
+
+        base.OnFrameworkInitializationCompleted();
+
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            return;
+        }
+
+        // Dispatcher darf nicht sterben, solange wir noch Fenster zeigen wollen.
+        desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        // Den async Startup-Flow erst starten, NACHDEM die Main-Loop läuft.
+        // Post stellt die Arbeit in die Dispatcher-Queue - sie wird ausgeführt
+        // sobald die Message-Loop aktiv ist, nicht vorher. Das verhindert den
+        // "Dispatcher shut down" Crash im Release-Build.
+        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+        {
+            await StartupFlow(desktop);
+        });
+    }
+
     /// <summary>
-    /// Called when the framework initialization is completed. 
-    /// Starts the local server, waits for it to be ready, shows the LoginWindow and waits for it 
-    /// to close, then loads settings, sets the visual theme, and opens the LauncherWindow 
-    /// to begin the data loading process.
+    /// Der eigentliche asynchrone Startup-Ablauf: Login anzeigen, Settings laden,
+    /// Theme setzen, Launcher öffnen. Läuft auf dem UI-Thread über den Dispatcher.
     /// </summary>
-    public override async void OnFrameworkInitializationCompleted()
+    private async Task StartupFlow(IClassicDesktopStyleApplicationLifetime desktop)
     {
         try
         {
-            if (Design.IsDesignMode) return;
-
-            base.OnFrameworkInitializationCompleted();
-
             var log = new Message("Application initializing...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                return;
-            }
-            
             var config = AppConfig.Load();
             AppData.Config = config;
 
-            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            
             var loginWindow = new LoginWindow();
             desktop.MainWindow = loginWindow;
 
@@ -103,7 +118,7 @@ public partial class App : Application
                 settings = await Database.CreateSettings(settingReq);
             }
 
-            AppData.Settings = settings ;
+            AppData.Settings = settings;
 
             RequestedThemeVariant = AppData.Settings.DarkModeEnabled ? ThemeVariant.Dark : ThemeVariant.Light;
 
@@ -142,10 +157,7 @@ public partial class App : Application
         {
             var log = new Message($"Application failed to start: {e.Message}", DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
-            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                desktop.Shutdown(1);
-            }
+            desktop.Shutdown(1);
         }
     }
 
