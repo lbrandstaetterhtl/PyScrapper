@@ -260,9 +260,6 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 Filters = filters
             };
 
-            var json = JsonSerializer.Serialize(requestData);
-            _logger.LogDebugMessage(new Message($"Sending search request: {json}", DateTime.Now, "DEBUG"));
-
             var results = await client.SendSearchRequest(requestData);
 
             var log = new Message("", DateTime.Now, "Init");
