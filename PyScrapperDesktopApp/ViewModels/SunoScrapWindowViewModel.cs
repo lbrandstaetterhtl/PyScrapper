@@ -25,25 +25,24 @@ namespace PyScrapperDesktopApp.ViewModels;
 /// </summary>
 public partial class SunoScrapWindowViewModel : ObservableObject
 {
-    [ObservableProperty]
-    private string _sunoUrl;
+    [ObservableProperty] private string _sunoUrl = "";
     
     private readonly List<string> _availableMediaType = AppData.ValidMediaTypes;
 
     [ObservableProperty]
-    private string _selectedMediaType;
-    
-    private Window _ScrapWindow;
+    private string _selectedMediaType = "";
 
-    [ObservableProperty]
-    private string _filename;
+
+    [ObservableProperty] private string _filename = "";
     public RelayCommand CancelCommand { get; set; }
     
     public IEnumerable<string> AvailableMediaTypes => _availableMediaType;
     
     public event Action? RequestClose;
     
-    private DialogService _dialogService;
+    private readonly DialogService _dialogService;
+    
+    private readonly AppLogger _logger = AppLogger.Instance;
     
     /// <summary>
     /// Scrap method that is executed when the user initiates the scraping process.
@@ -55,8 +54,11 @@ public partial class SunoScrapWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task Scrap()
     {
+        try
+        {
+
             ApiClient client = new(_dialogService);
-        
+
             var requestData = new DownloadRequestData()
             {
                 Provider = "suno",
@@ -65,13 +67,13 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                 Filename = Filename,
                 Download_path = AppData.Settings.DownloadPath
             };
-        
+
             var result = await client.SendScrapRequest(requestData);
-        
+
             if (result != "-1")
             {
                 Task.Delay(2000).Wait();
-                
+
                 var progressWindow = new ProgressBarWindow();
                 progressWindow.Show();
 
@@ -83,7 +85,8 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                 {
                     Task.Delay(2000).Wait();
 
-                    var downloadedFilePath = Path.Combine(AppData.Settings.DownloadPath, $"{Filename}{SelectedMediaType}");
+                    var downloadedFilePath =
+                        Path.Combine(AppData.Settings.DownloadPath, $"{Filename}{SelectedMediaType}");
 
                     bool isPlayable = false;
 
@@ -108,23 +111,31 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                 }
                 else
                 {
-                    await _dialogService.ShowAlertAsync("An error occurred while downloading the media. Please try again.");
+                    await _dialogService.ShowAlertAsync(
+                        "An error occurred while downloading the media. Please try again.");
                 }
             }
-            
+
             RequestClose?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            var log = new Message("An error occurred while scraping the media: " + ex.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
+            await _dialogService.ShowAlertAsync("An error occurred while scraping the media: " + ex.Message);
+        }
     }
 
     /// <summary>
     /// Constructor for the SunoScrapWindowViewModel class, which initializes the view model for the Suno scrap window.
     /// It sets up the necessary properties and commands for the scrap functionality, including the CancelCommand that allows the user to close the scrap window without initiating the scrap process.
     /// </summary>
-    /// <param name="scrapWindow"></param>
-    public SunoScrapWindowViewModel(Window scrapWindow, DialogService dialogService)
+    /// <param name="dialogService"></param>
+    public SunoScrapWindowViewModel(DialogService dialogService)
     {
         if (Design.IsDesignMode) return;
         
-        _ScrapWindow = scrapWindow;
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke());
         _dialogService = dialogService;
     }

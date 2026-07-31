@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -48,7 +49,7 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
     /// It validates the playlist name, collects the selected media IDs, creates a new playlist with the provided name and description, and adds it to the application's playlist data.
     /// </summary>
     [RelayCommand]
-    private async void CreatePlaylist()
+    private async Task CreatePlaylist()
     {
         if (string.IsNullOrWhiteSpace(PlaylistName))
         {

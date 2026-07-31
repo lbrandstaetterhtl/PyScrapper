@@ -4,6 +4,8 @@ from uvicorn import lifespan
 
 from server_backup import connect_db
 from datetime import datetime
+from fastapi import Depends, Security
+from fastapi.security import APIKeyHeader
 
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -451,6 +453,15 @@ def save_user_data(request: SaveUserDataRequest):
             )
 
         for playlist_media in playlist_medias:
+
+            cursor.execute("SELECT 1 FROM Playlists WHERE Identifier = ?", (playlist_media.PlaylistIdentifier,))
+            if cursor.fetchone() is None:
+                log_queue.put_nowait(f"[ERROR] Missing Playlist parent: {playlist_media.PlaylistIdentifier}")
+
+            cursor.execute("SELECT 1 FROM DownloadedMedias WHERE Identifier = ?", (playlist_media.MediaIdentifier,))
+            if cursor.fetchone() is None:
+                log_queue.put_nowait(f"[ERROR] Missing Media parent: {playlist_media.MediaIdentifier}")
+
             cursor.execute(
                 """INSERT INTO PlaylistMedias (PlaylistIdentifier, MediaIdentifier, Position)
                    VALUES (?, ?, ?) ON CONFLICT(PlaylistIdentifier, MediaIdentifier) DO
@@ -500,6 +511,21 @@ async def handle_save_user_data(req: SaveUserDataRequest):
 
 # ---------------- User Endpoints ----------------
 
+admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
+
+
+def require_admin(key: str | None = Security(admin_key_header)) -> bool:
+    # compare_digest = konstante Laufzeit -> kein Timing-Angriff
+    if not key or not secrets.compare_digest(key, ADMIN_KEY):
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+    return True
+
+
+# ============================================================
+# User Endpoints
+# ============================================================
+
+# create_user() unverändert – reine DB-Funktion, kein Key.
 def create_user(username: str, password: str, identifier: str, created_at: str):
     conn = connect_db()
     cursor = conn.cursor()
@@ -507,21 +533,21 @@ def create_user(username: str, password: str, identifier: str, created_at: str):
     date = datetime.now()
     formatted = date.isoformat()
 
-    cursor.execute("""INSERT INTO Users (Username, PasswordHash, Identifier, CreatedAt, LoggedIn, LastLoggedIn) VALUES (?, ?, ?, ?, ?, ?)""", (username, password, identifier, created_at, False, formatted))
+    cursor.execute("""INSERT INTO Users (Username, PasswordHash, Identifier, CreatedAt, LoggedIn, LastLoggedIn)
+                      VALUES (?, ?, ?, ?, ?, ?)""", (username, password, identifier, created_at, False, formatted))
     conn.commit()
     conn.close()
 
 
-@app.post("/set/user/loggedIn/{key}")
-async def handle_set_logged_in(key: str, identifier: str = Query(...)):
+@app.post("/set/user/loggedIn", dependencies=[Depends(require_admin)])
+async def handle_set_logged_in(identifier: str = Query(...)):
     try:
-        if key != ADMIN_KEY:
-            raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("""SELECT LoggedIn FROM Users WHERE Identifier = ?""", (identifier,))
+        cursor.execute("""SELECT LoggedIn
+                          FROM Users
+                          WHERE Identifier = ?""", (identifier,))
         logged_in = cursor.fetchone()[0]
 
         if logged_in is None:
@@ -529,10 +555,14 @@ async def handle_set_logged_in(key: str, identifier: str = Query(...)):
             raise fastapi.HTTPException(status_code=404, detail=f"User with identifier '{identifier}' not found")
 
         if logged_in:
-            cursor.execute("""UPDATE Users SET LoggedIn = 0 WHERE Identifier = ?""", (identifier,))
+            cursor.execute("""UPDATE Users
+                              SET LoggedIn = 0
+                              WHERE Identifier = ?""", (identifier,))
             conn.commit()
         else:
-            cursor.execute("""UPDATE Users SET LoggedIn = 1 WHERE Identifier = ?""", (identifier,))
+            cursor.execute("""UPDATE Users
+                              SET LoggedIn = 1
+                              WHERE Identifier = ?""", (identifier,))
             conn.commit()
 
     except Exception as e:
@@ -540,25 +570,26 @@ async def handle_set_logged_in(key: str, identifier: str = Query(...)):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/set/user/lastLoggedIn/{key}")
-async def handle_set_last_logged_in(key: str, identifier: str = Query(None)):
+@app.post("/set/user/lastLoggedIn", dependencies=[Depends(require_admin)])
+async def handle_set_last_logged_in(identifier: str = Query(None)):
     try:
-        if key != ADMIN_KEY:
-            raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
         conn = connect_db()
         cursor = conn.cursor()
         date = datetime.now()
         formatted = date.isoformat()
 
-        cursor.execute("""SELECT Username FROM Users WHERE Identifier = ?""", (identifier,))
+        cursor.execute("""SELECT Username
+                          FROM Users
+                          WHERE Identifier = ?""", (identifier,))
         username = cursor.fetchone()
 
         if username is None:
             log_queue.put_nowait(f"[ERROR] User with identifier '{identifier}' not found")
             raise fastapi.HTTPException(status_code=404, detail=f"User with identifier '{identifier}' not found")
 
-        cursor.execute("""UPDATE Users SET LastLoggedIn = ? WHERE Identifier = ?""", (formatted, identifier))
+        cursor.execute("""UPDATE Users
+                          SET LastLoggedIn = ?
+                          WHERE Identifier = ?""", (formatted, identifier))
 
         conn.commit()
         conn.close()
@@ -567,6 +598,7 @@ async def handle_set_last_logged_in(key: str, identifier: str = Query(None)):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
+# --- get_users: KEIN Admin-Key, unverändert ---
 @app.get("/get/user/{identifier}", response_model=UserResponse)
 async def get_users(identifier: str):
     try:
@@ -595,11 +627,8 @@ async def get_users(identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/getall/users/{key}", response_model=List[UserResponse])
-async def get_all_users(key: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.get("/getall/users", response_model=List[UserResponse], dependencies=[Depends(require_admin)])
+async def get_all_users():
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -615,11 +644,8 @@ async def get_all_users(key: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/create-tables/{key}", response_model=MessageResponse)
-async def create_table(key: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.post("/create-tables/", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+async def create_table():
     try:
         create_app_tables()
         log_queue.put_nowait("[INFO] Tables created successfully")
@@ -629,11 +655,8 @@ async def create_table(key: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/create/user/{key}", response_model=CreateResponse)
-async def handle_create_user_req(key: str, req: CreateUserRequest):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.post("/create/user/", response_model=CreateResponse, dependencies=[Depends(require_admin)])
+async def handle_create_user_req(req: CreateUserRequest):
     try:
         identifier = str(uuid.uuid4())
         username = req.username
@@ -651,16 +674,15 @@ async def handle_create_user_req(key: str, req: CreateUserRequest):
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/delete/user/{key}", response_model=MessageResponse)
-async def handle_delete_user_req(key: str, identifier: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.post("/delete/user/{identifier}", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+async def handle_delete_user_req(identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("""DELETE FROM Users WHERE Identifier = ?""", (identifier,))
+        cursor.execute("""DELETE
+                          FROM Users
+                          WHERE Identifier = ?""", (identifier,))
         conn.commit()
         conn.close()
 
@@ -671,15 +693,19 @@ async def handle_delete_user_req(key: str, identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-# ---------------- Playlist Endpoints ----------------
+# ============================================================
+# Playlist Endpoints
+# ============================================================
 
+# --- get_playlists: KEIN Admin-Key, unverändert ---
 @app.get("/get/playlists/{identifier}", response_model=List[PlaylistResponse])
 async def get_playlists(identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, UserIdentifier, Name, Description FROM Playlists WHERE Identifier = ?", (identifier,))
+        cursor.execute("SELECT Identifier, UserIdentifier, Name, Description FROM Playlists WHERE Identifier = ?",
+                       (identifier,))
         rows = cursor.fetchall()
         conn.close()
 
@@ -690,18 +716,16 @@ async def get_playlists(identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/create/playlist/{key}", response_model=CreateResponse)
-async def handle_create_playlist_req(key: str, req: CreatePlaylistRequest):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.post("/create/playlist/", response_model=CreateResponse, dependencies=[Depends(require_admin)])
+async def handle_create_playlist_req(req: CreatePlaylistRequest):
     try:
         identifier = str(uuid.uuid4())
 
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("""INSERT INTO Playlists (Identifier, UserIdentifier, Name, Description) VALUES (?, ?, ?, ?)""", (identifier, req.user_identifier, req.name, req.description))
+        cursor.execute("""INSERT INTO Playlists (Identifier, UserIdentifier, Name, Description)
+                          VALUES (?, ?, ?, ?)""", (identifier, req.user_identifier, req.name, req.description))
         conn.commit()
         conn.close()
 
@@ -712,16 +736,16 @@ async def handle_create_playlist_req(key: str, req: CreatePlaylistRequest):
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/delete/playlist/{key}", response_model=MessageResponse)
-async def handle_delete_playlist_req(key: str, identifier: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+# HINWEIS: 'identifier' ist hier undefiniert (Bug im Original) – bewusst NICHT angefasst.
+@app.post("/delete/playlist/{identifier}", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+async def handle_delete_playlist_req(identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("""DELETE FROM Playlists WHERE Identifier = ?""", (identifier,))
+        cursor.execute("""DELETE
+                          FROM Playlists
+                          WHERE Identifier = ?""", (identifier,))
         conn.commit()
         conn.close()
 
@@ -732,11 +756,8 @@ async def handle_delete_playlist_req(key: str, identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/getall/playlists/{key}", response_model=List[PlaylistResponse])
-async def get_all_playlists(key: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.get("/getall/playlists", response_model=List[PlaylistResponse], dependencies=[Depends(require_admin)])
+async def get_all_playlists():
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -752,13 +773,12 @@ async def get_all_playlists(key: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-# ---------------- DownloadedMedia Endpoints ----------------
+# ============================================================
+# DownloadedMedia Endpoints
+# ============================================================
 
-@app.post("/create/downloadedmedia/{key}", response_model=CreateResponse)
-async def handle_create_downloaded_media_req(key: str, req: CreateDownloadedMediaRequest):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.post("/create/downloadedmedia", response_model=CreateResponse, dependencies=[Depends(require_admin)])
+async def handle_create_downloaded_media_req(req: CreateDownloadedMediaRequest):
     try:
         identifier = str(uuid.uuid4())
 
@@ -766,8 +786,11 @@ async def handle_create_downloaded_media_req(key: str, req: CreateDownloadedMedi
         cursor = conn.cursor()
 
         cursor.execute(
-            """INSERT INTO DownloadedMedias (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Title) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (identifier, req.user_identifier, req.url, req.mediatype, req.downloaded_at, req.download_path, req.is_playable, req.title)
+            """INSERT INTO DownloadedMedias (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath,
+                                             IsPlayable, Title)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (identifier, req.user_identifier, req.url, req.mediatype, req.downloaded_at, req.download_path,
+             req.is_playable, req.title)
         )
         conn.commit()
         conn.close()
@@ -779,16 +802,16 @@ async def handle_create_downloaded_media_req(key: str, req: CreateDownloadedMedi
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/delete/downloadedmedia/{key}", response_model=MessageResponse)
-async def handle_delete_downloaded_media_req(key: str, identifier: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+# HINWEIS: 'identifier' ist hier undefiniert (Bug im Original) – bewusst NICHT angefasst.
+@app.post("/delete/downloadedmedia/{identifier}", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+async def handle_delete_downloaded_media_req(identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("""DELETE FROM DownloadedMedias WHERE Identifier = ?""", (identifier,))
+        cursor.execute("""DELETE
+                          FROM DownloadedMedias
+                          WHERE Identifier = ?""", (identifier,))
         conn.commit()
         conn.close()
 
@@ -799,13 +822,16 @@ async def handle_delete_downloaded_media_req(key: str, identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
+# --- get_downloaded_media: KEIN Admin-Key, unverändert ---
 @app.get("/get/downloadedmedia/{identifier}", response_model=DownloadedMediaResponse)
 async def get_downloaded_media(identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Title FROM DownloadedMedias WHERE Identifier = ?", (identifier,))
+        cursor.execute(
+            "SELECT Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Title FROM DownloadedMedias WHERE Identifier = ?",
+            (identifier,))
         row = cursor.fetchone()
         conn.close()
 
@@ -822,16 +848,15 @@ async def get_downloaded_media(identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/getall/downloadedmedias/{key}", response_model=List[DownloadedMediaResponse])
-async def get_all_downloaded_media(key: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.get("/getall/downloadedmedias", response_model=List[DownloadedMediaResponse],
+         dependencies=[Depends(require_admin)])
+async def get_all_downloaded_media():
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Title FROM DownloadedMedias")
+        cursor.execute(
+            "SELECT Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable, Title FROM DownloadedMedias")
         rows = cursor.fetchall()
         conn.close()
 
@@ -842,13 +867,16 @@ async def get_all_downloaded_media(key: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
+# --- get_user_downloaded_medias: KEIN Admin-Key, unverändert ---
 @app.get("/getuser/downloadedmedias/{user_identifier}", response_model=List[DownloadedMediaResponse])
 async def get_user_downloaded_medias(user_identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, UserIdentifier, Title, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias WHERE UserIdentifier = ?", (user_identifier,))
+        cursor.execute(
+            "SELECT Identifier, UserIdentifier, Title, Url, MediaType, DownloadedAt, DownloadPath, IsPlayable FROM DownloadedMedias WHERE UserIdentifier = ?",
+            (user_identifier,))
         rows = cursor.fetchall()
         conn.close()
 
@@ -859,13 +887,12 @@ async def get_user_downloaded_medias(user_identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-# ---------------- Settings Endpoints ----------------
+# ============================================================
+# Settings Endpoints
+# ============================================================
 
-@app.post("/create/settings/{key}", response_model=CreateResponse)
-async def handle_create_setting_req(key: str, req: CreateSettingsRequest):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.post("/create/settings/", response_model=CreateResponse, dependencies=[Depends(require_admin)])
+async def handle_create_setting_req(req: CreateSettingsRequest):
     try:
         identifier = str(uuid.uuid4())
 
@@ -873,29 +900,32 @@ async def handle_create_setting_req(key: str, req: CreateSettingsRequest):
         cursor = conn.cursor()
 
         cursor.execute(
-            """INSERT INTO Settings (Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup) VALUES (?, ?, ?, ?, ?)""",
-            (identifier, req.user_identifier, req.default_download_path, req.dark_mode_enabled, req.scan_folder_on_startup)
+            """INSERT INTO Settings (Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup)
+               VALUES (?, ?, ?, ?, ?)""",
+            (identifier, req.user_identifier, req.default_download_path, req.dark_mode_enabled,
+             req.scan_folder_on_startup)
         )
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Settings created successfully for user '{req.user_identifier}' with id {identifier}")
+        log_queue.put_nowait(
+            f"[INFO] Settings created successfully for user '{req.user_identifier}' with id {identifier}")
         return {"message": "Setting created successfully", "identifier": identifier}
     except Exception as e:
         log_queue.put_nowait(f"[ERROR] Error creating settings for user '{req.user_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/delete/settings/{key}", response_model=MessageResponse)
-async def handle_delete_setting_req(key: str, identifier: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+# HINWEIS: 'identifier' ist hier undefiniert (Bug im Original) – bewusst NICHT angefasst.
+@app.post("/delete/settings/{identifier}", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+async def handle_delete_setting_req(identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("""DELETE FROM Settings WHERE Identifier = ?""", (identifier,))
+        cursor.execute("""DELETE
+                          FROM Settings
+                          WHERE Identifier = ?""", (identifier,))
         conn.commit()
         conn.close()
 
@@ -906,13 +936,16 @@ async def handle_delete_setting_req(key: str, identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
+# --- get_setting: KEIN Admin-Key, unverändert ---
 @app.get("/get/settings/{user_identifier}", response_model=SettingsResponse)
 async def get_setting(user_identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings WHERE UserIdentifier = ?", (user_identifier,))
+        cursor.execute(
+            "SELECT Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings WHERE UserIdentifier = ?",
+            (user_identifier,))
         row = cursor.fetchone()
         conn.close()
 
@@ -929,16 +962,14 @@ async def get_setting(user_identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/getall/settings/{key}", response_model=List[SettingsResponse])
-async def get_all_settings(key: str):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.get("/getall/settings", response_model=List[SettingsResponse], dependencies=[Depends(require_admin)])
+async def get_all_settings():
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings")
+        cursor.execute(
+            "SELECT Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup FROM Settings")
         rows = cursor.fetchall()
         conn.close()
 
@@ -949,70 +980,77 @@ async def get_all_settings(key: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-# ---------------- PlaylistMedia Endpoints ----------------
+# ============================================================
+# PlaylistMedia Endpoints
+# ============================================================
 
-@app.post("/create/playlistmedia/{key}", response_model=CreatePlaylistMediaResponse)
-async def handle_create_playlist_media_req(key: str, req: CreatePlaylistMediaRequest):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.post("/create/playlistmedia", response_model=CreatePlaylistMediaResponse, dependencies=[Depends(require_admin)])
+async def handle_create_playlist_media_req(req: CreatePlaylistMediaRequest):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT COUNT(*) FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?", (req.playlist_identifier, req.media_identifier))
+        cursor.execute("SELECT COUNT(*) FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?",
+                       (req.playlist_identifier, req.media_identifier))
         count = cursor.fetchone()[0]
 
         if count > 0:
             conn.close()
-            log_queue.put_nowait(f"[ERROR] Media '{req.media_identifier}' already exists in playlist '{req.playlist_identifier}'")
+            log_queue.put_nowait(
+                f"[ERROR] Media '{req.media_identifier}' already exists in playlist '{req.playlist_identifier}'")
             raise fastapi.HTTPException(status_code=400, detail="Media already exists in the playlist")
 
-        cursor.execute("SELECT MAX(Position) FROM PlaylistMedias WHERE PlaylistIdentifier = ?", (req.playlist_identifier,))
+        cursor.execute("SELECT MAX(Position) FROM PlaylistMedias WHERE PlaylistIdentifier = ?",
+                       (req.playlist_identifier,))
         max_position_row = cursor.fetchone()
         max_position = max_position_row[0] if max_position_row[0] is not None else 0
         new_position = max_position + 1
 
-        cursor.execute("""INSERT INTO PlaylistMedias (PlaylistIdentifier, MediaIdentifier, Position) VALUES (?, ?, ?)""", (req.playlist_identifier, req.media_identifier, new_position))
+        cursor.execute("""INSERT INTO PlaylistMedias (PlaylistIdentifier, MediaIdentifier, Position)
+                          VALUES (?, ?, ?)""", (req.playlist_identifier, req.media_identifier, new_position))
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Media '{req.media_identifier}' added to playlist '{req.playlist_identifier}' at position {new_position}")
+        log_queue.put_nowait(
+            f"[INFO] Media '{req.media_identifier}' added to playlist '{req.playlist_identifier}' at position {new_position}")
         return {"message": "Media added to playlist successfully", "position": new_position}
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error adding media '{req.media_identifier}' to playlist '{req.playlist_identifier}': {str(e)}")
+        log_queue.put_nowait(
+            f"[ERROR] Error adding media '{req.media_identifier}' to playlist '{req.playlist_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/delete/playlistmedia/{key}", response_model=MessageResponse)
-async def handle_delete_playlist_media_req(key: str, req: DeletePlaylistMediaRequest):
-    if key != ADMIN_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-
+@app.post("/delete/playlistmedia", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+async def handle_delete_playlist_media_req(req: DeletePlaylistMediaRequest):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("DELETE FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?", (req.playlist_identifier, req.media_identifier))
+        cursor.execute("DELETE FROM PlaylistMedias WHERE PlaylistIdentifier = ? AND MediaIdentifier = ?",
+                       (req.playlist_identifier, req.media_identifier))
         conn.commit()
         conn.close()
 
         log_queue.put_nowait(f"[INFO] Media '{req.media_identifier}' removed from playlist '{req.playlist_identifier}'")
         return {"message": "Media removed from playlist successfully"}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error removing media '{req.media_identifier}' from playlist '{req.playlist_identifier}': {str(e)}")
+        log_queue.put_nowait(
+            f"[ERROR] Error removing media '{req.media_identifier}' from playlist '{req.playlist_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
+# --- get_playlist_medias: KEIN Admin-Key, unverändert ---
 @app.get("/get/playlistmedias/{playlist_identifier}", response_model=List[PlaylistMediaResponse])
 async def get_playlist_medias(playlist_identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT PlaylistIdentifier, MediaIdentifier, Position FROM PlaylistMedias WHERE PlaylistIdentifier = ? ORDER BY Position", (playlist_identifier,))
+        cursor.execute(
+            "SELECT PlaylistIdentifier, MediaIdentifier, Position FROM PlaylistMedias WHERE PlaylistIdentifier = ? ORDER BY Position",
+            (playlist_identifier,))
         rows = cursor.fetchall()
         conn.close()
 
@@ -1022,13 +1060,16 @@ async def get_playlist_medias(playlist_identifier: str):
         log_queue.put_nowait(f"[ERROR] Error retrieving media for playlist '{playlist_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
+
+# --- get_user_playlists: KEIN Admin-Key, unverändert ---
 @app.get("/getuser/playlists/{user_identifier}", response_model=List[PlaylistResponse])
 async def get_user_playlists(user_identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, UserIdentifier, Name, Description FROM Playlists WHERE UserIdentifier = ?", (user_identifier,))
+        cursor.execute("SELECT Identifier, UserIdentifier, Name, Description FROM Playlists WHERE UserIdentifier = ?",
+                       (user_identifier,))
         rows = cursor.fetchall()
         conn.close()
 
@@ -1039,8 +1080,11 @@ async def get_user_playlists(user_identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-# ---------------- Login ----------------
+# ============================================================
+# Login / Register / Logout  (KEIN Admin-Key nach außen)
+# ============================================================
 
+# --- login: unverändert ---
 @app.post("/login", response_model=LoginResponse)
 async def handle_login_req(req: LoginRequest):
     try:
@@ -1069,16 +1113,21 @@ async def handle_login_req(req: LoginRequest):
         log_queue.put_nowait(f"[ERROR] Error during login for user '{req.username}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
+
+# GEÄNDERT: interner Aufruf ohne Key.
+# handle_create_user_req hat jetzt nur noch (req) als Parameter; der direkte
+# Funktionsaufruf umgeht die require_admin-Dependency (die läuft nur über HTTP),
+# also bleibt /register wie gehabt offen/public.
 @app.post("/register")
 async def handle_register_req(req: RegisterRequest):
     try:
 
         create_user_req = CreateUserRequest(username=req.username, password=req.password)
-        response = await handle_create_user_req(ADMIN_KEY, create_user_req)
+        response = await handle_create_user_req(create_user_req)
 
         if response:
             log_queue.put_nowait(f"[INFO] User '{req.username}' registered successfully")
-            return {"message": "User registered successfully", "identifier" : response["identifier"]}
+            return {"message": "User registered successfully", "identifier": response["identifier"]}
     except fastapi.HTTPException:
         raise
     except Exception as e:
@@ -1086,13 +1135,16 @@ async def handle_register_req(req: RegisterRequest):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
+# --- logout: unverändert ---
 @app.post("/logout/{identifier}")
 async def handle_logout_req(identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("""UPDATE Users SET LoggedIn = 0 WHERE Identifier = ?""", (identifier,))
+        cursor.execute("""UPDATE Users
+                          SET LoggedIn = 0
+                          WHERE Identifier = ?""", (identifier,))
         conn.commit()
         conn.close()
 

@@ -15,7 +15,7 @@ public partial class SunoScrapWindow : Window
         
         DialogService ds = new DialogService(this);
         
-        var vm = new SunoScrapWindowViewModel(this, ds);
+        var vm = new SunoScrapWindowViewModel(ds);
         
         DataContext = vm;
         

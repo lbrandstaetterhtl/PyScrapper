@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,66 +75,80 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     /// the health check runs every 5 seconds until it is canceled when the window is closed.
     /// </summary>
     /// <exception cref="Exception"></exception>
-    public void StartHealthCheck()
+    public async Task StartHealthCheck()
     {
-        _cts = new CancellationTokenSource();
-        
-        var token = _cts.Token;
-        
-        if (Design.IsDesignMode)
+        try
         {
-            _cts.Cancel();
-            _cts.Dispose();
-            return;
-        }
+            _cts = new CancellationTokenSource();
 
-        Task.Run(async () =>
-        {
-            _runCount = 0;
-            
-            while (!token.IsCancellationRequested)
-            { 
-                bool logHealthResponse = _runCount % 5 == 0;
-                
-                try
-                {
-                    var health = await _apiClient.GetHealth(logHealthResponse);
+            var token = _cts.Token;
 
-                    if (health != null)
-                    {
-                        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                        {
-                            ServerStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, "GetHealth", health.Ok ? "check.png" : "cross.png"));
-                            ConnectionStatus = health.Ok ? "Server is reachable" : "Server is not reachable";
-                            UptimeFormatted = TimeSpan.FromSeconds(health.UptimeSeconds).ToString(@"dd\.hh\:mm\:ss");
-                            MemoryFormatted = $"{health.MemoryMb} MB";
-                            Pid = health.Pid;
-                            Processes = new ObservableCollection<ApiClient.ServerProcess>(health.Processes);
-                            DownloadJobs = new ObservableCollection<ApiClient.DownloadJobItem>(health.ActiveDownloads);
-                            DownloadsCount = health.ActiveDownloads.Count;
-                            ErrorMessages = new ObservableCollection<string>(health.ErrorMessages);
-                            ErrorsCount = health.ErrorMessages.Count;
-                            LastHealthCheckTime = "Last check: " + DateTime.Now.ToString("HH:mm:ss");
-                        });
-                    }
-                    else
-                    {
-                        throw new Exception("Server is not reachable");
-                    }
-                }
-                catch (Exception e)
-                {
-                    Avalonia.Threading.Dispatcher.UIThread.Post(SetOffline);
-                    
-                    var log = new Message("Health check failed: " + e.Message, DateTime.Now, "ERROR");
-                    _logger.LogNewMassage(log);
-                }
-
-                _runCount++;
-                
-                await Task.Delay(5000, token).WaitAsync(token);
+            if (Design.IsDesignMode)
+            {
+                _cts.Cancel();
+                _cts.Dispose();
+                return;
             }
-        }, token);
+
+            Task.Run(async () =>
+            {
+                _runCount = 0;
+
+                while (!token.IsCancellationRequested)
+                {
+                    bool logHealthResponse = _runCount % 5 == 0;
+
+                    try
+                    {
+                        var health = await _apiClient.GetHealth(logHealthResponse);
+
+                        if (health != null)
+                        {
+                            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                            {
+                                ServerStatusIcon = new Bitmap(Path.Combine(AppData.AssetPath, "GetHealth",
+                                    health.Ok ? "check.png" : "cross.png"));
+                                ConnectionStatus = health.Ok ? "Server is reachable" : "Server is not reachable";
+                                UptimeFormatted = TimeSpan.FromSeconds(health.UptimeSeconds)
+                                    .ToString(@"dd\.hh\:mm\:ss");
+                                MemoryFormatted = $"{health.MemoryMb} MB";
+                                Pid = health.Pid;
+                                Processes = new ObservableCollection<ApiClient.ServerProcess>(health.Processes);
+                                DownloadJobs =
+                                    new ObservableCollection<ApiClient.DownloadJobItem>(health.ActiveDownloads);
+                                DownloadsCount = health.ActiveDownloads.Count;
+                                ErrorMessages = new ObservableCollection<string>(health.ErrorMessages);
+                                ErrorsCount = health.ErrorMessages.Count;
+                                LastHealthCheckTime = "Last check: " + DateTime.Now.ToString("HH:mm:ss");
+                            });
+                        }
+                        else
+                        {
+                            throw new Exception("Server is not reachable");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Avalonia.Threading.Dispatcher.UIThread.Post(SetOffline);
+
+                        var log = new Message("Health check failed: " + e.Message, DateTime.Now, "ERROR");
+                        _logger.LogNewMassage(log);
+                    }
+
+                    _runCount++;
+
+                    await Task.Delay(5000, token).WaitAsync(token);
+                }
+            }, token);
+
+        }
+        catch (Exception e)
+        {
+            var log = new Message("Health check failed: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
+            await _dialogService.ShowAlertAsync("Health check failed: " + e.Message);
+        }
     }
     
     /// <summary>

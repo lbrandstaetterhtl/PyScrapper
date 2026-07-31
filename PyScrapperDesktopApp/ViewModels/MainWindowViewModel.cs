@@ -99,7 +99,7 @@ public partial class MainWindowViewModel : ObservableObject
     private void GetHealth()
     {
         if (Design.IsDesignMode) return;
-        
+
         var getHealthWindow = new GetServerHealthWindow();
         getHealthWindow.Show();
     }

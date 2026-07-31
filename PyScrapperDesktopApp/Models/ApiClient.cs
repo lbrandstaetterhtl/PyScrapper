@@ -37,6 +37,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     public async Task<string> SendScrapRequest(DownloadRequestData requestData)
     {
         using HttpClient client = new();
+        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
         
         client.Timeout = TimeSpan.FromMinutes(30);
 
@@ -81,6 +82,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
         {
 
             using HttpClient client = new();
+            client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/health");
             var responseData = await response.Content.ReadAsStringAsync();
@@ -147,6 +149,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     public async Task<List<SearchResultItem>> SendSearchRequest(SearchRequestData requestData)
     {
         using HttpClient client = new();
+        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
 
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
@@ -186,6 +189,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     public async Task<ProgressSuccessResponse> GetDownloadProgress(string downloadId)
     {
         using HttpClient client = new();
+        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
 
         var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/download/progress/{downloadId}");
         var responseData = await response.Content.ReadAsStringAsync();
@@ -237,6 +241,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     public async Task<List<bool>> SendListScrapRequest(List<DownloadRequestData> requestDataList, CancellationToken ct)
     {
         using HttpClient client = new();
+        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
 
         client.Timeout = TimeSpan.FromMinutes(30);
 
@@ -320,6 +325,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     public async Task<bool> Login(LoginRequest req)
     {
         using var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
         var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/login", content);
@@ -355,6 +361,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     public async Task<bool> Register(RegisterRequest req)
     {
         using var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
         var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/register", content);

@@ -15,7 +15,7 @@ namespace PyScrapperDesktopApp.Models;
 public abstract class Database
 {
     private static readonly AppLogger _logger = AppLogger.Instance;
-    
+
     public static async Task<ObservableCollection<DownloadedMedia>> LoadDownloadedMediasFromApi()
     {
         try
@@ -53,7 +53,7 @@ public abstract class Database
             return new ObservableCollection<DownloadedMedia>();
         }
     }
-    
+
     public static async Task<ObservableCollection<Playlist>> LoadPlaylistsFromApi()
     {
         try
@@ -92,7 +92,7 @@ public abstract class Database
             return new ObservableCollection<Playlist>();
         }
     }
-    
+
     public static async Task<Settings> LoadSettingsFromApi()
     {
         try
@@ -102,7 +102,7 @@ public abstract class Database
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/settings/{AppData.CurrentUser.Identifier}");
 
             var json = await response.Content.ReadAsStringAsync();
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var settings = JsonSerializer.Deserialize<Settings>(json);
@@ -128,7 +128,7 @@ public abstract class Database
             return null;
         }
     }
-    
+
     public static async Task<List<PlaylistMedia>> LoadPlaylistMediaFromApi(string playlistIdentifier)
     {
         try
@@ -172,7 +172,7 @@ public abstract class Database
             var media = await LoadPlaylistMediaFromApi(playlist.Identifier);
             allPlaylistMedias.AddRange(media);
         }
-        
+
         return allPlaylistMedias;
     }
 
@@ -181,14 +181,15 @@ public abstract class Database
         try
         {
             using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
 
             var jsonContent = JsonSerializer.Serialize(req);
             var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/downloadedmedia/{AppData.Config.ApiKey}", content);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/downloadedmedia", content);  
 
             DownloadedMedia result;
-            
+
             var json = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -199,15 +200,15 @@ public abstract class Database
             {
                 var log = new Message("Downloaded media created successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
-                
+
                 var deserialized = JsonSerializer.Deserialize<CreateResponse>(json);
-                
+
                 string identifier = deserialized?.Identifier ?? throw new Exception("Failed to deserialize identifier from API response.");
-                
+
                 DateTime downloadedAt = DateTime.Parse(req.DownloadedAt);
-                
+
                 result = new DownloadedMedia(AppData.CurrentUser.Identifier, req.Title, req.Url, req.MediaType, downloadedAt, req.DownloadPath, req.IsPlayable, identifier);
-                
+
                 return result;
             }
         }
@@ -224,11 +225,12 @@ public abstract class Database
         try
         {
             using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey); 
 
             var jsonContent = JsonSerializer.Serialize(req);
             var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/playlist/{AppData.Config.ApiKey}", content);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/playlist/", content);   
 
             Playlist result;
 
@@ -240,14 +242,14 @@ public abstract class Database
             {
                 var log = new Message("Playlist created successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
-                
+
                 var json = await response.Content.ReadAsStringAsync();
                 var deserialized = JsonSerializer.Deserialize<CreateResponse>(json);
-                
+
                 string identifier = deserialized?.Identifier ?? throw new Exception("Failed to deserialize identifier from API response.");
-                
+
                 result = new Playlist(req.Name, req.Description, identifier, AppData.CurrentUser.Identifier);
-                
+
                 return result;
             }
         }
@@ -258,17 +260,18 @@ public abstract class Database
             return null;
         }
     }
-    
+
     public static async Task<PlaylistMedia> CreatePlaylistMedia(CreatePlaylistMediaRequest req)
     {
         try
         {
             using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
 
             var jsonContent = JsonSerializer.Serialize(req);
             var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/playlistmedia/{AppData.Config.ApiKey}", content);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/playlistmedia", content);   
 
             PlaylistMedia result;
 
@@ -280,14 +283,14 @@ public abstract class Database
             {
                 var log = new Message("Playlist media created successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
-                
+
                 var json = await response.Content.ReadAsStringAsync();
                 var deserialized = JsonSerializer.Deserialize<CreatePlaylistMediaResponse>(json);
-                
+
                 int position = deserialized?.Position ?? throw new Exception("Failed to deserialize position from API response.");
-                
+
                 result = new PlaylistMedia(req.PlaylistIdentifier, req.MediaIdentifier, position);
-                
+
                 return result;
             }
         }
@@ -304,8 +307,9 @@ public abstract class Database
         try
         {
             using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
 
-            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/downloadedmedia/{AppData.Config.ApiKey}?identifier={identifier}", null);
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/downloadedmedia/?identifier={identifier}", null);   
             var json = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -324,16 +328,17 @@ public abstract class Database
             _logger.LogNewMassage(log);
         }
     }
-    
+
     public static async Task DeletePlaylist(string identifier)
     {
         try
         {
             var content = new StringContent(JsonSerializer.Serialize(new { Identifier = identifier }), System.Text.Encoding.UTF8, "application/json");
-            
-            using var client = new HttpClient();
 
-            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/playlist/{AppData.Config.ApiKey}", content);
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);  
+
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/playlist", content);   
 
             if (!response.IsSuccessStatusCode)
             {
@@ -351,16 +356,17 @@ public abstract class Database
             _logger.LogNewMassage(log);
         }
     }
-    
+
     public static async Task DeletePlaylistMedia(string playlistIdentifier, string mediaIdentifier)
     {
         try
         {
             var content = new StringContent(JsonSerializer.Serialize(new { PlaylistIdentifier = playlistIdentifier, MediaIdentifier = mediaIdentifier }), System.Text.Encoding.UTF8, "application/json");
-            
-            using var client = new HttpClient();
 
-            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/playlistmedia/{AppData.Config.ApiKey}", content);
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
+
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/playlistmedia", content);   
 
             if (!response.IsSuccessStatusCode)
             {
@@ -386,8 +392,10 @@ public abstract class Database
             var content = new StringContent(JsonSerializer.Serialize(req), System.Text.Encoding.UTF8,
                 "application/json");
             var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
+
             var response =
-                await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/settings/{AppData.Config.ApiKey}", content);
+                await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/settings/", content);  
             var json = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -426,12 +434,11 @@ public abstract class Database
         }
     }
 
-    
     public static async Task<User> GetUser(string identifier)
     {
         var client = new HttpClient();
         var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/user/{identifier}");
-        
+
         if (!response.IsSuccessStatusCode)
         {
             throw new Exception(response.ReasonPhrase);
@@ -458,50 +465,45 @@ public abstract class Database
     public static async Task<bool> SaveUserData(SaveDataRequest req)
     {
             using var client  = new HttpClient();
-            
+
             var content = new StringContent(JsonSerializer.Serialize(req), System.Text.Encoding.UTF8, "application/json");
-            
+
             var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/save", content);
 
             if (!response.IsSuccessStatusCode)
             {
                 throw new Exception(response.ReasonPhrase);
             }
-            
+
             var log = new Message("User data saved successfully via API.", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
-            
+
             var json = await response.Content.ReadAsStringAsync();
             log = new Message($"Response from API SaveUserData: {json}", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             return true;
     }
 
-    public static async Task SetUserLoggedIn()
+    public static async Task<bool> SetUserLoggedIn()
     {
         using var client = new HttpClient();
-        
+        client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
+
         var content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/loggedIn/{AppData.Config.ApiKey}?identifier={AppData.CurrentUser.Identifier}",  content);
+        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/loggedIn?identifier={AppData.CurrentUser.Identifier}",  content);   // Key raus
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new Exception("Failed to set user as logged in on the server:  " + response.ReasonPhrase);
+            return false;
         }
-            
-        response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/lastLoggedIn/{AppData.Config.ApiKey}?identifier={AppData.CurrentUser.Identifier}",  content);
-            
+
+        response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/lastLoggedIn?identifier={AppData.CurrentUser.Identifier}",  content);   // Key raus
+
         if (!response.IsSuccessStatusCode)
         {
-            throw new Exception($"Failed to set user's last login time on the server: {response.ReasonPhrase}");
+            return false;
         }
-    }
-    
-    public static async Task<bool> SetUserLoggedOut()
-    {
-        using var client = new HttpClient();
         
-        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/logout/{AppData.CurrentUser.Identifier}", null);
-        return response.IsSuccessStatusCode;
+        return true;
     }
 }

@@ -240,70 +240,80 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     [RelayCommand]
     public async Task Search()
     {
-        var client = new ApiClient(_dialogService);
-
-        List<string> tags = ["track"];
-        
-        var filters = new SearchFilter()
+        try
         {
-            Creator = "",
-            Tags = tags
-        };
+            var client = new ApiClient(_dialogService);
 
-        var requestData = new SearchRequestData()
-        {
-            Search = SearchQuery,
-            Provider = _selectedProvider,
-            Top = SearchResultsCount,
-            Filters = filters
-        };
-        
-        var json = JsonSerializer.Serialize(requestData);
-        _logger.LogDebugMessage(new Message($"Sending search request: {json}", DateTime.Now, "DEBUG"));
-        
-        var results = await client.SendSearchRequest(requestData);
+            List<string> tags = ["track"];
 
-        var log = new Message("", DateTime.Now, "Init");
-        
-        if (results.Count == 0)
-        {
-            await _dialogService.ShowAlertAsync($"No results found for the given search query \"{SearchQuery}\".");
-            
-            log = new Message("No results found for query: " + SearchQuery, DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-            
-            return;
-        }
+            var filters = new SearchFilter()
+            {
+                Creator = "",
+                Tags = tags
+            };
 
-        var httpClient = new HttpClient();
+            var requestData = new SearchRequestData()
+            {
+                Search = SearchQuery,
+                Provider = _selectedProvider,
+                Top = SearchResultsCount,
+                Filters = filters
+            };
 
-        var tasks = results.Select(async item =>
-        {
+            var json = JsonSerializer.Serialize(requestData);
+            _logger.LogDebugMessage(new Message($"Sending search request: {json}", DateTime.Now, "DEBUG"));
+
+            var results = await client.SendSearchRequest(requestData);
+
+            var log = new Message("", DateTime.Now, "Init");
+
+            if (results.Count == 0)
+            {
+                await _dialogService.ShowAlertAsync($"No results found for the given search query \"{SearchQuery}\".");
+
+                log = new Message("No results found for query: " + SearchQuery, DateTime.Now, "INFO");
+                _logger.LogNewMassage(log);
+
+                return;
+            }
+
+            var httpClient = new HttpClient();
+
+            var tasks = results.Select(async item =>
+            {
                 if (_selectedProvider == _providers[1])
                 {
                     var thumbnailUrl = $"https://i.ytimg.com/vi/{item.identifier}/hqdefault.jpg";
-    
+
                     var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
-    
+
                     var stream = new MemoryStream(bytes);
                     item.ThumbnailBitmap = new Bitmap(stream);
                 }
                 else if (_selectedProvider == _providers[2] || _selectedProvider == _providers[3])
                 {
                     var thumbnailUrl = item.thumbnail;
-    
+
                     var bytes = await httpClient.GetByteArrayAsync(thumbnailUrl);
-    
+
                     var stream = new MemoryStream(bytes);
                     item.ThumbnailBitmap = new Bitmap(stream);
                 }
-        });
-        
-        await Task.WhenAll(tasks);
-        
-        httpClient.Dispose();
+            });
 
-        Items = results;
+            await Task.WhenAll(tasks);
+
+            httpClient.Dispose();
+
+            Items = results;
+        }
+        catch (Exception ex)
+        {
+            var log = new Message($"An error occurred during the search process: {ex.Message}", DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
+            await _dialogService.ShowAlertAsync("An error occurred during the search process: " + ex.Message);
+        }
     }
     
     private void CancelDownload()

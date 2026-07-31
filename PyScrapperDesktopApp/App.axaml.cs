@@ -300,7 +300,7 @@ public partial class App : Application
                 return false;
             }
 
-            var loggedOut = await Database.SetUserLoggedOut();
+            var loggedOut = await Database.SetUserLoggedIn();
             if (!loggedOut)
             {
                 log = new Message("SetUserLoggedOut failed", DateTime.Now, "ERROR");
