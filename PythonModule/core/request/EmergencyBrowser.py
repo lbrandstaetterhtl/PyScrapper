@@ -325,7 +325,7 @@ def _tryPressPlay(page, max_attempts: int = 4, wait_ms: int = 2000) -> bool:
 def _buildCurlCommand(
     url: str,
     headers: dict[str, str],
-    includeCookieHeader: bool = False
+    include_cookie_header: bool = False
 ) -> str:
     """
     Baut aus dem echten Playwright-Request einen kopierbaren curl-Befehl.
@@ -347,7 +347,7 @@ def _buildCurlCommand(
     "authorization",
 ]
 
-    if includeCookieHeader:
+    if include_cookie_header:
         wanted_headers.append("cookie")
 
     # playwright normale gives headers in lower case.
@@ -483,7 +483,7 @@ def _guessMediaType(
     badKeywords = [
         "ads", "banner", "promo", "tracking",
         "gambling", "notification", "bonus",
-        "click", "redirect"
+        "click", "redirect", "jwplayer6", "ping.gif"
     ]
 
     goodKeywords = [
@@ -505,7 +505,7 @@ def _guessMediaType(
         if "master" in lower:
             _priority = 100
             _mediaType = media.MediaType.MASTER_M3U8
-        elif "index" in lower:
+        elif any(word in lower for word in ("index", "playlist")):
             _priority = 90
             _mediaType = media.MediaType.INDEX_M3U8
         else:

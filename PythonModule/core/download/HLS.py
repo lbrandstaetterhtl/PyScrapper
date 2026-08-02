@@ -1,37 +1,38 @@
 #Imports
 from ..request.Session import Session
-from ..general.RegexFind import searchBlocks, searchBlocksAll
+from ..general.DataSearch import searchBlocks, searchBlocksAll
 from ..general.Html import getHtml
 from ..models.errors import ArgumentError, MergeError
 from ..models.M3U8 import M3U8Stream
-import urllib.request, urllib.parse, urllib.error
+import urllib.request, urllib.parse
 import shutil
 import subprocess
 import os
+import time
 
 
 #Classes
-class downloadM3U8FromMaster():
+class DownloadM3U8FromMaster():
     def __init__(
             self,
-            outFile: str,
-            masterUrl: str = "",
+            out_file: str,
+            url: str = "",
             session: Session = None,
-            downloadProgress: dict = None,
+            progress_dict: dict = None,
             preferedAudioLanguages: list[str] = None
             ):
-        if not masterUrl:
+        if not url:
             raise ArgumentError("downloadM3U8FromMaster: No master url was given")
         
        
         
-        if not isinstance(outFile, str): raise ValueError("downloadM3U8FromMaster: given output file is not a string")
-        if not outFile.endswith((".ts", ".mp4")):
+        if not isinstance(out_file, str): raise ValueError("downloadM3U8FromMaster: given output file is not a string")
+        if not out_file.endswith((".ts", ".mp4")):
             print("downloadM3U8FromMaster: Warning: given output file does not end with .ts or .mp4, adding .ts to the end of the file name")
-            outFile += ".ts"
-        if downloadProgress is None:
-            downloadProgress = {}
-        if not isinstance(downloadProgress, dict): raise ValueError("downloadM3U8FromMaster: given download progress is not a dict")
+            out_file += ".ts"
+        if progress_dict is None:
+            progress_dict = {}
+        if not isinstance(progress_dict, dict): raise ValueError("downloadM3U8FromMaster: given download progress is not a dict")
 
         if not session:
             print("downloadM3U8FromMaster: No session was given, creating new session")
@@ -45,13 +46,13 @@ class downloadM3U8FromMaster():
         self.preferedAudioLanguages = preferedAudioLanguages
 
 
-        self.masterUrl = masterUrl
-        self.outFile = outFile
-        self.downloadProgress = downloadProgress
+        self.masterUrl = url
+        self.outFile = out_file
+        self.downloadProgress = progress_dict
 
 
     def run(self):
-        result = _selectIndexFromMaster(
+        result: M3U8Stream = _selectIndexFromMaster(
         masterUrl=self.masterUrl,
         preferedAudioLanguages=self.preferedAudioLanguages,
         session=self.session
@@ -61,11 +62,11 @@ class downloadM3U8FromMaster():
         print(f"downloadM3U8FromMaster: Best index url: {bestIndexUrl}")
 
         DownloadM3U8FromIndex(
-            outFile=self.outFile,
-            indexUrl=bestIndexUrl,
-            audioUrl=audioUrl,
+            out_file=self.outFile,
+            url=bestIndexUrl,
+            audio_url=audioUrl,
             session=self.session,
-            downloadProgress=self.downloadProgress
+            progress_dict=self.downloadProgress
         ).run()
 
 
@@ -75,25 +76,25 @@ class downloadM3U8FromMaster():
 class DownloadM3U8FromIndex():
     def __init__(
             self,
-            outFile: str,
-            indexUrl: str = "",
-            audioUrl: str = "",
+            out_file: str,
+            url: str = "",
+            audio_url: str = "",
             session: Session = None,
-            downloadProgress:dict = None,
+            progress_dict:dict = None,
             ):
-        if not indexUrl:
+        if not url:
             raise ArgumentError("DownloadM3U8FromIndex: No index file or url was given")
         
-        if downloadProgress is None:
-            downloadProgress = {}
+        if progress_dict is None:
+            progress_dict = {}
 
-        if not isinstance(downloadProgress, dict):
+        if not isinstance(progress_dict, dict):
             raise ValueError("DownloadM3U8FromIndex: given download progress is not a dict")
         
-        if not isinstance(outFile, str):
+        if not isinstance(out_file, str):
             raise ValueError("DownloadM3U8FromIndex: given output file is not a string")
         
-        self.outPath = os.path.dirname(outFile)
+        self.outPath = os.path.dirname(out_file)
         if self.outPath:
             os.makedirs(self.outPath, exist_ok=True)
 
@@ -102,10 +103,10 @@ class DownloadM3U8FromIndex():
         if not self.ffmpegPath:
             self.ffmpegPath = None
         
-        self.indexUrl = indexUrl
+        self.indexUrl = url
 
-        self.outFile = outFile
-        self.downloadProgress = downloadProgress
+        self.outFile = out_file
+        self.downloadProgress = progress_dict
 
         if not isinstance(session, Session) or session is None:
             print("DownloadM3U8FromIndex: No session was given, creating new session")
@@ -115,10 +116,18 @@ class DownloadM3U8FromIndex():
         
         
        
-        self.audioUrl = audioUrl or ""
+        self.audioUrl = audio_url
 
-    def run(self):
+    def run(
+            self,
+            download_with_ffmpeg: bool = False
+            ):
+        print("Index running")
         #Main method for downloading m3u8 files, it will try to use ffmpeg if it is installed and in the PATH, if not it will fallback to downloading the segments manually and merging them together. It also updates the given download progress dict with the current progress of the download
+        if download_with_ffmpeg == False or not isinstance(download_with_ffmpeg, bool):
+            #Fallback if there isn't ffmpeg installed or found        
+                    self.downloadM3U8Manual()
+                    return
         try:
 
             if self.ffmpegPath:
@@ -145,8 +154,7 @@ class DownloadM3U8FromIndex():
         except Exception as e:
             print(f"downloadM3U8FromIndex: An error occurred while trying to download with ffmpeg, falling back to manual download. Error: {e}")
 
-    #Fallback if there isn't ffmpeg installed or found        
-        self.downloadM3U8Manual()
+    
         
 
 
@@ -396,45 +404,119 @@ def _downloadM3U8SegmentsToFile(
         segmentUrls: list[str],
         outFile: str,
         session: Session,
-        downloadProgress: dict
+        downloadProgress: dict,
+        chunkSize: int = 8192
 ):
+    if not segmentUrls:
+        raise ValueError(
+            "_downloadM3U8SegmentsToFile: No segment URLs were given"
+        )
+
+    if downloadProgress is None:
+        downloadProgress = {}
+
     totalSegments = len(segmentUrls)
     downloadedSegments = 0
+    downloadedBytes = 0
 
-    downloadProgress['status'] = "downloading..."
-    downloadProgress['totalSegments'] = totalSegments
-    
-    downloadProgress['downloadedBytes'] = 0
+    startTime = time.time()
 
-    with open(outFile, "wb") as f:
-        for url in segmentUrls:
-            segmentSize:int = 0
-            request = urllib.request.Request(
-                url,
-                method="GET"
-            )
-            try:
+    downloadProgress["status"] = "downloading..."
+    downloadProgress["totalSegments"] = totalSegments
+    downloadProgress["downloadedSegments"] = 0
+    downloadProgress["downloadedBytes"] = 0
+    downloadProgress["downloadProgress"] = 0.0
+    downloadProgress["speed"] = 0.0
+    downloadProgress["eta"] = None
+
+    try:
+        with open(outFile, "wb") as file:
+            for segmentIndex, url in enumerate(segmentUrls, start=1):
+                segmentSize = 0
+
+                request = urllib.request.Request(
+                    url,
+                    method="GET"
+                )
+
                 with session.open(request=request) as response:
                     while True:
-                        chunk = response.read(8192)
+                        chunk = response.read(chunkSize)
+
                         if not chunk:
                             break
-                        segmentSize += len(chunk)
-                        f.write(chunk)
+
+                        file.write(chunk)
+
+                        chunkLength = len(chunk)
+                        segmentSize += chunkLength
+                        downloadedBytes += chunkLength
+
+                        elapsedTime = time.time() - startTime
+
+                        if elapsedTime > 0:
+                            bytesPerSecond = downloadedBytes / elapsedTime
+
+                            downloadProgress["speed"] = round(
+                                bytesPerSecond / 1024 / 1024,
+                                2
+                            )
+
+                        downloadProgress["downloadedBytes"] = (
+                            downloadedBytes
+                        )
 
                 downloadedSegments += 1
-                print(f"\rDownloaded segment {downloadedSegments}/{totalSegments} ({segmentSize} bytes)", end="", flush=True)
-                percent = 100 / totalSegments * downloadedSegments
-                downloadProgress['downloadProgress'] = percent
-                downloadProgress['downloadedBytes'] += segmentSize
 
-            except Exception as e:
-                downloadProgress['status'] = "failed"
-                raise ValueError(f"_downloadM3U8SegmentsToFile: An error occurred while downloading segment {url}. Error: {e}")
-                
+                progressPercent = (
+                    downloadedSegments / totalSegments * 100
+                )
 
-    downloadProgress['downloadedSegments'] = downloadedSegments
-    downloadProgress['status'] = "complete" 
+                elapsedTime = time.time() - startTime
+                averageSegmentTime = (
+                    elapsedTime / downloadedSegments
+                )
+
+                remainingSegments = (
+                    totalSegments - downloadedSegments
+                )
+
+                estimatedRemainingTime = (
+                    remainingSegments * averageSegmentTime
+                )
+
+                downloadProgress["downloadedSegments"] = (
+                    downloadedSegments
+                )
+                downloadProgress["downloadProgress"] = round(
+                    progressPercent,
+                    2
+                )
+                downloadProgress["eta"] = round(
+                    estimatedRemainingTime,
+                    1
+                )
+
+                print(
+                    f"\rDownloadJob: {downloadProgress['id']} "
+                    f"Downloaded segment "
+                    f"{downloadedSegments}/{totalSegments} "
+                    f"({segmentSize} bytes, "
+                    f"{downloadProgress['speed']} MiB/s, "
+                    f"ETA {downloadProgress['eta']} s)",
+                    end="",
+                    flush=True
+                )
+
+        downloadProgress["downloadProgress"] = 100.0
+        downloadProgress["eta"] = 0.0
+        downloadProgress["status"] = "complete"
+
+        print()
+
+    except Exception:
+        downloadProgress["status"] = "failed"
+        raise
 
 
 

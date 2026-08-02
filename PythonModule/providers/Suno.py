@@ -1,8 +1,7 @@
 import urllib.request, urllib.error, urllib.parse
-import re, os
-import time
 import PythonModule.core as core
-
+import os, re
+from PythonModule.models import processorModels
 
 class SunoError(Exception): ...
 
@@ -94,33 +93,27 @@ def search_creator(
 
 
 def download (
-        url: str,
-        session,
-        out_file: str,
-        mediatype = ".mp3",
-        progress_dict: dict = None,
+        download_information: processorModels.DownloadInformations,
         
         
         
 ):
-
-    if not url: 
-        raise SunoNotEnoughArguments("No url was given!")
-    if not session:
-        raise SunoNotEnoughArguments("No session was given")
-    if not progress_dict:
-        raise SunoNotEnoughArguments("No progress dict was given")
+    if not download_information or not isinstance(download_information, processorModels.DownloadInformations): raise ValueError("BandcampDownload: Given download information is either None or has the wrong type")
     
 
-    html = core.general.Html.getHtml(url=url, session=session)
+    html = core.general.Html.getHtml(url=download_information.url, session=download_information.session)
 
-    strip = url.replace("https://suno.com/song/", "")
+    strip = download_information.url.replace("https://suno.com/song/", "")
     identifier = strip
 
-    file = search_media(html=html, identifier=identifier, mediatype=mediatype)
-    if os.path.exists(out_file):
-        raise SunoError(f"Destination out file {out_file} already exists. No Download has started")
+    file = search_media(html=html, identifier=identifier, mediatype=download_information.fileending)
+    if os.path.exists(download_information.outFile):
+        raise SunoError(f"SunoDownload: Destination out file {download_information.outFile} already exists. No Download has started")
 
     
-    core.download.File._downloadToFile(url=file, out_file=out_file, session=session, progress_dict=progress_dict)
+    core.download.File._downloadToFile(
+        url=file, out_file=download_information.outFile,
+        session=download_information.session,
+        progress_dict=download_information.downloadProgress
+        )
 

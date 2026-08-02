@@ -1,6 +1,6 @@
-from PythonModule.providers import Youtube, Suno, Archive, Bandcamp
 from PythonModule.models.requests import DownloadRequest
 from PythonModule.core.request.Session import Session
+from PythonModule.models import processorModels
 from . import utils
 
 import asyncio
@@ -17,173 +17,108 @@ class DownloadProcessor():
             ):
         
         if not isinstance(progressDict, dict): 
-            raise TypeError("progressDict needs to be from type 'dict'")
+            raise TypeError("[ERROR] DownloadProcessor: progressDict needs to be from type 'dict'")
         
         if not isinstance(downloadRequest, DownloadRequest): 
-            raise TypeError("downloadRequest needs to be from models.downloadRequest")
+            raise TypeError("[ERROR] DownloadProcessor: downloadRequest needs to be from models.downloadRequest")
         
         if not isinstance(downloadLimiter, asyncio.Semaphore): 
-            raise TypeError("downloadLimiter needs to be from type 'asyncio.Semaphore'")
+            raise TypeError("[ERROR] DownloadProcessor: downloadLimiter needs to be from type 'asyncio.Semaphore'")
         
         if not isinstance(session, Session): 
-           raise TypeError("Session must be from type session")
+           raise TypeError("[ERROR] DownloadProcessor: Session must be from type session")
         
         if not isinstance(logQueue, asyncio.Queue):
-            raise TypeError("given Queue for logs must be an asyncio.Queue")
+            raise TypeError("[ERROR] DownloadProcessor: given Queue for logs must be an asyncio.Queue")
         
-#progressDict is used to save the progress. server.py will give one and so it will be updated for the server in life time
-        self.progressDict:dict = progressDict
 
-#in Download Request is the data saved to determine what the Processor will do
-        self.downloadRequest:DownloadRequest = downloadRequest
-
-#downloadLimiter will be given from the server so not too many downlaod Jobs will run parralel and kill the bandwidth
-        self.downloadLimiter:asyncio.Semaphore = downloadLimiter 
 
 #Session is used to open the links with, save cookies...
-        self.session:Session = session
+        self._createDownloadInformations(
+            download_request=downloadRequest,
+            progress_dict=progressDict,
+            session=session,
+            download_limiter = downloadLimiter
+        )
+
+
 
         self.logQueue: asyncio.Queue = logQueue
+
+
+        
         
 
     async def run(
             self
             ):
         try:
-            out_path = self.downloadRequest.download_path
-            dir_path = os.path.dirname(out_path)
-            os.makedirs(dir_path, exist_ok=True)
-
-            file = self.downloadRequest.filename
-            self.downloadRequest.mediatype = utils.addpointtomediatype(mediatype=self.downloadRequest.mediatype)
-            print(self.downloadRequest.mediatype)
-            mediatype = self.downloadRequest.mediatype
-
-            out_file = utils.make_out_file(
-                out_path=out_path,
-                filename=file,
-                mediatype=mediatype
-            )
-
-
-
-
-
-        
-        
-            provider = utils.validateProviders(providerGiven=self.downloadRequest.provider)
-            if not provider:
-                raise ValueError("No supported provider was given")
+            provider:processorModels.ProviderTypes = utils.validateProviders(providerGiven=self.downloadInformation.providerStr)
             
-    #Raises an exception if 
+            downloadFunction = processorModels.providerDownloadMapping.get(provider, None)
+            if downloadFunction is None:
+                raise Exception(f"Provider {self.downloadInformation.providerStr} isn't supported for downloading yet")
 
-            utils.validateMediatype(provider=provider, mediatype=mediatype)
+            if not downloadFunction:
+                raise Exception("No download function was found for this provider")
 
-            
-            if provider == "archive":
-                await self.ArchiveDownload(out_file)
-                
 
-            elif provider == "youtube":
-                await self.YoutubeDownload(out_file)
+            async with self.downloadInformation.downloadLimiter:
+                await asyncio.to_thread(
+                    downloadFunction,
+                    self.downloadInformation
+                )
 
-            elif provider == "suno":
-                await self.SunoDownload(out_file)
-            
-            elif provider == "bandcamp":
-                await self.BandCampDownload(out_file)
 
-            else:
-                raise Exception("invalid provider was somehow passed")
-            
-            self.logQueue.put_nowait(f"[INFO] Successfully completed downloadjob {self.progressDict.get('id')}")
+#If everything runs without raising an error the Processor will think that everything went according to plan and finished successfully            
+            self.logQueue.put_nowait(f"[INFO] DownloadProcessor: Successfully completed downloadjob {self.downloadInformation.downloadProgress.get('id')}")
             
         except Exception as e:
-            self.logQueue.put_nowait(f"[ERROR] Failed download for job {self.progressDict.get('id')}.\nError Message: {str(e)}")
-            self.progressDict["status"] = "error"
-            self.progressDict["errorMessage"] = str(e)
+            self.logQueue.put_nowait(f"[ERROR] DownloadProcessor: Failed download for job {self.downloadInformation.downloadProgress.get('id')}.\nError Message: {str(e)}")
+            self.downloadInformation.downloadProgress["status"] = "error"
+            self.downloadInformation.downloadProgress["errorMessage"] = str(e)
 #END OF RUN        
         
     
-        
 
 
-    async def ArchiveDownload(
+
+
+
+    def _createDownloadInformations(
             self,
-            out_file
+            download_request: DownloadRequest,
+            progress_dict: dict,
+            session: Session,
+            download_limiter: asyncio.Semaphore
+
+            
             ):
-        async with self.downloadLimiter:
-            await asyncio.to_thread(
-                Archive.download,
-                url=self.downloadRequest.url,
-                out_file=out_file,
-                progress_dict= self.progressDict,
-                session = self.session,
-                mediatype=self.downloadRequest.mediatype
-            )
-#END OF ARCHIVE DOWNLOAD            
-       
+        self.downloadInformation = processorModels.DownloadInformations()
+#Creating filename with ending 
+        self.downloadInformation.filename = download_request.filename + download_request.mediatype
+        self.downloadInformation.fileending = download_request.mediatype
 
+#Creating Folder where file will get saved into
+        self.downloadInformation.downloadPath = download_request.download_path
+        os.makedirs(self.downloadInformation.downloadPath, exist_ok=True)
 
+#Creating outfile where the modules will save the files to
+        self.downloadInformation.outFile = os.path.join(self.downloadInformation.downloadPath, self.downloadInformation.filename)
 
-    async def YoutubeDownload(self,
-                            out_file:str
-                            ):
-#Removing the file extensions because for youtube yt-dlp is used and yt-dlp adds its fileextensions on its own
-        out_file = out_file.replace(f"{self.downloadRequest.mediatype}", "")
+        self.downloadInformation.url = download_request.url
 
-        async with self.downloadLimiter:
-            if self.downloadRequest.mediatype.lower() == ".mp4":
-                
+        self.downloadInformation.session = session
 
-                await asyncio.to_thread(
-                    Youtube.download,
-                    url=self.downloadRequest.url,
-                    out_file=out_file,
-                    progress_dict=self.progressDict
-                    )
-            else:
-                await asyncio.to_thread(
-                    Youtube.download_audio_only,
-                    url=self.downloadRequest.url,
-                    progress_dict=self.progressDict,
-                    out_file=out_file
-                    )
-#END OF YOUTUBEDOWNLOAD              
+        self.downloadInformation.downloadProgress = progress_dict
+
+        self.downloadInformation.providerStr = download_request.provider
+
+        self.downloadInformation.downloadLimiter = download_limiter
 
 
 
 
-    async def SunoDownload(
-            self,
-            out_file:str
-    ):
-        async with self.downloadLimiter:
-            await asyncio.to_thread(
-                Suno.download,
-                url=self.downloadRequest.url,
-                out_file=out_file,
-                progress_dict=self.progressDict,
-                session=self.session,
-                mediatype=self.downloadRequest.mediatype
-
-            )
-    async def BandCampDownload(
-            self,
-            out_file: str
-    ):
-        async with self.downloadLimiter:
-            await asyncio.to_thread(
-                Bandcamp.download,
-                url=self.downloadRequest.url,
-                out_file=out_file,
-                progress_dict=self.progressDict,
-                session=self.session,
-                
-            )
-#END OF SUNODOWNLOAD
-                
-        
 
 
     

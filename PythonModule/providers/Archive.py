@@ -1,6 +1,8 @@
 import PythonModule.core as core
 import urllib.parse, urllib.request, urllib.error
-import json, os, time
+import json
+from PythonModule.models import processorModels
+from PythonModule.models.requests import SearchFilters
 
 class ArchiveError(Exception): ...
 class ArchiveSearchError(ArchiveError): ...
@@ -12,6 +14,7 @@ class ArchiveDownloadError(ArchiveError): ...
 def search(
         search: str,
         session=None,
+        filters: SearchFilters = None,
         top=5,
 
 )-> list[dict]:
@@ -20,6 +23,7 @@ def search(
         raise ArchiveArgumentError("No search query for archive was given")
     if not session:
         raise ArchiveArgumentError("No session was given to open the query with")
+    if not isinstance(top, int) or top < 0: raise ValueError("'top' must be an integer above 0")
     
     query = f'(mediatype:audio OR mediatype:movies) AND title:("{search}")'
 
@@ -53,31 +57,15 @@ def search(
 
 
 def download(
-        url: str,
-        progress_dict: dict,
-        session,
-        out_file: str,
-        mediatype=".mp3",
-        chunk_size:int = 8096,
+        download_information: processorModels.DownloadInformations,
         
     ):
 
-    if not url:
-        raise ArchiveArgumentError("No Url was given for Archive download")
+    if not download_information or not isinstance(download_information, processorModels.DownloadInformations): raise ValueError("ArchiveDownload: Given download information is either None or has the wrong type")
     
-    if not isinstance(url, str) or not url.startswith(("https://archive.org/metadata", "https://www.archive.org/metadata", "www.archive.org/metadata", "archive.org/metadata")):
-        raise ArchiveArgumentError("ArchiveDownload: Invalid URL was given, wanted: 'https://archive.org/metadata/{identifier}'")
+    metadata_url = download_information.url
     
-    if not session:
-        session = core.request.Session.Session()
-    
-    if not progress_dict or not isinstance(progress_dict, dict):
-        raise ArchiveArgumentError("ArchiveDownload: Either no Dictionary to write to was given or given object wasn't a Python dictionary")
-    
-    
-    metadata_url = url
-    
-    split = url.rstrip("/").split("/")
+    split = download_information.url.rstrip("/").split("/")
     identifier = split[-1]
 
 
@@ -85,13 +73,13 @@ def download(
         metadata_url,
         method="GET"
     )
-    with session.open(request=request) as response:
+    with download_information.session.open(request=request) as response:
         metadata = json.loads(response.read().decode("utf-8"))
 
     found=False
     for file in metadata.get("files", []):
         name = file.get('name')
-        if name.endswith(mediatype):
+        if name.endswith(download_information.fileending):
             found=True
 
 
@@ -104,18 +92,18 @@ def download(
             )
 
             
-            progress_dict['status'] = "downloading..."
+            download_information.downloadProgress['status'] = "downloading..."
             core.download.File._downloadToFile(
                 request=download_request,
-                out_file=out_file,
-                session=session,
-                progress_dict=progress_dict,
-                chunk_size=chunk_size
+                out_file=download_information.outFile,
+                session=download_information.session,
+                progress_dict=download_information.downloadProgress,
+
                 )
             break
 
     if not found:
-        raise ArchiveDownloadError(f"No file with mediatype {mediatype} found in archive metadata")
+        raise ArchiveDownloadError(f"No file with mediatype {download_information.fileending} found in archive metadata")
 
 
 

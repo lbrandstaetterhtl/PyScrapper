@@ -1,13 +1,11 @@
-import urllib.parse, urllib.request, urllib.error
-import http.cookiejar
-import json
-import re
+import urllib.parse
 from yt_dlp import YoutubeDL
-import re
 import os
 import shutil
 import pathlib
-from PythonModule.core.general.Html import getHtml
+import PythonModule.core as core
+from PythonModule.models import processorModels
+from PythonModule.models.requests import SearchFilters
 
 
 def find_ffmpeg() -> str | None:
@@ -43,16 +41,18 @@ class YoutubeDownloadError(Exception): ...
 
 def search(
         search:str,
-        session: http.cookiejar.CookieJar = None,
+        filters: SearchFilters,
+        session: core.request.Session.Session,
         top:int = 5
         
         ) -> list[dict]:
     
-    if not search:
-        raise NoSearchError("YOUTUBE_SEARCH: No search was given")
-    if not session:
-        raise SessionError("YOUTUBE_SEARCH: No session was given")
-
+    if not search or not isinstance(search, str):
+        raise NoSearchError("YOUTUBE_SEARCH: No search was given or invalid type was given")
+    if not session or not isinstance(session, core.request.Session.Session):
+        raise SessionError("YOUTUBE_SEARCH: No session was given or unsupported type of sessio")
+    if not isinstance(filters, SearchFilters): raise ValueError("'filters' must be from type SearchFilters")
+    if not isinstance(top, int) or top < 0: raise ValueError("'top' must be an integer above 0")
 
     try:
         top = int(top)
@@ -69,12 +69,15 @@ def search(
     
 
 
-    html:str = getHtml(url=search_url, session=session)
-    jsondata: dict = search_json(html=html, keyword="var ytInitialData = ")
+    html:str = core.general.Html.getHtml(
+        url=search_url,
+        session=session
+        )
+    jsondata: dict = core.general.DataSearch.searchJson(searchBlock=html, keyword="var ytInitialData = ")
 
 
     Data = []
-    for videorenderer in iter_value_from_json(jsondata, "videoRenderer"):
+    for videorenderer in core.general.DataSearch.iterValueFromJson(jsondata, "videoRenderer"):
         if not isinstance(videorenderer, dict):
             continue
 
@@ -118,55 +121,6 @@ def search(
 
 
 
-
-
-
-
-
-
-
-
-def search_json(
-        html: str,
-        keyword: str
-        ) -> dict:
-    
-
-    found = re.search(keyword + r"({.*?});", html, re.DOTALL)
-
-    if not found:
-        raise NoSearchError("SEARCH_JSON: Failed to find the json data")
-    
-    try:    
-        jsondata = json.loads(found.group(1))
-
-    except json.JSONDecodeError:
-        raise NoSearchError("SEARCH_JSON: Failed to decode the JSON data")
-
-
-    return jsondata
-
-
-
-
-
-def iter_value_from_json(
-        data: dict,
-        value: str
-):
-    if isinstance(data, dict):
-        if value in data:
-            yield data[value]
-
-        for key in data:
-            yield from iter_value_from_json(data[key], value)
-
-
-    elif isinstance(data, list):
-        for item in data:
-            yield from iter_value_from_json(item, value)
-
-
 def download_audio_only(
         url: str,
         out_file: str,
@@ -185,7 +139,7 @@ def download_audio_only(
     ydl_opts = {
         "format": "bestaudio/best",
         "outtmpl": out_file,
-        "progress_hooks": [build_progress_hook(progress_dict)],
+        "progress_hooks": [_buildProgressHook(progress_dict)],
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
@@ -205,32 +159,28 @@ def download_audio_only(
     progress_dict['status'] = "complete"
 
 
+
+
+
+
 def download(
-        url: str,
-        out_file: str,
-        progress_dict: dict,
+        download_information: processorModels.DownloadInformations,
         
 ):
-    if not url:
-        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No URL was given for download")
-    if not out_file:
-        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No out file was given")
-    if not progress_dict:
-        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD: No progress dict was given")
+    if not download_information or not isinstance(download_information, processorModels.DownloadInformations): raise ValueError("YoutubeDownload: Given download informations is either None or has the wrong type")
 
- 
     #identifier = url.replace("https://www.youtube.com/watch?v=", "")
-
-    if os.path.exists(out_file):
-        raise YoutubeDownloadError(f"Destination out file {out_file} already exists. No Download has started")
+   
+    if os.path.exists(download_information.outFile):
+        raise YoutubeDownloadError(f"Destination out file {download_information.outFile} already exists. No Download has started")
 
 
     ydl_opts = {
         # best video + best audio, fallback auf fertige mp4
         "format": "bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b",
-        "outtmpl": out_file,
+        "outtmpl": download_information.outFile,
         "merge_output_format": "mp4",
-        "progress_hooks": [build_progress_hook(progress_dict)],
+        "progress_hooks": [_buildProgressHook(download_information.downloadProgress)],
 
         # Sehr hilfreich bei YouTube-Problemen
         "cookiesfrombrowser": ("firefox",),
@@ -257,18 +207,18 @@ def download(
     if ffmpeg:
         ydl_opts["ffmpeg_location"] = ffmpeg
 
-    progress_dict['status'] = "downloading..."
-    progress_dict['filename'] = out_file
+    download_information.downloadProgress['status'] = "downloading..."
+    download_information.downloadProgress['filename'] = download_information.outFile
     with YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
+        ydl.download([download_information.url])
 
-    progress_dict['status'] = "complete"    
+    download_information.downloadProgress['status'] = "complete"    
     
 
 
 
 
-def build_progress_hook(progress_dict: dict):
+def _buildProgressHook(progress_dict: dict):
     def progress_hook(d: dict):
         status = d.get("status")
 

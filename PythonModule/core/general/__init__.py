@@ -1,9 +1,9 @@
 from . import Html
-from . import RegexFind
+from . import DataSearch
 from . import CurlToFFMPEG
 
 __all__ = [
     "Html",
-    "RegexFind",
+    "DataSearch",
     "CurlToFFMPEG"
 ]

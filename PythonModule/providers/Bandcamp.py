@@ -4,6 +4,7 @@ from PythonModule.models.requests import SearchFilters
 from PythonModule.models.exceptions import InvalidURL
 import urllib.parse, urllib.request, urllib.error
 import re
+from PythonModule.models import processorModels
 
 
 class BandCampSearchError(Exception): ...
@@ -20,7 +21,7 @@ def search(
     if not isinstance(filters, SearchFilters): raise ValueError("'filters' must be from type SearchFilters")
     if not isinstance(top, int) or top < 0: raise ValueError("'top' must be an integer above 0")
     
-    searchURL = build_search_url(
+    searchURL = _buildSearchUrl(
                 search=search,
             )
     
@@ -35,7 +36,7 @@ def search(
     
     
     try:
-        results= get_searchResults(
+        results= _get_searchResults(
             html=_getSearchHtml(),
             top=top,
             filters=filters   
@@ -52,7 +53,7 @@ def search(
         )
         session.reloadCookies()
         
-        results= get_searchResults(
+        results= _get_searchResults(
                     html=_getSearchHtml(),
                     top=top,
                     filters=filters
@@ -60,7 +61,7 @@ def search(
         
 
 
-    print(results)
+
     return results
        
 
@@ -68,7 +69,7 @@ def search(
 
 
 
-def build_search_url(
+def _buildSearchUrl(
         search: str,
         
 ) -> list[str]:
@@ -89,7 +90,7 @@ def build_search_url(
 
 
 
-def get_searchResults(
+def _get_searchResults(
         html: str,
         top: int,
         filters: SearchFilters
@@ -105,13 +106,13 @@ def get_searchResults(
 
     
     try:
-        allTracks = core.general.RegexFind.searchBlocks(
+        allTracks = core.general.DataSearch.searchBlocks(
             pattern=result_items_pattern,
             searchBlock=html,
             returnException=True
         )
 
-    except core.general.RegexFind.RegexSearchError as error:
+    except core.general.DataSearch.RegexSearchError as error:
         raise BandCampSearchError(
             "BandcampSearch: Search results were not found. "
             "Bandcamp may have returned a JavaScript challenge."
@@ -140,11 +141,11 @@ def get_searchResults(
     
         
        
-        trackType = core.general.RegexFind.searchBlocks(
+        trackType = core.general.DataSearch.searchBlocks(
             pattern=type_pattern,
             searchBlock=track
         )
-        MyType = typeMapping(trackType)
+        MyType = _typeMapping(trackType)
         
 #Default "nothing" that gets sended for tags is [''] that's why filtering for that    
         if filters.tags != ['']:
@@ -152,7 +153,7 @@ def get_searchResults(
             if MyType not in filters.tags:
                 continue
             
-        result = buildResult(
+        result = _buildResult(
             track=track,
             typeGiven=MyType
             
@@ -166,7 +167,7 @@ def get_searchResults(
     
 
 
-def buildResult(
+def _buildResult(
         track: str,
         typeGiven: str
 
@@ -174,18 +175,18 @@ def buildResult(
     dictionary = {}
     thumbnail_pattern = r'<img src="(.*?)">'
 
-    dictionary['thumbnail'] = core.general.RegexFind.searchBlocks(
+    dictionary['thumbnail'] = core.general.DataSearch.searchBlocks(
         pattern=thumbnail_pattern,
         searchBlock=track
     )
     titel_pattern = r'<div class="heading">.*?<a.*?>(.*?)</a>'
-    dictionary['title'] = core.general.RegexFind.searchBlocks(
+    dictionary['title'] = core.general.DataSearch.searchBlocks(
         pattern=titel_pattern,
         searchBlock=track
     )
 
     url_pattern = r'<div class="heading">.*?<a href="(.*?)"'
-    dictionary['url'] = core.general.RegexFind.searchBlocks(
+    dictionary['url'] = core.general.DataSearch.searchBlocks(
         pattern=url_pattern,
         searchBlock=track
     )
@@ -195,7 +196,7 @@ def buildResult(
     
 
 
-def typeMapping(givenType: str) -> str:
+def _typeMapping(givenType: str) -> str:
     mapping = {
         "t" : "track",
         "a" : "album",
@@ -237,7 +238,7 @@ def validateURL(
 
 
 
-def extractStreamingURL(
+def _extractStreamingURL(
         urlType: str,
         url: str,
         session
@@ -257,7 +258,7 @@ def extractStreamingURL(
 
             streamurl_pattern = r'(https://t4.bcbits.com/stream/.*?);}'
 
-            streamingUrl = core.general.RegexFind.searchBlocks(
+            streamingUrl = core.general.DataSearch.searchBlocks(
                 pattern=streamurl_pattern,
                 searchBlock=html
             )
@@ -279,20 +280,18 @@ def extractStreamingURL(
 
 
 def download(
-        url: str,
-        session,
-        progress_dict: dict,
-        out_file: str,
-):
+        download_information: processorModels.DownloadInformations,
+): 
+    if not download_information or not isinstance(download_information, processorModels.DownloadInformations): raise ValueError("BandcampDownload: Given download information is either None or has the wrong type")
     
     urlType = validateURL(
-        url=url
+        url=download_information.url
     )
 
-    streamingURLList, trackURLList = extractStreamingURL(
-        url=url,
+    streamingURLList, trackURLList = _extractStreamingURL(
+        url=download_information.url,
         urlType=urlType,
-        session=session
+        session=download_information.session
     )
     
     
@@ -304,7 +303,7 @@ def download(
             method="GET",
             headers={
                 "Referer" : streamingURL,
-                "Origin" : url,
+                "Origin" : download_information.url,
                 "Range": "bytes=0-",
                 }   
             )
@@ -313,9 +312,9 @@ def download(
         try:
             core.download.File._downloadToFile(
                 request=request,
-                session=session,
-                out_file=out_file,
-                progress_dict=progress_dict,
+                session=download_information.session,
+                out_file=download_information.outFile,
+                progress_dict=download_information.downloadProgress,
                 
             )
         except urllib.error.HTTPError as e:
@@ -324,11 +323,11 @@ def download(
 
                 trackHTML = core.general.Html.getHtml(
                     url=trackURL,
-                    session=session
+                    session=download_information.session
                 )
 
                 embeddedplayer_pattern = r'<meta property="og:video".*?content="(https://bandcamp.com/EmbeddedPlayer.*?)">'
-                embeddedPlayerUrl = core.general.RegexFind.searchBlocks(
+                embeddedPlayerUrl = core.general.DataSearch.searchBlocks(
                     pattern=embeddedplayer_pattern,
                     searchBlock=trackHTML
                 )
@@ -340,9 +339,9 @@ def download(
 
                 core.download.File._downloadToFile(
                     request=request,
-                    session=session,
-                    out_file=out_file,
-                    progress_dict=progress_dict
+                    session=download_information.session,
+                    out_file=download_information.outFile,
+                    progress_dict=download_information.downloadProgress
 
                 )
             else: raise

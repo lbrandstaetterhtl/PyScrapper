@@ -6,11 +6,11 @@ import asyncio
 
 def validateProviders(
           providerGiven: str
-) -> str:
-    for name, aliases in settings.SUPPORTEDPROVIDERS.items():
-            if providerGiven in aliases:
-                return name
-    raise NotSupportedProvider(provider=providerGiven, supported=settings.SUPPORTEDPROVIDERS[providerGiven])
+):
+    for providerType, aliases in settings.SUPPORTEDPROVIDERS.items():
+            if providerGiven.lower() in aliases:
+                return providerType
+    raise Exception("Invalid provider was given")
 
 
 

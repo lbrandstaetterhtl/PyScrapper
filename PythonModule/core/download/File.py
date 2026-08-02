@@ -91,5 +91,15 @@ def _downloadToFile(
                         remaining / speed,
                         1
                     )
+            print(
+                f"\rDownloadJob: {progress_dict.get('id', 'unknown')} "
+                f"Downloaded "
+                f"{downloaded}/{total_size} bytes "
+                f"({progress_dict.get('downloadProgress', 0):.2f}%, "
+                f"{progress_dict.get('speed', 0)} MiB/s, "
+                f"ETA {progress_dict.get('eta', 'unknown')} s)",
+                end="",
+                flush=True
+            )
 
     progress_dict["status"] = "complete"

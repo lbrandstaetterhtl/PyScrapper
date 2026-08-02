@@ -1,5 +1,4 @@
-import os
-import core
+import PythonModule.core as core
 import urllib.request, urllib.parse
 import gzip
 import zlib
@@ -129,4 +128,5 @@ async def main():
             print(f"E{episode}: exception occurred: {result}")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

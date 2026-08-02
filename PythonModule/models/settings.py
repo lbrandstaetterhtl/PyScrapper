@@ -1,3 +1,5 @@
+from PythonModule.models.processorModels import ProviderTypes
+
 
 VALIDARCHIVENAMES = [
     "archive",
@@ -24,11 +26,25 @@ VALIDBANDCAMPNAMES = [
     "www.bandcamp.cp,"
 ]
 
+VALIDDEFAULTNAMES = [
+    "default",
+    "general"
+]
+
+VALIDSOUNDCLOUDNAMES = [
+    "soundcloud",
+    "soundcloud.com",
+    "www.soundcloud.com",
+    "sound-cloud"
+]
+
 SUPPORTEDPROVIDERS = {
-    'archive': VALIDARCHIVENAMES,
-    'bandcamp' : VALIDBANDCAMPNAMES,
-    'youtube': VALIDYOUTUBENAMES,
-    'suno': VALIDSUNONAMES
+    ProviderTypes.Archive: VALIDARCHIVENAMES,
+    ProviderTypes.Bandcamp : VALIDBANDCAMPNAMES,
+    ProviderTypes.Youtube: VALIDYOUTUBENAMES,
+    ProviderTypes.Suno: VALIDSUNONAMES,
+    ProviderTypes.Default : VALIDDEFAULTNAMES,
+    ProviderTypes.Soundcloud : VALIDSOUNDCLOUDNAMES
 }
 
 SUPPORTEDARCHIVEFILES = [
@@ -66,6 +82,8 @@ SUPPORTEDFILES = {
     "youtube" : SUPPORTEDYOUTUBEFILES,
     "suno" : SUPPORTEDSUNOFILES
 }
+
+
 
 PROGRESSDICT = {
             "id": "",
