@@ -16,8 +16,7 @@ Diese Datei richtet sich **ausschließlich an Entwickler**. Sie beschreibt den a
 - ein **React / TypeScript / Vite**-Web-Frontend in `PyScrapperWebInterface/`
 - ein **SQLite-Datenmodell** im Backend (`LocalServer/Data/data.db`)
 - lokale Laufzeit- und App-Logs
-- ViewModel-Tests für die Desktop-App in `PyScrapperDesktopApp.Tests/`
-- ein **Inno-Setup-Installer** (`installer.iss`), der eine gebündelte Windows-Installation mit eigener Python-/ffmpeg-Umgebung erzeugt
+- **zwei getrennte Inno-Setup-Installer**: `desktop-installer.iss` (nur Desktop-App + Runtimes) und `server-installer.iss` (nur Backend mit eigenem embeddable Python)
 
 **Wichtige Code-Realität, die man kennen muss:**
 
@@ -25,71 +24,142 @@ Diese Datei richtet sich **ausschließlich an Entwickler**. Sie beschreibt den a
 - Das Web-Frontend verwendet seine Fetch-URLs derzeit fest auf `http://127.0.0.1:8000`, während Backend und Desktop-Client standardmäßig mit **8765** arbeiten.
 - Die Suno-Suche ist im Backend aktuell ein **Platzhalter** und liefert leere Ergebnisse.
 - `/command` unterstützt aktuell nur `quit`.
-- Mehrere Admin-/CRUD-Endpunkte sind über `ADMIN_KEY` abgesichert, der aus einer `.env` geladen wird.
+- Mehrere Admin-/CRUD-Endpunkte sind über `ADMIN_KEY` abgesichert, der aus einer `.env` geladen wird. Der Server-Installer generiert diesen Key automatisch.
 - Der Server ist **nur lokal gedacht** und nicht für öffentliches Deployment gehärtet.
-- Der Installer trägt aktuell den **Server-Code noch nicht** mit aus (die `[Files]`-Zeile für `server\*` ist auskommentiert).
 
 ---
 
-## Installation über den Installer (Endnutzer, Windows x64)
+## Installation über die Installer (Endnutzer, Windows x64)
 
-Für die schnelle Installation auf **Windows x64** gibt es einen Inno-Setup-Bootstrapper (`installer.iss`). Er bündelt die komplette Laufzeitumgebung, sodass kein manuelles Python-/ffmpeg-Setup nötig ist. Der Installer läuft **ohne Adminrechte** (`PrivilegesRequired=lowest`) und installiert pro Benutzer.
+Für die Installation auf **Windows x64** gibt es **zwei getrennte Inno-Setup-Bootstrapper**:
 
-### Was der Installer tut
+| Installer | Skript | Installiert | Zielordner (Standard) |
+|---|---|---|---|
+| **Desktop-App** | `desktop-installer.iss` | Avalonia-Client + Runtimes + ffmpeg/ffprobe | `%LOCALAPPDATA%\Programs\PyScrapper` |
+| **Server** | `server-installer.iss` | FastAPI-Backend + eigenes Python + ffmpeg + Playwright | `%LOCALAPPDATA%\Programs\PyScrapperServer` |
 
-Der Assistent lädt beim Ausführen die nötigen Komponenten herunter und richtet sie mit **Live-Konsolen-Log** und **Fortschritt pro Schritt** ein. Die sechs Einrichtungsschritte (nach dem Kopieren der App-Dateien):
+Beide Installer laufen **ohne Adminrechte** (`PrivilegesRequired=lowest`) und installieren pro Benutzer nach `%LOCALAPPDATA%\Programs\`. Beide zeigen während der Einrichtung ein **Live-Konsolen-Log** und **Fortschritt pro Schritt**.
 
-1. **Visual C++ Runtime** – `vc_redist.x64.exe /install /quiet /norestart`
-2. **Python 3.12.7** – still nach `{app}\python` installiert (fester Pfad, **nicht** in den System-PATH, kein Launcher)
-3. **pip aktualisieren** – `python -m pip install --upgrade pip`
-4. **Python-Pakete** – `python -m pip install -r requirements.txt`
-5. **ffmpeg einrichten** – ZIP entpacken, `ffmpeg.exe` nach `{app}\ffmpeg.exe` kopieren
-6. **Chromium laden** – `python -m playwright install chromium` (für den Bandcamp-Fallback)
+> **Warum LocalAppData statt Program Files?** Ohne Adminrechte ist `Program Files` nicht beschreibbar. Frühere Installer-Versionen scheiterten daran still (Python landete nie im Zielordner). `%LOCALAPPDATA%\Programs\` ist der korrekte Ort für Per-User-Installationen.
 
-Heruntergeladene Komponenten (Download-Phase vor der Installation):
+### Desktop-Installer (`desktop-installer.iss`)
+
+Installiert **ausschließlich** was die Desktop-App braucht — kein Python, kein pip, kein Playwright.
+
+**Kopierte Dateien:** Der komplette `dotnet publish`-Output (inkl. `libvlc\` und `runtimes\`) wird 1:1 nach `{app}` kopiert. Die Struktur des publish-Ordners darf nicht verändert werden, sonst findet die framework-dependent App ihre nativen Bibliotheken nicht.
+
+**Einrichtungsschritte (3):**
+
+1. **Visual C++ Runtime** – `vc_redist.x64.exe /install /quiet /norestart` (für libvlc)
+2. **.NET 9 Desktop Runtime** – wird nur heruntergeladen und installiert, **falls nicht vorhanden** (Check via `dotnet --list-runtimes` auf `Microsoft.WindowsDesktop.App 9.x`)
+3. **ffmpeg + ffprobe** – ZIP entpacken, beide Binaries nach `{app}\ffmpeg\` (ffprobe wird vom Codec-Konverter der App benötigt)
+
+**Download-Quellen:**
 
 - Visual C++ Redistributable x64 – `https://aka.ms/vs/17/release/vc_redist.x64.exe`
-- Python 3.12.7 (amd64) – `https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe`
+- .NET 9 Desktop Runtime x64 – `https://aka.ms/dotnet/9.0/windowsdesktop-runtime-win-x64.exe`
 - ffmpeg (release-essentials) – `https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip`
 
-Nach Abschluss liegt die App im gewählten Zielordner (Standard `{autopf}\PyScrapper`, bei Per-User-Installation typischerweise unter `%LOCALAPPDATA%\Programs\PyScrapper`) – inklusive eigenem Python unter `{app}\python` und `ffmpeg.exe` unter `{app}`. Die App bringt ihre Laufzeitumgebung damit selbst mit.
+### Server-Installer (`server-installer.iss`)
 
-### Installer benutzen
+Installiert **ausschließlich** das Backend — keine .NET-Runtime, keine Desktop-Binaries.
 
-1. `PyScrapper-Setup-<version>.exe` ausführen (aus `installer-output/` bzw. dem Release).
-2. Dem Assistenten folgen. Zuerst läuft die Download-Phase mit eigenem Fortschrittsbalken, danach die Einrichtung mit Live-Log.
-3. Optional das **Desktop-Icon** aktivieren (Task ist standardmäßig deaktiviert).
-4. Nach Abschluss die App über Startmenü-Eintrag oder Desktop-Icon starten.
+**Kopierte Dateien:**
 
-### Installer selbst bauen
+- `LocalServer\` → `{app}\LocalServer\` (ohne `.venv`, `__pycache__`, `.env`, `logs`, `Data\*.db`)
+- `PythonModule\` → `{app}\PythonModule\` (als **Geschwister** von `LocalServer` — zwingend, da `server.py` per `sys.path.insert` den Parent-Ordner in den Modulpfad legt)
 
-Voraussetzung: [Inno Setup](https://jrsoftware.org/isinfo.php) **6.1+** (wegen `WizardSizePercent`).
+**Einrichtungsschritte (6):**
 
-1. Desktop-App als Windows-x64-Build veröffentlichen, sodass die Dateien im Ordner `win-x64/` neben der `installer.iss` liegen:
+1. **Visual C++ Runtime** – `vc_redist.x64.exe /install /quiet /norestart`
+2. **Python 3.12.7 embeddable** – ZIP wird nach `{app}\python` **entpackt** (kein Installer!), danach wird `python312._pth` so konfiguriert, dass `Lib\site-packages` und `import site` aktiv sind
+3. **pip installieren** – via `get-pip.py` (das embeddable Package enthält kein pip)
+4. **Python-Pakete** – `python -m pip install -r {app}\LocalServer\requirements.txt`
+5. **ffmpeg + ffprobe** – ZIP entpacken, beide Binaries nach `{app}\ffmpeg\`
+6. **Chromium laden** – `python -m playwright install chromium` (für den Bandcamp-Fallback)
 
-   ```powershell
-   dotnet publish PyScrapperDesktopApp -c Release -r win-x64 -o win-x64
-   ```
+**Nach den Schritten erzeugt der Installer:**
 
-2. `requirements.txt` und `icon.ico` neben die `installer.iss` legen (beide werden vom Skript referenziert).
-3. `installer.iss` in Inno Setup öffnen und mit **F9** kompilieren – oder per CLI:
+- `{app}\LocalServer\.env` mit einem **zufällig generierten `ADMIN_KEY`** (32 Hex-Zeichen)
+- `{app}\start-server.bat` – startet den Server mit dem eingebetteten Python; ffmpeg wird für die Session in den PATH gelegt
 
-   ```powershell
-   ISCC.exe installer.iss
-   ```
+**Download-Quellen:**
 
-4. Das fertige Setup landet in `installer-output/` als `PyScrapper-Setup-<version>.exe`.
+- Visual C++ Redistributable x64 – `https://aka.ms/vs/17/release/vc_redist.x64.exe`
+- Python 3.12.7 embeddable (amd64) – `https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip`
+- get-pip – `https://bootstrap.pypa.io/get-pip.py`
+- ffmpeg (release-essentials) – `https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip`
 
-**Eckdaten aus dem Skript:**
+> **Warum embeddable statt regulärer Python-Installer?** Der reguläre Installer (`python-3.12.7-amd64.exe /quiet TargetDir=...`) ignoriert `TargetDir` stillschweigend, wenn dieselbe Python-Version bereits auf dem System existiert (z. B. aus dem Microsoft Store) — er repariert dann die vorhandene Installation und der Zielordner bleibt leer. Das embeddable ZIP wird nur entpackt: keine Registry, keine Konflikte, funktioniert unabhängig vom Systemzustand.
 
-- `AppName` **PyScrapper**, `AppVersion` **0.0.1**, Publisher **Leon Brandstetter**
-- Ziel-Exe `PyScrapperDesktopApp.exe`, App-Dateien aus `win-x64\`
-- `ArchitecturesAllowed=x64`, 64-Bit-Installmodus
-- Kompression `lzma2/max`, `SolidCompression`
-- Sprachen: Deutsch und Englisch
-- `CloseApplications=yes` (laufende Instanz wird vor Update geschlossen)
+> **Warum kein venv?** `{app}\python` ist bereits ein vollständig privates Python — pip installiert alle Pakete in dessen `Lib\site-packages`, isoliert vom System. Ein venv würde diese Isolation redundant nachbauen. Die `start-server.bat` ruft `python.exe` mit vollem Pfad auf; eine „Aktivierung" ist nicht nötig.
 
-> **Server-Code:** Die `[Files]`-Zeile für `server\*` ist im aktuellen `installer.iss` **auskommentiert** – der Installer liefert das Backend also noch nicht mit aus. Wer den Server mitinstallieren will, aktiviert die Zeile und passt den Quellpfad an.
+### Setup-EXEs selbst bauen
+
+Im Repository liegen **keine fertigen Setup-EXEs** — nur die beiden `.iss`-Skripte. Wer die Installer nutzen will, baut sie selbst:
+
+**Voraussetzung:** [Inno Setup](https://jrsoftware.org/isinfo.php) **6.1+** installiert.
+
+1. Repository klonen und Desktop-App publishen:
+```powershell
+   git clone https://github.com/lbrandstaetterhtl/PyScrapper.git
+   Set-Location PyScrapper
+   dotnet publish PyScrapperDesktopApp -c Release --self-contained false
+```
+
+2. In beiden `.iss`-Dateien die Pfad-Defines an den eigenen Klon-Ort anpassen (`MyAppPublishDir` in `desktop-installer.iss`, `ProjectRoot` in `server-installer.iss`).
+3. Beide Installer kompilieren:
+```powershell
+   ISCC.exe server-installer.iss
+   ISCC.exe desktop-installer.iss
+```
+
+Alternativ die `.iss` in der Inno-Setup-IDE öffnen und mit **F9** kompilieren. Beide Setups landen in `installer-output\`.
+
+4. Installieren — **erst Server, dann Desktop**:
+   - `PyScrapper-Server-Setup-<version>.exe` ausführen, dem Assistenten folgen (Download-Phase, dann Einrichtung mit Live-Log).
+   - Server über den Startmenü-Eintrag **„PyScrapper Server starten"** oder `{app}\start-server.bat` starten (`http://127.0.0.1:8765`).
+   - `PyScrapper-Desktop-Setup-<version>.exe` ausführen.
+   - Desktop-App über Startmenü oder Desktop-Icon starten — sie erwartet den laufenden Server.
+     Details zu den Build-Schritten stehen im Abschnitt [Installer bauen und veröffentlichen](#installer-bauen-und-veröffentlichen).
+
+
+### Ergebnisstruktur nach Installation
+
+**Desktop (`%LOCALAPPDATA%\Programs\PyScrapper\`):**
+
+```text
+PyScrapper/
+├── PyScrapperDesktopApp.exe
+├── *.dll                        # Avalonia, LibVLCSharp, ...
+├── libvlc\                      # native VLC-Binaries (win-x64 / win-x86)
+├── runtimes\                    # native .NET-Abhängigkeiten
+├── ffmpeg\
+│   ├── ffmpeg.exe
+│   └── ffprobe.exe
+└── unins000.exe
+```
+
+**Server (`%LOCALAPPDATA%\Programs\PyScrapperServer\`):**
+
+```text
+PyScrapperServer/
+├── LocalServer\
+│   ├── server.py
+│   ├── requirements.txt
+│   ├── .env                     # generierter ADMIN_KEY
+│   ├── Data\                    # SQLite-DB entsteht beim ersten Start
+│   └── logs\
+├── PythonModule\                # Geschwister von LocalServer (sys.path!)
+├── python\                      # embeddable Python 3.12.7 + site-packages
+├── ffmpeg\
+│   ├── ffmpeg.exe
+│   └── ffprobe.exe
+├── logs\
+├── data\
+├── start-server.bat
+└── unins000.exe
+```
 
 ---
 
@@ -102,12 +172,13 @@ PyScrapper/
 │   ├── requirements.txt         # Python-Abhängigkeiten
 │   ├── Data/
 │   │   └── data.db              # SQLite-Datenbank
+│   ├── installer/               # .iss installer script
 │   ├── logs/
 │   │   └── server_runtime.log   # Server-Runtime-Log
 │   ├── cookies.txt              # Cookie-Jar der gemeinsamen Session
 │   ├── .env                     # Backend-Umgebung, u. a. ADMIN_KEY
 │   ├── server_backup.py         # Legacy-/Sicherungsstand
-│   └── server_OLD.py           # Legacy-/Sicherungsstand
+│   └── server_OLD.py            # Legacy-/Sicherungsstand
 │
 ├── PythonModule/
 │   ├── core.py                  # HTTP-Helper
@@ -120,28 +191,12 @@ PyScrapper/
 ├── PyScrapperDesktopApp/
 │   ├── PyScrapperDesktopApp.csproj
 │   ├── App.axaml / App.axaml.cs
+│   ├── installer/               # .iss installer script
 │   ├── Models/
 │   ├── ViewModels/
 │   ├── Views/
 │   ├── Assets/
 │   └── logs/
-│
-├── PyScrapperDesktopApp.Tests/
-│   ├── ViewModels/
-│   ├── Models/
-│   └── AvaloniaFixture.cs
-│
-├── PyScrapperWebInterface/
-│   ├── src/
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── README.md
-│
-├── installer.iss                # Inno-Setup-Bootstrapper (Windows-Installer)
-├── requirements.txt             # vom Installer mit ausgeliefert
-├── icon.ico                     # Installer-/App-Icon
-├── cookies.txt                  # zusätzliche Cookie-Datei im Repo-Root
-└── Notes/
 ```
 
 ---
@@ -245,9 +300,9 @@ Die Fetch-Requests sind im Snapshot fest auf Port `8000` verdrahtet, obwohl das 
 
 ### Start / Runtime
 
-Der Server wird direkt mit Uvicorn gestartet. Es gibt im aktuellen Snapshot **keine** eingebauten Start-/Stop-Skripte im Ordner `LocalServer/scripts/...`.
+Der Server wird direkt mit Uvicorn gestartet. Es gibt im aktuellen Snapshot **keine** eingebauten Start-/Stop-Skripte im Ordner `LocalServer/scripts/...` — bei installierter Version übernimmt `start-server.bat` den Start.
 
-Empfohlener Start aus `LocalServer/`:
+Empfohlener Start aus `LocalServer/` (Entwicklungsumgebung):
 
 ```powershell
 Set-Location C:\Users\p50232\RiderProjects\PyScrapper\LocalServer
@@ -271,7 +326,7 @@ python -m playwright install
 
 - `ADMIN_KEY`
 
-Zusätzlich verwendet die Server-Session eine `cookies.txt`-Datei als Cookie-Jar.
+In der Entwicklungsumgebung liegt die `.env` in `LocalServer/`; bei installierter Version generiert der Server-Installer sie dort automatisch mit einem zufälligen Key. Zusätzlich verwendet die Server-Session eine `cookies.txt`-Datei als Cookie-Jar.
 
 **Wichtig:**
 
@@ -528,7 +583,7 @@ Die App geht im aktuellen Stand in dieser Reihenfolge vor:
 - Playwright-Browser
 - `dotnet restore` für die .NET-Projekte
 
-> **Verhältnis zum Installer:** Bei einer Installation über `installer.iss` sind Visual C++, Python, ffmpeg, die Requirements und der Playwright-Browser bereits eingerichtet. Die Launcher-Phase findet diese Komponenten dann vor und muss sie nicht erneut installieren – sie prüft im Wesentlichen nur noch die Server-Erreichbarkeit.
+> **Verhältnis zu den Installern:** Bei einer Installation über die beiden Installer sind Visual C++, .NET-Runtime, ffmpeg (Desktop) bzw. Python, Requirements und der Playwright-Browser (Server) bereits eingerichtet. Die Launcher-Phase findet diese Komponenten dann vor und muss sie nicht erneut installieren – sie prüft im Wesentlichen nur noch die Server-Erreichbarkeit. **Hinweis:** Die Python-/venv-/pip-Checks des Launchers beziehen sich auf die Dev-Umgebung; bei installierter Version liegen diese Komponenten in der Server-Installation und sind aus Sicht der Desktop-App nicht relevant.
 
 ### Wichtige Fenster / Views
 
@@ -665,7 +720,7 @@ npm run lint
 
 ## Empfohlene Setup-Schritte
 
-> Diese Schritte richten die Umgebung **manuell** für die Entwicklung ein. Endnutzer nutzen stattdessen den [Installer](#installation-über-den-installer-endnutzer-windows-x64), der Python, ffmpeg, Requirements und Playwright automatisch einrichtet.
+> Diese Schritte richten die Umgebung **manuell** für die Entwicklung ein. Endnutzer nutzen stattdessen die [beiden Installer](#installation-über-die-installer-endnutzer-windows-x64), die Runtimes, Python, ffmpeg, Requirements und Playwright automatisch einrichten.
 
 ### 1) Python-Backend vorbereiten
 
@@ -708,47 +763,57 @@ Falls das Frontend gegen das Backend sprechen soll, beachte die Port-Mismatch-St
 
 ## Installer bauen und veröffentlichen
 
-Für ein verteilbares Windows-Setup (siehe auch [Installation über den Installer](#installation-über-den-installer-endnutzer-windows-x64)):
+Voraussetzung: [Inno Setup](https://jrsoftware.org/isinfo.php) **6.1+** (wegen `WizardSizePercent`).
 
-### 1) Desktop-App publishen
+### Desktop-Installer bauen
 
-```powershell
-Set-Location C:\Users\p50232\RiderProjects\PyScrapper
-dotnet publish PyScrapperDesktopApp -c Release -r win-x64 -o win-x64
-```
+1. Desktop-App frisch publishen (framework-dependent, ohne `-r`):
 
-Ergebnis: alle App-Dateien inklusive `PyScrapperDesktopApp.exe` unter `win-x64\`.
+   ```powershell
+   Set-Location C:\Users\p50232\RiderProjects\PyScrapper
+   dotnet publish PyScrapperDesktopApp -c Release --self-contained false
+   ```
 
-### 2) Installer kompilieren
+   Ergebnis liegt in `PyScrapperDesktopApp\bin\Release\net9.0\publish\`. **Immer den publish-Ordner verwenden, nie den rohen `net9.0\`-Build-Ordner** — nur publish enthält garantiert alle Abhängigkeiten für fremde Rechner.
 
-```powershell
-ISCC.exe installer.iss
-```
+2. In `desktop-installer.iss` den Pfad prüfen:
 
-Oder `installer.iss` in der Inno-Setup-IDE öffnen und **F9** drücken. Voraussetzung ist Inno Setup **6.1+**.
+   ```pascal
+   #define MyAppPublishDir  "C:\...\PyScrapper\PyScrapperDesktopApp\bin\Release\net9.0\publish"
+   ```
 
-### 3) Ergebnis
+3. Kompilieren:
 
-Das fertige Setup liegt danach in `installer-output/` als `PyScrapper-Setup-<version>.exe` und richtet beim Ausführen VC++ Runtime, Python 3.12.7, pip, die Requirements, ffmpeg und Chromium ein.
+   ```powershell
+   ISCC.exe desktop-installer.iss
+   ```
 
----
+### Server-Installer bauen
 
-## Tests
+1. In `server-installer.iss` den Projekt-Root prüfen:
 
-### Desktop-App-Tests
+   ```pascal
+   #define ProjectRoot  "C:\...\PyScrapper"
+   ```
 
-Die Unit-Tests liegen in `PyScrapperDesktopApp.Tests/` und decken vor allem ViewModels ab.
+2. Kompilieren:
 
-Ausführen:
+   ```powershell
+   ISCC.exe server-installer.iss
+   ```
 
-```powershell
-Set-Location C:\Users\p50232\RiderProjects\PyScrapper\PyScrapperDesktopApp.Tests
-dotnet test
-```
+Beide Setups landen in `installer-output\`.
 
-### Hinweis zu Python-Tests
+### Eckdaten der Skripte
 
-Im aktuellen Snapshot ist im sichtbaren Repo-Baum keine separate Python-Test-Suite enthalten.
+| | Desktop | Server |
+|---|---|---|
+| AppId | eigene GUID | eigene GUID |
+| Zielordner | `{localappdata}\Programs\PyScrapper` | `{localappdata}\Programs\PyScrapperServer` |
+| Kompression | `lzma2/fast` | `none` (Server-Code ist klein, Downloads dominieren) |
+| Sprachen | Deutsch, Englisch | Deutsch, Englisch |
+| CloseApplications | `yes` | `no` |
+| Setup-Schritte | 3 | 6 |
 
 ---
 
@@ -761,15 +826,16 @@ Im aktuellen Snapshot ist im sichtbaren Repo-Baum keine separate Python-Test-Sui
 | `LocalServer/Data/data.db` | SQLite-Datenbank |
 | `LocalServer/logs/server_runtime.log` | Backend-Runtime-Log |
 | `LocalServer/cookies.txt` | Session-Cookie-Jar |
+| `LocalServer/.env` | Backend-Umgebung (`ADMIN_KEY`) |
 | `PyScrapperDesktopApp/logs/app.log` | App-Log |
 | `PyScrapperDesktopApp/PyScrapperDesktopApp.csproj` | Desktop-Projekt / NuGet-Pakete |
+| `PyScrapperDesktopApp/bin/Release/net9.0/publish/` | Publish-Ausgabe (Quelle des Desktop-Installers) |
 | `PyScrapperWebInterface/package.json` | Web-Scripts / Dependencies |
 | `PyScrapperWebInterface/src/components/fetchRequests/*.ts` | Web-API-URLs |
-| `installer.iss` | Inno-Setup-Installer-Skript |
-| `requirements.txt` (Repo-Root) | vom Installer für die eingebettete Python-Umgebung genutzt |
+| `desktop-installer.iss` | Inno-Setup-Skript für die Desktop-App |
+| `server-installer.iss` | Inno-Setup-Skript für den Server |
 | `icon.ico` | Installer- und App-Icon |
-| `installer-output/` | Ausgabeordner des kompilierten Setups |
-| `win-x64/` | Publish-Ausgabe der Desktop-App (Installer-Quelle) |
+| `installer-output/` | Ausgabeordner beider kompilierten Setups |
 
 ---
 
@@ -783,13 +849,23 @@ Im aktuellen Snapshot ist im sichtbaren Repo-Baum keine separate Python-Test-Sui
 - `HTTP://`-Downloads werden abgelehnt, nur `HTTPS://` ist erlaubt.
 - Der Server ist nur lokal gedacht und hat keine Sicherheits-Härtung für öffentliches Deployment; es fehlen u. a. Rate-Limits, harte AuthZ/ACLs und Abuse-Schutz.
 - `download/progress`-Einträge werden nach dem Abschluss verzögert entfernt; wenn du Jobs debuggen willst, schau zeitnah nach.
-- `ADMIN_KEY` muss sowohl im Backend- als auch im Desktop-Umfeld verfügbar sein, wenn die jeweiligen Admin-/DB-Flows genutzt werden.
+- `ADMIN_KEY` muss sowohl im Backend- als auch im Desktop-Umfeld verfügbar sein, wenn die jeweiligen Admin-/DB-Flows genutzt werden. Bei installierter Server-Version wird der Key automatisch generiert und liegt in `{app}\LocalServer\.env`.
 - `Playwright`-Browser sind für geschützte Seiten notwendig; ohne `python -m playwright install` sind Bandcamp-Fallbacks fehleranfällig.
 - `FFmpeg` / `ffprobe` werden für YouTube-Downloads und Codec-Konvertierung benötigt.
 - Die frühere README verwies auf Skripte unter `LocalServer/scripts/...`; diese sind im aktuellen Snapshot nicht vorhanden.
 - `PlaylistDetailsWindow` ist vorhanden, aber das direkte Play-/Lookup-Wiring ist im aktuellen Stand noch nicht vollständig verdrahtet.
 - **`/save/{key}` ist instabil.** Beobachtete Fehler: `FOREIGN KEY constraint failed` (meist Einfüge-Reihenfolge – `PlaylistMedias` muss nach Medien und Playlists geschrieben werden – oder Waisen-Zuordnungen auf gelöschte Medien) und `database is locked` (SQLite lässt nur einen Schreiber zu; WAL + `busy_timeout` setzen, den Save in einer Transaktion ausführen, nach Fehlern sauber `rollback`+`close`, da ein abgebrochener Save sonst eine Sperre hinterlässt).
-- **Installer:** benötigt Inno Setup **6.1+** und einen fertigen `win-x64\`-Publish-Ordner. Der Server-Code wird derzeit nicht mit ausgeliefert (auskommentierte `[Files]`-Zeile). Die Download-URLs für VC++, Python und ffmpeg sind im Skript fest verdrahtet – ändern sich diese Upstream, müssen sie in `installer.iss` angepasst werden.
+
+### Installer-bezogene Stolperfallen
+
+- **Zwei Installer, klare Trennung:** Der Desktop-Installer liefert kein Python/Playwright, der Server-Installer keine .NET-Runtime. Wer beides braucht, installiert beide.
+- **Immer den publish-Ordner einpacken:** Der rohe `bin\Release\net9.0\`-Ordner funktioniert nur auf dem Entwickler-Rechner (NuGet-Cache). Für den Installer zählt ausschließlich `publish\`.
+- **`SourcePath`/`PublishDir` prüfen:** Ein nicht existenter Quellpfad führt dazu, dass Inno Setup vom falschen Ort einpackt — im schlimmsten Fall vom Laufwerks-Root inklusive Systemdateien.
+- **Regulärer Python-Installer ist tabu:** `TargetDir` wird bei vorhandener gleicher Python-Version ignoriert (Exit-Code trotzdem 0). Nur das embeddable ZIP ist zuverlässig.
+- **`python312._pth` nicht vergessen:** Ohne `import site` + `Lib\site-packages` in dieser Datei findet das embeddable Python keine per pip installierten Pakete.
+- **Verwaltete Rechner (AppLocker/SRP):** Auf Firmen-/FH-Rechnern kann „Error 5: Access is denied" beim Setup-Start auftreten — Inno entpackt sich nach `%TEMP%`, was Policies oft verbieten. Workarounds: als Administrator starten oder `TEMP`/`TMP` vor dem Start auf einen erlaubten Ordner umbiegen. Auf privaten Rechnern tritt das nicht auf.
+- **ffprobe-Pfad im Code:** `AudioPlayer.cs` muss ffprobe unter `{app}\ffmpeg\ffprobe.exe` (relativ zu `AppContext.BaseDirectory`) suchen, nicht unter dem Dev-Pfad `LocalServer\ffmpeg\bin\`.
+- **Download-URLs fest verdrahtet:** VC++, .NET Runtime, Python-embed, get-pip und ffmpeg werden von festen URLs geladen — ändern sich diese Upstream, müssen sie in beiden `.iss`-Dateien angepasst werden.
 
 ---
 
@@ -849,14 +925,20 @@ Get-Content C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\logs\server_run
 Get-Content C:\Users\p50232\RiderProjects\PyScrapper\PyScrapperDesktopApp\logs\app.log -Tail 100
 ```
 
-### Installer kompilieren
+### Desktop-Installer kompilieren
 
 ```powershell
-ISCC.exe installer.iss
+ISCC.exe desktop-installer.iss
+```
+
+### Server-Installer kompilieren
+
+```powershell
+ISCC.exe server-installer.iss
 ```
 
 ---
 
 ## Schlussbemerkung
 
-Diese README ist bewusst auf den **aktuellen Codezustand** ausgerichtet. Wenn du den Backend-Port, die Suno-Suche, den Desktop-Startflow, die Web-Frontend-URLs oder den Installer (`installer.iss`) änderst, sollte diese Datei als erstes mitgezogen werden.
+Diese README ist bewusst auf den **aktuellen Codezustand** ausgerichtet. Wenn du den Backend-Port, die Suno-Suche, den Desktop-Startflow, die Web-Frontend-URLs oder die Installer (`desktop-installer.iss` / `server-installer.iss`) änderst, sollte diese Datei als erstes mitgezogen werden.
