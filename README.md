@@ -4,6 +4,8 @@ Diese Datei richtet sich **ausschließlich an Entwickler**. Sie beschreibt den a
 
 **Repository:** [github.com/lbrandstaetterhtl/PyScrapper](https://github.com/lbrandstaetterhtl/PyScrapper)
 
+**Falls Sie eine Release testen oder benutzen wollen:** [github.com/lbrandstaetterhtl/PyscrapperInstaller/release/tag/v1.0.0](https://github.com/lbrandstaetterhtl/PyscrapperInstaller/releases/tag/v1.0.0)
+
 ---
 
 ## Kurzfazit zum aktuellen Stand
