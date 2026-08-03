@@ -1,7 +1,6 @@
 import enum
 from dataclasses import dataclass, field
 from PythonModule.core.request.Session import Session
-import PythonModule.providers as p
 import asyncio
 
 class ProviderTypes(enum.Enum):
@@ -14,22 +13,6 @@ class ProviderTypes(enum.Enum):
     Soundcloud = enum.auto()
     Wcoflix = enum.auto()
     Aniworld = enum.auto()
-
-
-providerDownloadMapping: dict = {
-    ProviderTypes.Archive : p.Archive.download,
-    ProviderTypes.Suno : p.Suno.download,
-    ProviderTypes.Youtube : p.Youtube.download,
-    ProviderTypes.Bandcamp : p.Bandcamp.download,
-    ProviderTypes.Default : p.Default.download,
-    ProviderTypes.Soundcloud : p.Soundcloud.download
-}
-
-providerSearchMapping: dict = {
-    ProviderTypes.Archive : p.Archive.search,
-    ProviderTypes.Youtube : p.Youtube.search,
-    ProviderTypes.Bandcamp : p.Bandcamp.search
-}
 
 @dataclass
 class DownloadInformations:
@@ -47,5 +30,23 @@ class DownloadInformations:
 
     downloadLimiter: asyncio.Semaphore = asyncio.Semaphore(10)
 
+
+
+import PythonModule.providers as p
+
+providerDownloadMapping: dict = {
+    ProviderTypes.Archive : p.Archive.download,
+    ProviderTypes.Suno : p.Suno.download,
+    ProviderTypes.Youtube : p.Youtube.download,
+    ProviderTypes.Bandcamp : p.Bandcamp.download,
+    ProviderTypes.Default : p.Default.download,
+    ProviderTypes.Soundcloud : p.Soundcloud.download
+}
+
+providerSearchMapping: dict = {
+    ProviderTypes.Archive : p.Archive.search,
+    ProviderTypes.Youtube : p.Youtube.search,
+    ProviderTypes.Bandcamp : p.Bandcamp.search
+}
 
 

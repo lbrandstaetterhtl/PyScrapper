@@ -492,18 +492,18 @@ public abstract class Database
         client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
 
         var content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/loggedIn?identifier={AppData.CurrentUser.Identifier}",  content);   // Key raus
+        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/loggedIn?identifier={AppData.CurrentUser.Identifier}",  content);  
 
         if (!response.IsSuccessStatusCode)
         {
-            return false;
+            throw new Exception(response.ReasonPhrase);
         }
 
-        response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/lastLoggedIn?identifier={AppData.CurrentUser.Identifier}",  content);   // Key raus
+        response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/lastLoggedIn?identifier={AppData.CurrentUser.Identifier}",  content); 
 
         if (!response.IsSuccessStatusCode)
         {
-            return false;
+            throw new Exception(response.ReasonPhrase);
         }
         
         return true;

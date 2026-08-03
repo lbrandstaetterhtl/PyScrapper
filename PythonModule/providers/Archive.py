@@ -1,3 +1,4 @@
+from __future__ import annotations
 import PythonModule.core as core
 import urllib.parse, urllib.request, urllib.error
 import json
