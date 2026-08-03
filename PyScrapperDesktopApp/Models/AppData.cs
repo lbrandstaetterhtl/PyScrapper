@@ -37,15 +37,21 @@ public class AppData : Interfaces.IAppDataService
     public static User CurrentUser = null;
     public static Settings Settings = new("default");
     public static readonly ObservableCollection<PlaylistMedia> PlaylistMedias = new();
-    public static string PyScrapperPath { get; } = 
+    
+    /*public static string PyScrapperPath { get; } = 
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PyScrapper");
-    public static string AppBasePath { get; } = AppContext.BaseDirectory;
+            "PyScrapper"); (for release) */
+    
+    //public static string AppBasePath { get; } = AppContext.BaseDirectory; (for release)
+    
+    
+    public static string PyScrapperPath { get; } = 
+        Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName; // (for working in ide)
     public static string AppLogsPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "logs");
     public static string ServerLogsPath { get; set; } = Path.Combine(PyScrapperPath, "LocalServer", "logs");
     public static string DataPath { get; set; } =  Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "data");
-    public static string AssetPath { get; set; } = Path.Combine(AppBasePath, "Assets");
+    public static string AssetPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp" ,"Assets"); //AppBasePath instead of PyScrapperPath if released!! and no PyScrapperDesktopApp
     public static readonly List<FilePickerFileType> FileTypes = 
     [
         new ("Media Files") 

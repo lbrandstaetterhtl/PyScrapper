@@ -2,6 +2,8 @@
 
 Diese Datei richtet sich **ausschließlich an Entwickler**. Sie beschreibt den aktuellen Stand der Codebasis, die Architektur, die echten Einstiegspunkte, die verfügbaren Funktionen und die wichtigsten Abweichungen zwischen Dokumentation und Code.
 
+**Repository:** [github.com/lbrandstaetterhtl/PyScrapper](https://github.com/lbrandstaetterhtl/PyScrapper)
+
 ---
 
 ## Kurzfazit zum aktuellen Stand
@@ -15,6 +17,7 @@ Diese Datei richtet sich **ausschließlich an Entwickler**. Sie beschreibt den a
 - ein **SQLite-Datenmodell** im Backend (`LocalServer/Data/data.db`)
 - lokale Laufzeit- und App-Logs
 - ViewModel-Tests für die Desktop-App in `PyScrapperDesktopApp.Tests/`
+- ein **Inno-Setup-Installer** (`installer.iss`), der eine gebündelte Windows-Installation mit eigener Python-/ffmpeg-Umgebung erzeugt
 
 **Wichtige Code-Realität, die man kennen muss:**
 
@@ -24,6 +27,69 @@ Diese Datei richtet sich **ausschließlich an Entwickler**. Sie beschreibt den a
 - `/command` unterstützt aktuell nur `quit`.
 - Mehrere Admin-/CRUD-Endpunkte sind über `ADMIN_KEY` abgesichert, der aus einer `.env` geladen wird.
 - Der Server ist **nur lokal gedacht** und nicht für öffentliches Deployment gehärtet.
+- Der Installer trägt aktuell den **Server-Code noch nicht** mit aus (die `[Files]`-Zeile für `server\*` ist auskommentiert).
+
+---
+
+## Installation über den Installer (Endnutzer, Windows x64)
+
+Für die schnelle Installation auf **Windows x64** gibt es einen Inno-Setup-Bootstrapper (`installer.iss`). Er bündelt die komplette Laufzeitumgebung, sodass kein manuelles Python-/ffmpeg-Setup nötig ist. Der Installer läuft **ohne Adminrechte** (`PrivilegesRequired=lowest`) und installiert pro Benutzer.
+
+### Was der Installer tut
+
+Der Assistent lädt beim Ausführen die nötigen Komponenten herunter und richtet sie mit **Live-Konsolen-Log** und **Fortschritt pro Schritt** ein. Die sechs Einrichtungsschritte (nach dem Kopieren der App-Dateien):
+
+1. **Visual C++ Runtime** – `vc_redist.x64.exe /install /quiet /norestart`
+2. **Python 3.12.7** – still nach `{app}\python` installiert (fester Pfad, **nicht** in den System-PATH, kein Launcher)
+3. **pip aktualisieren** – `python -m pip install --upgrade pip`
+4. **Python-Pakete** – `python -m pip install -r requirements.txt`
+5. **ffmpeg einrichten** – ZIP entpacken, `ffmpeg.exe` nach `{app}\ffmpeg.exe` kopieren
+6. **Chromium laden** – `python -m playwright install chromium` (für den Bandcamp-Fallback)
+
+Heruntergeladene Komponenten (Download-Phase vor der Installation):
+
+- Visual C++ Redistributable x64 – `https://aka.ms/vs/17/release/vc_redist.x64.exe`
+- Python 3.12.7 (amd64) – `https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe`
+- ffmpeg (release-essentials) – `https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip`
+
+Nach Abschluss liegt die App im gewählten Zielordner (Standard `{autopf}\PyScrapper`, bei Per-User-Installation typischerweise unter `%LOCALAPPDATA%\Programs\PyScrapper`) – inklusive eigenem Python unter `{app}\python` und `ffmpeg.exe` unter `{app}`. Die App bringt ihre Laufzeitumgebung damit selbst mit.
+
+### Installer benutzen
+
+1. `PyScrapper-Setup-<version>.exe` ausführen (aus `installer-output/` bzw. dem Release).
+2. Dem Assistenten folgen. Zuerst läuft die Download-Phase mit eigenem Fortschrittsbalken, danach die Einrichtung mit Live-Log.
+3. Optional das **Desktop-Icon** aktivieren (Task ist standardmäßig deaktiviert).
+4. Nach Abschluss die App über Startmenü-Eintrag oder Desktop-Icon starten.
+
+### Installer selbst bauen
+
+Voraussetzung: [Inno Setup](https://jrsoftware.org/isinfo.php) **6.1+** (wegen `WizardSizePercent`).
+
+1. Desktop-App als Windows-x64-Build veröffentlichen, sodass die Dateien im Ordner `win-x64/` neben der `installer.iss` liegen:
+
+   ```powershell
+   dotnet publish PyScrapperDesktopApp -c Release -r win-x64 -o win-x64
+   ```
+
+2. `requirements.txt` und `icon.ico` neben die `installer.iss` legen (beide werden vom Skript referenziert).
+3. `installer.iss` in Inno Setup öffnen und mit **F9** kompilieren – oder per CLI:
+
+   ```powershell
+   ISCC.exe installer.iss
+   ```
+
+4. Das fertige Setup landet in `installer-output/` als `PyScrapper-Setup-<version>.exe`.
+
+**Eckdaten aus dem Skript:**
+
+- `AppName` **PyScrapper**, `AppVersion` **0.0.1**, Publisher **Leon Brandstetter**
+- Ziel-Exe `PyScrapperDesktopApp.exe`, App-Dateien aus `win-x64\`
+- `ArchitecturesAllowed=x64`, 64-Bit-Installmodus
+- Kompression `lzma2/max`, `SolidCompression`
+- Sprachen: Deutsch und Englisch
+- `CloseApplications=yes` (laufende Instanz wird vor Update geschlossen)
+
+> **Server-Code:** Die `[Files]`-Zeile für `server\*` ist im aktuellen `installer.iss` **auskommentiert** – der Installer liefert das Backend also noch nicht mit aus. Wer den Server mitinstallieren will, aktiviert die Zeile und passt den Quellpfad an.
 
 ---
 
@@ -71,6 +137,9 @@ PyScrapper/
 │   ├── vite.config.ts
 │   └── README.md
 │
+├── installer.iss                # Inno-Setup-Bootstrapper (Windows-Installer)
+├── requirements.txt             # vom Installer mit ausgeliefert
+├── icon.ico                     # Installer-/App-Icon
 ├── cookies.txt                  # zusätzliche Cookie-Datei im Repo-Root
 └── Notes/
 ```
@@ -263,7 +332,7 @@ Abgeschlossene oder fehlerhafte Jobs werden nach etwa **60 Sekunden** aus dem Pr
 | POST | `/search` | Suche | Provider-spezifische Suche |
 | POST | `/login` | Login | Gegen die `Users`-Tabelle |
 | POST | `/register` | Registrierung | Legt einen User über denselben Mechanismus wie Create-User an |
-| POST | `/save/{key}` | User Daten speichern | Speichert die Daten eines Users per user_identifier (ist nicht fertig und sehr instabil) 
+| POST | `/save/{key}` | User Daten speichern | Speichert die Daten eines Users per user_identifier (ist nicht fertig und sehr instabil) |
 
 **Hinweis zu `/command`:**
 
@@ -459,6 +528,8 @@ Die App geht im aktuellen Stand in dieser Reihenfolge vor:
 - Playwright-Browser
 - `dotnet restore` für die .NET-Projekte
 
+> **Verhältnis zum Installer:** Bei einer Installation über `installer.iss` sind Visual C++, Python, ffmpeg, die Requirements und der Playwright-Browser bereits eingerichtet. Die Launcher-Phase findet diese Komponenten dann vor und muss sie nicht erneut installieren – sie prüft im Wesentlichen nur noch die Server-Erreichbarkeit.
+
 ### Wichtige Fenster / Views
 
 Aktuell existieren u. a. diese Views:
@@ -594,6 +665,8 @@ npm run lint
 
 ## Empfohlene Setup-Schritte
 
+> Diese Schritte richten die Umgebung **manuell** für die Entwicklung ein. Endnutzer nutzen stattdessen den [Installer](#installation-über-den-installer-endnutzer-windows-x64), der Python, ffmpeg, Requirements und Playwright automatisch einrichtet.
+
 ### 1) Python-Backend vorbereiten
 
 ```powershell
@@ -633,6 +706,33 @@ Falls das Frontend gegen das Backend sprechen soll, beachte die Port-Mismatch-St
 
 ---
 
+## Installer bauen und veröffentlichen
+
+Für ein verteilbares Windows-Setup (siehe auch [Installation über den Installer](#installation-über-den-installer-endnutzer-windows-x64)):
+
+### 1) Desktop-App publishen
+
+```powershell
+Set-Location C:\Users\p50232\RiderProjects\PyScrapper
+dotnet publish PyScrapperDesktopApp -c Release -r win-x64 -o win-x64
+```
+
+Ergebnis: alle App-Dateien inklusive `PyScrapperDesktopApp.exe` unter `win-x64\`.
+
+### 2) Installer kompilieren
+
+```powershell
+ISCC.exe installer.iss
+```
+
+Oder `installer.iss` in der Inno-Setup-IDE öffnen und **F9** drücken. Voraussetzung ist Inno Setup **6.1+**.
+
+### 3) Ergebnis
+
+Das fertige Setup liegt danach in `installer-output/` als `PyScrapper-Setup-<version>.exe` und richtet beim Ausführen VC++ Runtime, Python 3.12.7, pip, die Requirements, ffmpeg und Chromium ein.
+
+---
+
 ## Tests
 
 ### Desktop-App-Tests
@@ -665,6 +765,11 @@ Im aktuellen Snapshot ist im sichtbaren Repo-Baum keine separate Python-Test-Sui
 | `PyScrapperDesktopApp/PyScrapperDesktopApp.csproj` | Desktop-Projekt / NuGet-Pakete |
 | `PyScrapperWebInterface/package.json` | Web-Scripts / Dependencies |
 | `PyScrapperWebInterface/src/components/fetchRequests/*.ts` | Web-API-URLs |
+| `installer.iss` | Inno-Setup-Installer-Skript |
+| `requirements.txt` (Repo-Root) | vom Installer für die eingebettete Python-Umgebung genutzt |
+| `icon.ico` | Installer- und App-Icon |
+| `installer-output/` | Ausgabeordner des kompilierten Setups |
+| `win-x64/` | Publish-Ausgabe der Desktop-App (Installer-Quelle) |
 
 ---
 
@@ -683,6 +788,8 @@ Im aktuellen Snapshot ist im sichtbaren Repo-Baum keine separate Python-Test-Sui
 - `FFmpeg` / `ffprobe` werden für YouTube-Downloads und Codec-Konvertierung benötigt.
 - Die frühere README verwies auf Skripte unter `LocalServer/scripts/...`; diese sind im aktuellen Snapshot nicht vorhanden.
 - `PlaylistDetailsWindow` ist vorhanden, aber das direkte Play-/Lookup-Wiring ist im aktuellen Stand noch nicht vollständig verdrahtet.
+- **`/save/{key}` ist instabil.** Beobachtete Fehler: `FOREIGN KEY constraint failed` (meist Einfüge-Reihenfolge – `PlaylistMedias` muss nach Medien und Playlists geschrieben werden – oder Waisen-Zuordnungen auf gelöschte Medien) und `database is locked` (SQLite lässt nur einen Schreiber zu; WAL + `busy_timeout` setzen, den Save in einer Transaktion ausführen, nach Fehlern sauber `rollback`+`close`, da ein abgebrochener Save sonst eine Sperre hinterlässt).
+- **Installer:** benötigt Inno Setup **6.1+** und einen fertigen `win-x64\`-Publish-Ordner. Der Server-Code wird derzeit nicht mit ausgeliefert (auskommentierte `[Files]`-Zeile). Die Download-URLs für VC++, Python und ffmpeg sind im Skript fest verdrahtet – ändern sich diese Upstream, müssen sie in `installer.iss` angepasst werden.
 
 ---
 
@@ -742,8 +849,14 @@ Get-Content C:\Users\p50232\RiderProjects\PyScrapper\LocalServer\logs\server_run
 Get-Content C:\Users\p50232\RiderProjects\PyScrapper\PyScrapperDesktopApp\logs\app.log -Tail 100
 ```
 
+### Installer kompilieren
+
+```powershell
+ISCC.exe installer.iss
+```
+
 ---
 
 ## Schlussbemerkung
 
-Diese README ist bewusst auf den **aktuellen Codezustand** ausgerichtet. Wenn du den Backend-Port, die Suno-Suche, den Desktop-Startflow oder die Web-Frontend-URLs änderst, sollte diese Datei als erstes mitgezogen werden.
+Diese README ist bewusst auf den **aktuellen Codezustand** ausgerichtet. Wenn du den Backend-Port, die Suno-Suche, den Desktop-Startflow, die Web-Frontend-URLs oder den Installer (`installer.iss`) änderst, sollte diese Datei als erstes mitgezogen werden.
