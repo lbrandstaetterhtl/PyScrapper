@@ -84,7 +84,7 @@
         <tr><td><code>Models/DatabaseOperations.cs</code></td><td>CRUD gegen die API + gebündeltes Speichern</td></tr>
         <tr><td><code>Models/AppConfig.cs</code></td><td>Config laden/speichern + DPAPI-Verschlüsselung</td></tr>
         <tr><td><code>Models/AppLogger.cs</code></td><td>Queue-basiertes, thread-sicheres Logging</td></tr>
-        <tr><td><code>ViewModels/LauncherWindowViewModel.cs</code></td><td>Umgebungs-Bootstrap &amp; Serverstart</td></tr>
+        <tr><td><code>ViewModels/LauncherWindowViewModel.cs</code></td><td>Serverprüfung, Umgebungs-Bootstrap &amp; Fehlermeldungen</td></tr>
         <tr><td><code>ViewModels/MainWindowViewModel.cs</code></td><td>Zentrale Fenster-Logik &amp; Navigation</td></tr>
     </table>
 
@@ -93,14 +93,14 @@
         <tr><th>#</th><th>Schritt</th></tr>
         <tr><td>1</td><td>Ordnerstruktur prüfen: <code>PyScrapperDesktopApp</code> und <code>LocalServer</code> müssen nebeneinander im Repo-Root liegen.</td></tr>
         <tr><td>2</td><td><code>data/config.json</code> anlegen/prüfen — Server-URL, Port und API-Key (siehe <a href="Architecture_Professional.html" style="color:var(--gold)">Architektur → Konfiguration</a>).</td></tr>
-        <tr><td>3</td><td>App starten. Der <strong>Launcher</strong> richtet Python-Umgebung und Backend automatisch ein.</td></tr>
+        <tr><td>3</td><td>App starten. Der <strong>Launcher</strong> prüft, ob das Backend bereits läuft, und richtet danach die Laufzeitumgebung ein.</td></tr>
         <tr><td>4</td><td>Anmelden, suchen, herunterladen — der Zustand wird beim Beenden über <code>/save</code> gesichert.</td></tr>
     </table>
 
     <div class="callout">
         <strong>Tipp:</strong> Bei Startproblemen lohnt zuerst ein Blick in die <span class="ic">LogsWindow</span>
         (bzw. <span class="ic">logs/app.log</span>) und in die Health-Ansicht — sie zeigen, ob das Backend
-        korrekt hochgefahren ist.
+        läuft und ob die Config zu <code>http://127.0.0.1:8765</code> passt.
     </div>
 
     <footer>

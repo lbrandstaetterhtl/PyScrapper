@@ -99,7 +99,7 @@
         <li><strong>.NET 9 SDK</strong> — die App zielt auf <span class="ic">net9.0</span> (<span class="ic">WinExe</span>).</li>
         <li><strong>Windows</strong> für die volle Funktionalität — DPAPI (API-Key-Verschlüsselung) und der Launcher-Bootstrap sind Windows-orientiert. Avalonia selbst ist plattformübergreifend.</li>
         <li>Eine IDE mit Avalonia-Support (Rider empfohlen; VS/VS Code gehen auch).</li>
-        <li>Das <strong>LocalServer</strong>-Backend muss im Repo-Root neben dem Client liegen — der Launcher richtet die Python-Umgebung selbst ein.</li>
+        <li>Das <strong>LocalServer</strong>-Backend muss im Repo-Root neben dem Client liegen — der Launcher prüft die Laufzeitumgebung und die Server-Erreichbarkeit.</li>
     </ul>
     <div class="callout gold">
         <strong>Ordnerstruktur ist Pflicht:</strong> <span class="ic">PyScrapperDesktopApp</span> und
@@ -371,7 +371,7 @@ DataContext = _vm;</div>
     <div class="callout gold">
         <strong>Beim Debuggen zuerst hier schauen:</strong> Startet die App nicht bis zum MainWindow, hilft ein
         Blick in <span class="ic">logs/app.log</span> (bzw. das LogsWindow) und in die Health-Ansicht — sie zeigen,
-        ob Login, Launcher-Bootstrap und Backend-Start jeweils durchgelaufen sind.
+        ob Login, Launcher-Prüfung und Backend-Erreichbarkeit jeweils durchgelaufen sind.
     </div>
 
     <!-- ===================== GLOSSARY ===================== -->
@@ -383,13 +383,13 @@ DataContext = _vm;</div>
         <tr><td><code>DownloadedMedia</code></td><td>Ein heruntergeladenes und in der Bibliothek geführtes Medium</td></tr>
         <tr><td><code>PlaylistMedia</code></td><td>Zuordnung Medium↔Playlist mit Reihenfolge (<code>Position</code>)</td></tr>
         <tr><td><code>IsPlayable</code></td><td>Ergebnis der Codec-/Existenzprüfung; steuert <code>PlayableMedias</code></td></tr>
-        <tr><td><code>Launcher</code></td><td>Bootstrap-Fenster, das die Python-Umgebung einrichtet &amp; das Backend startet</td></tr>
+        <tr><td><code>Launcher</code></td><td>Bootstrap-Fenster, das die Umgebung prüft und den Serverstatus verifiziert</td></tr>
         <tr><td><code>SecretProtector</code></td><td>DPAPI-Wrapper zur Ver-/Entschlüsselung des API-Keys</td></tr>
         <tr><td><code>DialogService</code></td><td>Zentrale Standarddialoge (Alert/Confirm/Input)</td></tr>
     </table>
 
     <footer>
-        <p>PyScrapper Desktop-Dokumentation · Entwickler-Guide · Stand 29. Juli 2026</p>
+        <p>PyScrapper Desktop-Dokumentation · Entwickler-Guide · Stand 4. August 2026</p>
     </footer>
 </div>
 <script>

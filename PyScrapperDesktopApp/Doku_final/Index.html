@@ -122,15 +122,15 @@
         <img src="PyScrapperLogo.png" alt="PyScrapper Logo" class="logo">
         <h1>Py<span class="accent">Scrapper</span></h1>
         <p class="subtitle">Technische Dokumentation der Desktop-Anwendung</p>
-        <span class="version-pill">Desktop Client · Avalonia · .NET 9</span>
+        <span class="version-pill">Desktop Client · Avalonia · .NET 9 · Stand 2026-08-04</span>
     </header>
 
     <div class="intro">
         PyScrapper ist eine <strong>Media-Download- und Verwaltungs-Anwendung</strong>. Der
         <span class="blue">C#/Avalonia-Desktop-Client</span> kommuniziert über HTTP mit einem lokalen
-        <span class="blue">Python/FastAPI-Backend</span>, das die eigentlichen Downloads von YouTube,
-        Bandcamp, Suno und Archive.org durchführt. Diese Dokumentation beschreibt Architektur, Abläufe
-        und Oberfläche des Desktop-Clients auf dem aktuellen Stand der Codebasis.
+        <span class="blue">Python/FastAPI-Backend</span>, das Downloads, Suche und Persistenz übernimmt.
+        Diese Dokumentation beschreibt Architektur, Abläufe und Oberfläche des Desktop-Clients auf dem
+        aktuellen Stand der Codebasis.
     </div>
 
     <p class="section-label">Hauptdokumente</p>
@@ -187,13 +187,16 @@
         <div class="ref-box">
             <h3>🌐 Wichtige API-Endpoints</h3>
             <ul class="ref-list">
+                <li><span class="name"><span class="method get">GET</span>/</span><span class="desc">Root-Status</span></li>
+                <li><span class="name"><span class="method post">POST</span>/command</span><span class="desc">Server-Kommandos</span></li>
+                <li><span class="name"><span class="method post">POST</span>/download</span><span class="desc">Download starten</span></li>
+                <li><span class="name"><span class="method get">GET</span>/download/progress/{task_id}</span><span class="desc">Fortschritt</span></li>
+                <li><span class="name"><span class="method post">POST</span>/search</span><span class="desc">Suche</span></li>
+                <li><span class="name"><span class="method get">GET</span>/health</span><span class="desc">Serverstatus</span></li>
+                <li><span class="name"><span class="method post">POST</span>/save</span><span class="desc">Daten sichern</span></li>
                 <li><span class="name"><span class="method post">POST</span>/login</span><span class="desc">Anmeldung</span></li>
                 <li><span class="name"><span class="method post">POST</span>/register</span><span class="desc">Registrierung</span></li>
-                <li><span class="name"><span class="method post">POST</span>/search</span><span class="desc">Suche</span></li>
-                <li><span class="name"><span class="method post">POST</span>/download</span><span class="desc">Download starten</span></li>
-                <li><span class="name"><span class="method get">GET</span>/download/progress/{id}</span><span class="desc">Fortschritt</span></li>
-                <li><span class="name"><span class="method post">POST</span>/save/{key}</span><span class="desc">Daten sichern</span></li>
-                <li><span class="name"><span class="method get">GET</span>/health</span><span class="desc">Serverstatus</span></li>
+                <li><span class="name"><span class="method post">POST</span>/logout/{identifier}</span><span class="desc">Logout</span></li>
             </ul>
         </div>
         <div class="ref-box">
@@ -223,7 +226,7 @@
 
     <footer>
         <p>PyScrapper Desktop-Dokumentation · Format: HTML5 + CSS + Mermaid</p>
-        <p style="margin-top:6px;">Stand: <span class="accent">29. Juli 2026</span> · orientiert an der aktuellen Codebasis</p>
+        <p style="margin-top:6px;">Stand: <span class="accent">4. August 2026</span> · orientiert an der aktuellen Codebasis</p>
     </footer>
 </div>
 </body>

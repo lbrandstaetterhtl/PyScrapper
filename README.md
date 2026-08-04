@@ -6,6 +6,8 @@ Diese Datei richtet sich **ausschließlich an Entwickler**. Sie beschreibt den a
 
 **Falls Sie einen Release testen oder benutzen wollen:** (neueste version) [github.com/lbrandstaetterhtl/PyscrapperInstaller/release/tag/v1.0.0](https://github.com/lbrandstaetterhtl/PyscrapperInstaller/releases/tag/v1.0.0)
 
+**Desktop-Dokumentation (Portal):** [`PyScrapperDesktopApp/Doku_final/Index.html`](PyScrapperDesktopApp/Doku_final/Index.html)
+
 ---
 
 ## Kurzfazit zum aktuellen Stand

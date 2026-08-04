@@ -36,7 +36,6 @@
     h3 { color: var(--blue-bright); font-size: 1.18em; margin: 28px 0 12px; }
     h4 { color: var(--text); font-size: 1em; margin: 18px 0 8px; }
     p { margin-bottom: 14px; color: var(--text); }
-    .panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 22px 24px; margin: 20px 0; }
     .mermaid { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin: 20px 0; text-align: center; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 0.9em; }
     th { background: var(--bg-card); color: var(--gold); text-align: left; padding: 11px 14px; border-bottom: 2px solid var(--border-bright); }
@@ -61,17 +60,14 @@
     .codeblock { background: #061125; border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin: 14px 0; overflow-x: auto; font-family: 'Cascadia Code','Consolas',monospace; font-size: 0.82em; line-height: 1.7; color: var(--text-dim); }
     .codeblock .k { color: var(--purple); }
     .codeblock .s { color: var(--green); }
-    .codeblock .c { color: var(--text-faint); font-style: italic; }
     .codeblock .a { color: var(--gold); }
     /* ---------- FLOW DIAGRAM ---------- */
     .flow { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin: 20px 0; }
     .flow-actors { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
     .actor { font-size: 0.78em; font-weight: 600; padding: 3px 11px; border-radius: 20px; border: 1px solid; }
-    .a-user   { color: #c4b5fd; border-color: #7c5cd0; background: rgba(124,92,208,0.12); }
     .a-view   { color: var(--blue-bright); border-color: #2f6fb0; background: rgba(47,143,216,0.12); }
     .a-vm     { color: #6ee7b7; border-color: #2f9e6f; background: rgba(74,222,128,0.10); }
     .a-svc    { color: var(--gold); border-color: var(--gold-dim); background: rgba(254,221,0,0.10); }
-    .a-server { color: #fca5a5; border-color: #c05050; background: rgba(248,113,113,0.10); }
     .a-data   { color: #93c5fd; border-color: #3d6db0; background: rgba(96,165,250,0.10); }
     .flow-steps { display: flex; flex-direction: column; gap: 2px; }
     .fstep { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; padding: 7px 0; }
@@ -445,11 +441,11 @@ graph LR
         <tr><td><span class="tag post">POST</span> <code>/create/playlistmedia/{key}</code></td><td>Database.CreatePlaylistMedia</td><td>Zuordnung anlegen (mit Position)</td></tr>
         <tr><td><span class="tag post">POST</span> <code>/create/settings/{key}</code></td><td>Database.CreateSettings</td><td>Standard-Settings anlegen</td></tr>
         <tr><td><span class="tag post">POST</span> <code>/delete/...</code></td><td>Database.Delete*</td><td>Medien, Playlists, Zuordnungen löschen</td></tr>
-        <tr><td><span class="tag post">POST</span> <code>/save/{key}</code></td><td>Database.SaveUserData</td><td>Gebündeltes Speichern beim Beenden</td></tr>
+        <tr><td><span class="tag post">POST</span> <code>/save</code></td><td>Database.SaveUserData</td><td>Gebündeltes Speichern beim Beenden</td></tr>
     </table>
     <div class="callout">
-        Geschützte Endpoints tragen den <span class="ic">{key}</span> (den API-Key) in der URL. Öffentliche
-        Lese-Endpoints wie <span class="ic">/get/settings/{id}</span> kommen ohne aus. Fehler werden über
+        Geschützte Endpoints verwenden den <span class="ic">X-Admin-key</span>-Header statt eines Schlüssels in der URL.
+        Öffentliche Lese-Endpoints wie <span class="ic">/get/settings/{id}</span> kommen ohne Header aus. Fehler werden über
         <span class="ic">HttpErrorResponse</span> (Feld <span class="ic">detail</span>) transportiert und im
         Client als <span class="ic">MessageBox</span> angezeigt.
     </div>

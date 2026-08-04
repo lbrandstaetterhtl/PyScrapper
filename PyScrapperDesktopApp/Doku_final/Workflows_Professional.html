@@ -125,7 +125,7 @@
         <div class="step"><div class="step-num">2</div><div class="step-body"><h4>ShutdownMode setzen</h4><p><code>OnExplicitShutdown</code> — die App bleibt am Leben, während nur Login/Launcher sichtbar sind (noch kein Hauptfenster).</p></div></div>
         <div class="step"><div class="step-num">3</div><div class="step-body"><h4>LoginWindow</h4><p>Wird als temporäres MainWindow gezeigt. Über eine <code>TaskCompletionSource</code> wartet die App auf das Ergebnis. Kein Erfolg → <code>Shutdown(0)</code>.</p></div></div>
         <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Settings laden</h4><p><code>LoadSettingsFromApi()</code>; fehlen sie, werden Standard-Settings via <code>CreateSettings()</code> angelegt. Danach Theme setzen.</p></div></div>
-        <div class="step"><div class="step-num">5</div><div class="step-body"><h4>LauncherWindow</h4><p>Bereitet die Python-Umgebung vor und startet das Backend. Ergebnis über Event-Handler ausgewertet (Success / Cancelled / Error).</p></div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body"><h4>LauncherWindow</h4><p>Prüft zuerst, ob das Backend bereits läuft, und verifiziert dann die Laufzeitumgebung. Bei fehlender Erreichbarkeit endet der Start mit Fehler statt mit stillem Autostart.</p></div></div>
         <div class="step"><div class="step-num">6</div><div class="step-body"><h4>LoadApplicationData</h4><p>Lädt Medien, Playlists, PlaylistMedia; prüft Dateien &amp; Codecs; scannt optional den Ordner.</p></div></div>
         <div class="step"><div class="step-num">7</div><div class="step-body"><h4>MainWindow</h4><p>Wird angezeigt, <code>ShutdownMode</code> wechselt auf <code>OnMainWindowClose</code>, <code>Exit</code>-Handler wird registriert.</p></div></div>
     </div>
@@ -256,8 +256,8 @@ stateDiagram-v2
         <tr><td>Playwright</td><td><code>playwright install</code></td><td>Browser für den Emergency-Fallback</td></tr>
     </table>
     <div class="callout">
-        Reagiert der Server nicht innerhalb von 30 Sekunden, bricht der Launcher mit einer aussagekräftigen
-        Fehlermeldung ab und verweist auf Python-Umgebung und Server-Logs.
+        Der aktuelle Launcher-Code startet nicht blind einen neuen Serverprozess, sondern bricht bei fehlender
+        Erreichbarkeit mit einer Fehlermeldung ab und verweist auf Python-Umgebung und Server-Logs.
     </div>
 
     <!-- ===================== LOAD DATA ===================== -->
@@ -511,7 +511,7 @@ stateDiagram-v2
     <p>
         Beim Schließen des Hauptfensters greift der <span class="ic">Exit</span>-Handler
         <span class="ic">App.OnExit()</span>. Der gesamte Nutzerzustand wird als
-        <span class="ic">SaveDataRequest</span> gebündelt an <span class="ic">/save/{key}</span> geschickt —
+        <span class="ic">SaveDataRequest</span> gebündelt an <span class="ic">/save</span> geschickt —
         Playlists, Medien, PlaylistMedia und Settings in einem Aufruf. Danach wird der zuletzt angemeldete Nutzer
         in die Config geschrieben.
     </p>
@@ -542,7 +542,7 @@ stateDiagram-v2
                 <div class="fstep-num">3</div>
                 <div class="fstep-body">
                     <div class="fstep-route"><span class="actor a-svc">App.OnExit</span><span class="fstep-arrow">→</span><span class="actor a-svc">Database</span><span class="fstep-arrow">→</span><span class="actor a-server">Backend</span></div>
-                    <div class="fstep-action"><code>SaveUserData(req)</code> → <code>POST /save/{key}</code></div>
+                    <div class="fstep-action"><code>SaveUserData(req)</code> → <code>POST /save</code></div>
                 </div>
             </div>
             <div class="fstep return">

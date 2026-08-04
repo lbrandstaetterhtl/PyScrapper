@@ -69,7 +69,6 @@
     .ph-sub { color: var(--text-faint); font-size: 0.8em; }
     .ph-file { font-family: 'Cascadia Code','Consolas',monospace; font-size: 0.74em; color: var(--gold-dim); background: rgba(254,221,0,0.06); padding: 3px 10px; border-radius: 4px; margin-top: 2px; }
     /* When ready, replace .ph block with: <img class="shot" src="screenshots/xyz.png"> */
-    .shot { width: 100%; border: 1px solid var(--border-bright); border-radius: 10px; display: block; }
     .cap { text-align: center; font-size: 0.72em; color: var(--text-faint); margin-top: 8px; font-style: italic; }
 
     footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; color: var(--text-faint); font-size: 0.85em; }
@@ -143,10 +142,10 @@
                 <span class="win-title">LauncherWindow</span>
                 <span class="win-file">Views/LauncherWindow.axaml · LauncherWindowViewModel</span>
             </span></div>
-            <p>Bootstrap-Fenster mit Statusanzeige. Richtet die Python-Umgebung ein und startet das Backend.</p>
+            <p>Bootstrap-Fenster mit Statusanzeige. Prüft die Server-Erreichbarkeit und verifiziert anschließend die Laufzeitumgebung.</p>
             <ul>
                 <li>Zeigt aktuellen <strong>Titel</strong>, eine <strong>Statusmeldung</strong> und ein Symbol/Spinner pro Schritt.</li>
-                <li>Schritte: VC++ Redist, ffmpeg, Python 3.12, pip, venv, requirements, Playwright, Serverstart.</li>
+                <li>Schritte: VC++ Redist, ffmpeg, Python 3.12, pip, venv, requirements, Playwright, Serverprüfung.</li>
                 <li>Verifiziert das Backend über <span class="ic">/health</span> und liefert ein <span class="ic">LauncherResult</span>.</li>
             </ul>
         </div>

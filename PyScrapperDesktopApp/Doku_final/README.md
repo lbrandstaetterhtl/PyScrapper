@@ -1,7 +1,7 @@
 # PyScrapper — Desktop-Dokumentation
 
 Technische Dokumentation der PyScrapper-Desktopanwendung (C# / Avalonia / .NET 9).
-Die HTML-Seiten sind im PyScrapper-Design gehalten und decken Architektur, Workflows und UI ab.
+Die HTML-Seiten sind im PyScrapper-Design gehalten und decken Architektur, Workflows und UI auf dem aktuellen Workspace-Stand ab.
 
 ## Startpunkt
 
@@ -15,7 +15,7 @@ Systemüberblick, MVVM-Schichten, Kern-Datenmodelle (`DownloadedMedia`, `Playlis
 (`AppConfig` / `SecretProtector`), API-Kommunikation (`ApiClient` / `Database`) und Technologie-Stack.
 
 ### `Workflows_Professional.html`
-Startsequenz (Config → Login → Settings → Launcher → Datenladen → MainWindow), Umgebungs-Bootstrap,
+Startsequenz (Config → Login → Settings → Launcher → Datenladen → MainWindow), tatsächliches Launcher-Verhalten,
 Such- und Download-Ablauf, Filterlogik und das gebündelte Speichern beim Beenden.
 
 ### `UI_Documentation.html`
@@ -40,13 +40,16 @@ Hinzufügen eines Features, Datenfluss an echten Beispielen, das Laufzeit-Verhal
 
 ### API-Endpoints
 ```
-POST /login                   - Anmeldung
-POST /register                - Registrierung
-POST /search                  - Suche
+GET  /                        - Root-Status
+POST /command                 - Server-Kommandos
 POST /download                - Download starten
 GET  /download/progress/{id}  - Fortschritt
-POST /save/{key}              - Gebündeltes Speichern
+POST /search                  - Suche
 GET  /health                  - Serverstatus
+POST /save                    - Gebündeltes Speichern
+POST /login                   - Anmeldung
+POST /register                - Registrierung
+POST /logout/{identifier}     - Logout
 ```
 
 ### Kernklassen
@@ -63,5 +66,5 @@ Database          - CRUD gegen die API
 
 ---
 
-**Dokumentationsstand:** 29. Juli 2026
+**Dokumentationsstand:** 4. August 2026
 **Format:** HTML5 + CSS + Mermaid
