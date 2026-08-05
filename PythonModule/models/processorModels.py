@@ -46,7 +46,8 @@ providerDownloadMapping: dict = {
 providerSearchMapping: dict = {
     ProviderTypes.Archive : p.Archive.search,
     ProviderTypes.Youtube : p.Youtube.search,
-    ProviderTypes.Bandcamp : p.Bandcamp.search
+    ProviderTypes.Bandcamp : p.Bandcamp.search,
+    ProviderTypes.Soundcloud : p.Soundcloud.search,
 }
 
 

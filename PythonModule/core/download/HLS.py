@@ -426,6 +426,7 @@ def _downloadM3U8SegmentsToFile(
     downloadProgress["downloadedSegments"] = 0
     downloadProgress["downloadedBytes"] = 0
     downloadProgress["downloadProgress"] = 0.0
+    downloadProgress["totalBytes"] = -1
     downloadProgress["speed"] = 0.0
     downloadProgress["eta"] = None
 

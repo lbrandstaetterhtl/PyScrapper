@@ -93,7 +93,9 @@ PROGRESSDICT = {
             "totalBytes" : 0,
             "downloadedBytes" : 0,
             "speed" : 0,
-            "eta" : 0
+            "eta" : 0,
+            "totalSegments" : 0,
+            "downloadedSegments" : 0
         }
 
 SUPPORTEDCOMMANDS = [

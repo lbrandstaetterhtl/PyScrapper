@@ -49,8 +49,11 @@ def _downloadToFile(
     else:
         response_context = session.open(url=url)
 
+
+    
     with response_context as response, open(out_file, "wb") as file:
         progress_dict["status"] = "downloading..."
+        progress_dict["totalSegments"] = -1
 
         total_size = int(response.headers.get("Content-Length", 0))
         progress_dict["totalBytes"] = total_size
