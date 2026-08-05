@@ -13,6 +13,7 @@ class ProviderTypes(enum.Enum):
     Soundcloud = enum.auto()
     Wcoflix = enum.auto()
     Aniworld = enum.auto()
+    Newgrounds = enum.auto()
 
 @dataclass
 class DownloadInformations:
@@ -42,6 +43,7 @@ providerDownloadMapping: dict = {
     ProviderTypes.Default : p.Default.download,
     ProviderTypes.Soundcloud : p.Soundcloud.download,
     ProviderTypes.Wcoflix : p.wcoflix.download,
+    ProviderTypes.Newgrounds : p.Newgrounds.download
 }
 
 providerSearchMapping: dict = {
@@ -49,6 +51,7 @@ providerSearchMapping: dict = {
     ProviderTypes.Youtube : p.Youtube.search,
     ProviderTypes.Bandcamp : p.Bandcamp.search,
     ProviderTypes.Soundcloud : p.Soundcloud.search,
+    ProviderTypes.Newgrounds : p.Newgrounds.search,
 }
 
 

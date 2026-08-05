@@ -6,6 +6,7 @@ from . import Suno
 from . import wcoflix
 from . import Youtube
 from . import Default
+from . import Newgrounds
 
 __all__ = [
     "Default",
@@ -15,5 +16,6 @@ __all__ = [
     "Soundcloud",
     "Suno",
     "wcoflix",
-    "Youtube"
+    "Youtube",
+    "Newgrounds"
 ]

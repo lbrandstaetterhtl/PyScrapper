@@ -44,6 +44,12 @@ VALIDWCOFLIXNAMES = [
     "www.wcoflix.tv"
 ]
 
+VALIDNEWGROUNDSNAMES = [
+    "newgrounds",
+    "newgrounds.com",
+    "www.newgrounds.com"
+]
+
 SUPPORTEDPROVIDERS = {
     ProviderTypes.Archive: VALIDARCHIVENAMES,
     ProviderTypes.Bandcamp : VALIDBANDCAMPNAMES,
@@ -52,6 +58,7 @@ SUPPORTEDPROVIDERS = {
     ProviderTypes.Default : VALIDDEFAULTNAMES,
     ProviderTypes.Soundcloud : VALIDSOUNDCLOUDNAMES,
     ProviderTypes.Wcoflix : VALIDWCOFLIXNAMES,
+    ProviderTypes.Newgrounds : VALIDNEWGROUNDSNAMES,
 }
 
 SUPPORTEDARCHIVEFILES = [
