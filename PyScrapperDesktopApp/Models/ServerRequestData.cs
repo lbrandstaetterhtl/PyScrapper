@@ -64,7 +64,7 @@ public class CreateDownloadedMediaRequest
     [JsonPropertyName("download_path")]
     public string DownloadPath { get; set; }
     
-    [JsonPropertyName("mediatype")]
+    [JsonPropertyName("media_type")]
     public string MediaType { get; set; }
     
     [JsonPropertyName("downloaded_at")]

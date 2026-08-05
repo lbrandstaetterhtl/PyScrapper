@@ -99,10 +99,11 @@ public partial class SunoScrapWindowViewModel : ObservableObject
                     {
                         UserIdentifier = AppData.CurrentUser.Identifier,
                         DownloadPath = downloadedFilePath,
-                        DownloadedAt = DateTime.Now.ToLongDateString(),
+                        DownloadedAt = DateTime.Now.ToString("o"),
                         MediaType = SelectedMediaType,
                         IsPlayable = isPlayable,
-                        Url = SunoUrl
+                        Url = SunoUrl,
+                        Title = Filename
                     };
 
                     var media = await Database.CreateDownloadedMedia(req);

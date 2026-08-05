@@ -380,7 +380,7 @@ public partial class App : Application
                     DownloadedAt = File.GetCreationTime(file).ToString("O"),
                     MediaType = Path.GetExtension(file),
                     Url = "N/A",
-                    Title = Path.GetFileName(file),
+                    Title = Path.GetFileNameWithoutExtension(file),
                     IsPlayable = true,
                 };
                 

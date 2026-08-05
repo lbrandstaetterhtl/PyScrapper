@@ -312,7 +312,7 @@ public abstract class Database
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
 
-            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/downloadedmedia/?identifier={identifier}", null);   
+            var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/downloadedmedia/{identifier}", null);   
             var json = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)

@@ -435,6 +435,7 @@ def save_user_data(request: SaveUserDataRequest):
     cursor = conn.cursor()
 
     try:
+        # ---- 1. Medias upserten ----
         for media in medias:
             cursor.execute(
                 """INSERT INTO DownloadedMedias 
@@ -451,6 +452,7 @@ def save_user_data(request: SaveUserDataRequest):
                  media.DownloadedAt, media.DownloadPath, media.IsPlayable, media.Title)
             )
 
+        # ---- 2. Playlists upserten ----
         for playlist in playlists:
             cursor.execute(
                 """INSERT INTO Playlists (Identifier, UserIdentifier, Name, Description)
@@ -461,24 +463,68 @@ def save_user_data(request: SaveUserDataRequest):
                 (playlist.Identifier, user_identifier, playlist.Name, playlist.Description)
             )
 
-        for playlist_media in playlist_medias:
+        # ---- 3. Verwaiste Medias löschen (die in der DB sind, aber nicht mehr im Request) ----
+        # CASCADE entfernt automatisch zugehörige PlaylistMedias-Einträge.
+        media_ids = [m.Identifier for m in medias]
+        if media_ids:
+            placeholders = ",".join("?" for _ in media_ids)
+            cursor.execute(
+                f"""DELETE FROM DownloadedMedias
+                    WHERE UserIdentifier = ?
+                      AND Identifier NOT IN ({placeholders})""",
+                (user_identifier, *media_ids)
+            )
+        else:
+            # Request enthält gar keine Medias -> alle des Users löschen
+            cursor.execute(
+                "DELETE FROM DownloadedMedias WHERE UserIdentifier = ?",
+                (user_identifier,)
+            )
 
-            cursor.execute("SELECT 1 FROM Playlists WHERE Identifier = ?", (playlist_media.PlaylistIdentifier,))
-            if cursor.fetchone() is None:
-                log_queue.put_nowait(f"[ERROR] Missing Playlist parent: {playlist_media.PlaylistIdentifier}")
+        # ---- 4. Verwaiste Playlists löschen ----
+        playlist_ids = [p.Identifier for p in playlists]
+        if playlist_ids:
+            placeholders = ",".join("?" for _ in playlist_ids)
+            cursor.execute(
+                f"""DELETE FROM Playlists
+                    WHERE UserIdentifier = ?
+                      AND Identifier NOT IN ({placeholders})""",
+                (user_identifier, *playlist_ids)
+            )
+        else:
+            cursor.execute(
+                "DELETE FROM Playlists WHERE UserIdentifier = ?",
+                (user_identifier,)
+            )
 
-            cursor.execute("SELECT 1 FROM DownloadedMedias WHERE Identifier = ?", (playlist_media.MediaIdentifier,))
+        # ---- 5. PlaylistMedias komplett neu setzen ----
+        # Alle PlaylistMedias der (jetzt noch existierenden) Playlists dieses Users löschen...
+        cursor.execute(
+            """DELETE FROM PlaylistMedias
+               WHERE PlaylistIdentifier IN (
+                   SELECT Identifier FROM Playlists WHERE UserIdentifier = ?
+               )""",
+            (user_identifier,)
+        )
+        # ...und aus dem Request neu einfügen. Nur Einträge, deren Parents wirklich existieren.
+        for pm in playlist_medias:
+            cursor.execute("SELECT 1 FROM Playlists WHERE Identifier = ?", (pm.PlaylistIdentifier,))
             if cursor.fetchone() is None:
-                log_queue.put_nowait(f"[ERROR] Missing Media parent: {playlist_media.MediaIdentifier}")
+                log_queue.put_nowait(f"[WARN] Skipping PlaylistMedia, missing Playlist parent: {pm.PlaylistIdentifier}")
+                continue
+
+            cursor.execute("SELECT 1 FROM DownloadedMedias WHERE Identifier = ?", (pm.MediaIdentifier,))
+            if cursor.fetchone() is None:
+                log_queue.put_nowait(f"[WARN] Skipping PlaylistMedia, missing Media parent: {pm.MediaIdentifier}")
+                continue
 
             cursor.execute(
                 """INSERT INTO PlaylistMedias (PlaylistIdentifier, MediaIdentifier, Position)
-                   VALUES (?, ?, ?) ON CONFLICT(PlaylistIdentifier, MediaIdentifier) DO
-                UPDATE SET
-                    Position = excluded.Position""",
-                (playlist_media.PlaylistIdentifier, playlist_media.MediaIdentifier, playlist_media.Position)
+                   VALUES (?, ?, ?)""",
+                (pm.PlaylistIdentifier, pm.MediaIdentifier, pm.Position)
             )
 
+        # ---- 6. Settings upserten ----
         cursor.execute(
             """INSERT INTO Settings
                (Identifier, UserIdentifier, DownloadPath, DarkModeEnabled, ScanFolderOnStartup)
@@ -492,9 +538,11 @@ def save_user_data(request: SaveUserDataRequest):
         )
 
         conn.commit()
-        conn.close()
     except Exception as e:
+        conn.rollback()
         raise fastapi.HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
 
 @app.post("/save", dependencies=[Depends(require_admin)])
 async def handle_save_user_data(req: SaveUserDataRequest):
@@ -779,12 +827,13 @@ async def get_all_playlists():
 @app.post("/create/downloadedmedia", response_model=CreateResponse, dependencies=[Depends(require_admin)])
 async def handle_create_downloaded_media_req(req: CreateDownloadedMediaRequest):
     try:
+
         conn = connect_db()
         cursor = conn.cursor()
 
         cursor.execute("""SELECT Identifier FROM DownloadedMedias WHERE DownloadPath = ?""", (req.download_path,))
 
-        identifier = cursor.fetchone()[0]
+        identifier = cursor.fetchone()
         if identifier is not None:
             log_queue.put_nowait(f"[ERROR] Downloaded media with path '{req.download_path}' already exists")
             return {"message": "Downloaded media with path '{req.download_path}' already exists", "identifier": identifier}
@@ -794,7 +843,7 @@ async def handle_create_downloaded_media_req(req: CreateDownloadedMediaRequest):
             """INSERT INTO DownloadedMedias (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath,
                                              IsPlayable, Title)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (identifier, req.user_identifier, req.url, req.mediatype, req.downloaded_at, req.download_path,
+            (identifier, req.user_identifier, req.url, req.media_type, req.downloaded_at, req.download_path,
              req.is_playable, req.title)
         )
         conn.commit()
