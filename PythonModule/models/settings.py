@@ -38,13 +38,20 @@ VALIDSOUNDCLOUDNAMES = [
     "sound-cloud"
 ]
 
+VALIDWCOFLIXNAMES = [
+    "wcoflix",
+    "wcoflix.tv",
+    "www.wcoflix.tv"
+]
+
 SUPPORTEDPROVIDERS = {
     ProviderTypes.Archive: VALIDARCHIVENAMES,
     ProviderTypes.Bandcamp : VALIDBANDCAMPNAMES,
     ProviderTypes.Youtube: VALIDYOUTUBENAMES,
     ProviderTypes.Suno: VALIDSUNONAMES,
     ProviderTypes.Default : VALIDDEFAULTNAMES,
-    ProviderTypes.Soundcloud : VALIDSOUNDCLOUDNAMES
+    ProviderTypes.Soundcloud : VALIDSOUNDCLOUDNAMES,
+    ProviderTypes.Wcoflix : VALIDWCOFLIXNAMES,
 }
 
 SUPPORTEDARCHIVEFILES = [

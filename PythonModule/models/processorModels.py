@@ -40,7 +40,8 @@ providerDownloadMapping: dict = {
     ProviderTypes.Youtube : p.Youtube.download,
     ProviderTypes.Bandcamp : p.Bandcamp.download,
     ProviderTypes.Default : p.Default.download,
-    ProviderTypes.Soundcloud : p.Soundcloud.download
+    ProviderTypes.Soundcloud : p.Soundcloud.download,
+    ProviderTypes.Wcoflix : p.wcoflix.download,
 }
 
 providerSearchMapping: dict = {

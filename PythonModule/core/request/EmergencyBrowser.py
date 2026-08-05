@@ -447,11 +447,7 @@ def _saveMedia(
 
     _streamType, _mediaType, _priority = _guessMediaType(url)
 
-    # getvid is often direct videostream on wco.tv
-    if "getvid" in lower:
-        _streamType = media.StreamType.DIRECT
-        _mediaType = media.MediaType.FILE
-        _priority = 95
+    
 
     if url not in foundMedia:
         foundMedia[url] = media.Media(
@@ -483,7 +479,7 @@ def _guessMediaType(
     badKeywords = [
         "ads", "banner", "promo", "tracking",
         "gambling", "notification", "bonus",
-        "click", "redirect", "jwplayer6", "ping.gif"
+        "click", "redirect", "jwplayer6", "ping.gif",
     ]
 
     goodKeywords = [
@@ -498,6 +494,12 @@ def _guessMediaType(
         _streamType = media.StreamType.DIRECT
         _mediaType = media.MediaType.FILE
         _priority = 100
+
+    # getvid is often direct videostream on wco.tv
+    elif "getvid" in lower:
+        _streamType = media.StreamType.DIRECT
+        _mediaType = media.MediaType.FILE
+        _priority = 95
 
     elif ".m3u8" in lower:
         _streamType = media.StreamType.HLS

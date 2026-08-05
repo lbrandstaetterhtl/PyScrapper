@@ -19,7 +19,7 @@ MEDIATYPE_MAPPING = {
 
 def download(
         download_information: processorModels.DownloadInformations,
-        retry_with_FFmpeg:bool = False
+        retry_with_FFmpeg:bool = True
 ) -> None:
 
     
@@ -47,6 +47,7 @@ def download(
             if not downloadFunction:
                 raise ValueError("DefaultDownload: Valid Media was found but the download isn't supported yet. Only direct files and HLS Streaming is currently supported")
 
+            extraHeaders = candidate.headers.to_dict()
             
             if isinstance(downloadFunction, type):
                 
@@ -69,6 +70,7 @@ def download(
                     out_file = download_information.outFile,
                     session = download_information.session,
                     progress_dict = download_information.downloadProgress,
+                    extra_headers=extraHeaders
                 
                 )
                 return

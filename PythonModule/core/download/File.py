@@ -11,6 +11,7 @@ def _downloadToFile(
         request: urllib.request.Request = None,
         url: str = None,
         progress_dict: dict = None,
+        extra_headers: dict = {},
         chunk_size: int = 8192,
 ):
     if request is None and url is None:
@@ -45,9 +46,9 @@ def _downloadToFile(
         progress_dict = {}
 
     if request is not None:
-        response_context = session.open(request=request)
+        response_context = session.open(request=request, headers=extra_headers)
     else:
-        response_context = session.open(url=url)
+        response_context = session.open(url=url, headers=extra_headers)
 
 
     

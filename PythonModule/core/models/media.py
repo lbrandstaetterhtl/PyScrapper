@@ -38,6 +38,22 @@ class Headers:
     authorization: str = ""
     userAgent: str = ""
 
+    def to_dict(self) -> dict[str, str]:
+        headers = {
+            "Origin": self.origin,
+            "Referer": self.referer,
+            "Accept": self.accept,
+            "Authorization": self.authorization,
+            "User-Agent": self.userAgent,
+        }
+
+        
+        return {
+            name: value.strip()
+            for name, value in headers.items()
+            if isinstance(value, str) and value.strip()
+        }
+
 
 
 

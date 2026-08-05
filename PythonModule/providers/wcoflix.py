@@ -2,21 +2,17 @@ import PythonModule.core as core
 import urllib.request, urllib.parse
 import gzip
 import zlib
-import asyncio
+
 import subprocess
 
+from PythonModule.models import processorModels
 
 
-async def run_shell_command_async(command: str):
-    await asyncio.to_thread(
-        subprocess.run,
-        command,
-        shell=True,
-        check=True,
-        executable="/bin/bash"
-    )
 
-ses:core.request.Session.Session = core.request.Session.Session()
+
+
+    
+
 
 iFramePattern = r'<iframe[^>]*\bsrc=["\']([^"\']+)["\'][^>]*>'
 
@@ -39,94 +35,64 @@ headers = {
     "TE": "trailers",
 }
 
-def _indexUrlToPlayerUrl (
-        indexUrl: str 
-        ) -> str:
-    parts = urllib.parse.urlsplit(indexUrl)
-    return urllib.parse.urlunsplit(
-        (
-            parts.scheme,
-            parts.netloc,
-            "/inc/embed/video-js.php",
-            parts.query,
-            parts.fragment
-        )
+
+def download(
+        download_information: processorModels.DownloadInformations,
+        retry_with_FFmpeg: bool = True
+): 
+    if not download_information or not isinstance(download_information, processorModels.DownloadInformations): raise ValueError("wcoflixDownload: Given download information is either None or has the wrong type")
+    episodeHtml: str = core.general.Html.getHtml(
+        download_information.session,
+        download_information.url
     )
-    
-startEpisode: int = 1
-episodes: int = 26
-startStaffel: int = 1
-endStaffel: int = 1
 
+    indexUrl: str = core.general.DataSearch.searchBlocks(
+        iFramePattern, 
+        episodeHtml
+    )
+    indexRequest: str = urllib.request.Request(
+        indexUrl,
+        headers=headers
+    )
 
-async def downloadEpisodeInner(staffel: int, episode: int):
-
-    url: str = f"https://www.wcoflix.tv/azumanga-daioh-episode-{episode}-english-dubbed"
-    outFile: str = f"Azumanga Daioh S{staffel:02d}E{episode:02d} - English.ts"
-
-    episodeHTML: str = core.general.html.getHtml(ses, url)
-
-
-    indexUrl:str = core.general.regexFind.searchBlocks(iFramePattern, episodeHTML)
-    print(indexUrl)
-    request = urllib.request.Request(indexUrl, headers=headers)
-
-    with ses.open(request=request) as response: 
-        indexHTMLRAW = response.read()
-
+    with download_information.session.open(
+        request=indexRequest
+    ) as response:
+        indexHTMLRaw = response.read()
         encoding = response.headers.get("Content-Encoding", "").lower()
-        
 
-        if encoding == "gzip":
-            indexHTMLRAW = gzip.decompress(indexHTMLRAW)
-        elif encoding == "deflate":
-            indexHTMLRAW = zlib.decompress(indexHTMLRAW)
-        playerHTML: str = indexHTMLRAW.decode("utf-8", errors="replace")
+    if encoding == "gzip":
+        indexHTMLRaw = gzip.decompress(indexHTMLRaw)
+    elif encoding == "deflate":
+        indexHTMLRaw = zlib.decompress(indexHTMLRaw)
 
-#    with open("test3.txt", "w", encoding="utf-8") as f:
-#        f.write(playerHTML)
-    playerUrl: str = _indexUrlToPlayerUrl(indexUrl)
-    print(playerUrl)
+    
 
-    mediaList: core.models.media.MediaList = await asyncio.to_thread(core.request.emergencyBrowser.wcoflixBrowserDiscoverStreamUrls,
+    medialist: core.models.media.MediaList = core.request.EmergencyBrowser.WCOFLIXBrowserDiscoverStreamUrls(
         indexUrl,
         headless=True,
-        adBlock=True,
-        extraHeaders={
+        ad_block=True,
+        extra_headers={
             "Referer": "https://www.wcoflix.tv/"
         }
     )
-    candidate = mediaList.candidates[-1]
-    ffmpegCommand = core.general.curlToFFMPEG.curl_to_ffmpeg_command(
-                candidate.curlCommand,
-                output=outFile
-            )
+    if not medialist:
+        raise ValueError("wcoflixDownload: No media was found, since this is wcoflix I don't trust the provider. Please try again in a few minutes with the same task")
+    candiate: core.models.media.Media = medialist.candidates[-1]
 
-    await run_shell_command_async(ffmpegCommand)
+    extraHeaders = candiate.headers.to_dict()
+    core.download.File._downloadToFile(
+        download_information.outFile,
+        session=download_information.session,
+        url=candiate.mediaUrl,
+        extra_headers=extraHeaders
+    )
+    
+                
 
-    print(f"E{episode}: downloaded with ffmpeg")
     
 
-async def downloadEpisode(staffel: int, episode:int, sem: asyncio.Semaphore):
-    async with sem:
-        await downloadEpisodeInner(staffel, episode)
 
 
-async def main():
-    sem = asyncio.Semaphore(7)
-
-    tasks = [
-        asyncio.create_task(downloadEpisode(x, i, sem))
-        for x in range(startStaffel, (endStaffel + 1))
-        for i in range(startEpisode, (episodes + 1))
-    ]
-
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    for episode, result in zip(range(startEpisode, (episodes + 1)), results):
-        if isinstance(result, Exception):
-            print(f"E{episode}: exception occurred: {result}")
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
