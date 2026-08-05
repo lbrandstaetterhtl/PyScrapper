@@ -71,7 +71,10 @@ public partial class MainWindow : Window
                     throw new Exception("Media not found");
                 }
 
-                //TODO: NEW Mediaplayer logic
+                var tmpPlaylist = new Playlist(media.Title, "", "12345", AppData.CurrentUser.Identifier);
+                tmpPlaylist.MediaIdentifiers.Add(media.Identifier);
+                
+                MediaPlayer.LoadAndPlay(tmpPlaylist);
             }
         }
         catch (Exception ex)
@@ -79,7 +82,7 @@ public partial class MainWindow : Window
             var log = new Message("An error occurred while trying to play the media: " + ex.Message, DateTime.Now, "ERROR");
             _logger.LogNewMassage(log);
 
-            
+            await _ds.ShowAlertAsync("An error occurred while trying to play the media: " + ex.Message);
         }
     }
 

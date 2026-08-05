@@ -113,46 +113,58 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenMediaPlayerWindow()
     {
+        try
+        {
+            var topLevel = TopLevel.GetTopLevel(_window);
+            var storageService = new StorageService(topLevel!);
+            var files = await storageService.OpenFilePickerAsync(new FilePickerOpenOptions()
+            {
+                Title = "Select a media file",
+                AllowMultiple = false,
+                FileTypeFilter = AppData.FileTypes
+            });
 
-        var topLevel = TopLevel.GetTopLevel(_window);
-        var storageService = new StorageService(topLevel!);
-        var files = await storageService.OpenFilePickerAsync(new FilePickerOpenOptions()
-        {
-            Title = "Select a media file",
-            AllowMultiple = false,
-            FileTypeFilter = AppData.FileTypes
-        });
-        
-        if (files == null) return;
-        if (files.Count <= 0) return;
-        
-        string path = files[0].Path.LocalPath;
-        
-        if (!File.Exists(path))
-        {
-            return;
+            if (files == null) return;
+            if (files.Count <= 0) return;
+
+            string path = files[0].Path.LocalPath;
+
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            string mediaType = Path.GetExtension(path);
+
+            var req = new CreateDownloadedMediaRequest()
+            {
+                UserIdentifier = AppData.CurrentUser.Identifier,
+                DownloadPath = path,
+                MediaType = mediaType,
+                Url = "N/A",
+                IsPlayable = true,
+                DownloadedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                Title = Path.GetFileNameWithoutExtension(path)
+            };
+
+            var media = await Database.CreateDownloadedMedia(req);
+            
+            AppData.AddDownloadedMedia(media);
+
+            var tmpPlaylist = new Playlist(media.Title, "", "12345", AppData.CurrentUser.Identifier);
+            tmpPlaylist.MediaIdentifiers.Add(media.Identifier);
+
+            if (_window is MainWindow mainWindow)
+            {
+                mainWindow.MediaPlayer.LoadAndPlay(tmpPlaylist);
+            }
         }
-        
-        string mediaType = Path.GetExtension(path);
-
-        var req = new CreateDownloadedMediaRequest()
+        catch (Exception ex)
         {
-            UserIdentifier = AppData.CurrentUser.Identifier,
-            DownloadPath = path,
-            MediaType = mediaType,
-            Url = "N/A",
-            IsPlayable = true,
-            DownloadedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            Title = Path.GetFileNameWithoutExtension(path)
-        };
-
-        var media = await Database.CreateDownloadedMedia(req);
-        AppData.AddDownloadedMedia(media);
-
-        //TODO: So many things todo till it will work
-
-        if (_window is MainWindow mainWindow)
-        {
+            var log = new Message($"An error occurred while trying to open the media player: {ex.Message}", DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
+            await _dialogService.ShowAlertAsync($"An error occurred while trying to open the media player: {ex.Message}");
         }
     }
 

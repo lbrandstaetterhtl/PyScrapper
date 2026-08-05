@@ -779,11 +779,17 @@ async def get_all_playlists():
 @app.post("/create/downloadedmedia", response_model=CreateResponse, dependencies=[Depends(require_admin)])
 async def handle_create_downloaded_media_req(req: CreateDownloadedMediaRequest):
     try:
-        identifier = str(uuid.uuid4())
-
         conn = connect_db()
         cursor = conn.cursor()
 
+        cursor.execute("""SELECT Identifier FROM DownloadedMedias WHERE DownloadPath = ?""", (req.download_path,))
+
+        identifier = cursor.fetchone()[0]
+        if identifier is not None:
+            log_queue.put_nowait(f"[ERROR] Downloaded media with path '{req.download_path}' already exists")
+            return {"message": "Downloaded media with path '{req.download_path}' already exists", "identifier": identifier}
+
+        identifier = str(uuid.uuid4())
         cursor.execute(
             """INSERT INTO DownloadedMedias (Identifier, UserIdentifier, Url, MediaType, DownloadedAt, DownloadPath,
                                              IsPlayable, Title)
@@ -1117,7 +1123,7 @@ async def handle_login_req(req: LoginRequest):
 # handle_create_user_req hat jetzt nur noch (req) als Parameter; der direkte
 # Funktionsaufruf umgeht die require_admin-Dependency (die läuft nur über HTTP),
 # also bleibt /register wie gehabt offen/public.
-@app.post("/register")
+@app.post("/register", dependencies=[Depends(require_admin)])
 async def handle_register_req(req: RegisterRequest):
     try:
 

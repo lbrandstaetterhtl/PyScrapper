@@ -30,15 +30,14 @@ public partial class MediaPlayerControl : UserControl
         SetNavigationButtons();
         SetPlayButton(1);
         SetImageIcons();
-
-        // Wenn aus Compact rausgegangen — VideoView verknüpfen
+        
         _vm.CompactClosed += (s, e) =>
         {
             Dispatcher.UIThread.Post(() =>
             {
-                Dispatcher.UIThread.Post(() =>
+                Dispatcher.UIThread.Post(async() =>
                 {
-                    AttachVideoView();
+                     await AttachVideoView();
                     ToggleCompactButton.Content = new Image { Source = _vm.ToggleCompactIcon };
                 }, DispatcherPriority.Render);
             }, DispatcherPriority.Loaded);
@@ -171,9 +170,9 @@ public partial class MediaPlayerControl : UserControl
     {
         _pendingPlaylist = playlist;
 
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(async() =>
         {
-            AttachVideoView();
+            await AttachVideoView();
         }, DispatcherPriority.Loaded);
 
         Task.Delay(2000).Wait();
@@ -183,16 +182,15 @@ public partial class MediaPlayerControl : UserControl
     /// Verknüpft den VideoView mit dem MediaPlayer.
     /// Wird aufgerufen nachdem der Normal-View sichtbar ist.
     /// </summary>
-    private void AttachVideoView()
+    private async Task AttachVideoView()
     {
         if (_pendingPlaylist != null)
         {
             VideoView.MediaPlayer = null;
-            _vm.VideoViewLoaded(_pendingPlaylist);
+            await _vm.VideoViewLoaded(_pendingPlaylist);
             _pendingPlaylist = null;
         }
 
-        // Warten bis VideoView wirklich im Visual Tree ist
         if (VideoView.IsAttachedToVisualTree())
         {
             VideoView.MediaPlayer = _vm.MediaPlayer;

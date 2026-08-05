@@ -196,7 +196,8 @@ public abstract class Database
 
             var json = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
+            var deserialized = JsonSerializer.Deserialize<CreateResponse>(json);
+            if (!response.IsSuccessStatusCode &&  deserialized == null)
             {
                 throw new Exception(response.ReasonPhrase);
             }
@@ -204,8 +205,6 @@ public abstract class Database
             {
                 var log = new Message("Downloaded media created successfully via API.", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
-
-                var deserialized = JsonSerializer.Deserialize<CreateResponse>(json);
 
                 string identifier = deserialized?.Identifier ?? throw new Exception("Failed to deserialize identifier from API response.");
 

@@ -104,12 +104,12 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
         _audioPlayer.MediaPlayer.Volume = (int)volume;
     }
 
-    public void VideoViewLoaded(Playlist playlist = null)
+    public async Task VideoViewLoaded(Playlist playlist = null)
     {
         _playlist = playlist;
         if (_playlist != null)
         {
-            LoadPlaylist(_playlist);
+            await LoadPlaylist(_playlist);
             HasNext = _audioPlayer.HasNext;
             HasPrevious = _audioPlayer.HasPrevious;
             IsPlaylistMode = _audioPlayer.PlaylistModeEnabled;
@@ -225,10 +225,10 @@ public partial class MediaPlayerControlViewModel : ObservableObject, IDisposable
         _audioPlayer.MediaPlayer.Volume = Volume;
     }
 
-    public void LoadPlaylist(Playlist playlist)
+    private async Task LoadPlaylist(Playlist playlist)
     {
         SetAudioPlayer();
-        _audioPlayer.LoadPlaylist(playlist);
+        await _audioPlayer.LoadPlaylist(playlist);
         IsPlaylistMode = _audioPlayer.PlaylistModeEnabled;
     }
 

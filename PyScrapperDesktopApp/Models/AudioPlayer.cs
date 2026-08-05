@@ -96,7 +96,7 @@ public class AudioPlayer : IDisposable
     /// If the playlist contains multiple tracks, it enables playlist mode, populates the playlist with the corresponding media items, and optionally shuffles the playlist if shuffle mode is enabled. Finally, it starts playing the first track in the playlist and logs the action of loading the playlist with its name and the number of playable tracks it contains. This method allows the AudioPlayer to manage and play a collection of media items as a cohesive unit, providing functionality for navigating through the tracks and maintaining the state of the playlist.
     /// </summary>
     /// <param name="playlist"></param>
-    public void LoadPlaylist(Playlist playlist)
+    public async Task LoadPlaylist(Playlist playlist)
     {
         if (playlist.MediaIdentifiers.Count == 1)
         {
@@ -137,7 +137,7 @@ public class AudioPlayer : IDisposable
             }
         }
 
-        PlayNext();
+        await PlayNext();
     }
     
     /// <summary>
@@ -146,7 +146,7 @@ public class AudioPlayer : IDisposable
     /// Then it calls the PlayFile method with the download path of the next track to start playback.
     /// This method allows for seamless navigation through the tracks in a playlist, ensuring that playback continues smoothly from one track to the next, and handles edge cases such as reaching the end of the playlist by looping back to the start.
     /// </summary>
-    public void PlayNext()
+    public async Task PlayNext()
     {
         if (_playlistTracks.Count == 0) return;
         
@@ -154,7 +154,7 @@ public class AudioPlayer : IDisposable
         
         if (_currentIndex >= _playlistTracks.Count) _currentIndex = 0;
 
-        PlayFile(_playlistTracks[_currentIndex].DownloadPath);
+        await PlayFile(_playlistTracks[_currentIndex].DownloadPath);
     }
 
     /// <summary>
