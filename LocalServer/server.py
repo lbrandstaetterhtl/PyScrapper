@@ -544,7 +544,7 @@ def save_user_data(request: SaveUserDataRequest):
     finally:
         conn.close()
 
-@app.post("/save", dependencies=[Depends(require_admin)])
+@app.post("/save", dependencies=[Security(require_admin)])
 async def handle_save_user_data(req: SaveUserDataRequest):
 
     # Validiere user_identifier
@@ -586,7 +586,7 @@ def create_user(username: str, password: str, identifier: str, created_at: str):
     conn.close()
 
 
-@app.post("/set/user/loggedIn", dependencies=[Depends(require_admin)])
+@app.post("/set/user/loggedIn", dependencies=[Security(require_admin)])
 async def handle_set_logged_in(identifier: str = Query(...)):
     try:
         conn = connect_db()
@@ -617,7 +617,7 @@ async def handle_set_logged_in(identifier: str = Query(...)):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/set/user/lastLoggedIn", dependencies=[Depends(require_admin)])
+@app.post("/set/user/lastLoggedIn", dependencies=[Security(require_admin)])
 async def handle_set_last_logged_in(identifier: str = Query(None)):
     try:
         conn = connect_db()
@@ -646,7 +646,7 @@ async def handle_set_last_logged_in(identifier: str = Query(None)):
 
 
 # --- get_users: KEIN Admin-Key, unverändert ---
-@app.get("/get/user/{identifier}", dependencies=[Depends(require_admin)], response_model=UserResponse)
+@app.get("/get/user/{identifier}", dependencies=[Security(require_admin)], response_model=UserResponse)
 async def get_users(identifier: str):
     try:
         conn = connect_db()
@@ -674,7 +674,7 @@ async def get_users(identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/getall/users", response_model=List[UserResponse], dependencies=[Depends(require_admin)])
+@app.get("/getall/users", response_model=List[UserResponse], dependencies=[Security(require_admin)])
 async def get_all_users():
     try:
         conn = connect_db()
@@ -691,7 +691,7 @@ async def get_all_users():
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/create-tables/", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+@app.post("/create-tables/", response_model=MessageResponse, dependencies=[Security(require_admin)])
 async def create_table():
     try:
         create_app_tables()
@@ -702,7 +702,7 @@ async def create_table():
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/create/user/", response_model=CreateResponse, dependencies=[Depends(require_admin)])
+@app.post("/create/user/", response_model=CreateResponse, dependencies=[Security(require_admin)])
 async def handle_create_user_req(req: CreateUserRequest):
     try:
         identifier = str(uuid.uuid4())
@@ -721,7 +721,7 @@ async def handle_create_user_req(req: CreateUserRequest):
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/delete/user/{identifier}", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+@app.post("/delete/user/{identifier}", response_model=MessageResponse, dependencies=[Security(require_admin)])
 async def handle_delete_user_req(identifier: str):
     try:
         conn = connect_db()
@@ -745,7 +745,7 @@ async def handle_delete_user_req(identifier: str):
 # ============================================================
 
 # --- get_playlists: KEIN Admin-Key, unverändert ---
-@app.get("/get/playlists/{identifier}", response_model=List[PlaylistResponse], dependencies=[Depends(require_admin)])
+@app.get("/get/playlists/{identifier}", response_model=List[PlaylistResponse], dependencies=[Security(require_admin)])
 async def get_playlists(identifier: str):
     try:
         conn = connect_db()
@@ -763,7 +763,7 @@ async def get_playlists(identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/create/playlist/", response_model=CreateResponse, dependencies=[Depends(require_admin)])
+@app.post("/create/playlist/", response_model=CreateResponse, dependencies=[Security(require_admin)])
 async def handle_create_playlist_req(req: CreatePlaylistRequest):
     try:
         identifier = str(uuid.uuid4())
@@ -784,7 +784,7 @@ async def handle_create_playlist_req(req: CreatePlaylistRequest):
 
 
 # HINWEIS: 'identifier' ist hier undefiniert (Bug im Original) – bewusst NICHT angefasst.
-@app.post("/delete/playlist/{identifier}", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+@app.post("/delete/playlist/{identifier}", response_model=MessageResponse, dependencies=[Security(require_admin)])
 async def handle_delete_playlist_req(identifier: str):
     try:
         conn = connect_db()
@@ -803,7 +803,7 @@ async def handle_delete_playlist_req(identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/getall/playlists", response_model=List[PlaylistResponse], dependencies=[Depends(require_admin)])
+@app.get("/getall/playlists", response_model=List[PlaylistResponse], dependencies=[Security(require_admin)])
 async def get_all_playlists():
     try:
         conn = connect_db()
@@ -824,7 +824,7 @@ async def get_all_playlists():
 # DownloadedMedia Endpoints
 # ============================================================
 
-@app.post("/create/downloadedmedia", response_model=CreateResponse, dependencies=[Depends(require_admin)])
+@app.post("/create/downloadedmedia", response_model=CreateResponse, dependencies=[Security(require_admin)])
 async def handle_create_downloaded_media_req(req: CreateDownloadedMediaRequest):
     try:
 
@@ -833,10 +833,12 @@ async def handle_create_downloaded_media_req(req: CreateDownloadedMediaRequest):
 
         cursor.execute("""SELECT Identifier FROM DownloadedMedias WHERE DownloadPath = ?""", (req.download_path,))
 
-        identifier = cursor.fetchone()
-        if identifier is not None:
-            log_queue.put_nowait(f"[ERROR] Downloaded media with path '{req.download_path}' already exists")
-            return {"message": "Downloaded media with path '{req.download_path}' already exists", "identifier": identifier}
+        existing = cursor.fetchone()
+        if existing is not None:
+            identifier = existing["Identifier"]
+            conn.close()
+            log_queue.put_nowait(f"[INFO] Downloaded media with path '{req.download_path}' already exists")
+            return {"message": f"Downloaded media with path '{req.download_path}' already exists", "identifier": identifier}
 
         identifier = str(uuid.uuid4())
         cursor.execute(
@@ -857,7 +859,7 @@ async def handle_create_downloaded_media_req(req: CreateDownloadedMediaRequest):
 
 
 # HINWEIS: 'identifier' ist hier undefiniert (Bug im Original) – bewusst NICHT angefasst.
-@app.post("/delete/downloadedmedia/{identifier}", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+@app.post("/delete/downloadedmedia/{identifier}", response_model=MessageResponse, dependencies=[Security(require_admin)])
 async def handle_delete_downloaded_media_req(identifier: str):
     try:
         conn = connect_db()
@@ -877,7 +879,7 @@ async def handle_delete_downloaded_media_req(identifier: str):
 
 
 # --- get_downloaded_media: KEIN Admin-Key, unverändert ---
-@app.get("/get/downloadedmedia/{identifier}", response_model=DownloadedMediaResponse, dependencies=[Depends(require_admin)])
+@app.get("/get/downloadedmedia/{identifier}", response_model=DownloadedMediaResponse, dependencies=[Security(require_admin)])
 async def get_downloaded_media(identifier: str):
     try:
         conn = connect_db()
@@ -903,7 +905,7 @@ async def get_downloaded_media(identifier: str):
 
 
 @app.get("/getall/downloadedmedias", response_model=List[DownloadedMediaResponse],
-         dependencies=[Depends(require_admin)])
+         dependencies=[Security(require_admin)])
 async def get_all_downloaded_media():
     try:
         conn = connect_db()
@@ -922,7 +924,7 @@ async def get_all_downloaded_media():
 
 
 # --- get_user_downloaded_medias: KEIN Admin-Key, unverändert ---
-@app.get("/getuser/downloadedmedias/{user_identifier}", response_model=List[DownloadedMediaResponse], dependencies=[Depends(require_admin)])
+@app.get("/getuser/downloadedmedias/{user_identifier}", response_model=List[DownloadedMediaResponse], dependencies=[Security(require_admin)])
 async def get_user_downloaded_medias(user_identifier: str):
     try:
         conn = connect_db()
@@ -945,7 +947,7 @@ async def get_user_downloaded_medias(user_identifier: str):
 # Settings Endpoints
 # ============================================================
 
-@app.post("/create/settings/", response_model=CreateResponse, dependencies=[Depends(require_admin)])
+@app.post("/create/settings/", response_model=CreateResponse, dependencies=[Security(require_admin)])
 async def handle_create_setting_req(req: CreateSettingsRequest):
     try:
         identifier = str(uuid.uuid4())
@@ -971,7 +973,7 @@ async def handle_create_setting_req(req: CreateSettingsRequest):
 
 
 # HINWEIS: 'identifier' ist hier undefiniert (Bug im Original) – bewusst NICHT angefasst.
-@app.post("/delete/settings/{identifier}", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+@app.post("/delete/settings/{identifier}", response_model=MessageResponse, dependencies=[Security(require_admin)])
 async def handle_delete_setting_req(identifier: str):
     try:
         conn = connect_db()
@@ -991,7 +993,7 @@ async def handle_delete_setting_req(identifier: str):
 
 
 # --- get_setting: KEIN Admin-Key, unverändert ---
-@app.get("/get/settings/{user_identifier}", response_model=SettingsResponse, dependencies=[Depends(require_admin)])
+@app.get("/get/settings/{user_identifier}", response_model=SettingsResponse, dependencies=[Security(require_admin)])
 async def get_setting(user_identifier: str):
     try:
         conn = connect_db()
@@ -1016,7 +1018,7 @@ async def get_setting(user_identifier: str):
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/getall/settings", response_model=List[SettingsResponse], dependencies=[Depends(require_admin)])
+@app.get("/getall/settings", response_model=List[SettingsResponse], dependencies=[Security(require_admin)])
 async def get_all_settings():
     try:
         conn = connect_db()
@@ -1038,7 +1040,7 @@ async def get_all_settings():
 # PlaylistMedia Endpoints
 # ============================================================
 
-@app.post("/create/playlistmedia", response_model=CreatePlaylistMediaResponse, dependencies=[Depends(require_admin)])
+@app.post("/create/playlistmedia", response_model=CreatePlaylistMediaResponse, dependencies=[Security(require_admin)])
 async def handle_create_playlist_media_req(req: CreatePlaylistMediaRequest):
     try:
         conn = connect_db()
@@ -1076,7 +1078,7 @@ async def handle_create_playlist_media_req(req: CreatePlaylistMediaRequest):
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/delete/playlistmedia", response_model=MessageResponse, dependencies=[Depends(require_admin)])
+@app.post("/delete/playlistmedia", response_model=MessageResponse, dependencies=[Security(require_admin)])
 async def handle_delete_playlist_media_req(req: DeletePlaylistMediaRequest):
     try:
         conn = connect_db()
@@ -1096,7 +1098,7 @@ async def handle_delete_playlist_media_req(req: DeletePlaylistMediaRequest):
 
 
 # --- get_playlist_medias: KEIN Admin-Key, unverändert ---
-@app.get("/get/playlistmedias/{playlist_identifier}", response_model=List[PlaylistMediaResponse], dependencies=[Depends(require_admin)])
+@app.get("/get/playlistmedias/{playlist_identifier}", response_model=List[PlaylistMediaResponse], dependencies=[Security(require_admin)])
 async def get_playlist_medias(playlist_identifier: str):
     try:
         conn = connect_db()
@@ -1116,7 +1118,7 @@ async def get_playlist_medias(playlist_identifier: str):
 
 
 # --- get_user_playlists: KEIN Admin-Key, unverändert ---
-@app.get("/getuser/playlists/{user_identifier}", response_model=List[PlaylistResponse], dependencies=[Depends(require_admin)])
+@app.get("/getuser/playlists/{user_identifier}", response_model=List[PlaylistResponse], dependencies=[Security(require_admin)])
 async def get_user_playlists(user_identifier: str):
     try:
         conn = connect_db()
@@ -1139,7 +1141,7 @@ async def get_user_playlists(user_identifier: str):
 # ============================================================
 
 # --- login: unverändert ---
-@app.post("/login", response_model=LoginResponse, dependencies=[Depends(require_admin)])
+@app.post("/login", response_model=LoginResponse, dependencies=[Security(require_admin)])
 async def handle_login_req(req: LoginRequest):
     try:
         conn = connect_db()
@@ -1172,7 +1174,7 @@ async def handle_login_req(req: LoginRequest):
 # handle_create_user_req hat jetzt nur noch (req) als Parameter; der direkte
 # Funktionsaufruf umgeht die require_admin-Dependency (die läuft nur über HTTP),
 # also bleibt /register wie gehabt offen/public.
-@app.post("/register", dependencies=[Depends(require_admin)])
+@app.post("/register", dependencies=[Security(require_admin)])
 async def handle_register_req(req: RegisterRequest):
     try:
 
@@ -1190,7 +1192,7 @@ async def handle_register_req(req: RegisterRequest):
 
 
 # --- logout: unverändert ---
-@app.post("/logout/{identifier}", dependencies=[Depends(require_admin)])
+@app.post("/logout/{identifier}", dependencies=[Security(require_admin)])
 async def handle_logout_req(identifier: str):
     try:
         conn = connect_db()

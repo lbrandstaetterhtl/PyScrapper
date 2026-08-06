@@ -182,62 +182,73 @@ public class AudioPlayer : IDisposable
     /// <param name="filePath"></param>
     private async Task PlayFile(string filePath)
     {
-        bool isSupported = true;
-        if (filePath.EndsWith(".mp4"))
+        try
         {
-            isSupported = await IsSupportedCodec(filePath);
-        }
+            bool isSupported = true;
+            if (filePath.EndsWith(".mp4"))
+            {
+                isSupported = await IsSupportedCodec(filePath);
+            }
 
-        if (!isSupported)
+            if (!isSupported)
+            {
+                var media = AppData.DownloadedMedias.FirstOrDefault(m => m.DownloadPath == filePath);
+
+                if (media != null)
+                    media.IsPlayable = false;
+
+
+                if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
+
+                string message =
+                    $"The video codec for the file '{filePath}' is not supported. Would you like to convert the file to the supported format H264.";
+                var confirmationWindow = new ConfirmationWindow(message);
+                var result = await confirmationWindow.ShowDialog<bool>(desktop.MainWindow);
+
+                if (!result)
+                    return;
+
+                string outputPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(filePath) ?? "",
+                    System.IO.Path.GetFileNameWithoutExtension(filePath) + "_converted.mp4");
+
+                var converterWindow = new CodecConverterWindow(inputPath: filePath, outputPath: outputPath);
+                bool finished = await converterWindow.ShowDialog<bool>(desktop.MainWindow);
+
+                if (!finished)
+                {
+                    var logg = new Message($"User canceled the codec conversion for file '{filePath}'", DateTime.Now,
+                        "INFO");
+                    _logger.LogNewMassage(logg);
+                    return;
+                }
+                else
+                {
+                    filePath = outputPath;
+                }
+            }
+
+            CurrentFile = filePath;
+
+            _currentMedia?.Dispose();
+
+            _currentMedia = new Media(_libVLC, CurrentFile, FromType.FromPath);
+            _currentMedia.AddOption(":file-caching=500");
+            _currentMedia.AddOption(":avcodec-hw=none");
+            _currentMedia.AddOption(":codec=avcodec");
+
+            _mediaPlayer.Media = _currentMedia;
+            _mediaPlayer.Play();
+
+            var log = new Message($"Playing file: {CurrentFile}", DateTime.Now, "INFO");
+            _logger.LogNewMassage(log);
+
+            TrackChanged?.Invoke(this, CurrentFile);
+        }
+        catch (Exception ex)
         {
-            var media = AppData.DownloadedMedias.FirstOrDefault(m => m.DownloadPath == filePath);
-            
-            if (media != null)
-                media.IsPlayable = false;
-            
-            
-            if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
-            
-            string message = $"The video codec for the file '{filePath}' is not supported. Would you like to convert the file to the supported format H264.";
-            var confirmationWindow = new ConfirmationWindow(message);
-            var result = await confirmationWindow.ShowDialog<bool>(desktop.MainWindow);
-
-            if (!result)
-                return;
-            
-            string outputPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(filePath) ?? "", System.IO.Path.GetFileNameWithoutExtension(filePath) + "_converted.mp4");
-            
-            var converterWindow = new CodecConverterWindow(inputPath: filePath, outputPath: outputPath);
-            bool finished = await converterWindow.ShowDialog<bool>(desktop.MainWindow);
-
-            if (!finished)
-            {
-                var logg = new Message($"User canceled the codec conversion for file '{filePath}'", DateTime.Now, "INFO");
-                _logger.LogNewMassage(logg);
-                return;
-            }
-            else
-            {
-                filePath = outputPath;
-            }
+            var log = new Message($"Error while trying to play file '{filePath}': {ex.Message}", DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
         }
-        
-        CurrentFile = filePath;
-
-        _currentMedia?.Dispose();
-
-        _currentMedia = new Media(_libVLC, CurrentFile, FromType.FromPath);
-        _currentMedia.AddOption(":file-caching=500");
-        _currentMedia.AddOption(":avcodec-hw=none");
-        _currentMedia.AddOption(":codec=avcodec");
-
-        _mediaPlayer.Media = _currentMedia;
-        _mediaPlayer.Play();
-        
-        var log = new Message($"Playing file: {CurrentFile}", DateTime.Now, "INFO");
-        _logger.LogNewMassage(log);
-
-        TrackChanged?.Invoke(this, CurrentFile);
     }
 
     /// <summary>
@@ -329,7 +340,7 @@ public class AudioPlayer : IDisposable
         
         if (string.IsNullOrEmpty(codec))
         {
-            return false;
+            throw new Exception($"Video codec '{path}' not found");
         }
         else
         {

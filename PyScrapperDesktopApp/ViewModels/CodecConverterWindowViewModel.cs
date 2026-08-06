@@ -185,7 +185,8 @@ public partial class CodecConverterWindowViewModel : ObservableObject
                 DownloadPath = OutputFilePath,
                 MediaType = OutputFilePath.Split('.')[^1],
                 DownloadedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                IsPlayable = true
+                IsPlayable = true,
+                Title = System.IO.Path.GetFileNameWithoutExtension(OutputFilePath)
             };
 
             DownloadedMedia newMedia = await Database.CreateDownloadedMedia(req);
@@ -197,6 +198,8 @@ public partial class CodecConverterWindowViewModel : ObservableObject
         catch (Exception e)
         {
             StatusMessage = "Error during conversion: " + e.Message;
+            var log = new Message("Error during conversion: " + e.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
             _window.Close(false);
         }
         finally

@@ -500,4 +500,18 @@ public partial class MainWindowViewModel : ObservableObject
         var editConfigWindow = new EditConfigWindow();
         await editConfigWindow.ShowDialog(_window);
     }
+
+    [RelayCommand]
+    private async Task OpenSoundCloudScrapWindow()
+    {
+        var scrapWindow = new ScrapWindowWithSearch("soundcloud");
+        await scrapWindow.ShowDialog(_window);
+    }
+
+    [RelayCommand]
+    private async Task OpenNewgroundsScrapWindow()
+    {
+        var scrapWindow = new ScrapWindowWithSearch("newgrounds");
+        await scrapWindow.ShowDialog(_window);
+    }
 }
