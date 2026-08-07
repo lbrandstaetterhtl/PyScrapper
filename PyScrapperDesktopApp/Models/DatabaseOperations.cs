@@ -12,11 +12,20 @@ using SQLitePCL;
 
 namespace PyScrapperDesktopApp.Models;
 
+/// <summary>
+/// The Database class provides static methods for interacting with the application's backend API to perform CRUD operations on downloaded media,
+/// playlists, settings, and user data. It handles HTTP requests and responses, deserializes JSON data, and logs any errors encountered during API interactions.
+/// </summary>
 public abstract class Database
 {
     private static readonly AppLogger _logger = AppLogger.Instance;
 
-    public static async Task<ObservableCollection<DownloadedMedia>> LoadDownloadedMediasFromApi()
+    /// <summary>
+    /// Asynchronously loads the downloaded media items for the current user from the backend API.
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<ObservableCollection<DownloadedMedia>> LoadDownloadedMediasFromApiAsync()
     {
         try
         {
@@ -55,7 +64,12 @@ public abstract class Database
         }
     }
 
-    public static async Task<ObservableCollection<Playlist>> LoadPlaylistsFromApi()
+    /// <summary>
+    /// Asynchronously loads the playlists for the current user from the backend API.
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<ObservableCollection<Playlist>> LoadPlaylistsFromApiAsync()
     {
         try
         {
@@ -95,7 +109,12 @@ public abstract class Database
         }
     }
 
-    public static async Task<Settings> LoadSettingsFromApi()
+    /// <summary>
+    /// Asynchronously loads the settings for the current user from the backend API.
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<Settings> LoadSettingsFromApiAsync()
     {
         try
         {
@@ -132,7 +151,13 @@ public abstract class Database
         }
     }
 
-    public static async Task<List<PlaylistMedia>> LoadPlaylistMediaFromApi(string playlistIdentifier)
+    /// <summary>
+    /// Asynchronously loads the playlist media items for a specific playlist from the backend API.
+    /// </summary>
+    /// <param name="playlistIdentifier"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<List<PlaylistMedia>> LoadPlaylistMediaFromApiAsync(string playlistIdentifier)
     {
         try
         {
@@ -168,19 +193,30 @@ public abstract class Database
         }
     }
 
-    public static async Task<List<PlaylistMedia>> LoadAllPlaylistMedias(List<Playlist> playlists)
+    /// <summary>
+    /// Asynchronously loads all playlist media items for a list of playlists from the backend API.
+    /// </summary>
+    /// <param name="playlists"></param>
+    /// <returns></returns>
+    public static async Task<List<PlaylistMedia>> LoadAllPlaylistMediasAsync(List<Playlist> playlists)
     {
         List<PlaylistMedia> allPlaylistMedias = new List<PlaylistMedia>();
         foreach (var playlist in playlists)
         {
-            var media = await LoadPlaylistMediaFromApi(playlist.Identifier);
+            var media = await LoadPlaylistMediaFromApiAsync(playlist.Identifier);
             allPlaylistMedias.AddRange(media);
         }
 
         return allPlaylistMedias;
     }
 
-    public static async Task<DownloadedMedia> CreateDownloadedMedia(CreateDownloadedMediaRequest req)
+    /// <summary>
+    /// Asynchronously creates a new downloaded media entry in the backend API based on the provided request data.
+    /// </summary>
+    /// <param name="req"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<DownloadedMedia> CreateDownloadedMediaAsync(CreateDownloadedMediaRequest req)
     {
         try
         {
@@ -223,7 +259,13 @@ public abstract class Database
         }
     }
     
-    public static async Task<Playlist> CreatePlaylist(CreatePlaylistRequest req)
+    /// <summary>
+    /// Asynchronously creates a new playlist in the backend API based on the provided request data.
+    /// </summary>
+    /// <param name="req"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<Playlist> CreatePlaylistAsync(CreatePlaylistRequest req)
     {
         try
         {
@@ -264,7 +306,13 @@ public abstract class Database
         }
     }
 
-    public static async Task<PlaylistMedia> CreatePlaylistMedia(CreatePlaylistMediaRequest req)
+    /// <summary>
+    /// Asynchronously creates a new playlist media entry in the backend API based on the provided request data.
+    /// </summary>
+    /// <param name="req"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<PlaylistMedia> CreatePlaylistMediaAsync(CreatePlaylistMediaRequest req)
     {
         try
         {
@@ -305,7 +353,12 @@ public abstract class Database
         }
     }
     
-    public static async Task DeleteDownloadedMedia(string identifier)
+    /// <summary>
+    /// Asynchronously deletes a downloaded media entry from the backend API based on the provided identifier.
+    /// </summary>
+    /// <param name="identifier"></param>
+    /// <exception cref="Exception"></exception>
+    public static async Task DeleteDownloadedMediaAsync(string identifier)
     {
         try
         {
@@ -332,7 +385,12 @@ public abstract class Database
         }
     }
 
-    public static async Task DeletePlaylist(string identifier)
+    /// <summary>
+    /// Asynchronously deletes a playlist from the backend API based on the provided identifier.
+    /// </summary>
+    /// <param name="identifier"></param>
+    /// <exception cref="Exception"></exception>
+    public static async Task DeletePlaylistAsync(string identifier)
     {
         try
         {
@@ -360,7 +418,13 @@ public abstract class Database
         }
     }
 
-    public static async Task DeletePlaylistMedia(string playlistIdentifier, string mediaIdentifier)
+    /// <summary>
+    /// Asynchronously deletes a playlist media entry from the backend API based on the provided playlist and media identifiers.
+    /// </summary>
+    /// <param name="playlistIdentifier"></param>
+    /// <param name="mediaIdentifier"></param>
+    /// <exception cref="Exception"></exception>
+    public static async Task DeletePlaylistMediaAsync(string playlistIdentifier, string mediaIdentifier)
     {
         try
         {
@@ -388,7 +452,13 @@ public abstract class Database
         }
     }
 
-    public static async Task<Settings> CreateSettings(CreateSettingRequest req)
+    /// <summary>
+    /// Asynchronously creates new settings in the backend API based on the provided request data.
+    /// </summary>
+    /// <param name="req"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<Settings> CreateSettingsAsync(CreateSettingRequest req)
     {
         try
         {
@@ -437,7 +507,13 @@ public abstract class Database
         }
     }
 
-    public static async Task<User> GetUser(string identifier)
+    /// <summary>
+    /// Asynchronously retrieves a user from the backend API based on the provided identifier.
+    /// </summary>
+    /// <param name="identifier"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<User> GetUserAsync(string identifier)
     {
         var client = new HttpClient();
         client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
@@ -466,7 +542,13 @@ public abstract class Database
         }
     }
 
-    public static async Task<bool> SaveUserData(SaveDataRequest req)
+    /// <summary>
+    /// Asynchronously saves user data to the backend API based on the provided request data.
+    /// </summary>
+    /// <param name="req"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<bool> SaveUserDataAsync(SaveDataRequest req)
     {
             using var client  = new HttpClient();
             client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
@@ -485,7 +567,12 @@ public abstract class Database
             return true;
     }
 
-    public static async Task<bool> SetUserLoggedIn()
+    /// <summary>
+    /// Asynchronously sets the current user as logged in on the backend API.
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static async Task<bool> SetUserLoggedInAsync()
     {
         using var client = new HttpClient();
         client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   

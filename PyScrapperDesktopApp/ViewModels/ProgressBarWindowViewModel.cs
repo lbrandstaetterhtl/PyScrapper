@@ -20,16 +20,16 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     private CancellationTokenSource? _cts;
 
     [ObservableProperty] 
-    private float _progress;
+    private string _progress;
     
     [ObservableProperty]
     private string _status;
     
     [ObservableProperty]
-    private float _progressSpeed;
+    private string _progressSpeed;
 
     [ObservableProperty] 
-    private float _eta;
+    private string _eta;
     
     [ObservableProperty]
     private bool _isFinished = false;
@@ -98,22 +98,46 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                                         Status = progressData.Status + " | please wait...";
                                     }
 
-                                    Progress = progressData.DownloadProgress;
-                                    ProgressSpeed = progressData.Speed;
-                                    Eta = progressData.Eta;
+                                    Progress = $"{progressData.DownloadProgress}%";
+                                    ProgressSpeed = $"{progressData.Speed} Mb/s";
+                                    Eta = $"{progressData.Eta} seconds";
 
                                     if (progressData.Status.Equals("complete"))
                                     {
                                         IsFinished = true;
                                         Status = "Completed";
-                                        ProgressSpeed = 0;
-                                        Eta = 0;
+                                        ProgressSpeed = "0 Mb/s";
+                                        Eta = "0 seconds";
                                         StopProgress();
                                     }
                                 }
                                 else
                                 {
-                                    
+                                    if (progressData.ErrorMessage is not "")
+                                    {
+                                        Status = $"Error: {progressData.ErrorMessage}";
+                                        var log = new Message(progressData.ErrorMessage, DateTime.Now, "ERROR");
+                                        _logger.LogNewMassage(log);
+                                        errorWhileDownloading = true;
+                                        StopProgress();
+                                    }
+                                    else
+                                    {
+                                        Status = progressData.Status + " | please wait...";
+                                    }
+
+                                    Progress = $"{progressData.DownloadProgress}%";
+                                    ProgressSpeed = $"{progressData.Speed} Mb/s";
+                                    Eta = $"{progressData.Eta} seconds";
+
+                                    if (progressData.Status.Equals("complete"))
+                                    {
+                                        IsFinished = true;
+                                        Status = "Completed";
+                                        ProgressSpeed = "0 Mb/s";
+                                        Eta = "0 seconds";
+                                        StopProgress();
+                                    }
                                 }
                             });
                         }

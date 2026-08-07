@@ -64,7 +64,7 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
             UserIdentifier = AppData.CurrentUser.Identifier
         };
 
-        var newPlaylist = await Database.CreatePlaylist(req);
+        var newPlaylist = await Database.CreatePlaylistAsync(req);
         
         AppData.AddPlaylist(newPlaylist);
         
@@ -78,7 +78,7 @@ public partial class CreatePlaylistWindowViewModel : ObservableObject
                 MediaIdentifier = media.Identifier
             };
             
-            var newPlaylistMedia = await Database.CreatePlaylistMedia(reqMedia);
+            var newPlaylistMedia = await Database.CreatePlaylistMediaAsync(reqMedia);
             
             AppData.PlaylistMedias.Add(newPlaylistMedia);
         }

@@ -126,7 +126,7 @@ public partial class MainWindow : Window
 
                 AppData.RemoveDownloadedMedia(media);
 
-                await Database.DeleteDownloadedMedia(media.Identifier);
+                await Database.DeleteDownloadedMediaAsync(media.Identifier);
 
                 var log = new Message("Media removed: " + media.Url, DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);

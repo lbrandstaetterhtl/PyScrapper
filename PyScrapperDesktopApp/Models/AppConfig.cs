@@ -17,6 +17,11 @@ public static class SecretProtector
 {
     private static readonly byte[] Entropy = "PyScrapper.v1"u8.ToArray();
 
+    /// <summary>
+    /// Encrypts a plain text string using Windows DPAPI and returns the encrypted string in Base64 format.
+    /// </summary>
+    /// <param name="plainText"></param>
+    /// <returns></returns>
     public static string Encrypt(string plainText)
     {
         if (string.IsNullOrEmpty(plainText))
@@ -36,6 +41,11 @@ public static class SecretProtector
         }
     }
 
+    /// <summary>
+    /// Decrypts a Base64-encoded encrypted string using Windows DPAPI and returns the original plain text string.
+    /// </summary>
+    /// <param name="encryptedBase64"></param>
+    /// <returns></returns>
     public static string Decrypt(string encryptedBase64)
     {
         if (string.IsNullOrEmpty(encryptedBase64))
@@ -56,6 +66,9 @@ public static class SecretProtector
     }
 }
 
+/// <summary>
+/// Represents the application configuration, including server settings, API key, and last logged-in user.
+/// </summary>
 public class AppConfig
 {
     [JsonPropertyName("ServerUrl")]
@@ -72,6 +85,11 @@ public class AppConfig
     
     private static readonly string ConfigPath = Path.Combine(AppData.DataPath, "config.json");
     
+    /// <summary>
+    /// Loads the application configuration from the config.json file. If the file does not exist, it creates a default configuration and saves it.
+    /// If an error occurs during loading, it logs the error and returns a default configuration.
+    /// </summary>
+    /// <returns></returns>
     public static AppConfig Load()
     {
         try
@@ -116,6 +134,10 @@ public class AppConfig
         
     }
     
+    /// <summary>
+    /// Saves the application configuration to the config.json file. The API key is encrypted before saving.
+    /// </summary>
+    /// <param name="config"></param>
     public static void Save(AppConfig config)
     {
         try
@@ -138,6 +160,10 @@ public class AppConfig
         }
     }
 
+    /// <summary>
+    /// Builds a default application configuration with predefined server settings and API key. The last logged-in user is set to null.
+    /// </summary>
+    /// <returns></returns>
     public static AppConfig BuildDefault()
     {
         var result = new AppConfig()

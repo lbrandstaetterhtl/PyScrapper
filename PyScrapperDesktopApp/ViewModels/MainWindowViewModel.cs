@@ -146,7 +146,7 @@ public partial class MainWindowViewModel : ObservableObject
                 Title = Path.GetFileNameWithoutExtension(path)
             };
 
-            var media = await Database.CreateDownloadedMedia(req);
+            var media = await Database.CreateDownloadedMediaAsync(req);
             
             AppData.AddDownloadedMedia(media);
 

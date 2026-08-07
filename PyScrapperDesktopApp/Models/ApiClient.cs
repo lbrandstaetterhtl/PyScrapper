@@ -295,7 +295,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
                             Title = requestData.Filename
                         };
                         
-                        DownloadedMedia media = await Database.CreateDownloadedMedia(createRequest);
+                        DownloadedMedia media = await Database.CreateDownloadedMediaAsync(createRequest);
                         
                         AppData.AddDownloadedMedia(media);
                     }
@@ -322,6 +322,12 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
         }
     }
 
+    /// <summary>
+    /// Sends a login request to the server with the given username and password. If successful, it logs the login information, sets the current user in AppData, and returns true.
+    /// If there is an error, it logs the error and shows a message box with the error detail, then returns false. The login request is sent to the /login endpoint of the server.
+    /// </summary>
+    /// <param name="req"></param>
+    /// <returns></returns>
     public async Task<bool> Login(LoginRequest req)
     {
         using var client = new HttpClient();
@@ -335,9 +341,9 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
         
         if (response.IsSuccessStatusCode)
         {
-            AppData.CurrentUser = await Database.GetUser(req.Username);
+            AppData.CurrentUser = await Database.GetUserAsync(req.Username);
             
-            await Database.SetUserLoggedIn();
+            await Database.SetUserLoggedInAsync();
 
             var log = new Message($"Login successful for user: \"{req.Username}\"", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
@@ -358,6 +364,11 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
         }
     }
 
+    /// <summary>
+    /// Sends a logout request to the server for the last logged-in user. If successful, it logs the logout information and returns true.
+    /// If there is an error, it logs the error and shows a message box with the error detail, then returns false. The logout request is sent to the /logout/{userIdentifier} endpoint of the server, where {userIdentifier} is the identifier of the last logged-in user.
+    /// </summary>
+    /// <returns></returns>
     public async Task<bool> Logout()
     {
         using var  client = new HttpClient();
@@ -368,6 +379,12 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
         return response.IsSuccessStatusCode;
     }
 
+    /// <summary>
+    /// Sends a registration request to the server with the given username and password. If successful, it logs the registration information and returns true.
+    /// If there is an error, it logs the error and shows a message box with the error detail, then returns false. The registration request is sent to the /register endpoint of the server.
+    /// </summary>
+    /// <param name="req"></param>
+    /// <returns></returns>
     public async Task<bool> Register(RegisterRequest req)
     {
         using var client = new HttpClient();

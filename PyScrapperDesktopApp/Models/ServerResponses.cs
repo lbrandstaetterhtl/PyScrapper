@@ -139,6 +139,11 @@ public class CreatePlaylistMediaResponse
     public int Position { get; set; }
 }
 
+/// <summary>
+/// Class representing the structure of a default database response from the server, containing properties for a message and an identifier.
+/// This class is used to serialize and deserialize JSON data for standard database responses from the server, allowing the client to receive confirmation messages and unique identifiers for newly created or modified database entries.
+/// The "message" property provides information about the outcome of the database operation, while the "identifier" property contains a unique identifier associated with the database entry, which can be used for further operations or reference.
+/// </summary>
 public class DefaultDbResponse
 {
     [JsonPropertyName("message")]
@@ -148,6 +153,13 @@ public class DefaultDbResponse
     public string Identifier { get; set; }
 }
 
+/// <summary>
+/// Class representing the structure of a response from the server when retrieving a playlist, containing properties for the playlist's identifier,
+/// user identifier, name, and description. This class is used to serialize and deserialize JSON data for responses from the server that provide information about a specific playlist,
+/// allowing the client to display the playlist's details to the user.
+/// The "identifier" property uniquely identifies the playlist, the "userIdentifier" property indicates the user who owns the playlist,
+/// the "name" property provides the name of the playlist, and the "description" property contains a brief description of the playlist's content or purpose.
+/// </summary>
 public class GetPlaylistResponse
 {
     [JsonPropertyName("Identifier")]

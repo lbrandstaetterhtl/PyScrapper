@@ -44,6 +44,10 @@ public class SearchRequestData
     public SearchFilter Filters { get; set; }
 }
 
+/// <summary>
+/// Class representing the data structure for search filters, containing properties for the creator and a list of tags to filter search results.
+/// This class is used to serialize and deserialize JSON data when applying filters to search requests.
+/// </summary>
 public class SearchFilter
 {
     [JsonPropertyName("creator")]
@@ -53,6 +57,11 @@ public class SearchFilter
     public List<string> Tags { get; set; }
 }
 
+/// <summary>
+/// Class representing the data structure for a request to create a downloaded media entry, containing properties for the user identifier, URL, download path,
+/// media type, download timestamp, playability status, and title.
+/// This class is used to serialize and deserialize JSON data when making requests to create downloaded media entries on the server.
+/// </summary>
 public class CreateDownloadedMediaRequest
 {
     [JsonPropertyName("user_identifier")]
@@ -77,6 +86,10 @@ public class CreateDownloadedMediaRequest
     public string Title { get; set; }
 }
 
+/// <summary>
+/// Class representing the data structure for a request to create a playlist, containing properties for the user identifier, playlist name, and description.
+/// This class is used to serialize and deserialize JSON data when making requests to create playlists on the server.
+/// </summary>
 public class CreatePlaylistRequest
 {
     [JsonPropertyName("user_identifier")]
@@ -89,6 +102,10 @@ public class CreatePlaylistRequest
     public string Description { get; set; }
 }
 
+/// <summary>
+/// Class representing the data structure for a request to add media to a playlist, containing properties for the playlist identifier and media identifier.
+/// This class is used to serialize and deserialize JSON data when making requests to add media to playlists on the server.
+/// </summary>
 public class CreatePlaylistMediaRequest
 {
     [JsonPropertyName("playlist_identifier")]
@@ -98,6 +115,11 @@ public class CreatePlaylistMediaRequest
     public string MediaIdentifier { get; set; }
 }
 
+/// <summary>
+/// Class representing the data structure for a request to create user settings, containing properties for the user identifier,
+/// default download path, dark mode preference, and scan folder on startup preference.
+/// This class is used to serialize and deserialize JSON data when making requests to create user settings on the server.
+/// </summary>
 public class CreateSettingRequest
 {
     [JsonPropertyName("user_identifier")]
@@ -113,6 +135,10 @@ public class CreateSettingRequest
     public bool ScanFolderOnStartup { get; set; }
 }
 
+/// <summary>
+/// Class representing the data structure for a login request, containing properties for the username and password.
+/// This class is used to serialize and deserialize JSON data when making login requests to the server.
+/// </summary>
 public class LoginRequest
 {
     [JsonPropertyName("username")]
@@ -122,6 +148,10 @@ public class LoginRequest
     public string Password { get; set; }
 }
 
+/// <summary>
+/// Class representing the data structure for a registration request, containing properties for the username and password.
+/// This class is used to serialize and deserialize JSON data when making registration requests to the server.
+/// </summary>
 public class RegisterRequest
 {
     [JsonPropertyName("username")]
@@ -131,6 +161,10 @@ public class RegisterRequest
     public string Password { get; set; }
 }
 
+/// <summary>
+/// Class representing the data structure for a request to save user data, containing properties for the user identifier, playlists, downloaded media, playlist media, and settings.
+/// This class is used to serialize and deserialize JSON data when making requests to save user data on the server.
+/// </summary>
 public class SaveDataRequest
 {
     [JsonPropertyName("user_identifier")]

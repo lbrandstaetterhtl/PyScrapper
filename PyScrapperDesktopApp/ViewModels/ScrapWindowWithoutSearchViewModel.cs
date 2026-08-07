@@ -61,7 +61,6 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
     {
         try
         {
-
             ApiClient client = new(_dialogService);
 
             var requestData = new DownloadRequestData()
@@ -111,7 +110,7 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
                         Title = Filename
                     };
 
-                    var media = await Database.CreateDownloadedMedia(req);
+                    var media = await Database.CreateDownloadedMediaAsync(req);
 
                     AppData.AddDownloadedMedia(media);
                 }

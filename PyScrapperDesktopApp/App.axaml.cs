@@ -101,7 +101,7 @@ public partial class App : Application
                 return;
             }
 
-            var settings = await Database.LoadSettingsFromApi();
+            var settings = await Database.LoadSettingsFromApiAsync();
             if (settings == null)
             {
                 log = new Message("Failed to load settings from database, using default settings", DateTime.Now, "WARN");
@@ -115,7 +115,7 @@ public partial class App : Application
                     UserIdentifier = AppData.CurrentUser.Identifier,
                 };
 
-                settings = await Database.CreateSettings(settingReq);
+                settings = await Database.CreateSettingsAsync(settingReq);
             }
 
             AppData.Settings = settings;
@@ -176,7 +176,7 @@ public partial class App : Application
             var log = new Message("Loading Data...", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
 
-            var medias = await Database.LoadDownloadedMediasFromApi() ?? new ObservableCollection<DownloadedMedia>();
+            var medias = await Database.LoadDownloadedMediasFromApiAsync() ?? new ObservableCollection<DownloadedMedia>();
 
             var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
 
@@ -226,14 +226,14 @@ public partial class App : Application
                 AppData.AddDownloadedMedia(media);
             }
 
-            var playlists = await Database.LoadPlaylistsFromApi();
+            var playlists = await Database.LoadPlaylistsFromApiAsync();
 
             foreach (var playlist in playlists)
             {
                 AppData.AddPlaylist(playlist);
             }
 
-            var playlistMedias = await Database.LoadAllPlaylistMedias(playlists.ToList());
+            var playlistMedias = await Database.LoadAllPlaylistMediasAsync(playlists.ToList());
 
             foreach (var media in playlistMedias)
             {
@@ -305,7 +305,7 @@ public partial class App : Application
                 Setting = AppData.Settings
             };
 
-            if (!await Database.SaveUserData(req))
+            if (!await Database.SaveUserDataAsync(req))
             {
                 log = new Message("Saving user data failed", DateTime.Now, "ERROR");
                 _logger.LogNewMassage(log);
@@ -387,7 +387,7 @@ public partial class App : Application
                 if (AppData.MediaAlreadyExists(file))
                     continue;
 
-                var media = await Database.CreateDownloadedMedia(req);
+                var media = await Database.CreateDownloadedMediaAsync(req);
 
                 bool exists = File.Exists(media.DownloadPath);
                 bool isSupported = false;

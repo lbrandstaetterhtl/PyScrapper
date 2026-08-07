@@ -30,9 +30,9 @@
                     <TextBlock Text="{Binding Status}" Classes="UILabel"/>
 
                     <StackPanel Spacing="10" Orientation="Vertical">
-                        <TextBlock Text="{Binding Progress, StringFormat={}{0}%}" Classes="UIValue"/>
-                        <TextBlock Text="{Binding Eta, StringFormat={}{0} seconds}" Classes="UIValue"/>
-                        <TextBlock Text="{Binding ProgressSpeed, StringFormat={}{0}Mb/s}" Classes="UIValue"/>
+                        <TextBlock Text="{Binding Progress}" Classes="UIValue"/>
+                        <TextBlock Text="{Binding Eta}" Classes="UIValue"/>
+                        <TextBlock Text="{Binding ProgressSpeed}" Classes="UIValue"/>
                     </StackPanel>
                     
                     

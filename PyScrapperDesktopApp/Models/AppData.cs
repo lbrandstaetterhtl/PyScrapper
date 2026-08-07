@@ -242,17 +242,24 @@ public class Playlist(string name, string description, string identifier, string
                 MediaIdentifier = mediaIdentifier
             };
 
-            var playlistMedia = await Database.CreatePlaylistMedia(req);
+            var playlistMedia = await Database.CreatePlaylistMediaAsync(req);
             AppData.PlaylistMedias.Add(playlistMedia);
         }
     }
 
+    /// <summary>
+    /// Finds and populates the MediaIdentifiers list with the media IDs associated with this playlist from the AppData.PlaylistMedias collection.
+    /// </summary>
     public void FindMedias()
     {
         var medias = AppData.PlaylistMedias.Where(pm => pm.PlaylistIdentifier == Identifier).ToList();
         MediaIdentifiers = medias.Select(pm => pm.MediaIdentifier).ToList();
     }
     
+    /// <summary>
+    /// Removes a media item from the playlist by finding the corresponding PlaylistMedia entry in the AppData.PlaylistMedias collection and removing it.
+    /// </summary>
+    /// <param name="mediaIdentifier"></param>
     public void RemoveMedia(string mediaIdentifier)
     {
         var playlistMedia = AppData.PlaylistMedias.FirstOrDefault(pm => pm.MediaIdentifier == mediaIdentifier && pm.PlaylistIdentifier == Identifier);
@@ -400,12 +407,23 @@ public class MediaFilter
     }
 }
 
+/// <summary>
+/// Class representing a user of the application, with properties for username and a unique identifier.
+/// </summary>
+/// <param name="username"></param>
+/// <param name="identifier"></param>
 public class User(string username, string identifier)
 {
     public string Username { get; set; } = username;
     public string Identifier { get; set; } = identifier;
 }
 
+/// <summary>
+/// Class representing the association between a media item and a playlist, with properties for the media identifier, playlist identifier, and position of the media item within the playlist.
+/// </summary>
+/// <param name="mediaIdentifier"></param>
+/// <param name="playlistIdentifier"></param>
+/// <param name="position"></param>
 public class PlaylistMedia(string mediaIdentifier, string playlistIdentifier, int position)
 {
     public string MediaIdentifier { get; set; } = mediaIdentifier;
@@ -413,6 +431,9 @@ public class PlaylistMedia(string mediaIdentifier, string playlistIdentifier, in
     public int Position { get; set; } = position;
 }
 
+/// <summary>
+/// Enum representing the possible results of a login attempt, including success, cancellation, and error states.
+/// </summary>
 public enum LoginResult
 {
     Success,

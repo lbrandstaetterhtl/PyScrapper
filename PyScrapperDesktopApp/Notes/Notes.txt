@@ -2,5 +2,4 @@
 
 
 Next steps:
-Mediaplayer has to be adjusted to the new db structure
 https://deepwiki.com/videolan/libvlcsharp/2.3-best-practices-and-common-patterns

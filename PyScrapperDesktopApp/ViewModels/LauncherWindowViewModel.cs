@@ -93,19 +93,12 @@ public partial class LauncherWindowViewModel : ObservableObject
             {
                 log = new Message("Server is running", DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
-
-                await FinishSuccess();
                 
-                await Task.WhenAll(
-                    Task.Run(EnsureVcRedist),
-                    Task.Run(EnsureFfmpeg),
-                    Task.Run(EnsurePython),
-                    Task.Run(EnsureVenv),
-                    Task.Run(() => {RunProcess("python", "-m pip install --upgrade pip", LocalServer).Wait();}),
-                    Task.Run(() => {RunProcess("python", $"-m pip install -r \"{Requirements}\"", LocalServer).Wait(); }),
-                    Task.Run(() => RunProcess(VenvPython, " -m playwright install", LocalServer).Wait() ),
-                    RestoreDotnetPackages()
-                );
+                await EnsureVcRedist();
+                
+                await RestoreDotnetPackages();
+                
+                await EnsureFfmpeg();
                 
                 await FinishSuccess();
             }
@@ -211,8 +204,6 @@ public partial class LauncherWindowViewModel : ObservableObject
             return false;
         }
     }
-
-    
 
     /// <summary>
     /// Restores all .NET packages by finding all .csproj files in the repository root and running
@@ -405,196 +396,6 @@ public partial class LauncherWindowViewModel : ObservableObject
             .EnumerateFiles(pkgRoot, "ffmpeg.exe", SearchOption.AllDirectories)
             .Any(f => f.Contains("yt-dlp.FFmpeg"));
     }
-
-    /// <summary>
-    /// Verifies that a compatible Python executable (3.12 or lower) is available on the system.
-    /// Python 3.13 and above are rejected because key dependencies such as greenlet and playwright
-    /// do not yet provide binary wheels for those versions, which causes DLL load failures at runtime.
-    /// If no compatible Python is found or the version is too new, an exception is thrown with
-    /// instructions for the user.
-    /// </summary>
-    private async Task EnsurePython()
-    {
-
-            var python = FindPython();
-
-            if (python != null)
-            {
-                await Dispatcher.UIThread.InvokeAsync(() => Messages.Add(new LauncherMessage
-                {
-                    Message = $"Found {python.Split(' ')[0]} executable",
-                    Title = "Python",
-                    Symbol = "✓"
-                }));
-                return;
-            }
-
-            await Dispatcher.UIThread.InvokeAsync(() => Messages.Add(new LauncherMessage()
-            {
-                Message = "3.12 not found | downloading installer",
-                Title = "Python",
-                Symbol = "⏳"
-            }));
-
-            using var httpClient = new HttpClient();
-            var bytes = await httpClient.GetByteArrayAsync(_installerUrl);
-            await File.WriteAllBytesAsync(_installerPath, bytes);
-
-            await Dispatcher.UIThread.InvokeAsync(() => Messages.Add(new LauncherMessage()
-            {
-                Message = $"Installing (admins right required)",
-                Title = "Python",
-                Symbol = "⏳"
-            }));
-
-            await RunProcess(_installerPath, "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0", null, log: true, shell: true);
-
-            await Dispatcher.UIThread.InvokeAsync(() => Messages.Add(new LauncherMessage()
-            {
-                Message = "Installation complete, verifying...",
-                Title = "Python",
-                Symbol = "⏳"
-            }));
-            
-            RefreshEnvironmentPath();
-            
-            python = FindPython();
-
-            if (python == null)
-            {
-                throw new Exception(
-                    "Python 3.12 executable not found after installation. Please ensure Python 3.12 is installed and added to PATH, then restart the application.\n" +
-                    "You can download it from: https://www.python.org/downloads/release/python-3120/"
-                );
-            }
-            
-            await Dispatcher.UIThread.InvokeAsync(() => Messages.Add(new LauncherMessage()
-            {
-                Message = $"Found {python.Split(' ')[0]} executable after installation",
-                Title = "Python",
-                Symbol = "✓"
-            }));    
-    }
-
-    /// <summary>
-    /// Ensures that a Python virtual environment exists at the expected path. If the venv does not exist,
-    /// it searches for a compatible Python installation, checks that pip is available via ensurepip if
-    /// needed, and creates the virtual environment. If the venv already exists, this method returns
-    /// immediately without recreating it. If Python is not found, pip cannot be bootstrapped, or the
-    /// venv creation fails, an exception is thrown.
-    /// </summary>
-    private void EnsureVenv()
-    {
-        if (File.Exists(VenvPython)) return;
-
-        var venvDir = Path.Combine(LocalServer, ".venv");
-        var python  = FindPython() ?? throw new Exception("Python not found. Please install Python 3.12 and try again.");
-        var exe     = python.Split(' ')[0];
-        var args    = python.Contains(' ') ? python.Split(' ', 2)[1] : string.Empty;
-
-        EnsurePipAvailable(exe, args);
-
-        var venvArgs = string.IsNullOrEmpty(args)
-            ? $"-m venv \"{venvDir}\""
-            : $"{args} -m venv \"{venvDir}\"";
-
-        var p = Process.Start(BuildProcessInfo(exe, venvArgs, LocalServer, false))!;
-        p.WaitForExit();
-
-        if (!File.Exists(VenvPython))
-            throw new Exception($"Failed to create virtual environment using: {python}");
-    }
-
-    /// <summary>
-    /// Checks if pip is available for the given Python executable by running pip --version.
-    /// If pip is not found, attempts to bootstrap it using the built-in ensurepip module.
-    /// If ensurepip also fails, an exception is thrown with platform-specific installation instructions.
-    /// This method may run on a background thread and uses Dispatcher.UIThread.Post to update the status text.
-    /// </summary>
-    /// <param name="exe"></param>
-    /// <param name="extraArgs"></param>
-    private void EnsurePipAvailable(string exe, string extraArgs)
-    {
-        var pipArgs = string.IsNullOrEmpty(extraArgs)
-            ? "-m pip --version"
-            : $"{extraArgs} -m pip --version";
-
-        var check = Process.Start(new ProcessStartInfo
-        {
-            FileName               = exe,
-            Arguments              = pipArgs,
-            RedirectStandardOutput = true,
-            RedirectStandardError  = true,
-            UseShellExecute        = false,
-            CreateNoWindow         = true,
-        })!;
-        check.WaitForExit();
-
-        if (check.ExitCode == 0) return;
-
-        var log = new Message("pip not found, attempting bootstrap via ensurepip...", DateTime.Now, "WARN");
-        _logger.LogNewMassage(log);
-
-        Dispatcher.UIThread.Post(() => Messages.Add(new LauncherMessage()
-        {
-            Message = "bootstrapping pip...",
-            Title = "pip Check",
-            Symbol = "✓"
-        }));
-
-        var ensureArgs = string.IsNullOrEmpty(extraArgs)
-            ? "-m ensurepip --upgrade"
-            : $"{extraArgs} -m ensurepip --upgrade";
-
-        var bootstrap = Process.Start(new ProcessStartInfo
-        {
-            FileName               = exe,
-            Arguments              = ensureArgs,
-            RedirectStandardOutput = true,
-            RedirectStandardError  = true,
-            UseShellExecute        = false,
-            CreateNoWindow         = true,
-        })!;
-        bootstrap.WaitForExit();
-
-        if (bootstrap.ExitCode != 0)
-            throw new Exception(
-                "pip is not installed and could not be bootstrapped automatically.\n" +
-                "On Debian/Ubuntu: sudo apt install python3-pip\n" +
-                "On Arch: sudo pacman -S python-pip"
-            );
-    }
-
-    /// <summary>
-    /// Searches for a compatible Python 3.12 installation on the system by trying version-specific
-    /// executable names first (py -3.12, python3.12) before falling back to generic names.
-    /// Returns the full invocation string (e.g. "py -3.12") of the first executable that responds
-    /// to --version with exit code 0, or null if none is found.
-    /// </summary>
-    /// <returns></returns>
-    private static string FindPython()
-    {
-        foreach (var name in new[] { "py -3.12", "python3.12", "py", "python", "python3" })
-        {
-            try
-            {
-                var parts = name.Split(' ', 2);
-                var p = Process.Start(new ProcessStartInfo
-                {
-                    FileName               = parts[0],
-                    Arguments              = parts.Length > 1 ? parts[1] + " --version" : "--version",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError  = true,
-                    UseShellExecute        = false,
-                    CreateNoWindow         = true,
-                });
-                p?.WaitForExit();
-                if (p?.ExitCode == 0) return name;
-            }
-            catch { }
-        }
-        return null;
-    }
     
     /// <summary>
     /// Lädt die PATH-Umgebungsvariable für den AKTUELLEN Prozess neu.
@@ -668,8 +469,6 @@ public partial class LauncherWindowViewModel : ObservableObject
                 throw new Exception($"{Path.GetFileName(exe)} exited with code {p.ExitCode}");
         });
     }
-    
-    
 
     /// <summary>
     /// Creates a ProcessStartInfo configured for running a background process with redirected output and error

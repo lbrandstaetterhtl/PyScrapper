@@ -81,7 +81,7 @@ public partial class PlaylistDetailsWindow : Window
             {
                 if (DataContext is PlaylistDetailsWindowViewModel vm)
                 {
-                    await Database.DeletePlaylistMedia(media.Identifier, vm._playlist.Identifier);
+                    await Database.DeletePlaylistMediaAsync(media.Identifier, vm._playlist.Identifier);
                     vm._playlist.RemoveMedia(media.Identifier);
                     vm.RefreshMedias();
                 }

@@ -17,6 +17,12 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
     
     private readonly AppLogger _logger = AppLogger.Instance;
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the "Login" button.
+    /// It performs a health check on the API client, sends a login request with the provided username and password, and handles the response.
+    /// If the login is successful, it logs the event, sets the result of the login window to success, and closes the window.
+    /// If the login fails, it logs the event and displays an alert dialog to inform the user of the failure.
+    /// </summary>
     [RelayCommand]
     private async Task Login()
     {
@@ -26,7 +32,7 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
 
         if (!healthResponse.Ok)
         {
-            await dialogService.ShowAlertAsync("Health check failed. Please check your connection or contact your admin.");
+            await dialogService.ShowAlertAsync("Health check failed. Please check your connection.");
             return;
         }
 
@@ -59,6 +65,10 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
         }
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the "Cancel" button.
+    /// It sets the result of the login window to cancelled and closes the window.
+    /// </summary>
     [RelayCommand]
     private void Cancel()
     {
@@ -66,6 +76,12 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
         window.Close();
     }
 
+    /// <summary>
+    /// Command method that is executed when the user clicks the "Register" button.
+    /// It performs a health check on the API client, sends a registration request with the provided username and password, and handles the response.
+    /// If the registration is successful, it automatically calls the Login method to log in the user.
+    /// If the registration fails, it displays an alert dialog to inform the user of the failure.
+    /// </summary>
     [RelayCommand]
     private async Task Register()
     {
@@ -75,7 +91,7 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
 
         if (!healthResponse.Ok)
         {
-            await dialogService.ShowAlertAsync("Health check failed. Please check your connection or contact your admin.");
+            await dialogService.ShowAlertAsync("Health check failed. Please check your connection.");
             return;
         }
 

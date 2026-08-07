@@ -413,6 +413,11 @@ public class AudioPlayer : IDisposable
         }
     }
     
+    /// <summary>
+    /// Represents information about a media stream, including its codec type and codec name.
+    /// This class is used to deserialize the JSON output from FFprobe when probing media files for their stream information.
+    /// It provides properties to access the codec type (e.g., video, audio) and the codec name (e.g., h264, aac) of each stream in the media file.
+    /// </summary>
     private class StreamInfo
     {
         [JsonPropertyName("codec_type")]

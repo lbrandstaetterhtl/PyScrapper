@@ -189,7 +189,7 @@ public partial class CodecConverterWindowViewModel : ObservableObject
                 Title = System.IO.Path.GetFileNameWithoutExtension(OutputFilePath)
             };
 
-            DownloadedMedia newMedia = await Database.CreateDownloadedMedia(req);
+            DownloadedMedia newMedia = await Database.CreateDownloadedMediaAsync(req);
             
             AppData.AddDownloadedMedia(newMedia);
             
