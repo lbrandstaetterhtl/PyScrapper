@@ -1,4 +1,43 @@
-from PythonModule.models.processorModels import ProviderTypes
+import enum
+
+
+
+class ProviderTypes(enum.Enum):
+    Default = enum.auto()
+    ERROR = enum.auto()
+    Youtube = enum.auto()
+    Bandcamp = enum.auto()
+    Archive = enum.auto()
+    Suno = enum.auto()
+    Soundcloud = enum.auto()
+    Wcoflix = enum.auto()
+    Aniworld = enum.auto()
+    Newgrounds = enum.auto()
+
+
+
+
+
+import PythonModule.providers as p
+
+providerDownloadMapping: dict = {
+    ProviderTypes.Archive : p.Archive.download,
+    ProviderTypes.Suno : p.Suno.download,
+    ProviderTypes.Youtube : p.Youtube.download,
+    ProviderTypes.Bandcamp : p.Bandcamp.download,
+    ProviderTypes.Default : p.Default.download,
+    ProviderTypes.Soundcloud : p.Soundcloud.download,
+    ProviderTypes.Wcoflix : p.wcoflix.download,
+    ProviderTypes.Newgrounds : p.Newgrounds.download
+}
+
+providerSearchMapping: dict = {
+    ProviderTypes.Archive : p.Archive.search,
+    ProviderTypes.Youtube : p.Youtube.search,
+    ProviderTypes.Bandcamp : p.Bandcamp.search,
+    ProviderTypes.Soundcloud : p.Soundcloud.search,
+    ProviderTypes.Newgrounds : p.Newgrounds.search,
+}
 
 
 VALIDARCHIVENAMES = [

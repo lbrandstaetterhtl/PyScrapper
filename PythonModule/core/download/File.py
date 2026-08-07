@@ -1,11 +1,45 @@
 import urllib.error, urllib.request
 import time
+import os
 from ..request.Session import Session
+from ..models.errors import ArgumentError
+from ..general import Validate
 
+def _validateArguments_downloadToFile(
+        out_file: str,
+        session: Session,
+        request: urllib.request.Request,
+        url: str,
+        progress_dict: dict,
+        extra_headers: dict,
+        chunk_size: int,
+):
+    if (
+        (url and request)
+        or (not url and not request)
+    ):
+        raise ArgumentError(
+            argument="url, request",
+            wanted_type="str, urllib.request.Request: Please provide only one and not None",
+            caller="[CORE] downloadToFile"
+        )
+    Validate.validateOutFile(out_file=out_file, caller="[CORE] downloadToFile")
+    Validate.validateInt(argument_name="chunk_size", integer=chunk_size, caller="[CORE] downloadToFile")
+    Validate.validateSession(session=session, argument_name="session", caller="[CORE] downloadToFile")
+    Validate.validateDict(argument_name="progress_dict", dictionary=progress_dict, caller="[CORE] downloadToFile")
+    
+    
+    if url:
+        Validate.validateHostDefault(url)
+    else:
+        Validate.validateUrllibRequest(request)
 
+    if extra_headers:
+        Validate.validateDict(argument_name="extra_headers", dictionary=extra_headers, caller="[CORE] downloadToFile")
 
+    
 
-def _downloadToFile(
+def downloadToFile(
         out_file: str,
         session: Session = None,
         request: urllib.request.Request = None,
@@ -14,36 +48,7 @@ def _downloadToFile(
         extra_headers: dict = {},
         chunk_size: int = 8192,
 ):
-    if request is None and url is None:
-        raise ValueError(
-            "_downloadToFile: Neither URL nor urllib Request was given"
-        )
-
-    if request is not None and url is not None:
-        raise ValueError(
-            "_downloadToFile: Give either URL or Request, not both"
-        )
-
-    if request is not None and not isinstance(
-        request,
-        urllib.request.Request
-    ):
-        raise TypeError(
-            f"_downloadToFile: request must be urllib.request.Request, "
-            f"got {type(request).__name__}: {request!r}"
-        )
-
-    if url is not None and not isinstance(url, str):
-        raise TypeError(
-            f"_downloadToFile: url must be str, "
-            f"got {type(url).__name__}: {url!r}"
-        )
-
-    if session is None:
-        session = Session()
-
-    if progress_dict is None:
-        progress_dict = {}
+    _validateArguments_downloadToFile(out_file, session, request, url, progress_dict, extra_headers, chunk_size)
 
     if request is not None:
         response_context = session.open(request=request, headers=extra_headers)

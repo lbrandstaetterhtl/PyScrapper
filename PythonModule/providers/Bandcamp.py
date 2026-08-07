@@ -1,28 +1,29 @@
+#Core Imports
 import PythonModule.core as core
-
 from PythonModule.models.requests import SearchFilters
-from PythonModule.models.exceptions import InvalidURL
+
+#Python Default Imports
 import urllib.parse, urllib.request, urllib.error
-import re
-from PythonModule.models import processorModels
+
+
 
 
 class BandCampSearchError(Exception): ...
 
 
 def search(
-        search: str,
+        search_term: str,
         filters: SearchFilters,
         session: core.request.Session.Session,
         top: int = 5
 ) -> list[dict]:
-    
-    if not isinstance(search, str): raise ValueError("'search' must be an string")
-    if not isinstance(filters, SearchFilters): raise ValueError("'filters' must be from type SearchFilters")
-    if not isinstance(top, int) or top < 0: raise ValueError("'top' must be an integer above 0")
-    
+
+    core.general.Validate.validateStr(argument_name="search_term", string=search_term, caller="[providers] Bandcamp.search")
+    core.general.Validate.validateGeneralType(argument_name="filters", obj=filters, objType=SearchFilters, caller="[providers] Bandcamp.search")
+    core.general.Validate.validateSession(session=session, argument_name="session", caller="[providers] Bandcamp.search")
+    core.general.Validate.validateInt(argument_name="top", integer=top, caller="[providers] Bandcamp.search")
     searchURL = _buildSearchUrl(
-                search=search,
+                search_term=search_term,
             )
     
     def _getSearchHtml():
@@ -30,6 +31,7 @@ def search(
             url=searchURL,
             session=session
         )
+        core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Bandcamp._getSearchHtml")
         return html
          
     
@@ -70,17 +72,15 @@ def search(
 
 
 def _buildSearchUrl(
-        search: str,
+        search_term: str,
         
 ) -> list[str]:
-    
-   
     
     base_url = "https://bandcamp.com/search?"
 
     
     params = {
-        "q" : search
+        "q" : search_term
     }
     searchURL = base_url + urllib.parse.urlencode(params)
     return searchURL
@@ -96,42 +96,29 @@ def _get_searchResults(
         filters: SearchFilters
         
 )-> list[dict]:
-    if not isinstance(html, str): raise ValueError("Please provide html to search")
+
     results = []
     
 
-
-    
     result_items_pattern = r'<ul class="result-items">(.*?)</ul>'
 
     
     try:
         allTracks = core.general.DataSearch.searchBlocks(
             pattern=result_items_pattern,
-            searchBlock=html,
-            returnException=True
+            search_block=html,
+            return_regex_exception=True
         )
 
     except core.general.DataSearch.RegexSearchError as error:
-        raise BandCampSearchError(
-            "BandcampSearch: Search results were not found. "
-            "Bandcamp may have returned a JavaScript challenge."
-        ) from error
-
-    if not allTracks:
-        raise BandCampSearchError(
-            "BandcampSearch: Didn't find tracks with given HTML"
+        raise core.models.errors.TaskFailedError(
+            task="allTracks = [CORE] searchBlocks",
+            reason=f"searchBlocks search error: {error}",
+            extraMessages=["Maybe Bandcamp wants the user to solve captcha.", "Try sending a headful browser and see if there is javascript or captchas that needs to be solved"],
+            caller="[providers] Bandcamp._get_searchResults",
         )
+    tracks = core.general.DataSearch.searchBlocksAll(pattern=r'<li class="searchresult.*?</li>', search_block=allTracks, return_regex_exception=True)
 
-
-
-    tracks = re.findall(
-        r'<li class="searchresult.*?</li>',
-        allTracks,
-        re.DOTALL
-    )
-    
-    
 
     for track in tracks:
         
@@ -143,7 +130,8 @@ def _get_searchResults(
        
         trackType = core.general.DataSearch.searchBlocks(
             pattern=type_pattern,
-            searchBlock=track
+            search_block=track,
+            return_regex_exception=True
         )
         MyType = _typeMapping(trackType)
         
@@ -177,18 +165,18 @@ def _buildResult(
 
     dictionary['thumbnail'] = core.general.DataSearch.searchBlocks(
         pattern=thumbnail_pattern,
-        searchBlock=track
+        search_block=track
     )
     titel_pattern = r'<div class="heading">.*?<a.*?>(.*?)</a>'
     dictionary['title'] = core.general.DataSearch.searchBlocks(
         pattern=titel_pattern,
-        searchBlock=track
+        search_block=track
     )
 
     url_pattern = r'<div class="heading">.*?<a href="(.*?)"'
     dictionary['url'] = core.general.DataSearch.searchBlocks(
         pattern=url_pattern,
-        searchBlock=track
+        search_block=track
     )
     dictionary["type"] = typeGiven 
     return dictionary  
@@ -213,7 +201,7 @@ def _typeMapping(givenType: str) -> str:
 
 
 
-def validateURL(
+def _validateURL(
         url: str,
 ) -> str:
    
@@ -229,9 +217,10 @@ def validateURL(
     
     else:
 
-        raise InvalidURL(
+        raise core.models.errors.InvalidURLError(
             url=url,
-            supported=["streamURL", "trackURL", "albumURL"]
+            reasonList=["Given url is neither a direct streamUrl, trackUrl or albumUrl"],
+            caller="[providers] Bandcamp._validateUrl"
         )
     
 
@@ -254,25 +243,30 @@ def _extractStreamingURL(
             url=url,
             session=session
             )
+            core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Bandcamp._extractStreamingUrl")
 
 
             streamurl_pattern = r'(https://t4.bcbits.com/stream/.*?);}'
 
             streamingUrl = core.general.DataSearch.searchBlocks(
                 pattern=streamurl_pattern,
-                searchBlock=html
+                search_block=html,
+                return_regex_exception=True
             )
             
 
-            if not streamingUrl:
-                raise ValueError(f"No streaming URL was found, can't download with given url {url}")
             
             return [streamingUrl], [url]
         
         case "albumURL":
             raise Exception("albumURL not yet supported")
         case _:
-            raise Exception(f"None supported urlType was given. '{urlType}'")
+            raise core.models.errors.TaskFailedError(
+                task="match urlType",
+                reason=f"None supported urltype '{urlType}' was given",
+                caller="[providers] Bandcamp._extractStreamingURL"
+            )
+       
 
 
     
@@ -280,13 +274,20 @@ def _extractStreamingURL(
 
 
 def download(
-        download_information: processorModels.DownloadInformations,
+        download_information: core.models.General.DownloadInformations,
+        retry = True
 ): 
-    if not download_information or not isinstance(download_information, processorModels.DownloadInformations): raise ValueError("BandcampDownload: Given download information is either None or has the wrong type")
+    core.general.Validate.validateDownloadInformation(
+        argument_name="download_information",
+        download_information=download_information,
+        caller="[providers] Bandcamp.download"
+    )
+    core.general.Validate.validateBool(boolean=retry, argument_name="retry", caller="[providers] Bandcamp.download")
     
-    urlType = validateURL(
+    urlType = _validateURL(
         url=download_information.url
     )
+
 
     streamingURLList, trackURLList = _extractStreamingURL(
         url=download_information.url,
@@ -295,7 +296,7 @@ def download(
     )
     
     
-    retry = True
+    
     for streamingURL, trackURL in zip(streamingURLList, trackURLList):
         
         request = urllib.request.Request(
@@ -310,7 +311,7 @@ def download(
 
 
         try:
-            core.download.File._downloadToFile(
+            core.download.File.downloadToFile(
                 request=request,
                 session=download_information.session,
                 out_file=download_information.outFile,
@@ -325,19 +326,19 @@ def download(
                     url=trackURL,
                     session=download_information.session
                 )
+                core.general.Validate.validateStr(argument_name="trackHTML", string=trackHTML, caller="[providers] Bandcamp.download.error")
 
                 embeddedplayer_pattern = r'<meta property="og:video".*?content="(https://bandcamp.com/EmbeddedPlayer.*?)">'
                 embeddedPlayerUrl = core.general.DataSearch.searchBlocks(
                     pattern=embeddedplayer_pattern,
-                    searchBlock=trackHTML
+                    search_block=trackHTML
                 )
-                if not embeddedPlayerUrl:
-                    raise Exception
+                core.general.Validate.validateStr(argument_name="embeddedPlayerUrl", string=embeddedPlayerUrl, caller="[providers] Bandcamp.download.error")
 
                 core.request.EmergencyBrowser.BrowserButtonPress(url=embeddedPlayerUrl, button_name="#big_play_button")
 
 
-                core.download.File._downloadToFile(
+                core.download.File.downloadToFile(
                     request=request,
                     session=download_information.session,
                     out_file=download_information.outFile,
@@ -346,8 +347,7 @@ def download(
                 )
             else: raise
 
-        except Exception:
-            raise
+        
 
 
    

@@ -1,53 +1,60 @@
-#Imports
+#Core Imports
+from ..models.errors import RegexSearchError,  TaskFailedError
+from ..general import Validate
+
+#Python default Improts
 import re
-from ..models.errors import RegexSearchError
 import json
+
+
 
 #Functions
 
 #This functions searches an given string for a regex pattern and returns the first match, if no match is found it raises a RegexSearchError
 def searchBlocks(
         pattern: str,
-        searchBlock: str,
-        returnException:bool = False
+        search_block: str,
+        return_regex_exception:bool = False
 ) -> str:
-    if not isinstance(pattern, str): raise ValueError("searchBlocks: given pattern is not a string")
-    if not isinstance(searchBlock, str): raise ValueError("searchBlocks: given search block is not a string")
-    match = re.search(pattern, searchBlock, re.DOTALL)
+
+    _validateArguments_SearchBlocks(pattern, search_block, return_regex_exception, caller="[CORE] searchBlocks")
+    match = re.search(pattern, search_block, re.DOTALL)
 
     if match:
         result_block = match.group(1).strip()
         return result_block
     else:
         
-        if returnException == True:
+        if return_regex_exception == True:
             raise RegexSearchError(
                 pattern=pattern,
-                searchBlock=searchBlock
+                searchBlock=search_block
             )
         return ""
     
 
 
+        
+        
+    
+
 
 #This functions searches an given string for a regex pattern and returns all matches, if no match is found it raises a RegexSearchError
 def searchBlocksAll(
         pattern: str,
-        searchBlock: str,
-        returnException: bool = False
+        search_block: str,
+        return_regex_exception: bool = False
 ) -> list:
     
-    if not isinstance(pattern, str): raise ValueError("searchBlocksAll: given pattern is not a string")
-    if not isinstance(searchBlock, str): raise ValueError("searchBlocksAll: given search block is not a string")
+    _validateArguments_SearchBlocks(pattern, search_block, return_regex_exception, caller="[CORE] searchblocksAll")
 
-
-    matches = re.findall(pattern, searchBlock, re.DOTALL)
+    matches = re.findall(pattern, search_block, re.DOTALL)
 
     if not matches:
-        if returnException == True:
+        if return_regex_exception == True:
             raise RegexSearchError(
             pattern=pattern,
-            searchBlock=searchBlock
+            searchBlock=search_block
             )
         else: return ""
     
@@ -61,22 +68,23 @@ def searchBlocksAll(
 
 def searchJson(
         searchBlock: str,
-        keyword: str
+        keyword: str,
+        return_regex_exception: bool = False
         ) -> dict:
-    if not isinstance(searchBlock, str): raise ValueError("searchJson: given block to search isn't a string")
-    if not isinstance(keyword, str): raise ValueError("searchJson: given keyword isn't a string")
 
-    found = re.search(keyword + r"({.*?});", searchBlock, re.DOTALL)
+
+
+    found = searchBlocks(pattern=keyword + r"({.*?});", search_block=searchBlock, return_regex_exception=return_regex_exception)
 
     if not found:
-        raise Exception("searchJson: Failed to find the json data")
-    
-    try:    
-        jsondata = json.loads(found.group(1))
+        raise TaskFailedError(
+            task="searchBlocks",
+            reason=f"Couldn't find object with given keyword {keyword}",
+            caller="[CORE] searchJson",
+        )
 
-    except json.JSONDecodeError:
-        raise Exception("searchJson: Failed to decode the JSON data")
-
+       
+    jsondata = json.loads(found)
 
     return jsondata
 
@@ -97,3 +105,17 @@ def iterValueFromJson(
     elif isinstance(data, list):
         for item in data:
             yield from iterValueFromJson(item, value)
+
+
+
+
+
+def _validateArguments_SearchBlocks(
+    pattern: str,
+    search_block: str,
+    return_exception: bool,
+    caller: str
+):
+    Validate.validateStr(argument_name="pattern", string=pattern, caller=caller)
+    Validate.validateStr(argument_name="search_block", string=search_block, caller=caller)
+    Validate.validateBool(argument_name="return_regex_exception", boolean=return_exception, caller=caller)

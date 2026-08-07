@@ -1,12 +1,15 @@
+#Core Imports
 import PythonModule.core as core
-import urllib.error
+from PythonModule.models.requests import SearchFilters
+
+#Python Default Imports
+import urllib.error, urllib.parse
 import asyncio
 import subprocess
 
-import urllib.parse
 
-from PythonModule.models import processorModels
-from PythonModule.models.requests import SearchFilters
+
+
 
 TYPE_MAPPING = {
     "music.song": "track",
@@ -33,36 +36,39 @@ MEDIATYPE_MAPPING = {
 
 
 def search(
-        search: str,
+        search_term: str,
         filters: SearchFilters,
         session: core.request.Session.Session,
         top: int = 5
 ) -> list[dict]:
      
 
-    if not isinstance(search, str): raise ValueError("SoundcloudSearch: 'search' must be an string")
-    if not isinstance(filters, SearchFilters): raise ValueError("SoundcloudSearch: 'filters' must be from type SearchFilters")
-    if not isinstance(top, int) or top < 0: raise ValueError("SoundcloudSearch: 'top' must be an integer above 0")
-    if not isinstance(session, core.request.Session.Session): raise ValueError("SoundcloudSearch: Given Session isn't core Session")
+    core.general.Validate.validateStr(argument_name="search_term", string=search_term, caller="[providers] Soundcloud.search")
+    core.general.Validate.validateGeneralType(argument_name="filters", objType= SearchFilters, obj=filters, caller="[providers] Soundcloud.search")
+    core.general.Validate.validateSession(session=session, argument_name="session", caller="[providers] Soundcloud.search")
+    core.general.Validate.validateInt(argument_name="top", integer=top, caller="[providers] Soundcloud.search")
 
-    searchUrl: str = _buildSearchUrl(search)
+
+    searchUrl: str = _buildSearchUrl(search_term)
     html: str = core.general.Html.getHtml(
          session=session,
          url=searchUrl
     )
+    core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Soundcloud.search")
+
     results:list[dict] = []
     
 
     resultPattern: str = r'</ul>.*?<ul>.*?(<li><h2><a href=".*?)</ul>'
-    resultsBlock: str = core.general.DataSearch.searchBlocks(resultPattern, html, returnException=False)
-    if not resultsBlock: raise ValueError("SoundcloudSearch: No result on Soundcloud was found")
+    resultsBlock: str = core.general.DataSearch.searchBlocks(resultPattern, html, return_regex_exception=True)
+   
 
     
 
 
     hrefPattern: str = r'<a href="(.*?)".*?</a>'
-    hrefList: list[str] = core.general.DataSearch.searchBlocksAll(hrefPattern, resultsBlock, returnException=False)
-    if not hrefList: raise ValueError("SoundcloudSearch: Results were given but scrapper couldn't find href for results")
+    hrefList: list[str] = core.general.DataSearch.searchBlocksAll(hrefPattern, resultsBlock, return_regex_exception=True)
+
     for href in hrefList:
         if len(results) == top:
             continue
@@ -129,18 +135,22 @@ def _buildSearchResult(
 
 #Getting Type what this soundcloud ressource is
     typePattern: str = r'<meta property="og:type" content="([^"]*)">'
-    ressourceType: str = core.general.DataSearch.searchBlocks(typePattern, data, returnException=False)
+    ressourceType: str = core.general.DataSearch.searchBlocks(typePattern, data, return_regex_exception=False)
     result["type"] = TYPE_MAPPING.get(ressourceType, None)
 
 #Getting Title of this soudncloud ressource
     titlePattern: str = r'<meta property="og:title" content="([^"]*)">'
-    title: str = core.general.DataSearch.searchBlocks(titlePattern, data, returnException=False)
+    title: str = core.general.DataSearch.searchBlocks(titlePattern, data, return_regex_exception=False)
     result["title"] = title
 
 #Getting Thumbnail of this soundcloud ressource
     thumbnailPattern: str = r'<meta property="og:image" content="([^"]*)">'
-    thumbnail: str = core.general.DataSearch.searchBlocks(thumbnailPattern, data, returnException=False)
+    thumbnail: str = core.general.DataSearch.searchBlocks(thumbnailPattern, data, return_regex_exception=False)
     result["thumbnail"] = thumbnail
+
+    
+    if any(value == None or not value.strip() for value in result.values()):
+        return {}  
 
 
     return result
@@ -151,13 +161,12 @@ def _buildSearchResult(
 
 
 def _buildSearchUrl(
-          search: str
+          search_term: str
 ) -> str:
-    if not search or not isinstance(search, str): raise ValueError("Soundcloud_buildSearchUrl: Given search input wasn't a string")
-
+    core.general.Validate.validateStr(argument_name="search_term", string=search_term, caller="[providers] Soundcloud._buildSearchUrl")
     url = "https://soundcloud.com/search?" + urllib.parse.urlencode(
          {
-              "q" : search
+              "q" : search_term
          }
     )
     return url
@@ -167,16 +176,22 @@ def _buildSearchUrl(
 
 
 def download(
-        download_information: processorModels.DownloadInformations,
+        download_information: core.models.General.DownloadInformations,
         retry_with_FFmpeg:bool = False
         
 ):
     
     
 
-    if not download_information or not isinstance(download_information, processorModels.DownloadInformations): raise ValueError("SoundcloudDownload: Given download information is either None or has the wrong type")
+    core.general.Validate.validateDownloadInformation(argument_name="download_information", download_information=download_information, caller="[providers] Soundcloud.download")
+    core.general.Validate.validateBool(boolean=retry_with_FFmpeg, argument_name="retry_with_FFmpeg", caller="[providers] Soundcloud.download")
 
-    if not "soundcloud.com" in download_information.url.lower(): raise core.models.errors.ArgumentError("Given URL wasn't a soundcloud.com URL")
+    core.general.Validate.validateHostPro(
+        url=download_information.url,
+        allowed_protocols_list=["https"],
+        allowed_hostnames_list=["soundcloud.com", "www.soundcloud.com", "52.84.150.57", "52.84.150.39", "52.84.150.35", "52.84.150.52"],
+        caller="[providers] Soundcloud.download"
+        )
 
 
     buttonList=[
@@ -191,7 +206,12 @@ def download(
         buttonList=buttonList
     )
     
-    if not medialist: raise ValueError("SoundcloudDownload: Didn't find media to download, maybe it is DRM protected? Try again headful Browser! DRM isn't supported tho")
+    if not medialist:
+        raise core.models.errors.TaskFailedError(
+            task="[CORE] BrowserDiscoverStreamUrls_ButtonList",
+            reason="Browser couldn't detect find valid media",
+            extraMessages=["Browser can't find media when the website is DRM protected/encrypted", "Try again with Headful Browser and see if Browser is now able to find Media"]
+        )
     
     try:
         for candidate in medialist.candidates:
@@ -200,12 +220,14 @@ def download(
         
             downloadFunction = MEDIATYPE_MAPPING.get(candidate.mediaType, None)
          
-            
-            if not downloadFunction:
-                raise ValueError("SoundcloudDownload: Best found ressource doesn't have a function to download it with")
+            if downloadFunction == None:
+                raise core.models.errors.TaskFailedError(
+                    task="[providers] Soundcloud.download",
+                    reason="Mediatype Mapping didn't give back a function",
+                    extraMessages=["Mediatype Mapping only has functions for HLS download", f"Mediatype of the highest prio media: '{candidate.mediaType}'"],
+                    caller="[providers] Soundcloud.download",
+                )
 
-            
-  
                 
             downloader = downloadFunction(
                 url = candidate.mediaUrl,

@@ -469,67 +469,159 @@ def _saveMedia(
 
 
 
+
+
 def _guessMediaType(
     url: str
 ) -> tuple[media.StreamType, media.MediaType, int]:
-    
+    import urllib.parse
+
     lower = url.lower()
 
+    parsed = urllib.parse.urlparse(url)
+
+    hostname = (parsed.hostname or "").lower()
+    path = parsed.path.lower()
+
+    query = urllib.parse.parse_qs(
+        parsed.query,
+        keep_blank_values=True
+    )
+
+    # Only use path + query for keyword heuristics.
+    # Otherwise domains like "wcostream.com" would falsely match "stream".
+    searchable = f"{path}?{parsed.query.lower()}"
 
     badKeywords = [
-        "ads", "banner", "promo", "tracking",
-        "gambling", "notification", "bonus",
-        "click", "redirect", "jwplayer6", "ping.gif",
+        "ads",
+        "banner",
+        "promo",
+        "tracking",
+        "gambling",
+        "notification",
+        "bonus",
+        "click",
+        "redirect",
+        "jwplayer6",
+        "ping.gif",
     ]
 
     goodKeywords = [
-        "stream", "video", "media", "playlist",
-        "master", "index", "hls", "videoplayback"
+        "stream",
+        "video",
+        "media",
+        "playlist",
+        "master",
+        "index",
+        "hls",
+        "videoplayback",
     ]
 
+    # --------------------------------------------------
+    # YouTube / Googlevideo
+    # --------------------------------------------------
 
-#Youtube/google videos often don't have file endings
-#Youtube sadly doesn't work tho
-    if "googlevideo.com" in lower and "videoplayback" in lower:
+    if (
+        hostname.endswith("googlevideo.com")
+        and path.endswith("/videoplayback")
+    ):
+        _streamType = media.StreamType.DIRECT
+        _mediaType = media.MediaType.FILE
+        _priority = 120
+
+    # --------------------------------------------------
+    # WCO-style /getvid endpoint
+    # --------------------------------------------------
+
+    elif path.rstrip("/").endswith("/getvid"):
+
         _streamType = media.StreamType.DIRECT
         _mediaType = media.MediaType.FILE
         _priority = 100
 
-    # getvid is often direct videostream on wco.tv
-    elif "getvid" in lower:
-        _streamType = media.StreamType.DIRECT
-        _mediaType = media.MediaType.FILE
-        _priority = 95
+        # evid strongly suggests an actual media token
+        if "evid" in query:
+            _priority += 30
 
-    elif ".m3u8" in lower:
+        # JSON variant is likely metadata / resolver
+        if "json" in query:
+            _priority -= 80
+
+        # Non-JSON /getvid is much more likely the actual file
+        else:
+            _priority += 40
+
+    # --------------------------------------------------
+    # HLS
+    # --------------------------------------------------
+
+    elif ".m3u8" in path:
+
         _streamType = media.StreamType.HLS
 
-        if "master" in lower:
-            _priority = 100
+        filename = path.rsplit("/", 1)[-1]
+
+        if "master" in filename:
             _mediaType = media.MediaType.MASTER_M3U8
-        elif any(word in lower for word in ("index", "playlist")):
-            _priority = 90
-            _mediaType = media.MediaType.INDEX_M3U8
-        else:
-            _priority = 70
-            _mediaType = media.MediaType.UNKNOWN_M3U8
+            _priority = 110
 
-    elif ".mpd" in lower:
-        _priority = 80
-        _mediaType = media.MediaType.MASTER_MPD
-        _streamType = media.StreamType.DASH
-
-    elif any(ext in lower for ext in (".mp3", ".mkv", ".mp4", ".webm")):
-        if "init" in lower and (
-            ".mp4" in lower or ".webm" in lower
+        elif any(
+            keyword in filename
+            for keyword in ("index", "playlist")
         ):
-            _priority = 40
-            _mediaType = media.MediaType.UNKNOWN_MPD
-            _streamType = media.StreamType.DASH
+            _mediaType = media.MediaType.INDEX_M3U8
+            _priority = 100
+
         else:
+            _mediaType = media.MediaType.UNKNOWN_M3U8
             _priority = 50
-            _mediaType = media.MediaType.FILE
+
+    # --------------------------------------------------
+    # MPEG-DASH
+    # --------------------------------------------------
+
+    elif ".mpd" in path:
+
+        _streamType = media.StreamType.DASH
+        _mediaType = media.MediaType.MASTER_MPD
+        _priority = 100
+
+    # --------------------------------------------------
+    # Direct files
+    # --------------------------------------------------
+
+    elif any(
+        path.endswith(ext)
+        for ext in (
+            ".mp3",
+            ".m4a",
+            ".aac",
+            ".wav",
+            ".flac",
+            ".mp4",
+            ".mkv",
+            ".webm",
+            ".mov",
+        )
+    ):
+
+        # DASH init fragments often look like normal MP4/WebM files
+        if (
+            "init" in path
+            and path.endswith((".mp4", ".webm"))
+        ):
+            _streamType = media.StreamType.DASH
+            _mediaType = media.MediaType.UNKNOWN_MPD
+            _priority = 40
+
+        else:
             _streamType = media.StreamType.DIRECT
+            _mediaType = media.MediaType.FILE
+            _priority = 70
+
+    # --------------------------------------------------
+    # Unknown
+    # --------------------------------------------------
 
     else:
         return (
@@ -538,13 +630,27 @@ def _guessMediaType(
             -1
         )
 
-    if any(k in lower for k in badKeywords):
+    # --------------------------------------------------
+    # Generic priority adjustments
+    # --------------------------------------------------
+
+    if any(
+        keyword in searchable
+        for keyword in badKeywords
+    ):
         _priority -= 50
 
-    if any(k in lower for k in goodKeywords):
-        _priority += 30
+    if any(
+        keyword in searchable
+        for keyword in goodKeywords
+    ):
+        _priority += 20
 
-    return _streamType, _mediaType, _priority
+    return (
+        _streamType,
+        _mediaType,
+        _priority
+    )
 
 
 

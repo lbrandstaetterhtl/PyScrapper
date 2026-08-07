@@ -1,31 +1,37 @@
+# Core Imports
 import PythonModule.core as core
 
-from PythonModule.models import processorModels
+#Python Default Imports
 
 import urllib.error
-
 import subprocess
+
+
 
 MEDIATYPE_MAPPING = {
     core.models.media.MediaType.MASTER_M3U8 : core.download.HLS.DownloadM3U8FromMaster,
     core.models.media.MediaType.INDEX_M3U8 : core.download.HLS.DownloadM3U8FromIndex,
-    core.models.media.MediaType.FILE : core.download.File._downloadToFile
+    core.models.media.MediaType.FILE : core.download.File.downloadToFile
     }
 
 
-
-
-
-
 def download(
-        download_information: processorModels.DownloadInformations,
+        download_information: core.models.General.DownloadInformations,
         retry_with_FFmpeg:bool = True
 ) -> None:
 
-    
+    core.general.Validate.validateDownloadInformation(
+        argument_name="download_information",
+        download_information=download_information,
+        caller="[providers] Default.download"
+    )
+    core.general.Validate.validateBool(
+        boolean=retry_with_FFmpeg,
+        argument_name="retry_with_FFmpeg",
+        caller="[providers] Default.download"
+        )
 
-    if not download_information or not isinstance(download_information, processorModels.DownloadInformations):
-        raise ValueError("DefaultDownload: Given download information is either None or has the wrong type")
+    
 
     medialist: core.models.media.MediaList = core.request.EmergencyBrowser.BrowserDiscoverStreamURLs(
         url = download_information.url,
@@ -34,8 +40,12 @@ def download(
     )
 
     if not medialist:
-        raise ValueError(f"[ERROR] DefaultDownload: Current Code isn't capable of finding media on url '{download_information.url}'")
-    print("DefaultDownload: Successfully found media for download")
+        raise core.models.errors.TaskFailedError(
+            task="BrowserDiscoverStreamURLs",
+            reason="Browser isn't currently capable of finding medias on given url",
+            extraMessages=[f"Given url: {download_information.url}"]
+        )
+ 
 
     try:
         for candidate in medialist.candidates:
@@ -43,10 +53,14 @@ def download(
             candidate: core.models.media.Media
             downloadFunction = MEDIATYPE_MAPPING.get(candidate.mediaType, None)
             
-            
-            if not downloadFunction:
-                raise ValueError("DefaultDownload: Valid Media was found but the download isn't supported yet. Only direct files and HLS Streaming is currently supported")
-
+            if downloadFunction == None:
+                raise core.models.errors.TaskFailedError(
+                    task="MEDIATYPE_MAPPING.get()",
+                    reason="Mediatype Mapping didn't give back a function",
+                    extraMessages=["Mediatype Mapping only has functions for HLS and FILE download", f"Mediatype of the highest prio media: '{candidate.mediaType}'"],
+                    caller="[providers] Default.download",
+                )
+           
             extraHeaders = candidate.headers.to_dict()
             
             if isinstance(downloadFunction, type):
@@ -55,7 +69,8 @@ def download(
                     url = candidate.mediaUrl,
                     out_file = download_information.outFile,
                     session = download_information.session,
-                    progress_dict = download_information.downloadProgress
+                    progress_dict = download_information.downloadProgress,
+                    extra_headers = extraHeaders,
                 )
                 
                 downloader.run()

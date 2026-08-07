@@ -1,11 +1,20 @@
-import urllib.parse
-from yt_dlp import YoutubeDL
+#Core Imports
+import PythonModule.core as core
+
+#PythonModule imports
+from PythonModule.models.requests import SearchFilters
+
+#Python Default Imports
 import os
 import shutil
 import pathlib
-import PythonModule.core as core
-from PythonModule.models import processorModels
-from PythonModule.models.requests import SearchFilters
+import urllib.parse
+
+#PIP Imports
+from yt_dlp import YoutubeDL
+
+
+
 
 
 def find_ffmpeg() -> str | None:
@@ -40,43 +49,43 @@ class YoutubeDownloadError(Exception): ...
 
 
 def search(
-        search:str,
+        search_term:str,
         filters: SearchFilters,
         session: core.request.Session.Session,
         top:int = 5
         
         ) -> list[dict]:
-    
-    if not search or not isinstance(search, str):
-        raise NoSearchError("YOUTUBE_SEARCH: No search was given or invalid type was given")
-    if not session or not isinstance(session, core.request.Session.Session):
-        raise SessionError("YOUTUBE_SEARCH: No session was given or unsupported type of sessio")
-    if not isinstance(filters, SearchFilters): raise ValueError("'filters' must be from type SearchFilters")
-    if not isinstance(top, int) or top < 0: raise ValueError("'top' must be an integer above 0")
 
-    try:
-        top = int(top)
-    except (TypeError, ValueError) as e:
-         raise ValueError(f"YOUTBE_SEARCH: Top variable must be an integer {e}") from e
-    
-    if top <= 0:
-        raise ValueError("YOUTUBE_SEARCH: 'Top' variable must be greater than 0")
-    
+    core.general.Validate.validateStr(argument_name="search_term", string=search_term, caller="[providers] Youtube.search")
+    core.general.Validate.validateSession(session=session, caller="[providers] Youtube.search")
+    core.general.Validate.validateGeneralType(argument_name="filters", obj=filters, objType=SearchFilters, caller="[providers] Youtube.search")
+    core.general.Validate.validateInt(argument_name="top", integer=top, caller="[providers] Youtube.search") 
 
 
-    search_url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(search)
-
-    
+    search_url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(search_term)
 
 
     html:str = core.general.Html.getHtml(
         url=search_url,
         session=session
         )
-    jsondata: dict = core.general.DataSearch.searchJson(searchBlock=html, keyword="var ytInitialData = ")
+    core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Youtbe.search.getHtml")
+    
+    
+    keyword = "var ytInitialData = "
+
+    jsondata: dict = core.general.DataSearch.searchJson(searchBlock=html, keyword=keyword)
+
+   
+    if not jsondata:
+        raise core.models.errors.TaskFailedError(
+            task="[CORE] searchJson",
+            reason=f"Didn't find data with keyword {keyword}"
+        )
 
 
     Data = []
+
     for videorenderer in core.general.DataSearch.iterValueFromJson(jsondata, "videoRenderer"):
         if not isinstance(videorenderer, dict):
             continue
@@ -121,59 +130,23 @@ def search(
 
 
 
-def download_audio_only(
-        url: str,
-        out_file: str,
-        progress_dict: dict,
-        
-    ):
-
-    if not url:
-        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No URL was given for download")
-    if not out_file:
-        raise YoutubeArgumentError("YOUTUBE_DOWNLOAD_AUDIO: No out_file was given")
-
-    identifier = url.replace("https://www.youtube.com/watch?v=", "")
-    
-
-    ydl_opts = {
-        "format": "bestaudio/best",
-        "outtmpl": out_file,
-        "progress_hooks": [_buildProgressHook(progress_dict)],
-        "postprocessors": [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp3",
-            "preferredquality": "192",
-        }],
-    }
-
-    ffmpeg = find_ffmpeg()
-    if ffmpeg:
-        ydl_opts["ffmpeg_location"] = ffmpeg
-
-    progress_dict['status'] = "downloading..."
-    
-    with YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
-
-    progress_dict['status'] = "complete"
-
-
-
-
 
 
 def download(
-        download_information: processorModels.DownloadInformations,
+        download_information: core.models.General.DownloadInformations,
         
 ):
-    if not download_information or not isinstance(download_information, processorModels.DownloadInformations): raise ValueError("YoutubeDownload: Given download informations is either None or has the wrong type")
-
-    #identifier = url.replace("https://www.youtube.com/watch?v=", "")
+    core.general.Validate.validateDownloadInformation(
+        argument_name="download_information",
+        download_information=download_information,
+        caller="[providers] Youtube.download"
+    )
+    core.general.Validate.validateHostPro(
+        url=download_information.url,
+        allowed_hostnames_list=["youtube.com", "www.youtube.com", "142.251.141.14"],
+        caller="[providers]: Youtube.download"
+        )
    
-    if os.path.exists(download_information.outFile):
-        raise YoutubeDownloadError(f"Destination out file {download_information.outFile} already exists. No Download has started")
-
 
     ydl_opts = {
         # best video + best audio, fallback auf fertige mp4
@@ -214,7 +187,6 @@ def download(
 
     download_information.downloadProgress['status'] = "complete"    
     
-
 
 
 

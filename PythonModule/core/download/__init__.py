@@ -1,9 +1,9 @@
 from .HLS import DownloadM3U8FromIndex, DownloadM3U8FromMaster
-from .File import _downloadToFile
+from .File import downloadToFile
 
 
 __all__ = [
     "DownloadM3U8FromIndex",
     "DownloadM3U8FromMaster",
-    "_downloadToFile"
+    "downloadToFile"
 ]

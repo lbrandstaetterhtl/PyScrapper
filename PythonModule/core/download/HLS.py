@@ -2,13 +2,43 @@
 from ..request.Session import Session
 from ..general.DataSearch import searchBlocks, searchBlocksAll
 from ..general.Html import getHtml
-from ..models.errors import ArgumentError, MergeError
+from ..models.errors import ArgumentError, MergeError, TaskFailedError
 from ..models.M3U8 import M3U8Stream
 import urllib.request, urllib.parse
 import shutil
 import subprocess
 import os
 import time
+
+from ..general import Validate
+
+def _validateArguments_DownloadM3U8FromXInit(
+        out_file: str,
+        url: str,
+        session: Session,
+        progress_dict: dict,
+        extra_headers:dict,
+        preferedAudioLanguages: list[str] = None,
+        audio_url: str = None,
+        caller: str = "[CORE] _validateArguments_DownloadM3U8FromXInit"
+):
+    
+    Validate.validateDict(argument_name="progress_dict", dictionary=progress_dict, caller=caller)
+    Validate.validateSession(session=session, argument_name="session", caller=caller)
+    Validate.validateOutFile(out_file=out_file, caller=caller)
+
+    if preferedAudioLanguages:
+        Validate.validateListStr(argument_name="preferedAudioLanguages", liste=preferedAudioLanguages, caller=caller)
+
+    if extra_headers:
+        Validate.validateDict(argument_name="extra_headers", dictionary=extra_headers, caller=caller)
+
+    if audio_url:
+        Validate.validateHostDefault(url=audio_url, caller=caller)
+
+    Validate.validateHostDefault(url)
+    
+    
 
 
 #Classes
@@ -18,55 +48,52 @@ class DownloadM3U8FromMaster():
             out_file: str,
             url: str = "",
             session: Session = None,
-            progress_dict: dict = None,
-            preferedAudioLanguages: list[str] = None
-            ):
-        if not url:
-            raise ArgumentError("downloadM3U8FromMaster: No master url was given")
-        
-       
-        
-        if not isinstance(out_file, str): raise ValueError("downloadM3U8FromMaster: given output file is not a string")
-        if not out_file.endswith((".ts", ".mp4")):
-            print("downloadM3U8FromMaster: Warning: given output file does not end with .ts or .mp4, adding .ts to the end of the file name")
-            out_file += ".ts"
-        if progress_dict is None:
-            progress_dict = {}
-        if not isinstance(progress_dict, dict): raise ValueError("downloadM3U8FromMaster: given download progress is not a dict")
+            progress_dict: dict = None, 
+            extra_headers: dict = None,
+            preferedAudioLanguages: list[str] = None,
 
-        if not session:
-            print("downloadM3U8FromMaster: No session was given, creating new session")
-            self.session = Session()
-        else:
-            self.session = session
+            ):
+        
 
         if preferedAudioLanguages is None:
             preferedAudioLanguages = ["de", "deutsch", "ger", "german"]
-        if not isinstance(preferedAudioLanguages, list): raise ValueError("downloadM3U8FromMaster: given prefered audio languages is not a list")
-        self.preferedAudioLanguages = preferedAudioLanguages
-
+        _validateArguments_DownloadM3U8FromXInit(out_file, url, session, progress_dict, extra_headers, preferedAudioLanguages=preferedAudioLanguages, caller="[CORE] DownloadM3U8FromMaster.init")
 
         self.masterUrl = url
         self.outFile = out_file
         self.downloadProgress = progress_dict
+        self.extraHeaders = extra_headers
+        self.preferedAudioLanguages = preferedAudioLanguages
+        self.session = session
 
 
     def run(self):
         result: M3U8Stream = _selectIndexFromMaster(
         masterUrl=self.masterUrl,
         preferedAudioLanguages=self.preferedAudioLanguages,
-        session=self.session
+        session=self.session,
+        extra_headers=self.extraHeaders
     )
-        bestIndexUrl = result.streamUrl
-        audioUrl = result.audioUrl
-        print(f"downloadM3U8FromMaster: Best index url: {bestIndexUrl}")
+        
+        if not result.streamUrl:
+            raise TaskFailedError(
+                task="DownloadM3U8FromMaster.run",
+                reason="Downloader couldn't find a stream URL",
+                caller="[CORE] DownloadM3U8FromMaster"
+            )
+        
+        print(f"[CORE] DownloadM3U8FromMaster.run: Found index url: '{result.streamUrl}'. Bandwidth: {result.streamBandwidth}")
+
+        if result.audioUrl:
+            print(f"[CORE] DownloadM3U8FromMaster.run: Found optional audio url: '{result.audioUrl}'")
 
         DownloadM3U8FromIndex(
             out_file=self.outFile,
-            url=bestIndexUrl,
-            audio_url=audioUrl,
+            url=result.streamUrl,
+            audio_url=result.audioUrl,
             session=self.session,
-            progress_dict=self.downloadProgress
+            progress_dict=self.downloadProgress,
+            extra_headers = self.extraHeaders
         ).run()
 
 
@@ -81,89 +108,77 @@ class DownloadM3U8FromIndex():
             audio_url: str = "",
             session: Session = None,
             progress_dict:dict = None,
+            extra_headers: dict = None
             ):
-        if not url:
-            raise ArgumentError("DownloadM3U8FromIndex: No index file or url was given")
         
-        if progress_dict is None:
-            progress_dict = {}
-
-        if not isinstance(progress_dict, dict):
-            raise ValueError("DownloadM3U8FromIndex: given download progress is not a dict")
-        
-        if not isinstance(out_file, str):
-            raise ValueError("DownloadM3U8FromIndex: given output file is not a string")
-        
-        self.outPath = os.path.dirname(out_file)
-        if self.outPath:
-            os.makedirs(self.outPath, exist_ok=True)
+        _validateArguments_DownloadM3U8FromXInit(out_file, url, session, progress_dict,extra_headers, audio_url=audio_url, caller="[CORE] DownloadM3U8FromIndex.init")
 
         self.ffmpegPath = shutil.which("ffmpeg")
         
-        if not self.ffmpegPath:
-            self.ffmpegPath = None
+        self.session = session
         
         self.indexUrl = url
 
         self.outFile = out_file
+        self.outPath = os.path.dirname(os.path.dirname(out_file))
         self.downloadProgress = progress_dict
 
-        if not isinstance(session, Session) or session is None:
-            print("DownloadM3U8FromIndex: No session was given, creating new session")
-            self.session = Session()
-        else:
-            self.session = session
-        
-        
        
         self.audioUrl = audio_url
+        self.extraHeaders = extra_headers
+
 
     def run(
             self,
             download_with_ffmpeg: bool = False
             ):
-        print("Index running")
+        Validate.validateBool(boolean=download_with_ffmpeg, argument_name="download_with_ffmpeg", caller="[CORE] DownloadM3U8FromIndex.run")
+        
         #Main method for downloading m3u8 files, it will try to use ffmpeg if it is installed and in the PATH, if not it will fallback to downloading the segments manually and merging them together. It also updates the given download progress dict with the current progress of the download
-        if download_with_ffmpeg == False or not isinstance(download_with_ffmpeg, bool):
-            #Fallback if there isn't ffmpeg installed or found        
+        if download_with_ffmpeg == False:       
                     self.downloadM3U8Manual()
                     return
-        try:
+        
 
-            if self.ffmpegPath:
-                print("ffmpeg found, using ffmpeg to download m3u8")
-                if self.audioUrl:
-                    command = [
-                        self.ffmpegPath,
-                        "-i", self.indexUrl,
-                        "-i", self.audioUrl,
-                        "-map", "0:v:0",
-                        "-map", "1:a:0",
-                        "-c", "copy",
-                        self.outFile
-                    ]
-                else:
-                    command = [
-                        self.ffmpegPath,
-                        "-i", self.indexUrl,
-                        "-c", "copy",
-                        self.outFile
-                    ]
-                _downloadM3U8FFMPEG(command, self.downloadProgress)
-                return
-        except Exception as e:
-            print(f"downloadM3U8FromIndex: An error occurred while trying to download with ffmpeg, falling back to manual download. Error: {e}")
+        if self.ffmpegPath:
+            print("[CORE] DownloadM3U8FromIndex.run: ffmpeg found, using ffmpeg to download m3u8")
+            if self.audioUrl:
+                command = [
+                    self.ffmpegPath,
+                    "-i", self.indexUrl,
+                    "-i", self.audioUrl,
+                    "-map", "0:v:0",
+                    "-map", "1:a:0",
+                    "-c", "copy",
+                    self.outFile
+                ]
+            else:
+                command = [
+                    self.ffmpegPath,
+                    "-i", self.indexUrl,
+                    "-c", "copy",
+                    self.outFile
+                ]
+            _downloadM3U8FFMPEG(command, self.downloadProgress)
+            return
+        else:
+            raise TaskFailedError(
+                task="[CORE] DownloadM3U8FromIndex.run",
+                reason="ffmpeg path wasn't found on this system",
+                caller="[CORE] DownloadM3U8FromIndex.run"
+            )
+        
 
     
         
 
 
     def downloadM3U8Manual(self):
-        print("Downloading m3u8 manually, this may take a while...")
-        
+    
         _indexFile =getHtml(
             session=self.session,
-            url=self.indexUrl
+            url=self.indexUrl,
+            extra_headers=self.extraHeaders
         )
         
             
@@ -180,13 +195,15 @@ class DownloadM3U8FromIndex():
                 segmentUrls,
                 self.outFile,
                 self.session,
-                self.downloadProgress
+                self.downloadProgress,
+                extra_headers=self.extraHeaders
             )
         else:
             audioSegmentUrls = _getSegmentUrlsFromIndex(
                 indexFile=getHtml(
                     session=self.session,
-                    url=self.audioUrl
+                    url=self.audioUrl,
+                    extra_headers=self.extraHeaders
                 ),
                 playlistUrl=self.audioUrl
             )
@@ -197,7 +214,8 @@ class DownloadM3U8FromIndex():
                 self.outPath,
                 self.session,
                 self.downloadProgress,
-                self.ffmpegPath
+                self.ffmpegPath,
+                extra_headers=self.extraHeaders
             )
 
     
@@ -213,20 +231,20 @@ def _findBestQualityMasterM3U8(
     if not isinstance(prefferedLanguages, list) or prefferedLanguages is None:
         prefferedLanguages = ["de", "deutsch", "ger", "german"]
 
-    if not isinstance(manifestUrls, str): raise ValueError("DailymotionfindBestQuality: given file is not a string")
+    if not isinstance(manifestUrls, str): raise ValueError("_findBestQualityMasterM3U8: given file is not a string")
 
     
     mediaPattern = r'(#EXT-X-MEDIA:TYPE=AUDIO.*?)'
     
     mediaBlocks = searchBlocksAll(
         pattern=mediaPattern,
-        searchBlock=manifestUrls
+        search_block=manifestUrls
     )
     
     streamPattern = r'(#EXT-X-STREAM-INF:.*?)\n([^\n]+)'
     streamBlocks = searchBlocksAll(
         pattern=streamPattern,
-        searchBlock=manifestUrls
+        search_block=manifestUrls
     )
 
     result = M3U8Stream()
@@ -237,13 +255,13 @@ def _findBestQualityMasterM3U8(
         bandwidthPattern = r'BANDWIDTH=(\d+)'
         bandwidth = searchBlocks(
             pattern=bandwidthPattern,
-            searchBlock=stream
+            search_block=stream
         )
 
         audioTypePattern = r'AUDIO="(.*?)"'
         audioType = searchBlocks(
             pattern=audioTypePattern,
-            searchBlock=stream
+            search_block=stream
         )
 
         bandwidth = int(bandwidth) if bandwidth else 0
@@ -297,7 +315,7 @@ def _findAudioUrlFromMasterM3U8(
         for audio in mediaBlocks:
             audioType = searchBlocks(
                     pattern=audioTypePattern,
-                    searchBlock=audio
+                    search_block=audio
                 )
             if not audioType:
                 continue
@@ -306,12 +324,12 @@ def _findAudioUrlFromMasterM3U8(
                 
             audioName = searchBlocks(
                 pattern=audioNamePattern,
-                searchBlock=audio
+                search_block=audio
             )
 
             audioLanguage = searchBlocks(
                 pattern=audioLanguagePattern,
-                searchBlock=audio
+                search_block=audio
             )
             if audioName:
                 audioName = audioName.lower()
@@ -322,7 +340,7 @@ def _findAudioUrlFromMasterM3U8(
             if audioLanguage in prefferedLanguages or audioName in prefferedLanguages:
                 audioUrl = searchBlocks(
                     pattern=audioUriPattern,
-                    searchBlock=audio
+                    search_block=audio
                 )
                 if not audioUrl:
                     continue
@@ -338,14 +356,14 @@ def _findAudioUrlFromMasterM3U8(
     for audio in mediaBlocks:
         audioType = searchBlocks(
             pattern=audioTypePattern,
-            searchBlock=audio
+            search_block=audio
         )
         if not audioType:
             continue
         if audioType.lower() == result.streamAudioType.lower():
             audioUrl = searchBlocks(
                 pattern=audioUriPattern,
-                searchBlock=audio
+                search_block=audio
             )
             if not audioUrl:
                 continue
@@ -363,7 +381,8 @@ def _findAudioUrlFromMasterM3U8(
 def _selectIndexFromMaster(
         preferedAudioLanguages,
         masterUrl: str = "",
-        session: Session = None
+        session: Session = None,
+        extra_headers: dict = None,
         
 ) -> str:
     if not masterUrl:
@@ -371,7 +390,8 @@ def _selectIndexFromMaster(
     
     manifestUrls = getHtml(
         session=session,
-        url=masterUrl
+        url=masterUrl,
+        extra_headers=extra_headers
     )
 
     
@@ -405,7 +425,8 @@ def _downloadM3U8SegmentsToFile(
         outFile: str,
         session: Session,
         downloadProgress: dict,
-        chunkSize: int = 8192
+        chunkSize: int = 8192,
+        extra_headers:dict = None
 ):
     if not segmentUrls:
         raise ValueError(
@@ -440,7 +461,7 @@ def _downloadM3U8SegmentsToFile(
                     method="GET"
                 )
 
-                with session.open(request=request) as response:
+                with session.open(request=request, headers=extra_headers) as response:
                     while True:
                         chunk = response.read(chunkSize)
 
@@ -499,7 +520,7 @@ def _downloadM3U8SegmentsToFile(
                 )
 
                 print(
-                    f"\rDownloadJob: {downloadProgress['id']} "
+                    f"\rDownloadJob: {downloadProgress.get("id", "unknown")} "
                     f"Downloaded segment "
                     f"{downloadedSegments}/{totalSegments} "
                     f"({segmentSize} bytes, "
@@ -530,7 +551,8 @@ def _downloadM3U8SegmentsAndAudioToFile(
         outPath: str,
         session: Session,
         downloadProgress: dict,
-        ffmpegPath: str | None = None
+        ffmpegPath: str | None = None,
+        extra_headers: dict = None
 ):
     
     outVideoFile = os.path.join(outPath, "video.ts")
@@ -540,7 +562,8 @@ def _downloadM3U8SegmentsAndAudioToFile(
         segmentUrls=segmentUrls,
         outFile=outVideoFile,
         session=session,
-        downloadProgress=downloadProgress
+        downloadProgress=downloadProgress,
+        extra_headers=extra_headers
     )
     print("\nFinished downloading video segments, now downloading audio segments...")
     
@@ -559,7 +582,7 @@ def _downloadM3U8SegmentsAndAudioToFile(
             )
 
             try:
-                with session.open(request=request) as response:
+                with session.open(request=request, headers=extra_headers) as response:
                     while True:
                         chunk = response.read(8192)
                         if not chunk:
@@ -611,7 +634,7 @@ def _getSegmentUrlsFromIndex(
         if line.startswith("#EXT-X-MAP:"):
             initUrl = searchBlocks(
                 pattern=r'URI="([^"]+)"',
-                searchBlock=line
+                search_block=line
             )
             if initUrl:
                 if initUrl.startswith("http") or initUrl.startswith("https"):

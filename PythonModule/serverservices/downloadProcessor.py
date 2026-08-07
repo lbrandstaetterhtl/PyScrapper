@@ -1,8 +1,10 @@
+#Core Imports
+import PythonModule.core as core
+from PythonModule.models import settings
 from PythonModule.models.requests import DownloadRequest
-from PythonModule.core.request.Session import Session
-from PythonModule.models import processorModels
 from . import utils
 
+#Python Default Imports
 import asyncio
 import os
         
@@ -11,25 +13,25 @@ class DownloadProcessor():
             self,
             progressDict: dict,
             downloadRequest: DownloadRequest,
-            session: Session,
+            session: core.request.Session.Session,
             downloadLimiter: asyncio.Semaphore,
             logQueue: asyncio.Queue
             ):
-        
-        if not isinstance(progressDict, dict): 
-            raise TypeError("[ERROR] DownloadProcessor: progressDict needs to be from type 'dict'")
-        
-        if not isinstance(downloadRequest, DownloadRequest): 
-            raise TypeError("[ERROR] DownloadProcessor: downloadRequest needs to be from models.downloadRequest")
-        
-        if not isinstance(downloadLimiter, asyncio.Semaphore): 
-            raise TypeError("[ERROR] DownloadProcessor: downloadLimiter needs to be from type 'asyncio.Semaphore'")
-        
-        if not isinstance(session, Session): 
-           raise TypeError("[ERROR] DownloadProcessor: Session must be from type session")
-        
-        if not isinstance(logQueue, asyncio.Queue):
-            raise TypeError("[ERROR] DownloadProcessor: given Queue for logs must be an asyncio.Queue")
+
+        core.general.Validate.validateDict(
+            argument_name="progressDict", dictionary=progressDict, caller="[serverservices] downloadProcessor.init")
+        core.general.Validate.validateGeneralType(
+            argument_name="downloadRequest", obj=downloadRequest, objType=DownloadRequest, caller="[serverservices] downloadProcessor.init"
+        )
+        core.general.Validate.validateSession(
+            session=session, argument_name="session", caller="[serverservices] downloadProcessor.init"
+        )
+        core.general.Validate.validateGeneralType(
+            argument_name="downloadLimiter", obj=downloadLimiter, objType=asyncio.Semaphore
+        )
+        core.general.Validate.validateGeneralType(
+            argument_name="logQueue", obj=logQueue, objType=asyncio.Queue, caller="[serverservices] downloadProcessor.init"
+        )
         
 
 
@@ -44,24 +46,25 @@ class DownloadProcessor():
 
 
         self.logQueue: asyncio.Queue = logQueue
+        self.downloadInformation: core.models.General.DownloadInformations
 
 
-        
-        
 
     async def run(
             self
             ):
         try:
-            provider:processorModels.ProviderTypes = utils.validateProviders(providerGiven=self.downloadInformation.providerStr)
+            provider:settings.ProviderTypes = utils.validateProviders(providerGiven=self.downloadInformation.providerStr)
             
-            downloadFunction = processorModels.providerDownloadMapping.get(provider, None)
+            
+            downloadFunction = settings.providerDownloadMapping.get(provider, None)
             if downloadFunction is None:
-                raise Exception(f"Provider {self.downloadInformation.providerStr} isn't supported for downloading yet")
-
-            if not downloadFunction:
-                raise Exception("No download function was found for this provider")
-
+                raise core.models.errors.TaskFailedError(
+                    task="providerDownloadMapping.get()",
+                    reason="Provider string given isn't supported",
+                    extraMessages=[f"Provider string that was given {self.downloadInformation.providerStr}",f"Provider Type that got used: '{provider}'."]
+                )
+                
 
             async with self.downloadInformation.downloadLimiter:
                 await asyncio.to_thread(
@@ -89,12 +92,13 @@ class DownloadProcessor():
             self,
             download_request: DownloadRequest,
             progress_dict: dict,
-            session: Session,
+            session: core.request.Session.Session,
             download_limiter: asyncio.Semaphore
 
             
             ):
-        self.downloadInformation = processorModels.DownloadInformations()
+
+        self.downloadInformation = core.models.General.DownloadInformations()
 #Creating filename with ending 
         self.downloadInformation.filename = download_request.filename + download_request.mediatype
         self.downloadInformation.fileending = download_request.mediatype

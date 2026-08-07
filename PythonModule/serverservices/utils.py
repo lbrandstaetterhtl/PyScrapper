@@ -1,5 +1,5 @@
 from PythonModule.models import settings
-from PythonModule.models.exceptions import InvalidMediaType, NotSupportedProvider, InvalidURL
+from PythonModule.models.exceptions import InvalidMediaType, NotSupportedProvider
 import urllib.error, urllib.request
 import os
 import asyncio
@@ -31,9 +31,9 @@ def validateMediatype(
 def validate_url(url: str, session):
     
     if url.lower().startswith("http://"):
-            raise InvalidURL(reason="Given url was http")
+            raise ValueError("Given url was http")
     if not url.lower().startswith("https://"):
-        raise InvalidURL(reason="Invalid URL. Given url has to start with https://")
+        raise ValueError("Invalid URL. Given url has to start with https://")
     
     request = urllib.request.Request(
          url,
@@ -46,7 +46,7 @@ def validate_url(url: str, session):
                 print(response)
     
     except urllib.error.URLError:
-        raise InvalidURL(url=url, reason="Didn't reach anything")
+        raise ValueError("Didn't reach anything")
     
     except Exception as e:
         raise Exception(str(e))

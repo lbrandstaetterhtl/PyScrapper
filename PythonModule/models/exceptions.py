@@ -34,17 +34,7 @@ class NotSupportedProvider(Exception):
 
 
 
-class InvalidURL(Exception):
-    def __init__(
-            self,
-            url: str,
-            reason: str
-            ):
-        exceptionMessage = (
-            f"Given url {url} was invalid"
-            f"Invalid because of the following reason {reason}"
-        )
-        super().__init__(exceptionMessage)
+
 
 
 
@@ -73,4 +63,6 @@ class UnsupportedURL(Exception):
         )
         super().__init__(exceptionMessage)
     
-    
+
+
+        

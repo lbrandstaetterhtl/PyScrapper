@@ -1,11 +1,17 @@
+#Core Imports
 import PythonModule.core as core
-import urllib.request, urllib.parse
+
+#Python Default imports
 import gzip
 import zlib
 
-import subprocess
 
-from PythonModule.models import processorModels
+MEDIATYPE_MAPPING = {
+    core.models.media.MediaType.MASTER_M3U8 : core.download.HLS.DownloadM3U8FromMaster,
+    core.models.media.MediaType.INDEX_M3U8 : core.download.HLS.DownloadM3U8FromIndex,
+    core.models.media.MediaType.FILE : core.download.File.downloadToFile
+    }
+
 
 
 
@@ -37,27 +43,35 @@ headers = {
 
 
 def download(
-        download_information: processorModels.DownloadInformations,
+        download_information: core.models.General.DownloadInformations,
         retry_with_FFmpeg: bool = True
 ): 
-    if not download_information or not isinstance(download_information, processorModels.DownloadInformations): raise ValueError("wcoflixDownload: Given download information is either None or has the wrong type")
+    core.general.Validate.validateDownloadInformation(argument_name="download_information", download_information=download_information, caller="[providers] Wcoflix.download")
+    core.general.Validate.validateBool(boolean=retry_with_FFmpeg, argument_name="retry_with_ffmpeg", caller="[providers] Wcoflix.download")
+    core.general.Validate.validateHostPro(
+        url=download_information.url,
+        allowed_hostnames_list=["wcoflix.tv", "www.wcoflix.tv", "172.67.72.248", "104.26.14.194", "104.26.15.194"],
+        caller="[providers] Wcoflix.download"
+        )
+
+
     episodeHtml: str = core.general.Html.getHtml(
         download_information.session,
         download_information.url
     )
+    core.general.Validate.validateStr(argument_name="expisodeHtml", string=episodeHtml, caller="[providers] Wcoflix.download")
 
     indexUrl: str = core.general.DataSearch.searchBlocks(
         iFramePattern, 
-        episodeHtml
-    )
-    indexRequest: str = urllib.request.Request(
-        indexUrl,
-        headers=headers
+        episodeHtml,
+        return_regex_exception=True
     )
 
+
     with download_information.session.open(
-        request=indexRequest
+        url=indexUrl, headers=headers
     ) as response:
+        
         indexHTMLRaw = response.read()
         encoding = response.headers.get("Content-Encoding", "").lower()
 
@@ -77,16 +91,49 @@ def download(
         }
     )
     if not medialist:
-        raise ValueError("wcoflixDownload: No media was found, since this is wcoflix I don't trust the provider. Please try again in a few minutes with the same task")
-    candiate: core.models.media.Media = medialist.candidates[-1]
+        raise core.models.errors.TaskFailedError(
+            task="[CORE] WCOFLIXBrowserDiscoverStreamUrls",
+            reason="Browser didn't get valid Media. Please try again later",
+            caller="[provider] Wcoflix.download"
+        )
+    
+    candidate: core.models.media.Media = medialist.candidates[0]
 
-    extraHeaders = candiate.headers.to_dict()
-    core.download.File._downloadToFile(
-        download_information.outFile,
-        session=download_information.session,
-        url=candiate.mediaUrl,
-        extra_headers=extraHeaders
-    )
+    downloadFunction = MEDIATYPE_MAPPING.get(candidate.mediaType, None)
+    if not downloadFunction:
+        raise core.models.errors.TaskFailedError(
+            task="MEDIATYPE_MAPPING.get()",
+            reason="Mediatype of the candidate wasn't in the dictionary",
+            extraMessages=["Wcoflix only supports functions for File and HLS", f"Mediatype of candidate {candidate.mediaType}"],
+            caller="[providers] Wcoflix.download"
+        )
+  
+    extraHeaders = candidate.headers.to_dict()#
+    if isinstance(downloadFunction, type):         
+        downloader = downloadFunction(
+            url = candidate.mediaUrl,
+            out_file = download_information.outFile,
+            session = download_information.session,
+            progress_dict = download_information.downloadProgress,
+            extra_headers = extraHeaders,
+        )
+        
+        downloader.run()
+        return  
+
+    else:
+        
+        downloadFunction(
+            url= candidate.mediaUrl,
+            out_file = download_information.outFile,
+            session = download_information.session,
+            progress_dict = download_information.downloadProgress,
+            extra_headers=extraHeaders
+        
+        )
+        return
+
+
     
                 
 

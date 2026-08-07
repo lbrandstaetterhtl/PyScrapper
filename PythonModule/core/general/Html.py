@@ -1,65 +1,69 @@
-from ..models.errors import ArgumentError
+#Core Imports
 from ..request.Session import Session
-import urllib.request, urllib.error, urllib.parse
+
+
+#Python Default Imports
 import json
 
+
 def loadJSONUrl(
-        request,
+        url: str,
         session: Session,
         encoding="utf-8",
+        extra_headers:dict = None,
+   
 
 ) -> str | None:
-
+    from . import Validate
     
-    if not isinstance(request, urllib.request.Request): raise ValueError("loadJSONUrl: Invalid request was given")
-    if not isinstance(session, Session): raise ValueError("loadJSONUrl: Invalid session was given")
+ 
+    Validate.validateEncoding(encoding=encoding, caller="[CORE] loadJSONUrl")
+    Validate.validateSession(session=session, caller="[CORE] loadJSONUrl")
+    if extra_headers:
+        Validate.validateDict(argument_name="extra_headers", dictionary=extra_headers, caller="[CORE] loadJSONUrl")
+    Validate.validateHostDefault(url, caller="[CORE] loadJSONUrl")
 
-    with session.open(request=request) as response:
+    with session.open(url=url, headers=extra_headers) as response:
         raw = response.read()
         text = raw.decode(encoding)
         jsonData = json.loads(text)
 
     
     return jsonData if jsonData else None
+
+
+
+
     
 
 def getHtml(
         session:Session = None,
         url: str = None,
-        decode: str = "utf-8",
-        chunk_size = 8096
+        encoding: str = "utf-8",
+        extra_headers: dict = None,
+        chunk_size = 8096,
 
-)-> str:
+)-> str | None:
+    from . import Validate
+
+    Validate.validateSession(session=session, caller="[CORE] getHtml")
+    Validate.validateEncoding(encoding=encoding, argument_name="encoding", caller="[CORE] getHtml")
+    Validate.validateInt(argument_name="chunk_size", integer=chunk_size, caller="[CORE] getHtml")
+    if extra_headers:
+        Validate.validateDict(argument_name="extra_headers", dictionary=extra_headers, caller="[CORE] getHtml")
+
+    Validate.validateHostDefault(url=url, caller="[CORE] getHtml")
     
-    if not url:
-        raise ArgumentError("No URL was given")
-    if not session:
-        raise ArgumentError("No Session was given")
     
-    request = urllib.request.Request(
-        url,
-        method="GET",
-    )
-
-
-    try:
-        with session.open(request=request) as response:
-            chunks = []
-            while True:
-                chunk = response.read(chunk_size)
-                if not chunk:
-                    break
-                chunks.append(chunk)
-            
+    with session.open(url=url, headers=extra_headers) as response:
+        chunks = []
+        while True:
+            chunk = response.read(chunk_size)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        
 #the b"" for the join is used so we can python it is Bytes we are dealing with            
-            html = b"".join(chunks).decode(decode)
-            return html
-
-    except urllib.error.HTTPError as e:
-        raise
+        html = b"".join(chunks).decode(encoding)
+        return html
     
-    except urllib.error.URLError as e:
-        raise
-    
-    except UnicodeDecodeError:
-        raise UnicodeDecodeError(f"Failed to decode with given decode standard {decode}")

@@ -1,3 +1,4 @@
+#Python Default Imports
 import http.cookiejar
 import urllib.request
 import certifi
@@ -5,12 +6,21 @@ import ssl
 import os
 
 
+
+
 REQUESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 COOKIE_FILE = os.path.join(REQUESTS_DIR, "cookies.txt")
 
 class Session:
-    def __init__(self, cookie_file=COOKIE_FILE):
-        self.cookieFile = cookie_file
+    def __init__(
+        self,
+        cookie_file=COOKIE_FILE
+        ):
+
+        if os.path.exists(cookie_file):
+            self.cookieFile = cookie_file
+        else:
+            self.cookieFile = COOKIE_FILE
 
         self.cookieJar = http.cookiejar.MozillaCookieJar(
             self.cookieFile
@@ -75,41 +85,24 @@ class Session:
     def _saveCookies(self):
         self.cookieJar.save(ignore_discard=True, ignore_expires=True)
 
-    def open(self, url: str = None ,method="GET" , request: urllib.request.Request = None, headers:dict = None, timeout=10):
+    def open(self, url: str = None ,method="GET" , request: urllib.request.Request = None, headers:dict = None, timeout:int =10):
         self._saveCookies()
 
-
-        if not url and request is None:
-            raise ValueError("Session: Neither an url was given or an urllib request")
-
-        
-        if url and request is not None:
-            raise ValueError("Session: Won't handle url and request at the same time, please give only one..")
-
+        _validateArguments_sessionOpen(url, method, request, headers, timeout)
 
         finalHeaders = self.defaultHeaders.copy()
 
         if headers is not None:
-
-            if not isinstance(headers, dict):
-                raise ValueError("Session: Given headers is not a dictionary")
-
             finalHeaders.update(headers)
 
 
         if url:
-            if not isinstance(url, str):
-                raise ValueError("Session: Given 'url' is not a string")
-            
             _request = urllib.request.Request(
                 url,
                 method=method,
                 headers=finalHeaders
             )
-            
         else:
-            if not isinstance(request, urllib.request.Request):
-                raise ValueError("Session: Given request is not an urllib.request.Request")
             _request = request
 #Making sure every default header is set
             self._mergeHeaders(_request, finalHeaders)
@@ -127,3 +120,34 @@ class Session:
 
             if not any(k.lower() == key.lower() for k in request.headers):
                 request.add_header(key, value)
+
+
+def _validateArguments_sessionOpen(
+    url: str = None ,method="GET" , request: urllib.request.Request = None, headers:dict = None, timeout=10  
+):
+#Core Imports
+    from ..models.errors import ArgumentError
+    from ..general import Validate
+
+    if (
+        (url and request)
+        or (not url and not request)
+    ):
+        raise ArgumentError(
+            argument="url, request",
+            wanted_type="str, urllib.request.Request: Please provide only one and not None",
+            caller="session.open",
+        )
+    Validate.validateRequestMethod(method=method, caller="[CORE] Session.open")
+    Validate.validateInt(argument_name="timeout", integer=timeout, caller="[CORE] Session.open")
+    if headers:
+
+        Validate.validateDict(argument_name="headers", dictionary=headers, caller="[CORE] Session.open")
+        
+    if request:
+        Validate.validateUrllibRequest(request) 
+    else:
+        Validate.validateHostDefault(url)
+    
+     
+    

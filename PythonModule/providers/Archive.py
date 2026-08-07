@@ -1,9 +1,13 @@
-from __future__ import annotations
+#Core Imports
 import PythonModule.core as core
-import urllib.parse, urllib.request, urllib.error
-import json
-from PythonModule.models import processorModels
 from PythonModule.models.requests import SearchFilters
+
+#Python Default Imports
+import urllib.parse
+import json
+
+
+
 
 class ArchiveError(Exception): ...
 class ArchiveSearchError(ArchiveError): ...
@@ -13,20 +17,17 @@ class ArchiveDownloadError(ArchiveError): ...
 
 
 def search(
-        search: str,
+        search_term: str,
         session=None,
         filters: SearchFilters = None,
         top=5,
 
 )-> list[dict]:
+    core.general.Validate.validateStr(argument_name="search_term", string=search_term, caller="[providers] Archive.search")
+    core.general.Validate.validateSession(session=session, argument_name="session", caller="[providers] Archive.search")
+    core.general.Validate.validateInt(argument_name="top", integer=top, caller="[providers] Archive.search")
     
-    if not search:
-        raise ArchiveArgumentError("No search query for archive was given")
-    if not session:
-        raise ArchiveArgumentError("No session was given to open the query with")
-    if not isinstance(top, int) or top < 0: raise ValueError("'top' must be an integer above 0")
-    
-    query = f'(mediatype:audio OR mediatype:movies) AND title:("{search}")'
+    query = f'(mediatype:audio OR mediatype:movies) AND title:("{search_term}")'
 
     params = {
         "q": query,
@@ -37,20 +38,19 @@ def search(
     }
 
     url = "https://archive.org/advancedsearch.php?" + urllib.parse.urlencode(params, doseq=True)
-    request = urllib.request.Request(
-        url,
-        method="GET"
-    )
-    with session.open(request=request) as response:
+    
+    with session.open(url=url) as response:
         data = json.loads(response.read().decode("utf-8"))
     docs = data.get('response', {}).get("docs", [])
     docs_new = []
+
     for doc in docs:
         if not doc.get('identifier', None):
             continue
         doc['thumbnail'] = f"https://archive.org/download/{doc.get('identifier')}/__ia_thumb.jpg"
         doc['url'] = f"https://archive.org/metadata/{doc.get('identifier')}"
         docs_new.append(doc)
+
     return docs_new
 
 
@@ -58,11 +58,11 @@ def search(
 
 
 def download(
-        download_information: processorModels.DownloadInformations,
+        download_information: core.models.General.DownloadInformations,
         
     ):
 
-    if not download_information or not isinstance(download_information, processorModels.DownloadInformations): raise ValueError("ArchiveDownload: Given download information is either None or has the wrong type")
+    core.general.Validate.validateDownloadInformation(argument_name="download_information", download_information=download_information, caller="[providers] Archive.download")
     
     metadata_url = download_information.url
     
@@ -70,32 +70,24 @@ def download(
     identifier = split[-1]
 
 
-    request = urllib.request.Request(
-        metadata_url,
-        method="GET"
-    )
-    with download_information.session.open(request=request) as response:
+    with download_information.session.open(url=metadata_url) as response:
         metadata = json.loads(response.read().decode("utf-8"))
 
-    found=False
+    found:bool = True
+
+    foundMedia: list[str] = []
+
     for file in metadata.get("files", []):
-        name = file.get('name')
+        name: str = file.get('name')
+        foundMedia.append(name)
         if name.endswith(download_information.fileending):
-            found=True
-
-
+            found = True
 
             download_url = f"https://archive.org/download/{identifier}/{urllib.parse.quote(name)}"
 
-            download_request = urllib.request.Request(
-                download_url,
-                method="GET"
-            )
-
-            
             download_information.downloadProgress['status'] = "downloading..."
-            core.download.File._downloadToFile(
-                request=download_request,
+            core.download.File.downloadToFile(
+                url=download_url,
                 out_file=download_information.outFile,
                 session=download_information.session,
                 progress_dict=download_information.downloadProgress,
@@ -104,6 +96,12 @@ def download(
             break
 
     if not found:
+        raise core.models.errors.TaskFailedError(
+            task="metadata.get()",
+            reason=f"No file with mediatype {download_information.fileending}",
+            extraMessages=["If any other ressources were found, it will get listed here", f"Found ressources: {', '.join(foundMedia)}"],
+            caller="[providers] Archive.download"
+        )
         raise ArchiveDownloadError(f"No file with mediatype {download_information.fileending} found in archive metadata")
 
 
