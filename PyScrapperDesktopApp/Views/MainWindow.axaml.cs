@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using LibVLCSharp.Shared;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
@@ -24,9 +25,8 @@ public partial class MainWindow : Window
 
         InitializeComponent();
         TitleBar.Initialize(this);
-
-        _ds = new DialogService(this);
         
+        _ds = new DialogService(this);
         _vm = new MainWindowViewModel(_ds);
         DataContext = _vm;
 

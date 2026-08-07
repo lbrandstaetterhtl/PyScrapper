@@ -45,7 +45,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     
     private readonly Window _scrapWindow;
     
-    private readonly List<string> _providers = AppData.ValidProviders;
+    private readonly List<string> _providers = AppData.ValidSearchProviders;
     private readonly string _selectedProvider;
     
     public RelayCommand CancelCommand { get; set; }
@@ -244,7 +244,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         {
             var client = new ApiClient(_dialogService);
 
-            List<string> tags = ["track"];
+            List<string> tags = [""];
 
             var filters = new SearchFilter()
             {
@@ -287,7 +287,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     var stream = new MemoryStream(bytes);
                     item.ThumbnailBitmap = new Bitmap(stream);
                 }
-                else if (_selectedProvider == _providers[2] || _selectedProvider == _providers[3])
+                else 
                 {
                     var thumbnailUrl = item.thumbnail;
 

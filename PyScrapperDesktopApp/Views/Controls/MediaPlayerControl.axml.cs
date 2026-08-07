@@ -16,14 +16,12 @@ public partial class MediaPlayerControl : UserControl
     private MediaPlayerControlViewModel _vm;
     private int _playButtonCounter = 0;
     private Playlist? _pendingPlaylist = null;
-    private Window? _parentWindow;
     
     public event Action<bool>? OnCompactChanged;
 
     public MediaPlayerControl()
     {
         InitializeComponent();
-
         _vm = new MediaPlayerControlViewModel();
         DataContext = _vm;
 

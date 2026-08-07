@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
@@ -142,6 +143,7 @@ public class AppData : Interfaces.IAppDataService
 /// <param name="identifier"></param>
 public partial class DownloadedMedia(string userIdentifier, string title, string url, string mediaType, DateTime downloadedAt, string downloadPath, bool isPlayable, string identifier) : ObservableObject
 {
+    [JsonPropertyName("identifier")]
     [ObservableProperty]
     private string _identifier = identifier;
     
