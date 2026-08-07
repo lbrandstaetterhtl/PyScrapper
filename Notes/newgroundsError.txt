@@ -1,0 +1,3 @@
+﻿[2026-08-07_08-16-06] [ERROR] Failed search task with given arguments: id 2ec9d810-98ef-4819-a12d-4fa6acf8a708 provider newgrounds and searchinput terrifier.
+ Error Message:HTTP Error 403: Forbidden
+ 
