@@ -343,7 +343,7 @@ public class AudioPlayer : IDisposable
             var audioStreams = streams.FirstOrDefault(s => s.CodecType == "audio");
             if (audioStreams == null)
             {
-                throw new Exception($"Can't get streams for {path}");
+                throw new Exception($"{path} has no streams");
             }
             
             return true;
@@ -352,6 +352,13 @@ public class AudioPlayer : IDisposable
         return videoStream.CodecName.Equals("h264", StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Ruft ffprobe auf und liest alle Streams als JSON.
+    /// success=false = ffprobe selbst ist fehlgeschlagen (nicht gefunden, Datei unlesbar).
+    /// success=true mit leerer Liste = Datei hat keine Streams.
+    /// /// </summary>
+    /// <param name="path"></param>
+    /// <returns></returns>
     private static async Task<(bool, List<StreamInfo>)> ProbeStreams(string path)
     {
         var ffprobe = FindFfprobe() ?? "ffprobe";
@@ -395,7 +402,7 @@ public class AudioPlayer : IDisposable
                 }
                 else
                 {
-                    return (false, new List<StreamInfo>());
+                    return (true, new List<StreamInfo>());
                 }
             }
                 
@@ -403,7 +410,7 @@ public class AudioPlayer : IDisposable
         }
         else
         {
-            return (false, new List<StreamInfo>());
+            return (true, new List<StreamInfo>());
         }
     }
 
