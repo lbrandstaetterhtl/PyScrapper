@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:controls="clr-namespace:PyScrapperDesktopApp.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="PyScrapperDesktopApp.Views.SunoScrapWindow"
-        x:DataType="vm:SunoScrapWindowViewModel"
+        x:Class="PyScrapperDesktopApp.Views.ScrapWindowWithoutSearch"
+        x:DataType="vm:ScrapWindowWithoutSearchViewModel"
         Icon="/Assets/PyScrapperLogo.ico"
         WindowStartupLocation="CenterOwner"
         CanMaximize="False"
@@ -28,6 +28,11 @@
                                 <StackPanel Classes="UICell">
                                         <TextBlock Text="Enter URL: " Classes="UILabel"/>
                                         <TextBox Text="{Binding SunoUrl}" Classes="UI"/>
+                                </StackPanel>
+                                
+                                <StackPanel Classes="UICell">
+                                        <TextBlock Text="Select provider: " Classes="UILabel"/>
+                                        <ComboBox Classes="UI" ItemsSource="{Binding AvailableProviders}" SelectedItem="{Binding SelectedProvider}"/>
                                 </StackPanel>
                                 
                                 <StackPanel Classes="UICell">

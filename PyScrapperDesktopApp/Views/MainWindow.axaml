@@ -50,13 +50,14 @@
                         <MenuItem Header="Clear Filter" Command="{Binding ClearFilterCommand}"/>
                     </MenuItem>
                     <MenuItem Header="Scrap">
-                        <MenuItem Header="From Suno" Command="{Binding OpenSunoScrapWindowCommand}"/>
+                        <MenuItem Header="From link" Command="{Binding OpenScrapWindowWithoutSearchCommand}" ToolTip.Tip="Scrap from a link of a supported provider"/>
                         <MenuItem Header="From Youtube" Command="{Binding OpenYoutubeScrapWindowCommand}"/>
                         <MenuItem Header="From Bandcamp" Command="{Binding OpenBandcampScrapWindowCommand}"/>
                         <MenuItem Header="From Archive" Command="{Binding OpenArchiveScrapWindowCommand}"/>
                         <MenuItem Header="From SoundCloud" Command="{Binding OpenSoundCloudScrapWindowCommand}"/>
                         <MenuItem Header="From Newgrounds" Command="{Binding OpenNewgroundsScrapWindowCommand}"/>
                     </MenuItem>
+                    
                     <MenuItem Header="Open Media Player" Command="{Binding OpenMediaPlayerWindowCommand}"/>
                     <MenuItem Header="Playlists">
                         <MenuItem Header="Create Playlist" Command="{Binding CreatePlaylistCommand}"/>

@@ -80,14 +80,13 @@ public partial class MainWindowViewModel : ObservableObject
     }
     
     /// <summary>
-    /// Command method that is executed when the user clicks the button to open the Suno scrap window.
-    /// It checks if the application is running in a desktop environment and then creates and shows the SunoScrapWindow as a dialog, allowing the user to interact with it without leaving the main window.
+    /// Command method that is executed when the user clicks the button to open the scrap window without search.
     /// </summary>
     [RelayCommand]
-    private async Task OpenSunoScrapWindow()
+    private async Task OpenScrapWindowWithoutSearch()
     {
-        var sunoScrapWindow = new Views.SunoScrapWindow();
-        await sunoScrapWindow.ShowDialog(_window);
+        var scrapWindow = new ScrapWindowWithoutSearch();
+        await scrapWindow.ShowDialog(_window);
     }
     
     /// <summary>

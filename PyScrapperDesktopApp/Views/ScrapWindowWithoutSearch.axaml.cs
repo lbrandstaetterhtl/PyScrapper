@@ -4,9 +4,9 @@ using PyScrapperDesktopApp.ViewModels;
 
 namespace PyScrapperDesktopApp.Views;
 
-public partial class SunoScrapWindow : Window
+public partial class ScrapWindowWithoutSearch : Window
 {
-    public SunoScrapWindow()
+    public ScrapWindowWithoutSearch()
     {
         if (Design.IsDesignMode) return;
 
@@ -15,7 +15,7 @@ public partial class SunoScrapWindow : Window
         
         DialogService ds = new DialogService(this);
         
-        var vm = new SunoScrapWindowViewModel(ds);
+        var vm = new ScrapWindowWithoutSearchViewModel(ds);
         
         DataContext = vm;
         

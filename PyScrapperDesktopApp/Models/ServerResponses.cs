@@ -82,6 +82,15 @@ public class ProgressSuccessResponse
         
     [JsonPropertyName("speed")]
     public float Speed { get; set; }
+    
+    [JsonPropertyName("eta")]
+    public float Eta { get; set; }
+    
+    [JsonPropertyName("totalSegments")]
+    public int TotalSegments { get; set; }
+    
+    [JsonPropertyName("downloadedSegments")]
+    public int DownloadedSegments { get; set; }
 }
 
 /// <summary>

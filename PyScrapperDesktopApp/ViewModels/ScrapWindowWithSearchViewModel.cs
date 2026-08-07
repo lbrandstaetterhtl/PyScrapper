@@ -278,7 +278,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
             var tasks = results.Select(async item =>
             {
-                if (_selectedProvider == _providers[1])
+                if (_selectedProvider == _providers[0])
                 {
                     var thumbnailUrl = $"https://i.ytimg.com/vi/{item.identifier}/hqdefault.jpg";
 

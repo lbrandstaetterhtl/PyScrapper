@@ -27,6 +27,9 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     
     [ObservableProperty]
     private float _progressSpeed;
+
+    [ObservableProperty] 
+    private float _eta;
     
     [ObservableProperty]
     private bool _isFinished = false;
@@ -80,28 +83,37 @@ public partial class ProgressBarWindowViewModel : ObservableObject
 
                             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                             {
-                                if (progressData.ErrorMessage is not "")
+                                if (progressData.TotalBytes != -1)
                                 {
-                                    Status = $"Error: {progressData.ErrorMessage}";
-                                    var log = new Message(progressData.ErrorMessage, DateTime.Now, "ERROR");
-                                    _logger.LogNewMassage(log);
-                                    errorWhileDownloading = true;
-                                    StopProgress();
+                                    if (progressData.ErrorMessage is not "")
+                                    {
+                                        Status = $"Error: {progressData.ErrorMessage}";
+                                        var log = new Message(progressData.ErrorMessage, DateTime.Now, "ERROR");
+                                        _logger.LogNewMassage(log);
+                                        errorWhileDownloading = true;
+                                        StopProgress();
+                                    }
+                                    else
+                                    {
+                                        Status = progressData.Status + " | please wait...";
+                                    }
+
+                                    Progress = progressData.DownloadProgress;
+                                    ProgressSpeed = progressData.Speed;
+                                    Eta = progressData.Eta;
+
+                                    if (progressData.Status.Equals("complete"))
+                                    {
+                                        IsFinished = true;
+                                        Status = "Completed";
+                                        ProgressSpeed = 0;
+                                        Eta = 0;
+                                        StopProgress();
+                                    }
                                 }
                                 else
                                 {
-                                    Status = progressData.Status + " | please wait...";
-                                }
-
-                                Progress = progressData.DownloadProgress;
-                                ProgressSpeed = progressData.Speed;
-
-                                if (progressData.Status.Equals("complete"))
-                                {
-                                    IsFinished = true;
-                                    Status = "Completed";
-                                    ProgressSpeed = 0;
-                                    StopProgress();
+                                    
                                 }
                             });
                         }

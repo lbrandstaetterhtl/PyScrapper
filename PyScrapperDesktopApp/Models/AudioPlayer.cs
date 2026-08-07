@@ -58,7 +58,7 @@ public class AudioPlayer : IDisposable
 
         _mediaPlayer.EndReached += (s, e) =>
         {
-            System.Threading.ThreadPool.QueueUserWorkItem(_ => PlayNext());
+            ThreadPool.QueueUserWorkItem(_ => PlayNext());
         };
 
         _mediaPlayer.ESAdded += OnEsAdded;
@@ -353,9 +353,8 @@ public class AudioPlayer : IDisposable
     }
 
     /// <summary>
-    /// Ruft ffprobe auf und liest alle Streams als JSON.
-    /// success=false = ffprobe selbst ist fehlgeschlagen (nicht gefunden, Datei unlesbar).
-    /// success=true mit leerer Liste = Datei hat keine Streams.
+    /// Starts Ffprobe and gets all stream entries
+    /// Returns a bool and a list of codec_name and codec_type of the entries
     /// /// </summary>
     /// <param name="path"></param>
     /// <returns></returns>
@@ -413,9 +412,7 @@ public class AudioPlayer : IDisposable
             return (true, new List<StreamInfo>());
         }
     }
-
-        
-        
+    
     private class StreamInfo
     {
         [JsonPropertyName("codec_type")]
@@ -433,7 +430,6 @@ public class AudioPlayer : IDisposable
     /// </summary>
     private static string? FindFfprobe()
     {
-        // 1) PATH
         var where = Process.Start(new ProcessStartInfo
         {
             FileName               = "where",
@@ -448,7 +444,6 @@ public class AudioPlayer : IDisposable
         if (where.ExitCode == 0 && !string.IsNullOrEmpty(result))
             return result.Split('\n')[0].Trim();
 
-        // 2) WinGet yt-dlp.FFmpeg package directory
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var pkgRoot = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");
         if (Directory.Exists(pkgRoot))
@@ -459,7 +454,6 @@ public class AudioPlayer : IDisposable
             if (hit != null) return hit;
         }
 
-        // 3) Lokal neben der venv — vom Launcher installiert
         var localFfprobe = Path.Combine(AppData.PyScrapperPath, "LocalServer", "ffmpeg", "bin", "ffprobe.exe");
         if (File.Exists(localFfprobe)) return localFfprobe;
 

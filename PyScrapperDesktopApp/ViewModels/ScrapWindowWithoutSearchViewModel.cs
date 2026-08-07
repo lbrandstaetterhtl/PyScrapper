@@ -23,7 +23,7 @@ namespace PyScrapperDesktopApp.ViewModels;
 /// The Scrap method handles the scraping logic, including sending a request to the server, showing a progress bar window, and adding the downloaded media to the AppData if successful.
 /// If any errors occur during the process, it displays a message box to inform the user.
 /// </summary>
-public partial class SunoScrapWindowViewModel : ObservableObject
+public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
 {
     [ObservableProperty] private string _sunoUrl = "";
     
@@ -36,6 +36,11 @@ public partial class SunoScrapWindowViewModel : ObservableObject
     [ObservableProperty] private string _filename = "";
     public RelayCommand CancelCommand { get; set; }
     
+    public IEnumerable<string> AvailableProviders => AppData.ValidProviders;
+    
+    [ObservableProperty]
+    private string _selectedProvider = "";
+
     public IEnumerable<string> AvailableMediaTypes => _availableMediaType;
     
     public event Action? RequestClose;
@@ -61,7 +66,7 @@ public partial class SunoScrapWindowViewModel : ObservableObject
 
             var requestData = new DownloadRequestData()
             {
-                Provider = "suno",
+                Provider = SelectedProvider,
                 Url = SunoUrl,
                 Mediatype = SelectedMediaType,
                 Filename = Filename,
@@ -133,7 +138,7 @@ public partial class SunoScrapWindowViewModel : ObservableObject
     /// It sets up the necessary properties and commands for the scrap functionality, including the CancelCommand that allows the user to close the scrap window without initiating the scrap process.
     /// </summary>
     /// <param name="dialogService"></param>
-    public SunoScrapWindowViewModel(DialogService dialogService)
+    public ScrapWindowWithoutSearchViewModel(DialogService dialogService)
     {
         if (Design.IsDesignMode) return;
         
