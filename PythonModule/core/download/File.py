@@ -47,6 +47,8 @@ def downloadToFile(
         progress_dict: dict = None,
         extra_headers: dict = {},
         chunk_size: int = 8192,
+        convert_file: bool = False,
+
 ):
     _validateArguments_downloadToFile(out_file, session, request, url, progress_dict, extra_headers, chunk_size)
 
@@ -110,5 +112,25 @@ def downloadToFile(
                 end="",
                 flush=True
             )
+
+        if convert_file is True:
+        #Converter finally puts the file into the correct codec instead of loading bytes in wrong file extension
+            from ..models.Convert import ConvertRequest
+            from ..general import Converter
+            convertRequest = ConvertRequest(
+                input_file_list=[out_file],
+                output_file_list=[out_file],
+                inputs_per_output=1,
+                convert_progress_dict=progress_dict.get("convertProgress", {})
+            )
+            fileConverter = Converter.FileConverter(
+                convert_request=convertRequest,
+                caller=f"DownloadJob: {progress_dict.get("id", "unknown")}"
+            )
+
+            fileConverter.run()
+            
+        
+
 
     progress_dict["status"] = "complete"

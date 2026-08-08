@@ -71,6 +71,7 @@ def download(
                     session = download_information.session,
                     progress_dict = download_information.downloadProgress,
                     extra_headers = extraHeaders,
+
                 )
                 
                 downloader.run()
@@ -85,7 +86,9 @@ def download(
                     out_file = download_information.outFile,
                     session = download_information.session,
                     progress_dict = download_information.downloadProgress,
-                    extra_headers=extraHeaders
+                    extra_headers=extraHeaders,
+
+                    
                 
                 )
                 return

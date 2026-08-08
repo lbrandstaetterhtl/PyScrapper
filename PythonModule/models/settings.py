@@ -1,5 +1,7 @@
 import enum
 
+import PythonModule.core as core
+
 
 
 class ProviderTypes(enum.Enum):
@@ -148,7 +150,8 @@ PROGRESSDICT = {
             "speed" : 0,
             "eta" : 0,
             "totalSegments" : 0,
-            "downloadedSegments" : 0
+            "downloadedSegments" : 0,
+            "convertProgress" : core.models.Convert.CONVERT_PROGRESS_DICT.copy(),
         }
 
 SUPPORTEDCOMMANDS = [

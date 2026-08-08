@@ -67,6 +67,7 @@ class DownloadM3U8FromMaster():
         self.session = session
 
 
+
     def run(self):
         result: M3U8Stream = _selectIndexFromMaster(
         masterUrl=self.masterUrl,
@@ -93,7 +94,8 @@ class DownloadM3U8FromMaster():
             audio_url=result.audioUrl,
             session=self.session,
             progress_dict=self.downloadProgress,
-            extra_headers = self.extraHeaders
+            extra_headers = self.extraHeaders,
+
         ).run()
 
 
@@ -108,7 +110,8 @@ class DownloadM3U8FromIndex():
             audio_url: str = "",
             session: Session = None,
             progress_dict:dict = None,
-            extra_headers: dict = None
+            extra_headers: dict = None,
+
             ):
         
         _validateArguments_DownloadM3U8FromXInit(out_file, url, session, progress_dict,extra_headers, audio_url=audio_url, caller="[CORE] DownloadM3U8FromIndex.init")
@@ -128,19 +131,25 @@ class DownloadM3U8FromIndex():
         self.extraHeaders = extra_headers
 
 
+
+
     def run(
             self,
-            download_with_ffmpeg: bool = False
+            download_with_ffmpeg: bool = False,
+            convert_file: bool = False
             ):
         Validate.validateBool(boolean=download_with_ffmpeg, argument_name="download_with_ffmpeg", caller="[CORE] DownloadM3U8FromIndex.run")
         
         #Main method for downloading m3u8 files, it will try to use ffmpeg if it is installed and in the PATH, if not it will fallback to downloading the segments manually and merging them together. It also updates the given download progress dict with the current progress of the download
+        downloaded = False
         if download_with_ffmpeg == False:       
                     self.downloadM3U8Manual()
-                    return
+                    download_with_ffmpeg = False
+                    downloaded = True
+                    
         
 
-        if self.ffmpegPath:
+        if self.ffmpegPath and download_with_ffmpeg == True:
             print("[CORE] DownloadM3U8FromIndex.run: ffmpeg found, using ffmpeg to download m3u8")
             if self.audioUrl:
                 command = [
@@ -161,12 +170,30 @@ class DownloadM3U8FromIndex():
                 ]
             _downloadM3U8FFMPEG(command, self.downloadProgress)
             return
-        else:
+        elif downloaded == False:
             raise TaskFailedError(
                 task="[CORE] DownloadM3U8FromIndex.run",
                 reason="ffmpeg path wasn't found on this system",
                 caller="[CORE] DownloadM3U8FromIndex.run"
             )
+        
+        if convert_file is True:
+            if convert_file is True:
+            #Converter finally puts the file into the correct codec instead of loading bytes in wrong file extension
+                from ..models.Convert import ConvertRequest
+                from ..general import Converter
+                convertRequest = ConvertRequest(
+                    input_file_list=[self.outFile],
+                    output_file_list=[self.outFile],
+                    inputs_per_output=1,
+                    convert_progress_dict=self.downloadProgress.get("convertProgress")
+                )
+                fileConverter = Converter.FileConverter(
+                    convert_request=convertRequest,
+                    caller=f"DownloadJob: {self.downloadProgress.get("id", "unknown")}"
+                )
+    
+                fileConverter.run()
         
 
     
@@ -217,6 +244,7 @@ class DownloadM3U8FromIndex():
                 self.ffmpegPath,
                 extra_headers=self.extraHeaders
             )
+
 
     
 #Functions for Master
@@ -290,10 +318,6 @@ def _findBestQualityMasterM3U8(
         )
     
     return result
-
-
-
-
 
 def _findAudioUrlFromMasterM3U8(
         mediaBlocks: str,
@@ -375,9 +399,6 @@ def _findAudioUrlFromMasterM3U8(
                 result.audioUrl = urllib.parse.urljoin(masterUrl, audioUrl)
             return
                 
-
-
-
 def _selectIndexFromMaster(
         preferedAudioLanguages,
         masterUrl: str = "",
@@ -406,7 +427,7 @@ def _selectIndexFromMaster(
 #Functions for Index
 def _downloadM3U8FFMPEG(
         command: list,
-        downloadProgress: dict = None
+        downloadProgress: dict = None,
 ):
     if not isinstance(downloadProgress, dict) or downloadProgress is None:
         downloadProgress = {}
@@ -415,11 +436,7 @@ def _downloadM3U8FFMPEG(
 
     except Exception:
         raise
-
-
-
-
-
+    
 def _downloadM3U8SegmentsToFile(
         segmentUrls: list[str],
         outFile: str,
@@ -540,10 +557,6 @@ def _downloadM3U8SegmentsToFile(
         downloadProgress["status"] = "failed"
         raise
 
-
-
-
-
 def _downloadM3U8SegmentsAndAudioToFile(
         segmentUrls: list[str],
         audioSegmentUrls: list[str],
@@ -559,43 +572,22 @@ def _downloadM3U8SegmentsAndAudioToFile(
     outAudioFile = os.path.join(outPath, "audio.ts") 
 
     _downloadM3U8SegmentsToFile(
-        segmentUrls=segmentUrls,
-        outFile=outVideoFile,
+    segmentUrls=segmentUrls,
+    outFile=outVideoFile,
+    session=session,
+    downloadProgress=downloadProgress,
+    extra_headers=extra_headers
+)
+
+    print("\nFinished downloading video segments, now downloading audio segments...")
+
+    _downloadM3U8SegmentsToFile(
+        segmentUrls=audioSegmentUrls,
+        outFile=outAudioFile,
         session=session,
         downloadProgress=downloadProgress,
         extra_headers=extra_headers
     )
-    print("\nFinished downloading video segments, now downloading audio segments...")
-    
-    segments = len(audioSegmentUrls)
-    segment = 0
-
-
-    with open(outAudioFile, "wb") as f:
-
-        for url in audioSegmentUrls:
-            segment += 1
-            segmentSize:int = 0
-            request = urllib.request.Request(
-                url,
-                method="GET"
-            )
-
-            try:
-                with session.open(request=request, headers=extra_headers) as response:
-                    while True:
-                        chunk = response.read(8192)
-                        if not chunk:
-                            break
-                        segmentSize += len(chunk)
-                        f.write(chunk)
-
-                print(f"\rDownloaded audio segment {segment}/{segments} ({segmentSize} bytes)", end="", flush=True)
-                downloadProgress['downloadedBytes'] += segmentSize
-
-            except Exception as e:
-                downloadProgress['status'] = "failed"
-                raise ValueError(f"_downloadM3U8SegmentsAndAudioToFile: An error occurred while downloading audio segment {url}. Error: {e}")
     
     if not ffmpegPath:
         raise MergeError(videoFile=outVideoFile, audioFile=outAudioFile)
@@ -611,12 +603,6 @@ def _downloadM3U8SegmentsAndAudioToFile(
     ]
     _downloadM3U8FFMPEG(command=command, downloadProgress={})
         
-
-
-
-
-
-
 def _getSegmentUrlsFromIndex(
         indexFile: str,
         playlistUrl: str = ""
