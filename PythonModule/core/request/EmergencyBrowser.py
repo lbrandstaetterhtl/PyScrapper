@@ -424,6 +424,9 @@ def _saveMedia(
         or ".webm" in lower
         or ".flv" in lower
         or "videoplayback" in lower
+        or ".m4a" in lower
+        or "mime_type=video" in lower
+        or "mime_type=audio" in lower
     )
 
     if not is_media_request:
@@ -515,6 +518,8 @@ def _guessMediaType(
         "index",
         "hls",
         "videoplayback",
+        "cdn",
+        "login",
     ]
 
     # --------------------------------------------------
@@ -528,6 +533,17 @@ def _guessMediaType(
         _streamType = media.StreamType.DIRECT
         _mediaType = media.MediaType.FILE
         _priority = 120
+    # --------------------------------------------------
+    # Tiktok / Musically
+    # --------------------------------------------------
+    elif (
+        hostname.endswith("tiktokcdn.com")
+        or hostname.endswith("prime.tiktok.com")
+  
+    ):
+        _streamType = media.StreamType.DIRECT
+        _mediaType = media.MediaType.FILE
+        _priority = 100
 
     # --------------------------------------------------
     # WCO-style /getvid endpoint
@@ -550,6 +566,8 @@ def _guessMediaType(
         # Non-JSON /getvid is much more likely the actual file
         else:
             _priority += 40
+
+
 
     # --------------------------------------------------
     # HLS
@@ -634,17 +652,24 @@ def _guessMediaType(
     # Generic priority adjustments
     # --------------------------------------------------
 
-    if any(
-        keyword in searchable
-        for keyword in badKeywords
-    ):
-        _priority -= 50
+    for keyword in badKeywords:
+        if keyword in searchable:
+            _priority -= 20
 
-    if any(
-        keyword in searchable
-        for keyword in goodKeywords
-    ):
-        _priority += 20
+    for keyword in badKeywords:
+        if keyword in searchable:
+            _priority -= 20
+    #if any(
+    #    keyword in searchable
+    #    for keyword in badKeywords
+    #):
+    #    _priority -= 50
+
+    #if any(
+    #    keyword in searchable
+    #    for keyword in goodKeywords
+    #):
+    #    _priority += 20
 
     return (
         _streamType,
