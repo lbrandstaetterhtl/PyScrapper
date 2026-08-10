@@ -15,7 +15,7 @@ public partial class PlaylistDetailsWindow : Window
     private readonly Window _mainWindow;
     private readonly AppLogger _logger = AppLogger.Instance;
 
-    public PlaylistDetailsWindow(Playlist playlist)
+    public PlaylistDetailsWindow(string identifier)
     {
         InitializeComponent();
         TitleBar.Initialize(this);
@@ -24,7 +24,7 @@ public partial class PlaylistDetailsWindow : Window
         
         DialogService ds = new DialogService(this);
 
-        var vm = new PlaylistDetailsWindowViewModel(playlist, ds);
+        var vm = new PlaylistDetailsWindowViewModel(identifier, ds);
 
         DataContext = vm;
 

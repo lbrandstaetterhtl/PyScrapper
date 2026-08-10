@@ -230,14 +230,8 @@ public partial class App : Application
 
             foreach (var playlist in playlists)
             {
+                await playlist.FindMedias();
                 AppData.AddPlaylist(playlist);
-            }
-
-            var playlistMedias = await Database.LoadAllPlaylistMediasAsync(playlists.ToList());
-
-            foreach (var media in playlistMedias)
-            {
-                AppData.PlaylistMedias.Add(media);
             }
             
             if (AppData.Settings.ScanFolderOnStartup)
@@ -276,9 +270,6 @@ public partial class App : Application
     {
         try
         {
-            // Task.Run schiebt die Arbeit auf den Threadpool (kein UI-SyncContext),
-            // GetResult() blockiert den UI-Thread bis fertig.
-            // Blockieren ist hier OK - wir fahren eh runter.
             bool ok = Task.Run(PerformExit).GetAwaiter().GetResult();
             e.ApplicationExitCode = ok ? 0 : 1;
         }

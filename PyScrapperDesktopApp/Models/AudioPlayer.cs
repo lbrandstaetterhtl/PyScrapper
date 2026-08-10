@@ -186,10 +186,6 @@ public class AudioPlayer : IDisposable
     private async Task PlayFile(string filePath)
     {
         bool isSupported = true;
-        if (filePath.EndsWith(".mp4"))
-        {
-            isSupported = await IsSupportedCodec(filePath);
-        }
 
         if (!isSupported)
         {

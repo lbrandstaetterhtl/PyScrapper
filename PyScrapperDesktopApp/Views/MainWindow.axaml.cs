@@ -180,7 +180,7 @@ public partial class MainWindow : Window
     {
         if (sender is Border { DataContext: Playlist playlist })
         {
-            var playlistWindow = new PlaylistDetailsWindow(playlist);
+            var playlistWindow = new PlaylistDetailsWindow(playlist.Identifier);
             playlistWindow.Show();
         }
     }
@@ -189,7 +189,7 @@ public partial class MainWindow : Window
     {
         if (sender is MenuItem { DataContext: Playlist playlist })
         {
-            var playlistWindow = new PlaylistDetailsWindow(playlist);
+            var playlistWindow = new PlaylistDetailsWindow(playlist.Identifier);
             playlistWindow.Show();
         }
     }

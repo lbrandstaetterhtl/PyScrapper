@@ -250,8 +250,15 @@ public class Playlist(string name, string description, string identifier, string
     /// <summary>
     /// Finds and populates the MediaIdentifiers list with the media IDs associated with this playlist from the AppData.PlaylistMedias collection.
     /// </summary>
-    public void FindMedias()
+    public async Task FindMedias()
     {
+        var playlistMedias = await Database.LoadPlaylistMediaFromApiAsync(Identifier);
+
+        foreach (var media in playlistMedias)
+        {
+            AppData.PlaylistMedias.Add(media);
+        }
+        
         var medias = AppData.PlaylistMedias.Where(pm => pm.PlaylistIdentifier == Identifier).ToList();
         MediaIdentifiers = medias.Select(pm => pm.MediaIdentifier).ToList();
     }

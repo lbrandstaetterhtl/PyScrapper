@@ -41,21 +41,22 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     /// The constructor also assigns the playlist to a private field for later use in command methods.
     /// </summary>
     /// <param name="playlist"></param>
-    public PlaylistDetailsWindowViewModel(Playlist playlist, DialogService dialogService)
+    public PlaylistDetailsWindowViewModel(string identifier, DialogService dialogService)
     {
+        var playlist = AppData.Playlists.FirstOrDefault(p => p.Identifier == identifier);
         PlaylistName = playlist.Name;
 
-        Description = playlist.Description;
+        Description = playlist.Description ?? "";
         PlaylistId = playlist.Identifier;
-        //TODO: Find the right medias in AppData.PlaylistMedias
         _playlist = playlist;
+        Medias = AppData.DownloadedMedias.Where(m => _playlist.MediaIdentifiers.Contains(m.Identifier)).ToList();
         _dialogService = dialogService;
     }
     
-    public void RefreshMedias()
+    public async void RefreshMedias()
     {
-        //Medias = AppData.DownloadedMedias.Where(m => _playlist.MediaIds.Contains(m.Id)).ToList();
-        //TODO: Same as above, find the right medias in AppData.PlaylistMedias
+        await _playlist.FindMedias();
+        Medias = AppData.DownloadedMedias.Where(m => _playlist.MediaIdentifiers.Contains(m.Identifier)).ToList();
     }
     
     public Action? CloseRequested { get; set; }
@@ -85,13 +86,6 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
         {
             return;
         }
-        
-        //TODO: Same as above, find the right medias in AppData.PlaylistMedias and check if they are playable
-        /*if (_playlist.PlayableMediaIds.Count == 0)
-        {
-            await _dialogService.ShowAlertAsync("No playable media found in this playlist.");
-            return;
-        }*/
 
         if (desktop.MainWindow is MainWindow mainWindow)
         {
