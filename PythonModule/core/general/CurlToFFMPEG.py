@@ -1,5 +1,6 @@
 import sys
 import shlex
+import subprocess
 
 
 SKIP_HEADERS = {
@@ -10,22 +11,66 @@ SKIP_HEADERS = {
     "sec-fetch-site",
 }
 
+def _build_ffmpeg_command_linux(
+    url: str,
+    headers: dict,
+    output: str = "output.mp4"
+) -> str:
 
-def _shellQuote(value: str) -> str:
-    return shlex.quote(value)
+    user_agent = None
+    referer = None
+    normal_headers = []
+
+    for lower_name, (name, value) in headers.items():
+        if lower_name in SKIP_HEADERS:
+            continue
+
+        if lower_name == "user-agent":
+            user_agent = value
+            continue
+
+        if lower_name == "referer":
+            referer = value
+            continue
+
+        normal_headers.append(f"{name}: {value}")
+
+    header_text = ""
+    if normal_headers:
+        header_text = "\\r\\n".join(normal_headers) + "\\r\\n"
+
+    lines = ["ffmpeg \\"]
+
+    if user_agent:
+        lines.append(
+            f"  -user_agent {shlex.quote(user_agent)} \\"
+        )
+
+    if referer:
+        lines.append(
+            f"  -referer {shlex.quote(referer)} \\"
+        )
+
+    if header_text:
+        lines.append(
+            f"  -headers {_bash_ansi_c_quote(header_text)} \\"
+        )
+
+    lines.append(f"  -i {shlex.quote(url)} \\")
+    lines.append("  -c copy \\")
+    lines.append(f"  {shlex.quote(output)}")
+
+    return "\n".join(lines)
 
 
-
-
+def _windows_quote(value: str) -> str:
+    return subprocess.list2cmdline([value])
 
 def _bash_ansi_c_quote(value: str) -> str:
    
     value = value.replace("\\", "\\\\")
     value = value.replace("'", "\\'")
     return "$'" + value + "'"
-
-
-
 
 
 def _parseCurl(curl_command: str):
@@ -67,7 +112,12 @@ def _parseCurl(curl_command: str):
     return url, headers
 
 
-def _build_ffmpeg_command(url: str, headers: dict, output: str = "output.mp4"):
+def _build_ffmpeg_command_windows(
+    url: str,
+    headers: dict,
+    output: str = "output.mp4"
+) -> str:
+
     user_agent = None
     referer = None
     normal_headers = []
@@ -86,53 +136,58 @@ def _build_ffmpeg_command(url: str, headers: dict, output: str = "output.mp4"):
 
         normal_headers.append(f"{name}: {value}")
 
-    header_text = ""
-    if normal_headers:
-        header_text = "\\r\\n".join(normal_headers) + "\\r\\n"
-
-    lines = ["ffmpeg \\"]
+    command = ["ffmpeg"]
 
     if user_agent:
-        lines.append(f"  -user_agent {_shellQuote(user_agent)} \\")
+        command.extend([
+            "-user_agent",
+            user_agent
+        ])
 
     if referer:
-        lines.append(f"  -referer {_shellQuote(referer)} \\")
+        command.extend([
+            "-referer",
+            referer
+        ])
 
-    if header_text:
-        lines.append(f"  -headers {_bash_ansi_c_quote(header_text)} \\")
+    if normal_headers:
+        # Hier absichtlich escaped statt echter Zeilenumbrüche
+        header_text = "\\r\\n".join(normal_headers) + "\\r\\n"
 
-    lines.append(f"  -i {_shellQuote(url)} \\")
-    lines.append("  -c copy \\")
-    lines.append(f"  {_shellQuote(output)}")
+        command.extend([
+            "-headers",
+            header_text
+        ])
 
-    return "\n".join(lines)
+    command.extend([
+        "-i",
+        url,
+        "-c",
+        "copy",
+        output
+    ])
 
-
-def main():
-    print("Paste whole curl command here")
-    print("Confirm with 'control + D'\n")
-
-
-    _curlCommand = sys.stdin.read().strip()
-
-
-    if not _curlCommand:
-        print("No input was given", file=sys.stderr)
-        sys.exit(1)
-
-
-    try:
-        url, headers = _parseCurl(_curlCommand)
-        _ffmpegCommand = _build_ffmpeg_command(url, headers)
-        print("\nAusgabe:\n")
-        print(_ffmpegCommand)
-
-    except Exception as e:
-        print(f"Fehler: {e}", file=sys.stderr)
-        sys.exit(1)
+    return subprocess.list2cmdline(command)
 
 
+def _build_ffmpeg_command(
+    url: str,
+    headers: dict,
+    output: str = "output.mp4"
+) -> str:
 
+    if sys.platform == "win32":
+        return _build_ffmpeg_command_windows(
+            url,
+            headers,
+            output
+        )
+
+    return _build_ffmpeg_command_linux(
+        url,
+        headers,
+        output
+    )
 
 
 
@@ -140,19 +195,17 @@ def get_curlToFFmpeg(
     curl_command: str,
     output: str = "output.mp4"
 ) -> str:
-    """
-    Takes curl command as string
-    Gives back ffmpeg command with curl headers
-
-    """
 
     if not curl_command or not isinstance(curl_command, str):
-        raise ValueError("get_curlToFFmpeg: Empty command given or it wasn't a string")
+        raise ValueError(
+            "get_curlToFFmpeg: Empty command given "
+            "or it wasn't a string"
+        )
 
     url, headers = _parseCurl(curl_command.strip())
-    return _build_ffmpeg_command(url, headers, output)
 
-
-
-if __name__ == "__main__":
-    main()
+    return _build_ffmpeg_command(
+        url,
+        headers,
+        output
+    )
