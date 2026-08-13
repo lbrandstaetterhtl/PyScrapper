@@ -4,6 +4,8 @@ from typing import Optional
 
 import os
 
+import PythonModule.core as core
+
 #Downlaod path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -11,10 +13,17 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 #Classes
 class DownloadRequest(BaseModel):
     provider: str
-    url: str
-    mediatype: str = ".mp3"
+
+    urls: list[str]
+    
     filename: str
-    download_path: str = os.path.join(project_root, "downloads")
+
+    download_strategie: core.models.Download.DownloadStrategie = core.models.Download.DownloadStrategie.STREAM
+
+    extra_headers: dict | None = None
+
+    out_file: str | None = None
+    
 
 
 class CommandRequest(BaseModel):

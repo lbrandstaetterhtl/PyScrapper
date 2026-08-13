@@ -1,9 +1,16 @@
-from .HLS import DownloadM3U8FromIndex, DownloadM3U8FromMaster
-from .File import downloadToFile
+from .HLS import MasterHLSDownload, IndexHLSDownload, HLSDispatcher
+from .Dispatcher import DownloadDispatcher
+from . File import FileDispatcher
+
 
 
 __all__ = [
-    "DownloadM3U8FromIndex",
-    "DownloadM3U8FromMaster",
-    "downloadToFile"
+    "DownloadDispatcher",
+
+    "FileDispatcher",
+
+    "MasterHLSDownload",
+    "IndexHLSDownload",
+
+    "HLSDispatcher",
 ]

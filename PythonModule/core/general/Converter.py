@@ -18,10 +18,10 @@ class FileConverter():
             caller: str = "[CORE] Converter"
             ):
         from . import Validate
-        Validate.validateStr(argument_name="caller", string=caller, caller="[CORE] Converter.init")
+        Validate.general.validateStr(argument_name="caller", string=caller, caller="[CORE] Converter.init")
 
 #Dataclass ConvertRequest items get validated by the class itself, so only check if the given obj is really ConvertRequest
-        Validate.validateGeneralType(argument_name="convert_request", obj=convert_request, objType=ConvertRequest, caller="[CORE] Converter.init")
+        Validate.general.validateGeneralType(argument_name="convert_request", obj=convert_request, objType=ConvertRequest, caller="[CORE] Converter.init")
 
 
 
@@ -45,7 +45,7 @@ class FileConverter():
             )
 
         for output_file in convert_request.output_file_list:
-            Validate.validateStr(argument_name="output_file", string=output_file, caller=caller)
+            Validate.general.validateStr(argument_name="output_file", string=output_file, caller=caller)
             parentDir = os.path.dirname(output_file)
 
             if parentDir and not os.path.isdir(parentDir) or not parentDir:

@@ -204,10 +204,10 @@ class ConvertRequest:
         
         from ..general import Validate
 
-        Validate.validateInt(argument_name="inputs_per_output", integer=self.inputs_per_output, caller="[CORE] ConverRequest.__post_init__")
-        Validate.validateListStr(argument_name="input_file_list", liste=self.input_file_list, caller="[CORE] ConverRequest.__post_init__")
-        Validate.validateListStr(argument_name="output_file_list", liste=self.output_file_list, caller="[CORE] ConverRequest.__post_init__")
-        Validate.validateDict(argument_name="convert_progress_dict", dictionary=self.convert_progress_dict, caller="[CORE] ConverRequest.__post_init__")
+        Validate.general.validateInt(argument_name="inputs_per_output", integer=self.inputs_per_output, caller="[CORE] ConverRequest.__post_init__")
+        Validate.general.validateListStr(argument_name="input_file_list", liste=self.input_file_list, caller="[CORE] ConverRequest.__post_init__")
+        Validate.general.validateListStr(argument_name="output_file_list", liste=self.output_file_list, caller="[CORE] ConverRequest.__post_init__")
+        Validate.general.validateDict(argument_name="convert_progress_dict", dictionary=self.convert_progress_dict, caller="[CORE] ConverRequest.__post_init__")
 
         self._validateInputOutputFiles()
 

@@ -138,16 +138,16 @@ def _validateArguments_sessionOpen(
             wanted_type="str, urllib.request.Request: Please provide only one and not None",
             caller="session.open",
         )
-    Validate.validateRequestMethod(method=method, caller="[CORE] Session.open")
-    Validate.validateInt(argument_name="timeout", integer=timeout, caller="[CORE] Session.open")
+    Validate.special.validateRequestMethod(method=method, caller="[CORE] Session.open")
+    Validate.general.validateInt(argument_name="timeout", integer=timeout, caller="[CORE] Session.open")
     if headers:
 
-        Validate.validateDict(argument_name="headers", dictionary=headers, caller="[CORE] Session.open")
+        Validate.general.validateDict(argument_name="headers", dictionary=headers, caller="[CORE] Session.open")
         
     if request:
-        Validate.validateUrllibRequest(request) 
+        Validate.special.validateUrllibRequest(request) 
     else:
-        Validate.validateHostDefault(url)
+        Validate.special.validateHostDefault(url)
     
      
     

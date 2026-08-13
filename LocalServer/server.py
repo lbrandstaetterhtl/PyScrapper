@@ -1,16 +1,35 @@
-﻿import sys, os
+﻿#Python Default Imports
+import sys
+import os
+from datetime import datetime
+import platform, subprocess
+import  time, re, json, uuid
 
+
+
+import asyncio
+import sqlite3
+import secrets
+from typing import Optional, List
+
+#Python Pip Imports
 from uvicorn import lifespan
 
-from datetime import datetime
-from fastapi import Depends, Security
 from fastapi.security import APIKeyHeader
 
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import fastapi
-from PythonModule.models.settings import PROGRESSDICT
+from dotenv import load_dotenv
+import bcrypt
+from fastapi import FastAPI, HTTPException, Query, Depends, Security
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from fastapi.responses import StreamingResponse
+
+
+#PythonModule imports
+
 from PythonModule.models.responses import (
     MessageResponse,
     CreateResponse,
@@ -22,26 +41,35 @@ from PythonModule.models.responses import (
     PlaylistMediaResponse,
     UserResponse
 )
-from PythonModule.models.requests import SearchRequest, DownloadRequest, CommandRequest, CreateUserRequest, CreatePlaylistRequest, CreateDownloadedMediaRequest, CreateSettingsRequest, CreatePlaylistMediaRequest, DeletePlaylistMediaRequest, RegisterRequest, LoginRequest
+
+from PythonModule.models import requests as requests
+from PythonModule.models import settings
+
+import PythonModule.core as core
+import PythonModule.providers as providers
+import PythonModule.providers.models as providermodels
+from PythonModule.core.network.Session import Session
+
+
+
+
+
+
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+
 from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
-from PythonModule.core.request import Session
-from dotenv import load_dotenv
+
+
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query, Body
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, List
-import  time, re, json, uuid
-from datetime import datetime
-import bcrypt
 
-import platform, subprocess
 
-import os
-import asyncio
-import sqlite3
-import secrets
+
+
+
 
 #Global Variables
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,9 +80,13 @@ ADMIN_KEY = os.getenv("ADMIN_KEY")
 
 log_dir = os.path.join(project_root, "LocalServer", "logs")
 log_file = os.path.join(log_dir, "server_runtime.log")
+
+cookie_path = os.path.join(project_root, "LocalServer", "cookies")
+
+os.makedirs(cookie_path, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
 
-ses = Session.Session()
+
 
 app = FastAPI()
 
@@ -74,12 +106,14 @@ quit_event = asyncio.Event()
 
 download_jobs = set()
 search_jobs = set()
-download_progress = {}
 
 
-class SearchError(Exception): ...
-class CommandError(Exception): ...
-class DownloadError(Exception): ...
+saved_Download_Progresses_of_Downloadjobs: dict = {}
+
+saved_Stream_Downloads: dict = {}
+
+
+
 
 
 async def logger(quit_event: asyncio.Event, log_queue: asyncio.Queue):
@@ -103,7 +137,8 @@ async def logger(quit_event: asyncio.Event, log_queue: asyncio.Queue):
             print(e)
 
 
-download_limiter = asyncio.Semaphore(50)
+download_limiter = asyncio.Semaphore(10)
+search_limiter = asyncio.Semaphore(10)
 
 
 @app.get("/")
@@ -142,7 +177,7 @@ def require_admin(key: str | None = Security(admin_key_header)) -> bool:
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/command")
-async def receive_command(data: CommandRequest):
+async def receive_command(data: requests.CommandRequest):
     global log_file, log_queue, quit_event
     try:
         await commandProcessor.CommandProcessor(
@@ -159,64 +194,181 @@ async def receive_command(data: CommandRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/download", dependencies=[Depends(require_admin)])
-async def receive_download(data: DownloadRequest):
- 
-    global log_queue, ses, download_limiter
-    task_id = str(uuid.uuid4())
-    try:
-        ses.reloadCookies()
-        utils.validate_url(session=ses, url=data.url)
 
-        download_progress[task_id] = PROGRESSDICT.copy()
-        download_progress[task_id]['id'] = task_id
 
+async def _getMediaForDownload(func, url, session, extra_headers):
+    async with search_limiter:
+        request = providermodels.ProviderResultRequest(
+            url,
+            ses=session,
+            extra_headers=extra_headers
+        )
+
+        result = await asyncio.to_thread(
+            func,
+            request
+        )
+
+        return result
 
         
-    
-        task = asyncio.create_task(downloadProcessor.DownloadProcessor(
-            downloadRequest=data,
-            progressDict=download_progress[task_id],
+
+
+
+
+@app.post("/download/video-audio/", dependencies=[Depends(require_admin)])
+async def receive_download(data: requests.DownloadRequest):
+ 
+    global log_queue, ses, download_limiter
+    taskId = str(uuid.uuid4())
+    try:
+        
+        ses = Session()
+        
+        provider:settings.ProviderTypes = utils.validateProviders(data.provider)
+        if provider is None:
+            raise core.models.errors.TaskFailedError(
+                task="/download/video-audio/",
+                reason="Invalid provider strign was given that couldn't be resolved",
+                caller="server/download/video-audio"
+            )
+
+        func = settings.PROVIDER_GETRESULTS_MAPPING.get(provider)
+        if func is None:
+            raise core.models.errors.TaskFailedError(
+                task="/download/video-audio/",
+                reason=f"Couldn't map provider {provider} to a function",
+                caller="server/download/video-audio"
+            )
+
+        contexts = []
+        tasks = []
+
+#Looking at every url and opening the function of the provider
+#Trying to get results like the url to download the media from
+        for url in data.urls:
+            task = asyncio.create_task(
+                _getMediaForDownload(func,url, ses, data.extra_headers)
+            )
+            tasks.append(task)
+
+        results: list[providermodels.ProviderResult] = await asyncio.gather(
+            *tasks,
+            return_exceptions=True
+        )
+
+        for result in results:
+
+            target = core.models.Download.DownloadTarget(
+                url=result.url,
+                download_type=result.download_type,
+                extra_headers=result.extra_headers,
+            )
+            context = core.models.Download.DownloadContext(target=target)
+            contexts.append(context)
+
+        downloadInformation = core.models.Download.DownloadInformation(
+            job_id=taskId,
             session=ses,
-            downloadLimiter=download_limiter,
-            logQueue=log_queue
-            ).run(),
-            name=task_id)
+            download_limiter=download_limiter,
+            download_strategie=data.download_strategie,
+            contexts=contexts
+        )
 
-        def done(t: asyncio.Task):
-            download_jobs.discard(t)
-            asyncio.create_task(utils.cleanup_progress(
-                download_progess=download_progress,
-                task_id=task_id,
-                delay=60
-            ))
+        saved_Download_Progresses_of_Downloadjobs[taskId] = downloadInformation
+        
 
-        task.add_done_callback(done)
-        download_jobs.add(task)
 
-        log_queue.put_nowait(f"[INFO] Created download task with id {task_id} for provider {data.provider} with url {data.url}")
-        return {"id": task_id, "message": f"Request received for download, you can view progress under /download/progress/{task_id}"}
+#Depending on the strategie something different will happen
+        if data.download_strategie == core.models.Download.DownloadStrategie.LOCAL:
+            downloader = core.download.Dispatcher.DownloadDispatcher(downloadInformation)
+            await asyncio.to_thread(
+                downloader.downloadToFile
+            )
+            return {
+                    "task_id": taskId,
+                    "download_progress" : f"/download/progress/{taskId}",
+                    "streams": []
+                }
+
+
+
+        elif data.download_strategie == core.models.Download.DownloadStrategie.STREAM:
+            for context in downloadInformation.contexts:
+                saved_Stream_Downloads[context.target.job_id] = {
+                    "download_information" : downloadInformation,
+                    "context" : context
+                }
+
+            return {
+                "task_id": taskId,
+                "download_progress" : f"/download/progress/{taskId}",
+                "streams": [
+                    {
+                        "task_id": context.target.job_id,
+                        "url": f"/download/media/{context.target.job_id}"
+                    }
+                    for context in downloadInformation.contexts
+                ]
+            }
+            
+
+        else:
+            raise core.models.errors.TaskFailedError(
+                task=f"/download/video-audio/",
+                reason="Unknown download strategie was given",
+                caller="server/download/video-audio"
+            )
+
+
 
     except (ValueError, TypeError) as e:
-        log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.url}, filepath {data.download_path}.\nError Message: Invalid type for {str(e)}")
+        log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.urls}, .\nError Message: Invalid type for {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid type for {str(e)}")
 
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.url}, filepath {data.download_path}.\nError Message: {str(e)}")
+        log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.urls},.\nError Message: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/download/progress/{task_id}", dependencies=[Depends(require_admin)])
+@app.get("/download/media/{task_id}", dependencies=[Depends(require_admin)])
+async def download_media_to_client(task_id: str):
+    stream_info = saved_Stream_Downloads.get(task_id)
+
+    if stream_info is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Ressource /download/media/{task_id} doesn't exist"
+            )
+
+    downloadInformation = stream_info["download_information"]
+    context = stream_info["context"]
+
+    downloader = core.download.Dispatcher.DownloadDispatcher(downloadInformation)
+    return StreamingResponse(
+        downloader.downloadContextAndYield(context),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{context.target.job_id}.mp4"'
+        }
+)
+
+
+
+@app.get("/download/progress/{task_id}")
 async def get_download_progress(task_id: str):
-    progress = download_progress.get(task_id)
-    if not progress:
-        log_queue.put_nowait(f"[ERROR] Tried to access resource /download/progress/{task_id} which doesn't exist")
-        raise HTTPException(status_code=404, detail=f"No such ressource /download/progress/{task_id}")
-    return progress
+
+    info: core.models.Download.DownloadInformation = saved_Download_Progresses_of_Downloadjobs.get(task_id)
+
+    if info is None:
+        raise HTTPException(status_code=404)
+
+    return info.toDict()
+
 
 
 @app.post("/search", dependencies=[Depends(require_admin)])
-async def receive_search(data: SearchRequest):
+async def receive_search(data: requests.SearchRequest):
     global ses
     search_id = str(uuid.uuid4())
     try:
@@ -244,9 +396,9 @@ def health():
         except Exception:
             mem = None
 
-        active_downloads = [v for v in download_progress.values() if v["status"] not in ("complete", "error")]
-        downloads_with_errors = [v for v in download_progress.values() if v["status"] == "error"]
-        error_messages = [v["errorMessage"] for v in downloads_with_errors if v["errorMessage"]]
+        #active_downloads = [v for v in download_progress.values() if v["status"] not in ("complete", "error")]
+        #downloads_with_errors = [v for v in download_progress.values() if v["status"] == "error"]
+        #error_messages = [v["errorMessage"] for v in downloads_with_errors if v["errorMessage"]]
 
         return {
             "ok": True,
@@ -254,8 +406,8 @@ def health():
             "memory_mb": mem,
             "pid": os.getpid(),
             "processes": list_python_processes(),
-            "active_downloads": active_downloads,
-            "error_messages": error_messages
+            #"active_downloads": active_downloads,
+            #"error_messages": error_messages
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -703,7 +855,7 @@ async def create_table():
 
 
 @app.post("/create/user/", response_model=CreateResponse, dependencies=[Security(require_admin)])
-async def handle_create_user_req(req: CreateUserRequest):
+async def handle_create_user_req(req: requests.CreateUserRequest):
     try:
         identifier = str(uuid.uuid4())
         username = req.username
@@ -764,7 +916,7 @@ async def get_playlists(identifier: str):
 
 
 @app.post("/create/playlist/", response_model=CreateResponse, dependencies=[Security(require_admin)])
-async def handle_create_playlist_req(req: CreatePlaylistRequest):
+async def handle_create_playlist_req(req: requests.CreatePlaylistRequest):
     try:
         identifier = str(uuid.uuid4())
 
@@ -825,7 +977,7 @@ async def get_all_playlists():
 # ============================================================
 
 @app.post("/create/downloadedmedia", response_model=CreateResponse, dependencies=[Security(require_admin)])
-async def handle_create_downloaded_media_req(req: CreateDownloadedMediaRequest):
+async def handle_create_downloaded_media_req(req: requests.CreateDownloadedMediaRequest):
     try:
 
         conn = connect_db()
@@ -948,7 +1100,7 @@ async def get_user_downloaded_medias(user_identifier: str):
 # ============================================================
 
 @app.post("/create/settings/", response_model=CreateResponse, dependencies=[Security(require_admin)])
-async def handle_create_setting_req(req: CreateSettingsRequest):
+async def handle_create_setting_req(req: requests.CreateSettingsRequest):
     try:
         identifier = str(uuid.uuid4())
 
@@ -1041,7 +1193,7 @@ async def get_all_settings():
 # ============================================================
 
 @app.post("/create/playlistmedia", response_model=CreatePlaylistMediaResponse, dependencies=[Security(require_admin)])
-async def handle_create_playlist_media_req(req: CreatePlaylistMediaRequest):
+async def handle_create_playlist_media_req(req: requests.CreatePlaylistMediaRequest):
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -1079,7 +1231,7 @@ async def handle_create_playlist_media_req(req: CreatePlaylistMediaRequest):
 
 
 @app.post("/delete/playlistmedia", response_model=MessageResponse, dependencies=[Security(require_admin)])
-async def handle_delete_playlist_media_req(req: DeletePlaylistMediaRequest):
+async def handle_delete_playlist_media_req(req: requests.DeletePlaylistMediaRequest):
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -1142,7 +1294,7 @@ async def get_user_playlists(user_identifier: str):
 
 # --- login: unverändert ---
 @app.post("/login", response_model=LoginResponse, dependencies=[Security(require_admin)])
-async def handle_login_req(req: LoginRequest):
+async def handle_login_req(req: requests.LoginRequest):
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -1175,10 +1327,10 @@ async def handle_login_req(req: LoginRequest):
 # Funktionsaufruf umgeht die require_admin-Dependency (die läuft nur über HTTP),
 # also bleibt /register wie gehabt offen/public.
 @app.post("/register", dependencies=[Security(require_admin)])
-async def handle_register_req(req: RegisterRequest):
+async def handle_register_req(req: requests.RegisterRequest):
     try:
 
-        create_user_req = CreateUserRequest(username=req.username, password=req.password)
+        create_user_req = requests.CreateUserRequest(username=req.username, password=req.password)
         response = await handle_create_user_req(create_user_req)
 
         if response:

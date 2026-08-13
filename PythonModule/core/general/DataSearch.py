@@ -116,6 +116,6 @@ def _validateArguments_SearchBlocks(
     return_exception: bool,
     caller: str
 ):
-    Validate.validateStr(argument_name="pattern", string=pattern, caller=caller)
-    Validate.validateStr(argument_name="search_block", string=search_block, caller=caller)
-    Validate.validateBool(argument_name="return_regex_exception", boolean=return_exception, caller=caller)
+    Validate.general.validateStr(argument_name="pattern", string=pattern, caller=caller)
+    Validate.general.validateStr(argument_name="search_block", string=search_block, caller=caller)
+    Validate.general.validateBool(argument_name="return_regex_exception", boolean=return_exception, caller=caller)

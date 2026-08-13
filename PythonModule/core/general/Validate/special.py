@@ -1,15 +1,38 @@
-#Core Imports
-from ..models.errors import ArgumentError, InvalidURLError, TaskFailedError
-from ..models.Settings import VALID_ENCODINGS, VALID_URLLIBREQUEST_METHODS
+#Core imports
+from ...models.errors import ArgumentError, InvalidURLError
+from ...models.Settings import VALID_ENCODINGS, VALID_URLLIBREQUEST_METHODS
 
+#Own imports
+from .general import validateStr, validateListStr
 
 #Python Default imports
-import re
-import os
 import urllib.parse, urllib.request
 import ipaddress
-import asyncio
+import re
 
+
+
+ALLOWED_FILE_OPEN_METHOD = [
+"r",
+"rb",
+"r+",
+"rb+",
+
+"w",
+"wb",
+"w+",
+"wb+",
+
+"x",
+"xb",
+"x+",
+"xb+",
+
+"a",
+"ab",
+"a+",
+"ab+",
+]
 
 def validateHostDefault(
         url: str,
@@ -147,74 +170,7 @@ def validateHostPro(
 
 
 
-def validateDict(
-        argument_name: str,
-        dictionary: dict,
-        caller: str = "[CORE] validateDict"
-):
-    if (
-        not dictionary
-        or not isinstance(dictionary, dict)
-    ):
-        raise ArgumentError(
-            argument=argument_name,
-            wanted_type="dict",
-            caller=caller,
-            obj=dictionary
-        )
 
-
-
-def validateStr(
-        argument_name: str,
-        string: str,
-        caller: str = "[CORE] validateStr"
-):
-    if (
-        not string
-        or not isinstance(string, str)
-        or not string.strip()
-    ):
-        raise ArgumentError(
-            argument=argument_name,
-            wanted_type="str",
-            caller=caller,
-            obj=string
-        )
-
-def validateInt(
-        argument_name : str,
-        integer: int,
-        caller: str = "[CORE] validateInt"
-):
-    if (
-        not integer
-        or not isinstance(integer, int)
-        or not integer > 0
-    ):
-        raise ArgumentError(
-            argument=argument_name,
-            wanted_type="int > 0",
-            caller=caller,
-            obj=integer
-        )
-
-def validateListStr(
-        argument_name: str,
-        liste: list[str],
-        caller: str = "[CORE] validateListStr"
-):
-    if (
-        not liste
-        or not isinstance(liste, list)
-        or not all(isinstance(item, str) or item.strip() for item in liste)
-    ):
-        raise ArgumentError(
-            argument=argument_name,
-            wanted_type="list[str]",
-            caller = caller,
-            obj=liste
-        )
 
 
 def validateSession(
@@ -222,7 +178,7 @@ def validateSession(
         argument_name = "session",
         caller: str = "[CORE] validateSession"
 ):
-    from ..request.Session import Session
+    from ...network.Session import Session
     if (
         not session
         or not isinstance(session, Session)
@@ -250,102 +206,21 @@ def validateEncoding(
                 obj=encoding
             )
 
-def validateBool(
-        boolean: bool,
-        argument_name: str,
-        caller: str = "[CORE] validateBool"
-):
-    if not isinstance(boolean, bool):
- 
-        raise ArgumentError(
-            caller=caller,
-            argument=argument_name,
-            wanted_type="bool",
-            obj=boolean
-        )
 
-def validateOutFile(
-    out_file: str,
-    caller: str = "[CORE] validateOutFile"
-):
-    validateStr(argument_name="out_file", string=out_file, caller=caller)
-    try:
-        path = os.path.abspath(out_file)
-        invalidReasonList: list[str] = []
-        if "\0" in path:
-            invalidReasonList.append("Null Byte was found, this makes the path invalid")
-        if os.path.exists(out_file):
-            invalidReasonList.append("Given outFile already exists. Please choose another outFile")
-
-        parent = os.path.dirname(os.path.abspath(out_file))
-        os.makedirs(parent, exist_ok=True)
-
-        os.stat(os.path.dirname(path) or ".")
-
-        
-        
-
-        if invalidReasonList:
-            raise TaskFailedError(
-                task=f"validateOutFile '{out_file}'",
-                reason=f"{', '.join(invalidReasonList)}",
-                caller=caller
-            )
-
-    except Exception as e:
-        raise TaskFailedError(
-            task=f"validateOutFile {out_file}",
-            reason=str(e),
-            caller=caller
-        )
-
-def validateGeneralType(
-    argument_name: str,
-    obj,
-    objType: type,
-    caller: str = "[CORE] validateGeneralType",
-
-):
+def validateFileOpen(
+        open_method: str,
+        arugment_name: str = "file_open_method",
+        caller: str = "[CORE] validateFileOpen"
+): 
     if (
-        not obj
-        or not isinstance(obj, objType)
+        not open_method
+        or not isinstance(open_method, str)
+        or not open_method in ALLOWED_FILE_OPEN_METHOD
     ):
         raise ArgumentError(
-            argument=argument_name,
-            wanted_type=f"{objType}",
-            obj=obj,
-            caller=caller,
-        )
-
-def validateDownloadInformation(
-    argument_name: str,
-    download_information,
-    caller: str  = "[CORE] validateDownloadInformation"
-):
-    from ..models.General import DownloadInformations
-    if (
-        not download_information
-        or not isinstance(download_information, DownloadInformations)
-    ):
-        raise ArgumentError(
-            argument=argument_name,
-            wanted_type="core.models.General.DownloadInformations",
-            obj=download_information,
-            caller=caller
-        )
-    if (
-        not download_information.downloadLimiter
-        or not isinstance(download_information.downloadLimiter, asyncio.Semaphore)
-    ):
-        raise ArgumentError(
-            argument=f"{argument_name}.downloadLimiter",
-            wanted_type="asyncio.Semaphore",
-            obj=download_information.downloadLimiter,
+            argument=arugment_name,
+            wanted_type="normal file open method",
+            obj=open_method,
             caller=caller
         )
     
-    validateSession(session=download_information.session, argument_name=argument_name, caller=caller)
-    validateOutFile(out_file=download_information.outFile, caller=caller)
-    validateDict(argument_name=f"{argument_name}.downloadProgress", dictionary=download_information.downloadProgress)
-    validateHostDefault(url=download_information.url, caller=caller)
-   
