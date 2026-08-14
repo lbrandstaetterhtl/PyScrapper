@@ -5,6 +5,8 @@ from datetime import datetime
 import platform, subprocess
 import  time, re, json, uuid
 
+from dataclasses import dataclass, field
+
 
 
 import asyncio
@@ -21,7 +23,7 @@ from fastapi.security import APIKeyHeader
 import fastapi
 from dotenv import load_dotenv
 import bcrypt
-from fastapi import FastAPI, HTTPException, Query, Depends, Security
+from fastapi import FastAPI, HTTPException, Query, Depends, Security, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -46,7 +48,8 @@ from PythonModule.models import requests as requests
 from PythonModule.models import settings
 
 import PythonModule.core as core
-import PythonModule.providers as providers
+from PythonModule.core.network import file, html
+
 import PythonModule.providers.models as providermodels
 from PythonModule.core.network.Session import Session
 
@@ -67,7 +70,49 @@ from contextlib import asynccontextmanager
 
 
 
+@dataclass
+class ServerStream:
+    stream_id: str
+    context: core.models.Download.DownloadContext
 
+    segments: list | None = None
+    audio_segments: list | None = None
+
+
+
+
+@dataclass
+class ServerJob:
+    job_id: str
+
+    download_information: core.models.Download.DownloadInformation
+
+    creation_timestamp: float
+
+    stream_jobs : dict[str, ServerStream] = field(default_factory=dict)
+
+
+
+
+@dataclass
+class ServerState: 
+    jobs: dict[str, ServerJob] = field(default_factory=dict)
+
+    log_queue: asyncio.Queue = field(
+        default_factory=lambda: asyncio.Queue(maxsize=5000)
+    )
+
+    quit_event: asyncio.Event = field(
+        default_factory=lambda: asyncio.Event()
+    )
+
+    download_limiter: asyncio.Semaphore = field(
+        default_factory=lambda: asyncio.Semaphore(10)
+    )
+
+    search_limiter: asyncio.Semaphore = field(
+        default_factory=lambda: asyncio.Semaphore(10)
+    )
 
 
 
@@ -75,7 +120,12 @@ from contextlib import asynccontextmanager
 current_path = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_path)
 db_path = os.path.join(current_path, "Data", "data.db")
-load_dotenv()
+
+
+
+env_path = os.path.join(current_path, ".env")
+load_dotenv(dotenv_path=env_path)
+
 ADMIN_KEY = os.getenv("ADMIN_KEY")
 
 log_dir = os.path.join(project_root, "LocalServer", "logs")
@@ -88,31 +138,53 @@ os.makedirs(log_dir, exist_ok=True)
 
 
 
-app = FastAPI()
+
+
+admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
+
+
+def require_admin(key: str | None = Security(admin_key_header)) -> bool:
+    # compare_digest = konstante Laufzeit -> kein Timing-Angriff
+    if not key or not secrets.compare_digest(key, ADMIN_KEY):
+        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
+    return True
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    
+
+    logger_task = asyncio.create_task(
+        logger(server_state.quit_event, server_state.log_queue)
+    )
+
+    cleanup_task = asyncio.create_task(
+        cleanup_loop()
+    )
+
+    server_state.log_queue.put_nowait("[INFO] Server started successfully")
+
+    create_app_tables()
+    yield
+    cleanup_task.cancel()
+    logger_task.cancel()
+
+app = FastAPI(lifespan=lifespan)
+
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-log_queue = asyncio.Queue(maxsize=5000)
-quit_event = asyncio.Event()
+server_state = ServerState()
 
-download_jobs = set()
-search_jobs = set()
-
-
-saved_Download_Progresses_of_Downloadjobs: dict = {}
-
-saved_Stream_Downloads: dict = {}
-
-
+#"http://localhost:5173",
+ #       "http://127.0.0.1:5173"
 
 
 
@@ -137,8 +209,6 @@ async def logger(quit_event: asyncio.Event, log_queue: asyncio.Queue):
             print(e)
 
 
-download_limiter = asyncio.Semaphore(10)
-search_limiter = asyncio.Semaphore(10)
 
 
 @app.get("/")
@@ -157,22 +227,29 @@ async def root():
    # create_app_tables()
 
 async def cleanup_server(CLEANUP_AFTER_SECONDS):
-
-    
-    curTimestamp = time.monotonic()
+    now = time.monotonic()
 
 
-    for id, progress in saved_Download_Progresses_of_Downloadjobs.items():
-        if curTimestamp - progress.get("timestamp", 0) > CLEANUP_AFTER_SECONDS:
-            saved_Download_Progresses_of_Downloadjobs.pop(id, None)
-            log_queue.put_nowait(f"[INFO] Removed progress with the id {id} from saved progresses")
+    for job_id, job in list(server_state.jobs.items()):
+        if now - job.creation_timestamp > CLEANUP_AFTER_SECONDS:
+            server_state.jobs.pop(job_id, None)
 
-    for id, pendingDownload in saved_Stream_Downloads.items():
-        if  curTimestamp - pendingDownload.get("timestamp", 0)> CLEANUP_AFTER_SECONDS:
-            saved_Stream_Downloads.pop(id, None)
-            log_queue.put_nowait(f"[INFO] Removed download for enpoint with id {id}")
+    server_state.log_queue.put_nowait("[INFO] ended server cleanup!")
 
-    log_queue.put_nowait("[INFO] ended server cleanup!")
+
+
+async def cleanup_download(
+        delay: float,
+        *,
+        progress_task_id: str | None = None,
+        stream_task_id: str | None = None
+):
+    await asyncio.sleep(delay)
+
+    if progress_task_id is not None:
+        isNone = server_state.jobs.get(progress_task_id)
+        if isNone is not None:
+            server_state.jobs.pop(progress_task_id)
 
 
 async def cleanup_loop():
@@ -185,154 +262,67 @@ async def cleanup_loop():
  
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global quit_event, log_queue
-
-    logger_task = asyncio.create_task(
-        logger(quit_event, log_queue)
-    )
-
-    cleanup_task = asyncio.create_task(
-        cleanup_loop()
-    )
-
-    log_queue.put_nowait("[INFO] Server started successfully")
-
-    create_app_tables()
-    yield
-    cleanup_task.cancel()
-    logger_task.cancel()
 
 
-admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
 
 
-def require_admin(key: str | None = Security(admin_key_header)) -> bool:
-    # compare_digest = konstante Laufzeit -> kein Timing-Angriff
-    if not key or not secrets.compare_digest(key, ADMIN_KEY):
-        raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
-    return True
 
-app = FastAPI(lifespan=lifespan)
+
 
 @app.post("/command")
 async def receive_command(data: requests.CommandRequest):
-    global log_file, log_queue, quit_event
+    global log_file
     try:
         await commandProcessor.CommandProcessor(
             command=data.command,
             logFile=log_file,
-            logQueue=log_queue,
-            quitEvent=quit_event
+            logQueue=server_state.log_queue,
+            quitEvent=server_state.quit_event
         ).run()
 
-        log_queue.put_nowait(f"[INFO] Command '{data.command}' executed successfully")
+        server_state.log_queue.put_nowait(f"[INFO] Command '{data.command}' executed successfully")
 
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error handling command {data.command}.\nError Message: {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error handling command {data.command}.\nError Message: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 
 
-async def _getMediaForDownload(func, url, session, extra_headers):
-    async with search_limiter:
-        request = providermodels.ProviderResultRequest(
-            url,
-            ses=session,
-            extra_headers=extra_headers
-        )
-
-        result = await asyncio.to_thread(
-            func,
-            request
-        )
-
-        return result
-
-        
-
-async def cleanup_download(
-        delay: float,
-        *,
-        progress_task_id: str | None = None,
-        stream_task_id: str | None = None
-):
-    await asyncio.sleep(delay)
-
-    if progress_task_id is not None:
-        isNone = saved_Download_Progresses_of_Downloadjobs.get(progress_task_id, None)
-        if isNone is not None:
-            saved_Download_Progresses_of_Downloadjobs.pop(
-                progress_task_id,
-                None
-            )
-
-    if stream_task_id is not None:
-        isNone = saved_Stream_Downloads.get(stream_task_id, None)
-        if isNone is not None:
-            saved_Stream_Downloads.pop(
-                stream_task_id,
-                None
-            )
 
 
 
+async def _resolveMediaAndCreateContexts(
+        data: requests.DownloadRequest,
+        session: Session,
+        ):
+    
+    searchFunc = _resolveProviderSearchFunction(data.provider)
 
+    results:list[providermodels.ProviderResult] = []
 
-@app.post("/download/video-audio/", dependencies=[Depends(require_admin)])
-async def receive_download(data: requests.DownloadRequest):
- 
-    global log_queue, ses, download_limiter
-    taskId = str(uuid.uuid4())
-    try:
+    contexts : list[core.models.Download.DownloadContext] = []
 
-        cleanupAfterSeconds: float = 300
-
-        creation_time: float = time.monotonic()
-        
-        ses = Session()
-        
-        provider:settings.ProviderTypes = utils.validateProviders(data.provider)
-        if provider is None:
-            raise core.models.errors.TaskFailedError(
-                task="/download/video-audio/",
-                reason="Invalid provider strign was given that couldn't be resolved",
-                caller="server/download/video-audio"
-            )
-
-        func = settings.PROVIDER_GETRESULTS_MAPPING.get(provider)
-        if func is None:
-            raise core.models.errors.TaskFailedError(
-                task="/download/video-audio/",
-                reason=f"Couldn't map provider {provider} to a function",
-                caller="server/download/video-audio"
-            )
-
-        contexts = []
-        tasks = []
-
-#Looking at every url and opening the function of the provider
-#Trying to get results like the url to download the media from
+    async with server_state.search_limiter:
         for url in data.urls:
-
-            task = asyncio.create_task(
-                _getMediaForDownload(func,url, ses, data.extra_headers)
+            request = providermodels.ProviderResultRequest(
+                url,
+                ses=session,
+                extra_headers=data.extra_headers
             )
-            tasks.append(task)
 
-        results: list[providermodels.ProviderResult] = await asyncio.gather(
-            *tasks,
-            return_exceptions=True
-        )
+            result = await asyncio.to_thread(
+                searchFunc,
+                request
+            )
+            results.append(result)
 
         for result, filename in zip(results, data.filenames):
             target = core.models.Download.DownloadTarget(
                 url=result.url,
                 download_type=result.download_type,
                 extra_headers=result.extra_headers,
-                file_type=result.file_type,
+                file_ending=result.file_type,
                 out_file=filename
                 
                 
@@ -341,21 +331,67 @@ async def receive_download(data: requests.DownloadRequest):
             context = core.models.Download.DownloadContext(target=target)
             contexts.append(context)
 
+    return contexts
+
+
+
+        
+
+def _resolveProviderSearchFunction(provider: str) -> callable:
+
+    providerResolved:settings.ProviderTypes = utils.validateProviders(provider)
+
+    if providerResolved is None:
+        raise core.models.errors.TaskFailedError(
+            task="/download/video-audio/",
+            reason="Invalid provider strign was given that couldn't be resolved",
+            caller="server/download/video-audio"
+        )
+
+    func = settings.PROVIDER_GETRESULTS_MAPPING.get(providerResolved)
+
+    if func is None:
+        raise core.models.errors.TaskFailedError(
+            task="/download/video-audio/",
+            reason=f"Couldn't map provider {providerResolved} to a function",
+            caller="server/download/video-audio"
+        )
+
+    return func
+
+
+
+
+
+@app.post("/download/video-audio/", dependencies=[Depends(require_admin)])
+async def receive_download(data: requests.DownloadRequest):
+    global server_state
+    taskId = str(uuid.uuid4())
+
+    try:
+    #Settings and creation
+        cleanupAfterSeconds: float = 300
+        
+        ses = Session()
+
+        contexts : list[core.models.Download.DownloadContext] = await _resolveMediaAndCreateContexts(data, ses)
+
+        
+
         downloadInformation = core.models.Download.DownloadInformation(
             job_id=taskId,
             session=ses,
-            download_limiter=download_limiter,
+            download_limiter=server_state.download_limiter,
             download_strategie=data.download_strategie,
             contexts=contexts,
         )
-
-        saved_Download_Progresses_of_Downloadjobs[taskId] = {
-            "download_information" : downloadInformation,
-            "timestamp" : creation_time
-        }
+        job = ServerJob(
+            job_id=taskId,
+            download_information=downloadInformation,
+            creation_timestamp=time.monotonic()
+        )
+        server_state.jobs[taskId] = job
         
-
-
 #Depending on the strategie something different will happen
         if data.download_strategie == core.models.Download.DownloadStrategie.LOCAL:
             downloader = core.download.Dispatcher.DownloadDispatcher(downloadInformation)
@@ -370,7 +406,6 @@ async def receive_download(data: requests.DownloadRequest):
                 )
             )
 
-
             return {
                     "task_id": taskId,
                     "download_progress" : f"/download/progress/{taskId}",
@@ -382,12 +417,29 @@ async def receive_download(data: requests.DownloadRequest):
 
         elif data.download_strategie == core.models.Download.DownloadStrategie.STREAM:
             for context in downloadInformation.contexts:
-                saved_Stream_Downloads[context.target.job_id] = {
-                    "download_information" : downloadInformation,
-                    "context" : context,
-                    "timestamp" : creation_time
-                }
-                
+    
+                streamJob = ServerStream(
+
+                    stream_id=context.target.job_id,
+                    context=context,
+                )
+
+                watchUrl = f"/stream/watch/{taskId}/{context.target.job_id}"
+
+                if context.target.download_type == core.models.Download.DownloadType.HLS:
+                    segments, audioSegments = await asyncio.to_thread(
+                        _getIndexSegmentsForStreaming,
+                        job,
+                        streamJob.stream_id,
+                        context
+                    )
+                    watchUrl += "/index.m3u8"
+
+
+                    streamJob.segments = segments
+                    streamJob.audio_segments = audioSegments
+               
+                server_state.jobs[taskId].stream_jobs[streamJob.stream_id] = streamJob   
 
             return {
                 "task_id": taskId,
@@ -395,7 +447,8 @@ async def receive_download(data: requests.DownloadRequest):
                 "streams": [
                     {
                         "task_id": context.target.job_id,
-                        "url": f"/download/media/{context.target.job_id}"
+                        "download_url": f"/stream/download/{taskId}/{context.target.job_id}",
+                        "watch_url" : watchUrl
                     }
                     for context in downloadInformation.contexts
                 ],
@@ -413,31 +466,174 @@ async def receive_download(data: requests.DownloadRequest):
 
 
     except (ValueError, TypeError) as e:
-        log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.urls}, .\nError Message: Invalid type for {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.urls}, .\nError Message: Invalid type for {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid type for {str(e)}")
 
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.urls},.\nError Message: {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.urls},.\nError Message: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 
 
 
+def _getIndexSegmentsForStreaming(job: ServerJob,stream_id: str ,context: core.models.Download.DownloadContext):
+    from PythonModule.core.download.HLS import models as hlsmodels
+    file = html.getHtml(
+        session=job.download_information.session,
+        url=context.target.url,
+        extra_headers=context.target.extra_headers
+    )
+    fileType:hlsmodels.FileType = core.download.HLSDispatcher(job.download_information).dertermineFileType(file)
+    if fileType == hlsmodels.FileType.MASTER_FILE:
+        masterResults = core.download.MasterHLSDownload(context, job.download_information.session).getUrls()
+        indexUrl, audioUrl = masterResults
 
-@app.get("/download/media/{task_id}")
-async def download_media_to_client(task_id: str):
-    stream_info = saved_Stream_Downloads.get(task_id)
+        context.target.resolved_url = indexUrl
+        segmentList, audioSegmentList = core.download.IndexHLSDownload(context, job.download_information.session).getIndexSegmentList()
+    elif fileType == hlsmodels.FileType.INDEX_FILE:
+        segmentList, audioSegmentList = core.download.IndexHLSDownload(context, job.download_information.session).getIndexSegmentList()
 
-    if stream_info is None:
+    if not segmentList:
+        raise core.models.errors.TaskFailedError(
+            task="_getIndexSegmentsForStreaming",
+            reason="Didn't get segmentList from index"
+        )
+
+    return (segmentList, audioSegmentList)
+
+
+
+
+
+@app.get("/stream/watch/{task_id}/{stream_id}/index.m3u8")
+async def stream_hls_index(task_id: str, stream_id: str):
+    job = server_state.jobs.get(task_id)
+
+    if job is None:
+        raise HTTPException(status_code=404)
+
+    stream = job.stream_jobs.get(stream_id)
+
+    if stream is None or not stream.segments:
+        raise HTTPException(status_code=404)
+
+    max_duration = max(
+        segment.duration
+        for segment in stream.segments
+    )
+
+    lines = [
+        "#EXTM3U",
+        "#EXT-X-VERSION:3",
+        f"#EXT-X-TARGETDURATION:{int(max_duration + 0.999)}",
+        "#EXT-X-MEDIA-SEQUENCE:0",
+    ]
+
+    for index, segment in enumerate(stream.segments):
+        lines.append(f"#EXTINF:{segment.duration:.3f},")
+        lines.append(
+            f"/stream/watch/{task_id}/{stream_id}/segment/{index}"
+        )
+
+    lines.append("#EXT-X-ENDLIST")
+
+    playlist = "\n".join(lines)
+
+    return Response(
+        content=playlist,
+        media_type="application/vnd.apple.mpegurl"
+    )
+
+
+@app.get("/stream/watch/{task_id}/{stream_id}/segment/{segment_id}")
+async def stream_hls_segment(
+    task_id: str,
+    stream_id: str,
+    segment_id: int
+):
+    job = server_state.jobs.get(task_id)
+
+    if job is None:
+        raise HTTPException(status_code=404)
+
+    stream = job.stream_jobs.get(stream_id)
+
+    if stream is None or not stream.segments:
+        raise HTTPException(status_code=404)
+
+    if segment_id < 0 or segment_id >= len(stream.segments):
+        raise HTTPException(status_code=404)
+
+    segment = stream.segments[segment_id]
+
+    return StreamingResponse(
+        file.asyncDownloadYieldSimple(
+            session=job.download_information.session,
+            url=segment.url,
+            extra_headers=stream.context.target.extra_headers,
+        ),
+        media_type="video/mp2t"
+    )
+
+
+
+    
+
+@app.get("/stream/watch/{task_id}/{stream_id}")
+async def client_watch_stream(task_id: str, stream_id: str, request: Request):
+    job = server_state.jobs.get(task_id)
+
+    if job is None:
+        raise HTTPException(status_code=404)
+
+    stream_job = job.stream_jobs.get(stream_id)
+
+    if stream_job is None:
+        raise HTTPException(status_code=404)
+
+    context: core.models.Download.DownloadContext = stream_job.context
+
+    start_byte: int = 0
+    end_byte: int | None = None
+
+    range_headers = request.headers.get("range")
+    if range_headers:
+        value = range_headers.removeprefix("bytes=")
+        start, end = value.split("-", 1)
+
+        if start:
+            start_byte = start
+        if end:
+            end_byte = end
+
+    return StreamingResponse(
+        file.asyncDownloadYieldSimple(
+            session=job.download_information.session,
+            url=context.target.url,
+            extra_headers=context.target.extra_headers,
+            start_byte=start_byte,
+            end_byte=end_byte,
+        ),
+        media_type=providermodels.EXTENSION_CONTENT_TYPES.get(context.target.file_ending),
+    )
+
+
+
+@app.get("/stream/download/{task_id}/{stream_id}")
+async def client_download_stream(task_id: str, stream_id: str):
+    job = server_state.jobs.get(task_id)
+    streamJob = job.stream_jobs.get(stream_id)
+
+    if job is None or streamJob is None:
         raise HTTPException(
             status_code=404,
-            detail=f"Ressource /download/media/{task_id} doesn't exist"
+            detail=f"Ressource /stream/download/{task_id}/{stream_id} doesn't exist"
             )
+    
+    context: core.models.Download.DownloadContext = streamJob.context
 
-    downloadInformation = stream_info["download_information"]
-    context: core.models.Download.DownloadContext = stream_info["context"]
-
+    downloadInformation = job.download_information
     downloader = core.download.Dispatcher.DownloadDispatcher(downloadInformation)
 
     try:
@@ -445,7 +641,7 @@ async def download_media_to_client(task_id: str):
             downloader.downloadContextAndYield(context),
             media_type="application/octet-stream",
             headers={
-                "Content-Disposition": f'attachment; filename="{context.target.out_file if context.target.out_file is not None else context.target.job_id}.{context.target.file_type}"'
+                "Content-Disposition": f'attachment; filename="{context.target.out_file if context.target.out_file is not None else context.target.job_id}.{context.target.file_ending}"'
             }
         )
     
@@ -464,11 +660,13 @@ async def download_media_to_client(task_id: str):
 @app.get("/download/progress/{task_id}")
 async def get_download_progress(task_id: str):
 
-    obj = saved_Download_Progresses_of_Downloadjobs.get(task_id)
-    info: core.models.Download.DownloadInformation = obj["download_information"]
+    job = server_state.jobs.get(task_id)
+    
 
-    if info is None:
+    if job is None:
         raise HTTPException(status_code=404)
+
+    info: core.models.Download.DownloadInformation = job.download_information
 
     if all(context.download_progress.status in (
         core.models.Download.TaskStatus.FAILED,
@@ -482,7 +680,6 @@ async def get_download_progress(task_id: str):
                 progress_task_id=info.job_id
             )
         )
-
 
     return {
         "task_id" : info.job_id,
@@ -508,11 +705,11 @@ async def receive_search(data: requests.SearchRequest):
             session=ses,
             ).run()
 
-        log_queue.put_nowait(f"[INFO] Search succesfull for job {search_id} with query {data.search} and provider {data.provider}")
+        server_state.log_queue.put_nowait(f"[INFO] Search succesfull for job {search_id} with query {data.search} and provider {data.provider}")
         return response
 
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Failed search task with given arguments: id {search_id} provider {data.provider} and searchinput {data.search}.\n Error Message:{str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Failed search task with given arguments: id {search_id} provider {data.provider} and searchinput {data.search}.\n Error Message:{str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -793,12 +990,12 @@ def save_user_data(request: SaveUserDataRequest):
         for pm in playlist_medias:
             cursor.execute("SELECT 1 FROM Playlists WHERE Identifier = ?", (pm.PlaylistIdentifier,))
             if cursor.fetchone() is None:
-                log_queue.put_nowait(f"[WARN] Skipping PlaylistMedia, missing Playlist parent: {pm.PlaylistIdentifier}")
+                server_state.log_queue.put_nowait(f"[WARN] Skipping PlaylistMedia, missing Playlist parent: {pm.PlaylistIdentifier}")
                 continue
 
             cursor.execute("SELECT 1 FROM DownloadedMedias WHERE Identifier = ?", (pm.MediaIdentifier,))
             if cursor.fetchone() is None:
-                log_queue.put_nowait(f"[WARN] Skipping PlaylistMedia, missing Media parent: {pm.MediaIdentifier}")
+                server_state.log_queue.put_nowait(f"[WARN] Skipping PlaylistMedia, missing Media parent: {pm.MediaIdentifier}")
                 continue
 
             cursor.execute(
@@ -843,10 +1040,10 @@ async def handle_save_user_data(req: SaveUserDataRequest):
 
     try:
         save_user_data(req)
-        log_queue.put_nowait(f"[INFO] User data for '{req.user_identifier}' saved successfully")
+        server_state.log_queue.put_nowait(f"[INFO] User data for '{req.user_identifier}' saved successfully")
         return {"message": "User data saved successfully"}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error saving user data for '{req.user_identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error saving user data for '{req.user_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 # ---------------- User Endpoints ---------------
@@ -881,7 +1078,7 @@ async def handle_set_logged_in(identifier: str = Query(...)):
         logged_in = cursor.fetchone()[0]
 
         if logged_in is None:
-            log_queue.put_nowait(f"[ERROR] User with identifier '{identifier}' not found")
+            server_state.log_queue.put_nowait(f"[ERROR] User with identifier '{identifier}' not found")
             raise fastapi.HTTPException(status_code=404, detail=f"User with identifier '{identifier}' not found")
 
         if logged_in:
@@ -896,7 +1093,7 @@ async def handle_set_logged_in(identifier: str = Query(...)):
             conn.commit()
 
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error setting user logged-in status for '{identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error setting user logged-in status for '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -914,7 +1111,7 @@ async def handle_set_last_logged_in(identifier: str = Query(None)):
         username = cursor.fetchone()
 
         if username is None:
-            log_queue.put_nowait(f"[ERROR] User with identifier '{identifier}' not found")
+            server_state.log_queue.put_nowait(f"[ERROR] User with identifier '{identifier}' not found")
             raise fastapi.HTTPException(status_code=404, detail=f"User with identifier '{identifier}' not found")
 
         cursor.execute("""UPDATE Users
@@ -924,7 +1121,7 @@ async def handle_set_last_logged_in(identifier: str = Query(None)):
         conn.commit()
         conn.close()
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error setting user last logged-in status for '{identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error setting user last logged-in status for '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -944,16 +1141,16 @@ async def get_users(identifier: str):
 
             if row is None:
                 conn.close()
-                log_queue.put_nowait(f"[ERROR] User lookup failed for identifier/username '{identifier}'")
+                server_state.log_queue.put_nowait(f"[ERROR] User lookup failed for identifier/username '{identifier}'")
                 raise fastapi.HTTPException(status_code=404, detail="User not found")
 
         conn.close()
-        log_queue.put_nowait(f"[INFO] User '{identifier}' retrieved successfully")
+        server_state.log_queue.put_nowait(f"[INFO] User '{identifier}' retrieved successfully")
         return dict(row)
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving user '{identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving user '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -967,10 +1164,10 @@ async def get_all_users():
         rows = cursor.fetchall()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} users")
+        server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} users")
         return [dict(row) for row in rows]
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving all users: {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving all users: {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -978,10 +1175,10 @@ async def get_all_users():
 async def create_table():
     try:
         create_app_tables()
-        log_queue.put_nowait("[INFO] Tables created successfully")
+        server_state.log_queue.put_nowait("[INFO] Tables created successfully")
         return {"message": "Tables created successfully"}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error creating tables: {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error creating tables: {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -997,10 +1194,10 @@ async def handle_create_user_req(req: requests.CreateUserRequest):
 
         create_user(username, password_hash, identifier, created_at)
 
-        log_queue.put_nowait(f"[INFO] User '{username}' created successfully with id {identifier}")
+        server_state.log_queue.put_nowait(f"[INFO] User '{username}' created successfully with id {identifier}")
         return {"message": "User created successfully", "identifier": identifier}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error creating user '{req.username}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error creating user '{req.username}': {str(e)}")
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
@@ -1016,10 +1213,10 @@ async def handle_delete_user_req(identifier: str):
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] User '{identifier}' deleted successfully")
+        server_state.log_queue.put_nowait(f"[INFO] User '{identifier}' deleted successfully")
         return {"message": "User deleted successfully"}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error deleting user '{identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error deleting user '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1039,10 +1236,10 @@ async def get_playlists(identifier: str):
         rows = cursor.fetchall()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Retrieved playlist(s) for identifier '{identifier}'")
+        server_state.log_queue.put_nowait(f"[INFO] Retrieved playlist(s) for identifier '{identifier}'")
         return [dict(row) for row in rows]
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving playlists for '{identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving playlists for '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1059,10 +1256,10 @@ async def handle_create_playlist_req(req: requests.CreatePlaylistRequest):
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Playlist '{req.name}' created successfully with id {identifier}")
+        server_state.log_queue.put_nowait(f"[INFO] Playlist '{req.name}' created successfully with id {identifier}")
         return {"message": "Playlist created successfully", "identifier": identifier}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error creating playlist '{req.name}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error creating playlist '{req.name}': {str(e)}")
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
@@ -1079,10 +1276,10 @@ async def handle_delete_playlist_req(identifier: str):
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Playlist '{identifier}' deleted successfully")
+        server_state.log_queue.put_nowait(f"[INFO] Playlist '{identifier}' deleted successfully")
         return {"message": "Playlist deleted successfully"}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error deleting playlist '{identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error deleting playlist '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1096,10 +1293,10 @@ async def get_all_playlists():
         rows = cursor.fetchall()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} playlists")
+        server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} playlists")
         return [dict(row) for row in rows]
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving all playlists: {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving all playlists: {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1120,7 +1317,7 @@ async def handle_create_downloaded_media_req(req: requests.CreateDownloadedMedia
         if existing is not None:
             identifier = existing["Identifier"]
             conn.close()
-            log_queue.put_nowait(f"[INFO] Downloaded media with path '{req.download_path}' already exists")
+            server_state.log_queue.put_nowait(f"[INFO] Downloaded media with path '{req.download_path}' already exists")
             return {"message": f"Downloaded media with path '{req.download_path}' already exists", "identifier": identifier}
 
         identifier = str(uuid.uuid4())
@@ -1134,10 +1331,10 @@ async def handle_create_downloaded_media_req(req: requests.CreateDownloadedMedia
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Downloaded media '{req.title}' created successfully with id {identifier}")
+        server_state.log_queue.put_nowait(f"[INFO] Downloaded media '{req.title}' created successfully with id {identifier}")
         return {"message": "Downloaded media created successfully", "identifier": identifier}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error creating downloaded media '{req.title}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error creating downloaded media '{req.title}': {str(e)}")
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
@@ -1154,10 +1351,10 @@ async def handle_delete_downloaded_media_req(identifier: str):
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Downloaded media '{identifier}' deleted successfully")
+        server_state.log_queue.put_nowait(f"[INFO] Downloaded media '{identifier}' deleted successfully")
         return {"message": "Downloaded media deleted successfully"}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error deleting downloaded media '{identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error deleting downloaded media '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1175,15 +1372,15 @@ async def get_downloaded_media(identifier: str):
         conn.close()
 
         if row is None:
-            log_queue.put_nowait(f"[ERROR] Downloaded media '{identifier}' not found")
+            server_state.log_queue.put_nowait(f"[ERROR] Downloaded media '{identifier}' not found")
             raise fastapi.HTTPException(status_code=404, detail="Downloaded media not found")
 
-        log_queue.put_nowait(f"[INFO] Downloaded media '{identifier}' retrieved successfully")
+        server_state.log_queue.put_nowait(f"[INFO] Downloaded media '{identifier}' retrieved successfully")
         return dict(row)
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving downloaded media '{identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving downloaded media '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1199,10 +1396,10 @@ async def get_all_downloaded_media():
         rows = cursor.fetchall()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} downloaded medias")
+        server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} downloaded medias")
         return [dict(row) for row in rows]
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving all downloaded medias: {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving all downloaded medias: {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1219,10 +1416,10 @@ async def get_user_downloaded_medias(user_identifier: str):
         rows = cursor.fetchall()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} downloaded medias for user '{user_identifier}'")
+        server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} downloaded medias for user '{user_identifier}'")
         return [dict(row) for row in rows]
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving downloaded medias for user '{user_identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving downloaded medias for user '{user_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1247,11 +1444,11 @@ async def handle_create_setting_req(req: requests.CreateSettingsRequest):
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(
+        server_state.log_queue.put_nowait(
             f"[INFO] Settings created successfully for user '{req.user_identifier}' with id {identifier}")
         return {"message": "Setting created successfully", "identifier": identifier}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error creating settings for user '{req.user_identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error creating settings for user '{req.user_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
 
@@ -1268,10 +1465,10 @@ async def handle_delete_setting_req(identifier: str):
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Settings '{identifier}' deleted successfully")
+        server_state.log_queue.put_nowait(f"[INFO] Settings '{identifier}' deleted successfully")
         return {"message": "Setting deleted successfully"}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error deleting settings '{identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error deleting settings '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1289,15 +1486,15 @@ async def get_setting(user_identifier: str):
         conn.close()
 
         if row is None:
-            log_queue.put_nowait(f"[INFO] No settings found for user '{user_identifier}' (expected for new users)")
+            server_state.log_queue.put_nowait(f"[INFO] No settings found for user '{user_identifier}' (expected for new users)")
             raise fastapi.HTTPException(status_code=404, detail="Setting not found")
 
-        log_queue.put_nowait(f"[INFO] Settings retrieved for user '{user_identifier}'")
+        server_state.log_queue.put_nowait(f"[INFO] Settings retrieved for user '{user_identifier}'")
         return dict(row)
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving settings for user '{user_identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving settings for user '{user_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1312,10 +1509,10 @@ async def get_all_settings():
         rows = cursor.fetchall()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} settings entries")
+        server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} settings entries")
         return [dict(row) for row in rows]
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving all settings: {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving all settings: {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1335,7 +1532,7 @@ async def handle_create_playlist_media_req(req: requests.CreatePlaylistMediaRequ
 
         if count > 0:
             conn.close()
-            log_queue.put_nowait(
+            server_state.log_queue.put_nowait(
                 f"[ERROR] Media '{req.media_identifier}' already exists in playlist '{req.playlist_identifier}'")
             raise fastapi.HTTPException(status_code=400, detail="Media already exists in the playlist")
 
@@ -1350,13 +1547,13 @@ async def handle_create_playlist_media_req(req: requests.CreatePlaylistMediaRequ
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(
+        server_state.log_queue.put_nowait(
             f"[INFO] Media '{req.media_identifier}' added to playlist '{req.playlist_identifier}' at position {new_position}")
         return {"message": "Media added to playlist successfully", "position": new_position}
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        log_queue.put_nowait(
+        server_state.log_queue.put_nowait(
             f"[ERROR] Error adding media '{req.media_identifier}' to playlist '{req.playlist_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=400, detail=str(e))
 
@@ -1372,10 +1569,10 @@ async def handle_delete_playlist_media_req(req: requests.DeletePlaylistMediaRequ
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Media '{req.media_identifier}' removed from playlist '{req.playlist_identifier}'")
+        server_state.log_queue.put_nowait(f"[INFO] Media '{req.media_identifier}' removed from playlist '{req.playlist_identifier}'")
         return {"message": "Media removed from playlist successfully"}
     except Exception as e:
-        log_queue.put_nowait(
+        server_state.log_queue.put_nowait(
             f"[ERROR] Error removing media '{req.media_identifier}' from playlist '{req.playlist_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
@@ -1393,10 +1590,10 @@ async def get_playlist_medias(playlist_identifier: str):
         rows = cursor.fetchall()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} media entries for playlist '{playlist_identifier}'")
+        server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} media entries for playlist '{playlist_identifier}'")
         return [dict(row) for row in rows]
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving media for playlist '{playlist_identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving media for playlist '{playlist_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1412,10 +1609,10 @@ async def get_user_playlists(user_identifier: str):
         rows = cursor.fetchall()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} playlists for user '{user_identifier}'")
+        server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} playlists for user '{user_identifier}'")
         return [dict(row) for row in rows]
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error retrieving playlists for user '{user_identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving playlists for user '{user_identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1435,21 +1632,21 @@ async def handle_login_req(req: requests.LoginRequest):
         conn.close()
 
         if row is None:
-            log_queue.put_nowait(f"[ERROR] Login failed: user '{req.username}' not found")
+            server_state.log_queue.put_nowait(f"[ERROR] Login failed: user '{req.username}' not found")
             raise fastapi.HTTPException(status_code=404, detail="User not found")
 
         identifier, password_hash = row["Identifier"], row["PasswordHash"]
 
         if not bcrypt.checkpw(req.password.encode("utf-8"), password_hash.encode("utf-8")):
-            log_queue.put_nowait(f"[ERROR] Login failed: invalid password for user '{req.username}'")
+            server_state.log_queue.put_nowait(f"[ERROR] Login failed: invalid password for user '{req.username}'")
             raise fastapi.HTTPException(status_code=401, detail="Invalid password")
 
-        log_queue.put_nowait(f"[INFO] User '{req.username}' logged in successfully")
+        server_state.log_queue.put_nowait(f"[INFO] User '{req.username}' logged in successfully")
         return {"message": "Login successful", "identifier": identifier}
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error during login for user '{req.username}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error during login for user '{req.username}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1465,12 +1662,12 @@ async def handle_register_req(req: requests.RegisterRequest):
         response = await handle_create_user_req(create_user_req)
 
         if response:
-            log_queue.put_nowait(f"[INFO] User '{req.username}' registered successfully")
+            server_state.log_queue.put_nowait(f"[INFO] User '{req.username}' registered successfully")
             return {"message": "User registered successfully", "identifier": response["identifier"]}
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error during registration for user '{req.username}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error during registration for user '{req.username}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))
 
 
@@ -1487,8 +1684,8 @@ async def handle_logout_req(identifier: str):
         conn.commit()
         conn.close()
 
-        log_queue.put_nowait(f"[INFO] User '{identifier}' logged out successfully")
+        server_state.log_queue.put_nowait(f"[INFO] User '{identifier}' logged out successfully")
         return {"message": "Logout successful"}
     except Exception as e:
-        log_queue.put_nowait(f"[ERROR] Error during logout for user '{identifier}': {str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Error during logout for user '{identifier}': {str(e)}")
         raise fastapi.HTTPException(status_code=500, detail=str(e))

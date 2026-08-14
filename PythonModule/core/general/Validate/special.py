@@ -111,7 +111,7 @@ def validateUrllibRequest(
             wanted_type="str"
         )
     
-    validateRequestMethod(method=request.method, caller=caller)
+    validateRequestMethod(method=request.get_method(), caller=caller)
 
 def validateRequestMethod(
         method: str,

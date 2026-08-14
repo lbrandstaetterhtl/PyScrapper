@@ -59,46 +59,42 @@ def updateDownloadProgress(
 
 
     # Segment based progress
-    if download_progress.total_segments > 0:
-
-        download_progress.progress = round(
-            (
-                download_progress.downloaded_segments
-                / download_progress.total_segments
-            ) * 100,
-            2
+    if (
+        download_progress.downloaded_segments > 0
+        and elapsed_time > 0
+    ):
+        average_segment_time = (
+            elapsed_time
+            / download_progress.downloaded_segments
         )
 
-        if (
-            download_progress.downloaded_segments > 0
-            and elapsed_time > 0
-        ):
-            average_segment_time = (
-                elapsed_time
-                / download_progress.downloaded_segments
-            )
+        remaining_segments = max(
+            0,
+            download_progress.total_segments
+            - download_progress.downloaded_segments
+        )
 
-            remaining_segments = (
-                download_progress.total_segments
-                - download_progress.downloaded_segments
-            )
-
-            download_progress.eta = round(
+        download_progress.eta = max(
+            0.0,
+            round(
                 remaining_segments * average_segment_time,
                 1
             )
+        )
 
 
     # Byte based progress
     elif download_progress.total_bytes > 0:
 
-        download_progress.progress = round(
+        download_progress.progress = min(
+            100.0,
+            round(
             (
                 download_progress.downloaded_bytes
                 / download_progress.total_bytes
             ) * 100,
             2
-        )
+        ))
 
         if download_progress.speed > 0:
             bytes_per_second = (
@@ -106,14 +102,15 @@ def updateDownloadProgress(
                 / elapsed_time
             )
 
-            remaining_bytes = (
+            remaining_bytes = max(
+                0,
                 download_progress.total_bytes
                 - download_progress.downloaded_bytes
             )
 
-            download_progress.eta = round(
-                remaining_bytes / bytes_per_second,
-                1
+            download_progress.eta = max(
+                0.0,
+                round(remaining_bytes / bytes_per_second, 1)
             )
 
 

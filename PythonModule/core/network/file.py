@@ -12,8 +12,9 @@ from ..general import Validate
 from . import progress
 
 #Python default imports
-import time
+
 import asyncio
+import urllib.request
 
 
 
@@ -24,7 +25,9 @@ def _validateDownloadToFileArguments(
     out_file: str,
     extra_headers: dict,
     chunk_size: int,
-    open_file_method: str,  
+    open_file_method: str,
+    start_byte : int,
+    end_byte : int | None 
 ):
     Validate.special.validateHostDefault(
                 url, caller="[CORE] network.file.downloadToFile")
@@ -41,6 +44,21 @@ def _validateDownloadToFileArguments(
     if extra_headers:
         Validate.general.validateDict(
             argument_name="extra_headers", dictionary=extra_headers, caller="[CORE] network.file.downloadToFile")
+        
+    if (
+      
+        not isinstance(start_byte, int)
+        or not start_byte >= 0  
+    ):
+        raise ValueError("Startbyte wasn't an integer with value 0 and above")
+
+    if end_byte is not None:
+        if (
+            not isinstance(end_byte, int)
+            or not end_byte > start_byte
+            or not end_byte > 0
+        ):
+            raise ValueError("Endbyte was given but it wasn't bigger than startbyte or wasn't greater 0")
 
     
 
@@ -51,7 +69,9 @@ def downloadToFileSimple(
         out_file: str,
         extra_headers: dict = None,
         chunk_size: int = 8192,
-        open_file_method: str = "wb"
+        open_file_method: str = "wb",
+        start_byte : int = 0,
+        end_byte : int | None = None
 
 ) -> int:
     """
@@ -66,8 +86,23 @@ def downloadToFileSimple(
         out_file,
         extra_headers,
         chunk_size,
-        open_file_method
+        open_file_method,
+        start_byte,
+        end_byte
     )
+
+    byteRange = f"bytes={start_byte}-"
+    if end_byte is not None:
+        byteRange += str(end_byte)
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Range" : byteRange
+        }
+    )
+    
+
     downloadedBytes = 0
 #Actuall download part
     with session.open(url=url, headers=extra_headers) as response, open(out_file, open_file_method) as file:
@@ -92,7 +127,9 @@ def downloadToFile(
         download_progress: Download.DownloadProgress,
         extra_headers: dict = None,
         chunk_size: int = 8192,
-        open_file_method: str = "wb"
+        open_file_method: str = "wb",
+        start_byte: int = 0,
+        end_byte : int | None = None
 
 ):
     _validateDownloadToFileArguments(
@@ -101,16 +138,36 @@ def downloadToFile(
             out_file,
             extra_headers,
             chunk_size,
-            open_file_method
+            open_file_method,
+            start_byte,
+            end_byte
         )
+
+    byteRange = f"bytes={start_byte}-"
+    if end_byte is not None:
+        byteRange += str(end_byte)
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Range" : byteRange
+        }
+    )
     
 
-    Validate.download.validateDownloadProgress(
-            argument_name="download_progress", download_progress=download_progress, caller="[CORE] downloadToFile")
 
+    with session.open(request=req, headers=extra_headers) as response, open(out_file, open_file_method) as file:
+        content_length = response.headers.get("Content-Length")
+        content_range = response.headers.get("Content-Range")
 
-    with session.open(url=url, headers=extra_headers) as response, open(out_file, open_file_method) as file:
-        download_progress.total_bytes = int(response.headers.get("Content-Length", 0))
+        if content_range:
+            total_size = content_range.split("/")[-1]
+
+            if total_size != "*":
+                download_progress.total_bytes = int(total_size)
+
+        elif content_length:
+            download_progress.total_bytes = int(content_length)
 
 
         while True:
@@ -134,36 +191,69 @@ def _validateDownloadYieldArguments(
     url: str,
     session: Session,
     extra_headers: dict,
-    chunk_size: int, 
+    chunk_size: int,
+    start_byte: int,
+    end_byte: int | None = None
 ):
     Validate.special.validateHostDefault(
-                url, caller="[CORE] network.file.downloadToFile")
+                url, caller="[CORE] network.file.downloadYield")
         
     Validate.special.validateSession(
-        session, argument_name="session", caller="[CORE] network.file.downloadToFile")
+        session, argument_name="session", caller="[CORE] network.file.downloadYield")
 
     Validate.general.validateInt(
-        argument_name="chunk_size", integer=chunk_size, caller="[CORE] network.file.downloadToFile")
+        argument_name="chunk_size", integer=chunk_size, caller="[CORE] network.file.downloadYield")
 
     if extra_headers:
         Validate.general.validateDict(
-            argument_name="extra_headers", dictionary=extra_headers, caller="[CORE] network.file.downloadToFile")
+            argument_name="extra_headers", dictionary=extra_headers, caller="[CORE] network.file.downloadYield")
+
+    if (
+      not isinstance(start_byte, int)
+      or not start_byte >= 0  
+    ):
+        raise ValueError("Startbyte wasn't an integer with value 0 and above")
+
+    if end_byte is not None:
+        if (
+            not isinstance(end_byte, int)
+            or not end_byte > start_byte
+            or not end_byte > 0
+        ):
+            raise ValueError("Endbyte was given but it wasn't bigger than startbyte or wasn't greater 0")
+
+
 
 
 def downloadYieldSimple(
         session: Session,
         url: str,
         extra_headers: dict = None,
-        chunk_size: int = 8192
+        chunk_size: int = 8192,
+        start_byte: int = 0,
+        end_byte : int | None = None
 ):
     _validateDownloadYieldArguments(
         url,
         session,
         extra_headers,
-        chunk_size
+        chunk_size,
+        start_byte,
+        end_byte
     )
 
-    with session.open(url=url, headers=extra_headers) as response:
+    byteRange = f"bytes={start_byte}-"
+    if end_byte is not None:
+        byteRange += str(end_byte)
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Range" : byteRange
+        }
+    )
+
+    with session.open(request=req, headers=extra_headers) as response:
         while True:
             chunk = response.read(chunk_size)
 
@@ -177,26 +267,45 @@ def downloadYield(
         url: str,
         download_progress: Download.DownloadProgress,
         extra_headers: dict = None,
-        chunk_size: int = 8192
+        chunk_size: int = 8192,
+        start_byte: int = 0,
+        end_byte : int | None = None
 ):
     _validateDownloadYieldArguments(
         url,
         session,
         extra_headers,
-        chunk_size
+        chunk_size,
+        start_byte,
+        end_byte
 
     )
 
-    Validate.download.validateDownloadProgress(
-        argument_name="download_progress",
-        download_progress=download_progress,
-        caller="[CORE] network.file.yield.downloadYield"
+    byteRange = f"bytes={start_byte}-"
+    if end_byte is not None:
+        byteRange += str(end_byte)
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Range" : byteRange
+        }
     )
 
 
 
-    with session.open(url=url, headers=extra_headers) as response:
+    with session.open(request=req, headers=extra_headers) as response:
         content_length = response.headers.get("Content-Length")
+        content_range = response.headers.get("Content-Range")
+
+        if content_range:
+            total_size = content_range.split("/")[-1]
+
+            if total_size != "*":
+                download_progress.total_bytes = int(total_size)
+
+        elif content_length:
+            download_progress.total_bytes = int(content_length)
 
         if content_length:
             download_progress.total_bytes = int(content_length)
@@ -220,16 +329,33 @@ async def asyncDownloadYieldSimple(
         session: Session,
         url: str,
         extra_headers: dict = None,
-        chunk_size: int = 8192
+        chunk_size: int = 8192,
+        start_byte: int = 0,
+        end_byte: int | None = None
         ):
     _validateDownloadYieldArguments(
         url,
         session,
         extra_headers,
-        chunk_size
+        chunk_size,
+        start_byte,
+        end_byte
 
     )
-    with session.open(url=url, headers=extra_headers) as response:
+
+
+    byteRange = f"bytes={start_byte}-"
+    if end_byte is not None:
+        byteRange += str(end_byte)
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Range" : byteRange
+        }
+    )
+
+    with session.open(request=req, headers=extra_headers) as response:
             
             while True:
                 chunk = await asyncio.to_thread(
@@ -248,23 +374,46 @@ async def asyncDownloadYield(
     url: str,
     download_progress: Download.DownloadProgress,
     extra_headers: dict = None,
-    chunk_size: int = 8192
+    chunk_size: int = 8192,
+    start_byte: int = 0,
+    end_byte: int | None = None
     ):
     _validateDownloadYieldArguments(
         url,
         session,
         extra_headers,
-        chunk_size
+        chunk_size,
+        start_byte,
+        end_byte
+        
 
     )
 
-   
+    byteRange = f"bytes={start_byte}-"
+    if end_byte is not None:
+        byteRange += str(end_byte)
 
-    with session.open(url=url, headers=extra_headers) as response:
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Range" : byteRange
+        }
+    )
+
+
+    with session.open(request=req, headers=extra_headers) as response:
             content_length = response.headers.get("Content-Length")
+            content_range = response.headers.get("Content-Range")
 
-            if content_length:
+            if content_range:
+                total_size = content_range.split("/")[-1]
+
+                if total_size != "*":
+                    download_progress.total_bytes = int(total_size)
+
+            elif content_length:
                 download_progress.total_bytes = int(content_length)
+#actual download
             
             while True:
                 chunk = await asyncio.to_thread(

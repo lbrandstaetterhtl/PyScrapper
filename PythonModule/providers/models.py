@@ -28,6 +28,23 @@ CONTENT_TYPE_EXTENSIONS = {
     "application/dash+xml": "mpd",
 }
 
+EXTENSION_CONTENT_TYPES = {
+    "mp4": "video/mp4",
+    "webm": "video/webm",
+    "mkv": "video/x-matroska",
+    "ts": "video/mp2t",
+
+    "mp3": "audio/mpeg",
+    "m4a": "audio/mp4",
+    "aac": "audio/aac",
+    "wav": "audio/wav",
+    "flac": "audio/flac",
+    "ogg": "audio/ogg",
+
+    "m3u8": "application/vnd.apple.mpegurl",
+    "mpd": "application/dash+xml",
+}
+
 @dataclass
 class ProviderResult:
     url: str 

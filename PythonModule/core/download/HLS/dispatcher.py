@@ -46,8 +46,6 @@ class HLSDispatcher(Dispatcher):
                 caller="[CORE] HLSDispatcher.init"
             )
 
-
-
         self.downloadWithFFmpeg = download_with_ffmpeg
 
         self.preferredLanguages = preferred_languages
@@ -70,7 +68,7 @@ class HLSDispatcher(Dispatcher):
                     caller="[CORE] HLSDispatcher.run"
                 )
             try:
-                fileType = self._determine_File_Type(file)
+                fileType = self.dertermineFileType(file)
 
                 if fileType == models.FileType.MASTER_FILE:
 
@@ -138,7 +136,7 @@ class HLSDispatcher(Dispatcher):
                     caller="[CORE] HLSDispatcher.run"
                 )
             try:
-                fileType = self._determine_File_Type(file)
+                fileType = self.dertermineFileType(file)
 
                 if fileType == models.FileType.MASTER_FILE:
 
@@ -190,7 +188,7 @@ class HLSDispatcher(Dispatcher):
 
 
 
-    def _determine_File_Type(
+    def dertermineFileType(
             self,
             file: str
             ):

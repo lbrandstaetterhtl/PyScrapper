@@ -19,6 +19,7 @@ from . import models
 
 import shutil
 import time
+import asyncio
 
 
 
@@ -54,7 +55,7 @@ class IndexHLSDownload(HLSDownload):
         
     def downloadToFile(self):
 
-        segmentResults = self._getSegmentList()
+        segmentResults = self.getIndexSegmentList()
 
         segmentList, segmentAudioList = segmentResults
 
@@ -69,8 +70,7 @@ class IndexHLSDownload(HLSDownload):
 
 
     async def downloadAndYield(self):
-        segmentResults = self._getSegmentList(
-        )
+        segmentResults = await asyncio.to_thread(self.getIndexSegmentList)
 
         segmentList, segmentAudioList = segmentResults
 
@@ -109,7 +109,7 @@ class IndexHLSDownload(HLSDownload):
 
 
 
-    def _getSegmentList(
+    def getIndexSegmentList(
             self
             ) -> tuple[list[models.HLSSegment] | None, list[models.HLSSegment] | None]:
         """

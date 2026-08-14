@@ -39,7 +39,7 @@ class DownloadTarget:
 
     out_file: str = ""
 
-    file_type: str = "mp4"
+    file_ending: str = "mp4"
 
     extra_headers: dict[str, str] = field(default_factory=dict)
 
