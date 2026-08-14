@@ -13,10 +13,10 @@ class SearchProcessor():
     def __init__(
             self,
             searchRequest: SearchRequest,
-            session: core.request.Session.Session
+            session
             ):
-        core.general.Validate.validateGeneralType(argument_name="searchRequest", obj=searchRequest, objType=SearchRequest, caller="[serverservices] SearchProcessor.init")
-        core.general.Validate.validateSession(session=session, argument_name="session", caller="[serverservices] SearchProcessor.init")
+        core.general.Validate.general.validateGeneralType(argument_name="searchRequest", obj=searchRequest, objType=SearchRequest, caller="[serverservices] SearchProcessor.init")
+        core.general.Validate.special.validateSession(session=session, argument_name="session", caller="[serverservices] SearchProcessor.init")
 
         self.searchRequest: SearchRequest = searchRequest
         self.session = session
@@ -27,7 +27,7 @@ class SearchProcessor():
         provider:settings.ProviderTypes = utils.validateProviders(providerGiven=self.searchRequest.provider)
         results = {}
 
-        searchFunction = settings.providerSearchMapping.get(provider, None)
+        searchFunction = settings.PROVIDER_SEARCH_MAPPING.get(provider, None)
         
         if searchFunction is None:
             raise Exception(f"Provider {self.searchRequest.provider} isn't supported for searching yet")

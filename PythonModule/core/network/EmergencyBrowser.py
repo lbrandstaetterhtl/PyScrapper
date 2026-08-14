@@ -5,6 +5,22 @@ import http.cookiejar
 import shlex
 from urllib.parse import urlparse
 
+CONTENT_TYPE_EXTENSIONS = {
+    "video/mp4": "mp4",
+    "video/webm": "webm",
+    "video/x-matroska": "mkv",
+    "video/mp2t": "ts",
+
+    "audio/mpeg": "mp3",
+    "audio/mp4": "m4a",
+    "audio/aac": "aac",
+    "audio/wav": "wav",
+    "audio/flac": "flac",
+
+    "application/vnd.apple.mpegurl": "m3u8",
+    "application/x-mpegurl": "m3u8",
+    "application/dash+xml": "mpd",
+}
 
 REQUESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 COOKIE_FILE = os.path.join(REQUESTS_DIR, "cookies.txt")
@@ -40,6 +56,11 @@ def _load_mozilla_cookies_for_playwright(cookie_file: str) -> list[dict]:
 
     return cookies
 
+
+def _guess_File_Extension(content_type: str) -> str | None:
+
+    content_type = content_type.split(";", 1)[0].lower()
+    return CONTENT_TYPE_EXTENSIONS.get(content_type)
 
 def _save_playwright_cookies_to_mozilla(context, cookie_file: str) -> None:
     try:
@@ -399,19 +420,25 @@ def _buildOrigin(
 
 
 def _saveMedia(
-    request,
-    foundMedia: dict[str, media.Headers],
+    response,
+    foundMedia: dict[str, media.Media],
     cookieFile: str,
     pageUrl: str = "",
     includeCookieHeaderInCurl: bool = False
 ):
-    url: str = request.url
+    request = response.request
+
+    url = response.url
     if not url:
         return
 
     lower = url.lower()
 
-    resource_type = getattr(request, "resource_type", "")
+    request_headers = request.headers or {}
+    response_headers = response.headers or {}
+
+    resource_type = request.resource_type
+    content_type = response_headers.get("content-type", "")
 
     is_media_request = (
         resource_type == "media"
@@ -432,25 +459,32 @@ def _saveMedia(
     if not is_media_request:
         return
 
-    print("[Media] found:", resource_type, url)
-
-    headers = request.headers or {}
+    print(
+        "[Media] found:",
+        resource_type,
+        content_type,
+        url
+    )
 
     curlCommand = _buildCurlCommand(
         url,
-        headers,
+        request_headers,
         include_cookie_header=includeCookieHeaderInCurl
     )
 
-    _referer = headers.get("referer", pageUrl)
-    _origin = headers.get("origin", _buildOrigin(_referer) if _referer else "")
-    _accept = headers.get("accept", "")
-    _authorization = headers.get("authorization", "")
-    _userAgent = headers.get("user-agent", "")
+    _referer = request_headers.get("referer", pageUrl)
+    _origin = request_headers.get(
+        "origin",
+        _buildOrigin(_referer) if _referer else ""
+    )
+
+    _accept = request_headers.get("accept", "")
+    _authorization = request_headers.get("authorization", "")
+    _userAgent = request_headers.get("user-agent", "")
+
+    _fileExtension = _guess_File_Extension(content_type)
 
     _streamType, _mediaType, _priority = _guessMediaType(url)
-
-    
 
     if url not in foundMedia:
         foundMedia[url] = media.Media(
@@ -458,6 +492,8 @@ def _saveMedia(
             mediaType=_mediaType,
             streamType=_streamType,
             priority=_priority,
+            mediaExtension=_fileExtension,
+
             headers=media.Headers(
                 origin=_origin,
                 referer=_referer,
@@ -466,6 +502,7 @@ def _saveMedia(
                 authorization=_authorization,
                 userAgent=_userAgent
             ),
+
             curlCommand=curlCommand
         )
     
@@ -885,14 +922,14 @@ def BrowserDiscoverStreamURLs(
                 _saveMedia(
                     response,
                     foundMedia,
-                    cookieFile = cookie_file,
+                    cookieFile=cookie_file,
                     pageUrl=page.url if page.url else url,
                     includeCookieHeaderInCurl=include_cookie_header_in_curl
-
                 )
+
+            page.on("response", handleResponse)
                 
 
-            page.on("request", handleResponse)
 
 #Goes to the requested website and waits a brief period of time to get ressources before trying to click something
             try:
@@ -965,16 +1002,16 @@ def BrowserDiscoverStreamURLs_ButtonList(
 
             page = context.new_page()
 
-            def handleResponse(request):
+            def handleResponse(response):
                 _saveMedia(
-                    request,
+                    response,
                     foundMedia,
                     cookieFile=cookie_file,
                     pageUrl=page.url if page.url else url,
                     includeCookieHeaderInCurl=includeCookieHeaderInCurl
                 )
 
-            page.on("request", handleResponse)
+            page.on("response", handleResponse)
 
             try:
                 page.goto(url, wait_until="domcontentloaded", timeout=15000)
@@ -1061,15 +1098,12 @@ def WCOFLIXBrowserDiscoverStreamUrls(
                 _saveMedia(
                     response,
                     foundMedia,
-                    cookieFile = cookie_file,
+                    cookieFile=cookie_file,
                     pageUrl=page.url if page.url else index_url,
                     includeCookieHeaderInCurl=include_cookie_header_in_curl
-
                 )
-                
-#If target website sends any kind of response, handleResponse function will get called
-            page.on("request", handleResponse)
 
+            page.on("response", handleResponse)
 
             try:
                 page.goto(index_url, wait_until="domcontentloaded", timeout=30000)

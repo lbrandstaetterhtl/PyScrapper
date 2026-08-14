@@ -63,6 +63,7 @@ class Headers:
 class Media:
     headers: Headers
     mediaUrl: str = ""
+    mediaExtension: str = ""
     mediaType: MediaType = MediaType.UNKNOWN
     streamType: StreamType = MediaType.UNKNOWN
     priority: int = -1

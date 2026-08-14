@@ -1,6 +1,14 @@
 #Core Imports
 import PythonModule.core as core
+from PythonModule.core.network import EmergencyBrowser
+from PythonModule.core.network.Session import Session
 from PythonModule.models.requests import SearchFilters
+
+from PythonModule.core.network import html
+
+#Own imports
+
+from . import models
 
 #Python Default Imports
 import urllib.parse, urllib.request, urllib.error
@@ -14,39 +22,39 @@ class BandCampSearchError(Exception): ...
 def search(
         search_term: str,
         filters: SearchFilters,
-        session: core.request.Session.Session,
+        session: Session,
         top: int = 5
 ) -> list[dict]:
 
-    core.general.Validate.validateStr(argument_name="search_term", string=search_term, caller="[providers] Bandcamp.search")
-    core.general.Validate.validateGeneralType(argument_name="filters", obj=filters, objType=SearchFilters, caller="[providers] Bandcamp.search")
-    core.general.Validate.validateSession(session=session, argument_name="session", caller="[providers] Bandcamp.search")
-    core.general.Validate.validateInt(argument_name="top", integer=top, caller="[providers] Bandcamp.search")
+    core.general.Validate.general.validateStr(argument_name="search_term", string=search_term, caller="[providers] Bandcamp.search")
+    core.general.Validate.general.validateGeneralType(argument_name="filters", obj=filters, objType=SearchFilters, caller="[providers] Bandcamp.search")
+    core.general.Validate.special.validateSession(session=session, argument_name="session", caller="[providers] Bandcamp.search")
+    core.general.Validate.general.validateInt(argument_name="top", integer=top, caller="[providers] Bandcamp.search")
     searchURL = _buildSearchUrl(
                 search_term=search_term,
             )
     
     def _getSearchHtml():
-        html = core.general.Html.getHtml(
+        searchHtml = html.getHtml(
             url=searchURL,
             session=session
         )
-        core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Bandcamp._getSearchHtml")
-        return html
+        core.general.Validate.general.validateStr(argument_name="searchHtml", string=searchHtml, caller="[providers] Bandcamp._getSearchHtml")
+        return searchHtml
          
     
     
     
     try:
         results= _get_searchResults(
-            html=_getSearchHtml(),
+            searchHtml=_getSearchHtml(),
             top=top,
             filters=filters   
         )
 #Sometimes Bandcamp hates python and wants javascript to be executed
     except Exception:
         
-        core.request.EmergencyBrowser.BrowserButtonPress(
+        EmergencyBrowser.BrowserButtonPress(
             url=searchURL,
             button_name="",
             headless=False,
@@ -56,7 +64,7 @@ def search(
         session.reloadCookies()
         
         results= _get_searchResults(
-                    html=_getSearchHtml(),
+                    searchHtml=_getSearchHtml(),
                     top=top,
                     filters=filters
                 )
@@ -91,7 +99,7 @@ def _buildSearchUrl(
 
 
 def _get_searchResults(
-        html: str,
+        searchHtml: str,
         top: int,
         filters: SearchFilters
         
@@ -106,7 +114,7 @@ def _get_searchResults(
     try:
         allTracks = core.general.DataSearch.searchBlocks(
             pattern=result_items_pattern,
-            search_block=html,
+            search_block=searchHtml,
             return_regex_exception=True
         )
 
@@ -239,18 +247,20 @@ def _extractStreamingURL(
             return [streamingURL],[None]
         
         case "trackURL":
-            html = core.general.Html.getHtml(
+            trackHtml = html.getHtml(
             url=url,
             session=session
             )
-            core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Bandcamp._extractStreamingUrl")
+            core.general.Validate.general.validateStr(argument_name="trackHtml", string=trackHtml, caller="[providers] Bandcamp._extractStreamingUrl")
+            with open("test.html", "w", encoding="utf-8") as f:
+                f.write(trackHtml)
 
 
             streamurl_pattern = r'(https://t4.bcbits.com/stream/.*?);}'
 
             streamingUrl = core.general.DataSearch.searchBlocks(
                 pattern=streamurl_pattern,
-                search_block=html,
+                search_block=trackHtml,
                 return_regex_exception=True
             )
             
@@ -269,83 +279,106 @@ def _extractStreamingURL(
        
 
 
-    
-
-
-
-def download(
-        download_information: core.models.General.DownloadInformations,
-        retry = True
-): 
-    core.general.Validate.validateDownloadInformation(
-        argument_name="download_information",
-        download_information=download_information,
-        caller="[providers] Bandcamp.download"
-    )
-    core.general.Validate.validateBool(boolean=retry, argument_name="retry", caller="[providers] Bandcamp.download")
-    
+def getMediaInformation(
+        request: models.ProviderResultRequest,
+) -> models.ProviderResult:
     urlType = _validateURL(
-        url=download_information.url
+        url=request.url
     )
-
-
+    print("test")
+    print(request.url)
     streamingURLList, trackURLList = _extractStreamingURL(
-        url=download_information.url,
+        url=request.url,
         urlType=urlType,
-        session=download_information.session
+        session=request.ses
     )
+    url = streamingURLList[0]
+    extension = models.getContentType(url, request.ses)
+    
+
+    result = models.makeProviderResult(url, extension, core.models.Download.DownloadType.FILE)
+    return result
     
     
     
-    for streamingURL, trackURL in zip(streamingURLList, trackURLList):
+    
         
-        request = urllib.request.Request(
-            streamingURL,
-            method="GET",
-            headers={
-                "Referer" : streamingURL,
-                "Origin" : download_information.url,
-                "Range": "bytes=0-",
-                }   
-            )
+        
 
 
-        try:
-            core.download.File.downloadToFile(
-                request=request,
-                session=download_information.session,
-                out_file=download_information.outFile,
-                progress_dict=download_information.downloadProgress,
+# def download(
+#         download_information: core.models.Download.DownloadInformation,
+#         retry = True
+# ): 
+#     core.general.Validate.download.validateDownloadInformation(
+#         argument_name="download_information",
+#         download_information=download_information,
+#         caller="[providers] Bandcamp.download"
+#     )
+#     core.general.Validate.general.validateBool(boolean=retry, argument_name="retry", caller="[providers] Bandcamp.download")
+    
+#     urlType = _validateURL(
+#         url=download_information.url
+#     )
+
+
+#     streamingURLList, trackURLList = _extractStreamingURL(
+#         url=download_information.url,
+#         urlType=urlType,
+#         session=download_information.session
+#     )
+    
+    
+    
+#     for streamingURL, trackURL in zip(streamingURLList, trackURLList):
+        
+#         request = urllib.request.Request(
+#             streamingURL,
+#             method="GET",
+#             headers={
+#                 "Referer" : streamingURL,
+#                 "Origin" : download_information.url,
+#                 "Range": "bytes=0-",
+#                 }   
+#             )
+
+
+#         try:
+#             core.download.File.downloadToFile(
+#                 request=request,
+#                 session=download_information.session,
+#                 out_file=download_information.outFile,
+#                 progress_dict=download_information.downloadProgress,
                 
-            )
-        except urllib.error.HTTPError as e:
-            if e.code == 403 and retry and urlType !="streamURL":
-                retry = False
+#             )
+#         except urllib.error.HTTPError as e:
+#             if e.code == 403 and retry and urlType !="streamURL":
+#                 retry = False
 
-                trackHTML = core.general.Html.getHtml(
-                    url=trackURL,
-                    session=download_information.session
-                )
-                core.general.Validate.validateStr(argument_name="trackHTML", string=trackHTML, caller="[providers] Bandcamp.download.error")
+#                 trackHTML = html.getHtml(
+#                     url=trackURL,
+#                     session=download_information.session
+#                 )
+#                 core.general.Validate.general.validateStr(argument_name="trackHTML", string=trackHTML, caller="[providers] Bandcamp.download.error")
 
-                embeddedplayer_pattern = r'<meta property="og:video".*?content="(https://bandcamp.com/EmbeddedPlayer.*?)">'
-                embeddedPlayerUrl = core.general.DataSearch.searchBlocks(
-                    pattern=embeddedplayer_pattern,
-                    search_block=trackHTML
-                )
-                core.general.Validate.validateStr(argument_name="embeddedPlayerUrl", string=embeddedPlayerUrl, caller="[providers] Bandcamp.download.error")
+#                 embeddedplayer_pattern = r'<meta property="og:video".*?content="(https://bandcamp.com/EmbeddedPlayer.*?)">'
+#                 embeddedPlayerUrl = core.general.DataSearch.searchBlocks(
+#                     pattern=embeddedplayer_pattern,
+#                     search_block=trackHTML
+#                 )
+#                 core.general.Validate.general.validateStr(argument_name="embeddedPlayerUrl", string=embeddedPlayerUrl, caller="[providers] Bandcamp.download.error")
 
-                core.request.EmergencyBrowser.BrowserButtonPress(url=embeddedPlayerUrl, button_name="#big_play_button")
+#                 EmergencyBrowser.BrowserButtonPress(url=embeddedPlayerUrl, button_name="#big_play_button")
 
 
-                core.download.File.downloadToFile(
-                    request=request,
-                    session=download_information.session,
-                    out_file=download_information.outFile,
-                    progress_dict=download_information.downloadProgress
+#                 core.download.File.downloadToFile(
+#                     request=request,
+#                     session=download_information.session,
+#                     out_file=download_information.outFile,
+#                     progress_dict=download_information.downloadProgress
 
-                )
-            else: raise
+#                 )
+#             else: raise
 
         
 

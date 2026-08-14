@@ -60,7 +60,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 
-from PythonModule.serverservices import downloadProcessor, commandProcessor, searchProcessor, utils
+from PythonModule.serverservices import commandProcessor, searchProcessor, utils
 
 
 from contextlib import asynccontextmanager
@@ -156,13 +156,53 @@ async def root():
   #  log_queue.put_nowait("[INFO] Server started successfully")
    # create_app_tables()
 
+async def cleanup_server(CLEANUP_AFTER_SECONDS):
+
+    
+    curTimestamp = time.monotonic()
+
+
+    for id, progress in saved_Download_Progresses_of_Downloadjobs.items():
+        if curTimestamp - progress.get("timestamp", 0) > CLEANUP_AFTER_SECONDS:
+            saved_Download_Progresses_of_Downloadjobs.pop(id, None)
+            log_queue.put_nowait(f"[INFO] Removed progress with the id {id} from saved progresses")
+
+    for id, pendingDownload in saved_Stream_Downloads.items():
+        if  curTimestamp - pendingDownload.get("timestamp", 0)> CLEANUP_AFTER_SECONDS:
+            saved_Stream_Downloads.pop(id, None)
+            log_queue.put_nowait(f"[INFO] Removed download for enpoint with id {id}")
+
+    log_queue.put_nowait("[INFO] ended server cleanup!")
+
+
+async def cleanup_loop():
+    CLEANUP_AFTER_SECONDS = 24 * 60 * 60
+    while True:
+        await cleanup_server(CLEANUP_AFTER_SECONDS)
+        await asyncio.sleep(CLEANUP_AFTER_SECONDS)
+
+
+ 
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global quit_event, log_queue
-    asyncio.create_task(logger(quit_event, log_queue))
+
+    logger_task = asyncio.create_task(
+        logger(quit_event, log_queue)
+    )
+
+    cleanup_task = asyncio.create_task(
+        cleanup_loop()
+    )
+
     log_queue.put_nowait("[INFO] Server started successfully")
+
     create_app_tables()
     yield
+    cleanup_task.cancel()
+    logger_task.cancel()
 
 
 admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
@@ -213,6 +253,31 @@ async def _getMediaForDownload(func, url, session, extra_headers):
 
         
 
+async def cleanup_download(
+        delay: float,
+        *,
+        progress_task_id: str | None = None,
+        stream_task_id: str | None = None
+):
+    await asyncio.sleep(delay)
+
+    if progress_task_id is not None:
+        isNone = saved_Download_Progresses_of_Downloadjobs.get(progress_task_id, None)
+        if isNone is not None:
+            saved_Download_Progresses_of_Downloadjobs.pop(
+                progress_task_id,
+                None
+            )
+
+    if stream_task_id is not None:
+        isNone = saved_Stream_Downloads.get(stream_task_id, None)
+        if isNone is not None:
+            saved_Stream_Downloads.pop(
+                stream_task_id,
+                None
+            )
+
+
 
 
 
@@ -222,6 +287,10 @@ async def receive_download(data: requests.DownloadRequest):
     global log_queue, ses, download_limiter
     taskId = str(uuid.uuid4())
     try:
+
+        cleanupAfterSeconds: float = 300
+
+        creation_time: float = time.monotonic()
         
         ses = Session()
         
@@ -247,6 +316,7 @@ async def receive_download(data: requests.DownloadRequest):
 #Looking at every url and opening the function of the provider
 #Trying to get results like the url to download the media from
         for url in data.urls:
+
             task = asyncio.create_task(
                 _getMediaForDownload(func,url, ses, data.extra_headers)
             )
@@ -257,12 +327,16 @@ async def receive_download(data: requests.DownloadRequest):
             return_exceptions=True
         )
 
-        for result in results:
-
+        for result, filename in zip(results, data.filenames):
             target = core.models.Download.DownloadTarget(
                 url=result.url,
                 download_type=result.download_type,
                 extra_headers=result.extra_headers,
+                file_type=result.file_type,
+                out_file=filename
+                
+                
+
             )
             context = core.models.Download.DownloadContext(target=target)
             contexts.append(context)
@@ -272,10 +346,13 @@ async def receive_download(data: requests.DownloadRequest):
             session=ses,
             download_limiter=download_limiter,
             download_strategie=data.download_strategie,
-            contexts=contexts
+            contexts=contexts,
         )
 
-        saved_Download_Progresses_of_Downloadjobs[taskId] = downloadInformation
+        saved_Download_Progresses_of_Downloadjobs[taskId] = {
+            "download_information" : downloadInformation,
+            "timestamp" : creation_time
+        }
         
 
 
@@ -285,10 +362,20 @@ async def receive_download(data: requests.DownloadRequest):
             await asyncio.to_thread(
                 downloader.downloadToFile
             )
+
+            asyncio.create_task(
+                cleanup_download(
+                    cleanupAfterSeconds,
+                    progress_task_id=taskId
+                )
+            )
+
+
             return {
                     "task_id": taskId,
                     "download_progress" : f"/download/progress/{taskId}",
-                    "streams": []
+                    "streams": [],
+                    "info" : f"Progress will be deleted after {cleanupAfterSeconds} Seconds"
                 }
 
 
@@ -297,8 +384,10 @@ async def receive_download(data: requests.DownloadRequest):
             for context in downloadInformation.contexts:
                 saved_Stream_Downloads[context.target.job_id] = {
                     "download_information" : downloadInformation,
-                    "context" : context
+                    "context" : context,
+                    "timestamp" : creation_time
                 }
+                
 
             return {
                 "task_id": taskId,
@@ -309,7 +398,8 @@ async def receive_download(data: requests.DownloadRequest):
                         "url": f"/download/media/{context.target.job_id}"
                     }
                     for context in downloadInformation.contexts
-                ]
+                ],
+                "info" : "Progress and endpoints will be deleted after downloading enpoint file"
             }
             
 
@@ -331,7 +421,11 @@ async def receive_download(data: requests.DownloadRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/download/media/{task_id}", dependencies=[Depends(require_admin)])
+
+
+
+
+@app.get("/download/media/{task_id}")
 async def download_media_to_client(task_id: str):
     stream_info = saved_Stream_Downloads.get(task_id)
 
@@ -342,34 +436,71 @@ async def download_media_to_client(task_id: str):
             )
 
     downloadInformation = stream_info["download_information"]
-    context = stream_info["context"]
+    context: core.models.Download.DownloadContext = stream_info["context"]
 
     downloader = core.download.Dispatcher.DownloadDispatcher(downloadInformation)
-    return StreamingResponse(
-        downloader.downloadContextAndYield(context),
-        media_type="application/octet-stream",
-        headers={
-            "Content-Disposition": f'attachment; filename="{context.target.job_id}.mp4"'
-        }
-)
+
+    try:
+        return StreamingResponse(
+            downloader.downloadContextAndYield(context),
+            media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f'attachment; filename="{context.target.out_file if context.target.out_file is not None else context.target.job_id}.{context.target.file_type}"'
+            }
+        )
+    
+    
+    finally:
+        asyncio.create_task(
+            cleanup_download(
+                delay=5,
+                stream_task_id=context.target.job_id
+            )
+        )
+    
 
 
 
 @app.get("/download/progress/{task_id}")
 async def get_download_progress(task_id: str):
 
-    info: core.models.Download.DownloadInformation = saved_Download_Progresses_of_Downloadjobs.get(task_id)
+    obj = saved_Download_Progresses_of_Downloadjobs.get(task_id)
+    info: core.models.Download.DownloadInformation = obj["download_information"]
 
     if info is None:
         raise HTTPException(status_code=404)
 
-    return info.toDict()
+    if all(context.download_progress.status in (
+        core.models.Download.TaskStatus.FAILED,
+        core.models.Download.TaskStatus.FINISHED,
+    )
+    for context in info.contexts
+    ):
+        asyncio.create_task(
+            cleanup_download(
+                delay=5,
+                progress_task_id=info.job_id
+            )
+        )
+
+
+    return {
+        "task_id" : info.job_id,
+        "streams" : [
+            {
+                "stream_id" : context.target.job_id,
+                "download_progress" : context.download_progress,
+                "convert_progress" : context.convert_progress
+            }
+            for context in info.contexts
+        ] 
+    }
 
 
 
 @app.post("/search", dependencies=[Depends(require_admin)])
 async def receive_search(data: requests.SearchRequest):
-    global ses
+    ses = Session()
     search_id = str(uuid.uuid4())
     try:
         response = await searchProcessor.SearchProcessor(

@@ -1,9 +1,15 @@
 #Core Imports
 import PythonModule.core as core
+from PythonModule.core.network import EmergencyBrowser
+from PythonModule.core.network.Session import Session
+from PythonModule.core.network import html
 from PythonModule.models.requests import SearchFilters
 
+#Own imports
+from . import models
+
 #Python Default Imports
-import urllib.error, urllib.parse
+import urllib.parse
 import asyncio
 import subprocess
 
@@ -29,38 +35,35 @@ async def run_shell_command_async(command: str):
             executable="/bin/bash"
         )
 
-MEDIATYPE_MAPPING = {
-    core.models.media.MediaType.MASTER_M3U8 : core.download.HLS.DownloadM3U8FromMaster,
-    core.models.media.MediaType.INDEX_M3U8 : core.download.HLS.DownloadM3U8FromIndex,
-}
 
 
 def search(
         search_term: str,
         filters: SearchFilters,
-        session: core.request.Session.Session,
+        session: Session,
         top: int = 5
 ) -> list[dict]:
      
 
-    core.general.Validate.validateStr(argument_name="search_term", string=search_term, caller="[providers] Soundcloud.search")
-    core.general.Validate.validateGeneralType(argument_name="filters", objType= SearchFilters, obj=filters, caller="[providers] Soundcloud.search")
-    core.general.Validate.validateSession(session=session, argument_name="session", caller="[providers] Soundcloud.search")
-    core.general.Validate.validateInt(argument_name="top", integer=top, caller="[providers] Soundcloud.search")
+    core.general.Validate.general.validateStr(argument_name="search_term", string=search_term, caller="[providers] Soundcloud.search")
+    core.general.Validate.general.validateGeneralType(argument_name="filters", objType= SearchFilters, obj=filters, caller="[providers] Soundcloud.search")
+    core.general.Validate.special.validateSession(session=session, argument_name="session", caller="[providers] Soundcloud.search")
+    core.general.Validate.general.validateInt(argument_name="top", integer=top, caller="[providers] Soundcloud.search")
 
 
     searchUrl: str = _buildSearchUrl(search_term)
-    html: str = core.general.Html.getHtml(
+    
+    searchHtml: str = html.getHtml(
          session=session,
          url=searchUrl
     )
-    core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Soundcloud.search")
+    core.general.Validate.general.validateStr(argument_name="searchHtml", string=searchHtml, caller="[providers] Soundcloud.search")
 
     results:list[dict] = []
     
 
     resultPattern: str = r'</ul>.*?<ul>.*?(<li><h2><a href=".*?)</ul>'
-    resultsBlock: str = core.general.DataSearch.searchBlocks(resultPattern, html, return_regex_exception=True)
+    resultsBlock: str = core.general.DataSearch.searchBlocks(resultPattern, searchHtml, return_regex_exception=True)
    
 
     
@@ -123,7 +126,7 @@ def _inFilter(
 
 def _buildSearchResult(
         url: str,
-        session: core.request.Session.Session,
+        session: Session,
 
 ) -> dict:
     
@@ -158,12 +161,10 @@ def _buildSearchResult(
 
 
 
-
-
 def _buildSearchUrl(
           search_term: str
 ) -> str:
-    core.general.Validate.validateStr(argument_name="search_term", string=search_term, caller="[providers] Soundcloud._buildSearchUrl")
+    core.general.Validate.general.validateStr(argument_name="search_term", string=search_term, caller="[providers] Soundcloud._buildSearchUrl")
     url = "https://soundcloud.com/search?" + urllib.parse.urlencode(
          {
               "q" : search_term
@@ -172,39 +173,32 @@ def _buildSearchUrl(
     return url
 
 
+def getMediaInformation(
+        request: models.ProviderResultRequest,
+) -> models.ProviderResult:
 
+    core.general.Validate.general.validateGeneralType(
+        argument_name="request", obj=request, objType=models.ProviderResultRequest, caller="Soundcloud.getMediaInformation"
+    )
 
-
-def download(
-        download_information: core.models.General.DownloadInformations,
-        retry_with_FFmpeg:bool = False
-        
-):
-    
-    
-
-    core.general.Validate.validateDownloadInformation(argument_name="download_information", download_information=download_information, caller="[providers] Soundcloud.download")
-    core.general.Validate.validateBool(boolean=retry_with_FFmpeg, argument_name="retry_with_FFmpeg", caller="[providers] Soundcloud.download")
-
-    core.general.Validate.validateHostPro(
-        url=download_information.url,
+    core.general.Validate.special.validateHostPro(
+        url=request.url,
         allowed_protocols_list=["https"],
-        allowed_hostnames_list=["soundcloud.com", "www.soundcloud.com", "52.84.150.57", "52.84.150.39", "52.84.150.35", "52.84.150.52"],
+        allowed_hostnames_list=["soundcloud.com", "www.soundcloud.com"],
         caller="[providers] Soundcloud.download"
         )
-
 
     buttonList=[
     "#onetrust-reject-all-handler",
     "button.modal__closeButton[title='Close']"
     ]
 
-    medialist: core.models.media.MediaList = core.request.EmergencyBrowser.BrowserDiscoverStreamURLs_ButtonList(
-        download_information.url,
+    medialist: core.models.media.MediaList = EmergencyBrowser.BrowserDiscoverStreamURLs_ButtonList(
+        request.url,
         headless=True,
         adBlock=True,
         buttonList=buttonList
-    )
+     )
     
     if not medialist:
         raise core.models.errors.TaskFailedError(
@@ -212,51 +206,97 @@ def download(
             reason="Browser couldn't detect find valid media",
             extraMessages=["Browser can't find media when the website is DRM protected/encrypted", "Try again with Headful Browser and see if Browser is now able to find Media"]
         )
+
+    bestCandidate = medialist.candidates[0]
+    return models.makeProviderResultFromCandidate(bestCandidate)
     
-    try:
-        for candidate in medialist.candidates:
-            
-            candidate: core.models.media.Media
+    
+
+
+
+
+# def download(
+#         download_information: core.models.General.DownloadInformations,
+#         retry_with_FFmpeg:bool = False
         
-            downloadFunction = MEDIATYPE_MAPPING.get(candidate.mediaType, None)
+# ):
+    
+    
+
+#     core.general.Validate.validateDownloadInformation(argument_name="download_information", download_information=download_information, caller="[providers] Soundcloud.download")
+#     core.general.Validate.validateBool(boolean=retry_with_FFmpeg, argument_name="retry_with_FFmpeg", caller="[providers] Soundcloud.download")
+
+#     core.general.Validate.validateHostPro(
+#         url=download_information.url,
+#         allowed_protocols_list=["https"],
+#         allowed_hostnames_list=["soundcloud.com", "www.soundcloud.com", "52.84.150.57", "52.84.150.39", "52.84.150.35", "52.84.150.52"],
+#         caller="[providers] Soundcloud.download"
+#         )
+
+
+#     buttonList=[
+#     "#onetrust-reject-all-handler",
+#     "button.modal__closeButton[title='Close']"
+#     ]
+
+#     medialist: core.models.media.MediaList = core.request.EmergencyBrowser.BrowserDiscoverStreamURLs_ButtonList(
+#         download_information.url,
+#         headless=True,
+#         adBlock=True,
+#         buttonList=buttonList
+#     )
+    
+#     if not medialist:
+#         raise core.models.errors.TaskFailedError(
+#             task="[CORE] BrowserDiscoverStreamUrls_ButtonList",
+#             reason="Browser couldn't detect find valid media",
+#             extraMessages=["Browser can't find media when the website is DRM protected/encrypted", "Try again with Headful Browser and see if Browser is now able to find Media"]
+#         )
+    
+#     try:
+#         for candidate in medialist.candidates:
+            
+#             candidate: core.models.media.Media
+        
+#             downloadFunction = MEDIATYPE_MAPPING.get(candidate.mediaType, None)
          
-            if downloadFunction == None:
-                raise core.models.errors.TaskFailedError(
-                    task="[providers] Soundcloud.download",
-                    reason="Mediatype Mapping didn't give back a function",
-                    extraMessages=["Mediatype Mapping only has functions for HLS download", f"Mediatype of the highest prio media: '{candidate.mediaType}'"],
-                    caller="[providers] Soundcloud.download",
-                )
+#             if downloadFunction == None:
+#                 raise core.models.errors.TaskFailedError(
+#                     task="[providers] Soundcloud.download",
+#                     reason="Mediatype Mapping didn't give back a function",
+#                     extraMessages=["Mediatype Mapping only has functions for HLS download", f"Mediatype of the highest prio media: '{candidate.mediaType}'"],
+#                     caller="[providers] Soundcloud.download",
+#                 )
 
                 
-            downloader = downloadFunction(
-                url = candidate.mediaUrl,
-                out_file = download_information.outFile,
-                session = download_information.session,
-                progress_dict = download_information.downloadProgress
-            )
+#             downloader = downloadFunction(
+#                 url = candidate.mediaUrl,
+#                 out_file = download_information.outFile,
+#                 session = download_information.session,
+#                 progress_dict = download_information.downloadProgress
+#             )
     
-            downloader.run()
+#             downloader.run()
      
-            return
+#             return
                 
  
-    except urllib.error.HTTPError as e:
-        if e.code == 403 and retry_with_FFmpeg:
-            print(f"Error 403, trying with CURL and FFMPEG")
+#     except urllib.error.HTTPError as e:
+#         if e.code == 403 and retry_with_FFmpeg:
+#             print(f"Error 403, trying with CURL and FFMPEG")
 
-            ffmpegCommand = core.general.CurlToFFMPEG.get_curlToFFmpeg(
-                candidate.curlCommand,
-                output=download_information.outFile
-            )
+#             ffmpegCommand = core.general.CurlToFFMPEG.get_curlToFFmpeg(
+#                 candidate.curlCommand,
+#                 output=download_information.outFile
+#             )
 
-            run_shell_command_async(ffmpegCommand)
+#             run_shell_command_async(ffmpegCommand)
 
-            return
+#             return
 
-        raise
-    except Exception:
-         raise
+#         raise
+#     except Exception:
+#          raise
 
 
    

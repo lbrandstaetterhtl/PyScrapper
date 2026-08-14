@@ -16,7 +16,7 @@ class DownloadRequest(BaseModel):
 
     urls: list[str]
     
-    filename: str
+    filenames: list[str]
 
     download_strategie: core.models.Download.DownloadStrategie = core.models.Download.DownloadStrategie.STREAM
 

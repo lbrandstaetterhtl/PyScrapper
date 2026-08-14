@@ -38,20 +38,8 @@ def getMediaInformation(
         )
 
     bestCandidate = medialist.candidates[0]
-    if bestCandidate.streamType == core.models.media.StreamType.HLS:
-        downloadType = core.models.Download.DownloadType.HLS
-    elif bestCandidate.streamType == core.models.media.StreamType.DIRECT:
-        downloadType = core.models.Download.DownloadType.FILE
-    else:
-        downloadType = None
-
+    return models.makeProviderResultFromCandidate(bestCandidate)
     
-    result =  models.ProviderResult(
-        url = bestCandidate.mediaUrl,
-        download_type=downloadType,
-        extra_headers=bestCandidate.headers.to_dict()
-    )
-    return result
     
 
 #Penis

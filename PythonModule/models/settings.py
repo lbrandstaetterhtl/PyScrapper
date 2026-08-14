@@ -27,10 +27,19 @@ providerDownloadMapping: dict = {
 }
 
 PROVIDER_GETRESULTS_MAPPING: dict = {
-    ProviderTypes.Default : p.Default.getMediaInformation
+    ProviderTypes.Default : p.Default.getMediaInformation,
+    ProviderTypes.Soundcloud : p.Soundcloud.getMediaInformation,
+    ProviderTypes.Bandcamp : p.Bandcamp.getMediaInformation
 }
 
-providerSearchMapping: dict = {}
+PROVIDER_SEARCH_MAPPING: dict = {
+    ProviderTypes.Soundcloud : p.Soundcloud.search,
+    ProviderTypes.Bandcamp : p.Bandcamp.search
+}
+    
+
+
+
 
 
 VALIDARCHIVENAMES = [
