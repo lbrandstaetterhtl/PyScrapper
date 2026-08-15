@@ -58,8 +58,8 @@ def search(
             url=searchURL,
             button_name="",
             headless=False,
-            wait_after_click_ms=20000,
-            wait_before_click_ms=20000
+            wait_after_click_ms=15000,
+            wait_before_click_ms=10000
         )
         session.reloadCookies()
         
@@ -68,9 +68,8 @@ def search(
                     top=top,
                     filters=filters
                 )
-        
 
-
+ 
 
     return results
        

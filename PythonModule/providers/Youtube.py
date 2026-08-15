@@ -1,5 +1,11 @@
 #Core Imports
 import PythonModule.core as core
+from PythonModule.core.network import html
+from PythonModule.core.network import Session
+from PythonModule.core.network import EmergencyBrowser
+
+# Own imports
+from . import models
 
 #PythonModule imports
 from PythonModule.models.requests import SearchFilters
@@ -9,6 +15,7 @@ import os
 import shutil
 import pathlib
 import urllib.parse
+import json
 
 #PIP Imports
 from yt_dlp import YoutubeDL
@@ -51,30 +58,30 @@ class YoutubeDownloadError(Exception): ...
 def search(
         search_term:str,
         filters: SearchFilters,
-        session: core.request.Session.Session,
+        session: Session,
         top:int = 5
         
         ) -> list[dict]:
 
-    core.general.Validate.validateStr(argument_name="search_term", string=search_term, caller="[providers] Youtube.search")
-    core.general.Validate.validateSession(session=session, caller="[providers] Youtube.search")
-    core.general.Validate.validateGeneralType(argument_name="filters", obj=filters, objType=SearchFilters, caller="[providers] Youtube.search")
-    core.general.Validate.validateInt(argument_name="top", integer=top, caller="[providers] Youtube.search") 
+    core.general.Validate.general.validateStr(argument_name="search_term", string=search_term, caller="[providers] Youtube.search")
+    core.general.Validate.special.validateSession(session=session, caller="[providers] Youtube.search")
+    core.general.Validate.general.validateGeneralType(argument_name="filters", obj=filters, objType=SearchFilters, caller="[providers] Youtube.search")
+    core.general.Validate.general.validateInt(argument_name="top", integer=top, caller="[providers] Youtube.search") 
 
 
     search_url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(search_term)
 
 
-    html:str = core.general.Html.getHtml(
+    searchHtml:str = html.getHtml(
         url=search_url,
         session=session
         )
-    core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Youtbe.search.getHtml")
+    core.general.Validate.general.validateStr(argument_name="searchHtml", string=searchHtml, caller="[providers] Youtbe.search.getHtml")
     
     
     keyword = "var ytInitialData = "
 
-    jsondata: dict = core.general.DataSearch.searchJson(searchBlock=html, keyword=keyword)
+    jsondata: dict = core.general.DataSearch.searchJson(searchBlock=searchHtml, keyword=keyword)
 
    
     if not jsondata:
@@ -129,63 +136,219 @@ def search(
     return Data
 
 
+import json
+import re
+import urllib.parse
+import urllib.request
 
 
+import urllib.parse
+from playwright.sync_api import sync_playwright
 
-def download(
-        download_information: core.models.General.DownloadInformations,
-        
+
+WEB_SAFARI_USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+    "Version/15.5 Safari/605.1.15"
+)
+
+
+def getYoutubeFormats(
+    url: str,
+    cookie_file: str | None = None,
 ):
-    core.general.Validate.validateDownloadInformation(
-        argument_name="download_information",
-        download_information=download_information,
-        caller="[providers] Youtube.download"
-    )
-    core.general.Validate.validateHostPro(
-        url=download_information.url,
-        allowed_hostnames_list=["youtube.com", "www.youtube.com", "142.251.141.14"],
-        caller="[providers]: Youtube.download"
-        )
-   
-
     ydl_opts = {
-        # best video + best audio, fallback auf fertige mp4
-        "format": "bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b",
-        "outtmpl": download_information.outFile,
-        "merge_output_format": "mp4",
-        "progress_hooks": [_buildProgressHook(download_information.downloadProgress)],
+        "quiet": True,
+        "skip_download": True,
 
-        # Sehr hilfreich bei YouTube-Problemen
-        "cookiesfrombrowser": ("firefox",),
-
-        # Nur das einzelne Video, nicht versehentlich Playlist
-        "noplaylist": True,
-
-        # Robuster
-        "retries": 10,
-        "fragment_retries": 10,
-        "socket_timeout": 30,
-
-        # Gut zum Debuggen bei Problemen
-        "verbose": True,
-
-        # ffmpeg Postprocessing
-        "postprocessors": [{
-            "key": "FFmpegVideoConvertor",
-            "preferedformat": "mp4",
-        }],
+        "extractor_args": {
+            "youtube": {
+                "player_client": [
+                    "default",
+                    "web_safari",
+                ]
+            }
+        },
     }
 
-    ffmpeg = find_ffmpeg()
-    if ffmpeg:
-        ydl_opts["ffmpeg_location"] = ffmpeg
+    if cookie_file:
+        ydl_opts["cookiefile"] = cookie_file
 
-    download_information.downloadProgress['status'] = "downloading..."
-    download_information.downloadProgress['filename'] = download_information.outFile
     with YoutubeDL(ydl_opts) as ydl:
-        ydl.download([download_information.url])
+        info = ydl.extract_info(
+            url,
+            download=False
+        )
 
-    download_information.downloadProgress['status'] = "complete"    
+    return info
+
+
+
+
+def getMediaInformation(
+    request: models.ProviderResultRequest,
+) -> models.ProviderResult:
+
+    core.general.Validate.general.validateGeneralType(
+        argument_name="request",
+        obj=request,
+        objType=models.ProviderResultRequest,
+        caller="Youtube.getMediaInformation"
+    )
+
+    core.general.Validate.special.validateHostPro(
+        url=request.url,
+        allowed_hostnames_list=[
+            "youtube.com",
+            "www.youtube.com"
+        ],
+        caller="[providers] Youtube.getMediaInformation"
+    )
+
+    ydl_opts = {
+        "quiet": True,
+        "skip_download": True,
+
+        "cookiefile": request.ses.cookieFile,
+
+        "extractor_args": {
+            "youtube": {
+                "player_client": [
+                    "default",
+                    "android_vr",
+                    "web_safari",
+                ]
+            }
+        },
+    }
+
+    with YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(
+            request.url,
+            download=False
+        )
+
+    formats = info.get("formats", [])
+
+    usable_formats = []
+
+    for format in formats:
+
+        media_url = format.get("url")
+        extension = format.get("ext")
+
+
+        if not media_url:
+            continue
+
+        if extension not in (
+            "mp4",
+            "webm",
+            "m4a",
+            "mp3",
+            "ogg",
+            "opus",
+        ):
+            continue
+
+        usable_formats.append(format)
+
+    if not usable_formats:
+        raise core.models.errors.TaskFailedError(
+            task="Youtube.getMediaInformation",
+            reason="yt-dlp returned no usable direct media URL",
+            caller="[providers] Youtube.getMediaInformation"
+        )
+
+    best = max(
+        usable_formats,
+        key=lambda format: (
+            format.get("height") or 0,
+            format.get("tbr") or 0,
+            format.get("abr") or 0,
+        )
+    )
+
+   
+    fileType = models.getContentType(url=best["url"], session=request.ses, extra_headers=best.get("http_headers"))
+    
+    return models.ProviderResult(
+        url=best["url"],
+
+        download_type=(
+            core.models.Download.DownloadType.FILE
+        ),
+
+        extra_headers=(
+            best.get("http_headers")
+            or {}
+        ),
+
+        file_type=fileType
+    )
+
+
+   
+
+    
+
+    
+
+
+#def download(
+#        download_information: core.models.General.DownloadInformations,
+#        
+#):
+#    core.general.Validate.validateDownloadInformation(
+#        argument_name="download_information",
+#        download_information=download_information,
+#        caller="[providers] Youtube.download"
+#    )
+#    core.general.Validate.validateHostPro(
+#        url=download_information.url,
+#        allowed_hostnames_list=["youtube.com", "www.youtube.com", "142.251.141.14"],
+#        caller="[providers]: Youtube.download"
+#        )
+#   
+
+#    ydl_opts = {
+#        # best video + best audio, fallback auf fertige mp4
+#        "format": "bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b",
+#        "outtmpl": download_information.outFile,
+#        "merge_output_format": "mp4",
+#        "progress_hooks": [_buildProgressHook(download_information.downloadProgress)],
+
+        # Sehr hilfreich bei YouTube-Problemen
+#        "cookiesfrombrowser": ("firefox",),
+
+        # Nur das einzelne Video, nicht versehentlich Playlist
+#        "noplaylist": True,
+
+        # Robuster
+#        "retries": 10,
+#        "fragment_retries": 10,
+#        "socket_timeout": 30,
+
+        # Gut zum Debuggen bei Problemen
+#        "verbose": True,
+
+        # ffmpeg Postprocessing
+#        "postprocessors": [{
+#            "key": "FFmpegVideoConvertor",
+#            "preferedformat": "mp4",
+#        }],
+#    }
+
+#    ffmpeg = find_ffmpeg()
+#    if ffmpeg:
+#        ydl_opts["ffmpeg_location"] = ffmpeg
+
+#    download_information.downloadProgress['status'] = "downloading..."
+#    download_information.downloadProgress['filename'] = download_information.outFile
+#    with YoutubeDL(ydl_opts) as ydl:
+#        ydl.download([download_information.url])
+
+#    download_information.downloadProgress['status'] = "complete"    
     
 
 

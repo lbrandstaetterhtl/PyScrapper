@@ -9,6 +9,77 @@ from enum import Enum
 
 
 
+NEWGROUNDS_MEDIA_PRIORITY = {
+    # Lossless Audio
+    "flac": 100,
+    "wav": 95,
+
+    # Sehr brauchbares Video
+    "mp4": 90,
+    "webm": 85,
+
+    # Andere Audioformate
+    "m4a": 80,
+    "aac": 78,
+    "opus": 76,
+    "ogg": 74,
+    "mp3": 70,
+
+    # Sonstige Video-Container
+    "mkv": 65,
+    "mov": 60,
+}
+
+MEDIA_EXTENSION_PRIORITY = {
+    # Video + Audio Container
+    "mp4": 100,
+    "mkv": 95,
+    "webm": 90,
+    "mov": 80,
+    "m4v": 80,
+    "avi": 70,
+    "wmv": 60,
+    "mpg": 55,
+    "mpeg": 55,
+    "ts": 50,
+
+    # Audio
+    "flac": 45,
+    "wav": 40,
+    "m4a": 38,
+    "aac": 35,
+    "ogg": 32,
+    "opus": 30,
+    "mp3": 25,
+
+    # Playlists / Streams
+    "m3u8": 20,
+    "mpd": 20,
+}
+
+#Priority list when audio quality is more important
+MEDIA_PRIORITY_FOR_QUALITY_AUDIO = {
+    # Lossless Audio
+    "flac": 100,
+    "wav": 95,
+
+    # modern audio formats
+    "m4a": 85,
+    "aac": 80,
+    "opus": 78,
+    "ogg": 75,
+
+    # video less important
+        "mp4": 70,
+        "mkv": 65,
+        "webm": 50,
+
+    # poor old mp3
+    "mp3": 40,
+
+    
+}
+
 CONTENT_TYPE_EXTENSIONS = {
     "video/mp4": "mp4",
     "video/webm": "webm",
@@ -93,10 +164,11 @@ class ProviderNames(Enum):
 
 def getContentType(
         url: str,
-        session: Session
+        session: Session,
+        extra_headers: dict | None = None
 ) -> str | None:
 
-    with session.open(url=url) as response:
+    with session.open(url=url, headers=extra_headers) as response:
         content_type: str = response.headers.get("Content-Type")
         if content_type:
             content_type = content_type.split(";", 1)[0].strip()

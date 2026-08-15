@@ -41,8 +41,6 @@ def validateHostDefault(
 
     validateStr(argument_name="url", string=url, caller=caller)
     
-   
-
 
     invalidReasonList: list[str] = []
 
@@ -54,7 +52,8 @@ def validateHostDefault(
 #Allow IP adresses
     try:
         ipaddress.ip_address(hostname)
-        return
+        invalidReasonList.append("Given hostname was a IP-Adress which core doesn't allow for safety")
+    
     
     except ValueError:
         pass
@@ -63,6 +62,8 @@ def validateHostDefault(
     if len(parsed.hostname) > 253:
         invalidReasonList.append("DNS name is too long. Allowed length: 254")
 
+    if hostname == "localhost":
+        invalidReasonList.append("Choosing local host as host isn't allowed")
 
     if hostname.endswith("."):
         hostname = hostname[-1]

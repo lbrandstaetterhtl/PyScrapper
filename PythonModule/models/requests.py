@@ -10,6 +10,7 @@ import PythonModule.core as core
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+
 #Classes
 class DownloadRequest(BaseModel):
     provider: str
@@ -22,7 +23,7 @@ class DownloadRequest(BaseModel):
 
     extra_headers: dict | None = None
 
-    out_file: str | None = None
+    download_path: str = ""
     
 
 

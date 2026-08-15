@@ -1,18 +1,16 @@
 #Core Imports
 import PythonModule.core as core
+from PythonModule.core.network import html
+from PythonModule.core.network.Session import Session
+from PythonModule.core.network import EmergencyBrowser
+
+#Own downloads
+
+from . import models
 
 #Python Default imports
 import gzip
 import zlib
-
-
-MEDIATYPE_MAPPING = {
-    core.models.media.MediaType.MASTER_M3U8 : core.download.HLS.DownloadM3U8FromMaster,
-    core.models.media.MediaType.INDEX_M3U8 : core.download.HLS.DownloadM3U8FromIndex,
-    core.models.media.MediaType.FILE : core.download.File.downloadToFile
-    }
-
-
 
 
 
@@ -42,33 +40,32 @@ headers = {
 }
 
 
-def download(
-        download_information: core.models.General.DownloadInformations,
-        retry_with_FFmpeg: bool = True
-): 
-    core.general.Validate.validateDownloadInformation(argument_name="download_information", download_information=download_information, caller="[providers] Wcoflix.download")
-    core.general.Validate.validateBool(boolean=retry_with_FFmpeg, argument_name="retry_with_ffmpeg", caller="[providers] Wcoflix.download")
-    core.general.Validate.validateHostPro(
-        url=download_information.url,
-        allowed_hostnames_list=["wcoflix.tv", "www.wcoflix.tv", "172.67.72.248", "104.26.14.194", "104.26.15.194"],
-        caller="[providers] Wcoflix.download"
-        )
+def getMediaInformation(
+        request: models.ProviderResultRequest,
+) -> models.ProviderResult:
 
-
-    episodeHtml: str = core.general.Html.getHtml(
-        download_information.session,
-        download_information.url
+    core.general.Validate.general.validateGeneralType(
+        argument_name="request", obj=request, objType=models.ProviderResultRequest, caller="Soundcloud.getMediaInformation"
     )
-    core.general.Validate.validateStr(argument_name="expisodeHtml", string=episodeHtml, caller="[providers] Wcoflix.download")
+
+    core.general.Validate.special.validateHostPro(
+        url=request.url,
+        allowed_hostnames_list=["wcolfix.tv", "www.wcoflix.tv"],
+        caller="[providers] Wcoflix.getMediaInformation"
+    )
+
+    episodeHtml = html.getHtml(
+        request.ses,
+        request.url
+    )
 
     indexUrl: str = core.general.DataSearch.searchBlocks(
-        iFramePattern, 
+        iFramePattern,
         episodeHtml,
         return_regex_exception=True
     )
 
-
-    with download_information.session.open(
+    with request.ses.open(
         url=indexUrl, headers=headers
     ) as response:
         
@@ -82,56 +79,115 @@ def download(
 
     
 
-    medialist: core.models.media.MediaList = core.request.EmergencyBrowser.WCOFLIXBrowserDiscoverStreamUrls(
+    medialist: core.models.media.MediaList = EmergencyBrowser.WCOFLIXBrowserDiscoverStreamUrls(
         indexUrl,
         headless=True,
         ad_block=True,
         extra_headers={
             "Referer": "https://www.wcoflix.tv/"
         }
-    )
+    )   
     if not medialist:
         raise core.models.errors.TaskFailedError(
             task="[CORE] WCOFLIXBrowserDiscoverStreamUrls",
             reason="Browser didn't get valid Media. Please try again later",
             caller="[provider] Wcoflix.download"
         )
+
+    result = models.makeProviderResultFromCandidate(candidate=medialist.candidates[0])
+    return result
+
+
+#def download(
+#        download_information: core.models.General.DownloadInformations,
+#        retry_with_FFmpeg: bool = True
+#): 
+#    core.general.Validate.download.validateDownloadInformation(argument_name="download_information", download_information=download_information, caller="[providers] Wcoflix.download")
+#    core.general.Validate.general.validateBool(boolean=retry_with_FFmpeg, argument_name="retry_with_ffmpeg", caller="[providers] Wcoflix.download")
+#    core.general.Validate.special.validateHostPro(
+#        url=download_information.url,
+#        allowed_hostnames_list=["wcoflix.tv", "www.wcoflix.tv"],
+#        caller="[providers] Wcoflix.download"
+#        )
+#
+#
+#    episodeHtml: str = core.general.Html.getHtml(
+#        download_information.session,
+#        download_information.url
+#    )
+#    core.general.Validate.validateStr(argument_name="expisodeHtml", string=episodeHtml, caller="[providers] Wcoflix.download")#
+#
+#    indexUrl: str = core.general.DataSearch.searchBlocks(
+#        iFramePattern, 
+#        episodeHtml,
+#        return_regex_exception=True
+#    )
+
+
+#    with download_information.session.open(
+#        url=indexUrl, headers=headers
+#    ) as response:
+#        
+#        indexHTMLRaw = response.read()
+#        encoding = response.headers.get("Content-Encoding", "").lower()
+
+#    if encoding == "gzip":
+#        indexHTMLRaw = gzip.decompress(indexHTMLRaw)
+#    elif encoding == "deflate":
+#        indexHTMLRaw = zlib.decompress(indexHTMLRaw)
+
     
-    candidate: core.models.media.Media = medialist.candidates[0]
 
-    downloadFunction = MEDIATYPE_MAPPING.get(candidate.mediaType, None)
-    if not downloadFunction:
-        raise core.models.errors.TaskFailedError(
-            task="MEDIATYPE_MAPPING.get()",
-            reason="Mediatype of the candidate wasn't in the dictionary",
-            extraMessages=["Wcoflix only supports functions for File and HLS", f"Mediatype of candidate {candidate.mediaType}"],
-            caller="[providers] Wcoflix.download"
-        )
+#    medialist: core.models.media.MediaList = core.request.EmergencyBrowser.WCOFLIXBrowserDiscoverStreamUrls(
+#        indexUrl,
+#        headless=True,
+#        ad_block=True,
+#        extra_headers={
+#            "Referer": "https://www.wcoflix.tv/"
+#        }
+#    )
+#    if not medialist:
+#        raise core.models.errors.TaskFailedError(
+#            task="[CORE] WCOFLIXBrowserDiscoverStreamUrls",
+#            reason="Browser didn't get valid Media. Please try again later",
+#            caller="[provider] Wcoflix.download"
+#        )
+#    
+#    candidate: core.models.media.Media = medialist.candidates[0]
+
+#    downloadFunction = MEDIATYPE_MAPPING.get(candidate.mediaType, None)
+#    if not downloadFunction:
+#        raise core.models.errors.TaskFailedError(
+#            task="MEDIATYPE_MAPPING.get()",
+#            reason="Mediatype of the candidate wasn't in the dictionary",
+#            extraMessages=["Wcoflix only supports functions for File and HLS", f"Mediatype of candidate {candidate.mediaType}"],
+#            caller="[providers] Wcoflix.download"
+#        )
   
-    extraHeaders = candidate.headers.to_dict()#
-    if isinstance(downloadFunction, type):         
-        downloader = downloadFunction(
-            url = candidate.mediaUrl,
-            out_file = download_information.outFile,
-            session = download_information.session,
-            progress_dict = download_information.downloadProgress,
-            extra_headers = extraHeaders,
-        )
+#    extraHeaders = candidate.headers.to_dict()#
+#    if isinstance(downloadFunction, type):         
+#        downloader = downloadFunction(
+#            url = candidate.mediaUrl,
+#            out_file = download_information.outFile,
+#            session = download_information.session,
+#            progress_dict = download_information.downloadProgress,
+#            extra_headers = extraHeaders,
+#        )
         
-        downloader.run()
-        return  
+#        downloader.run()
+#        return  
 
-    else:
+#    else:
         
-        downloadFunction(
-            url= candidate.mediaUrl,
-            out_file = download_information.outFile,
-            session = download_information.session,
-            progress_dict = download_information.downloadProgress,
-            extra_headers=extraHeaders
+#        downloadFunction(
+#            url= candidate.mediaUrl,
+#            out_file = download_information.outFile,
+#            session = download_information.session,
+#            progress_dict = download_information.downloadProgress,
+#            extra_headers=extraHeaders
         
-        )
-        return
+#        )
+#        return
 
 
     

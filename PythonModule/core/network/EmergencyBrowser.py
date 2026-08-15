@@ -1,3 +1,4 @@
+from __future__ import annotations
 from playwright.sync_api import sync_playwright
 from ..models import media
 import os
@@ -154,22 +155,286 @@ def _save_playwright_cookies_to_mozilla(context, cookie_file: str) -> None:
             pass
 
 
+def _tryPressCookieAccept(
+    page,
+    timeout_ms: int = 1200,
+    wait_after_click_ms: int = 500,
+) -> bool:
+
+    selectors = [
+        # Sehr häufig
+        "button#onetrust-accept-btn-handler",
+        "#onetrust-accept-btn-handler",
+
+        # Sourcepoint
+        "button[title='Alle akzeptieren']",
+        "button[title='Accept All']",
+
+        # Generische Buttons
+        "button:has-text('Alle akzeptieren')",
+        "button:has-text('Alles akzeptieren')",
+        "button:has-text('Akzeptieren')",
+        "button:has-text('Zustimmen')",
+
+        "button:has-text('Accept all')",
+        "button:has-text('Accept All')",
+        "button:has-text('Accept')",
+        "button:has-text('I agree')",
+        "button:has-text('Agree')",
+
+        # Häufige aria-label Varianten
+        "button[aria-label*='accept' i]",
+        "button[aria-label*='akzeptieren' i]",
+        "button[aria-label*='zustimmen' i]",
+
+        # Inputs
+        "input[type='button'][value*='accept' i]",
+        "input[type='submit'][value*='accept' i]",
+        "input[type='button'][value*='akzeptieren' i]",
+        "input[type='submit'][value*='akzeptieren' i]",
+    ]
+
+    # Cookie-Banner können auch in iframe sitzen.
+    try:
+        frames = list(page.frames)
+    except Exception:
+        frames = [page.main_frame]
+
+    for frame in frames:
+
+        for selector in selectors:
+
+            try:
+                locator = frame.locator(selector).first
+
+                if locator.count() == 0:
+                    continue
+
+                if not locator.is_visible(
+                    timeout=timeout_ms
+                ):
+                    continue
+
+                print(
+                    f"[Cookies] trying accept button: "
+                    f"{selector}"
+                )
+
+                try:
+                    locator.click(
+                        timeout=timeout_ms
+                    )
+
+                except Exception:
+                    try:
+                        locator.click(
+                            timeout=timeout_ms,
+                            force=True
+                        )
+                    except Exception:
+                        continue
+
+                print(
+                    "[Cookies] consent accepted"
+                )
+
+                page.wait_for_timeout(
+                    wait_after_click_ms
+                )
+
+                return True
+
+            except Exception:
+                continue
+
+    print(
+        "[Cookies] no consent dialog found"
+    )
+
+    return False
+
 
 def _tryPressPlay(page, max_attempts: int = 4, wait_ms: int = 2000) -> bool:
     context = page.context
     start_url = page.url
 
     selectors = [
+        # --------------------------------------------------
+        # Video.js
+        # --------------------------------------------------
         ".vjs-big-play-button",
+        ".video-js .vjs-big-play-button",
+        "button.vjs-big-play-button",
+
+        # --------------------------------------------------
+        # JW Player
+        # --------------------------------------------------
         ".jw-icon-playback",
+        ".jw-display-icon-container",
         ".jwplayer .jw-display-icon-container",
+        ".jwplayer .jw-icon-playback",
+        ".jwplayer [aria-label*='play' i]",
+
+        # --------------------------------------------------
+        # Plyr
+        # --------------------------------------------------
         ".plyr__control--overlaid",
+        ".plyr__control[data-plyr='play']",
+        "button[data-plyr='play']",
+        ".plyr button[aria-label*='play' i]",
+
+        # --------------------------------------------------
+        # Shaka Player
+        # --------------------------------------------------
         ".shaka-play-button",
+        ".shaka-play-button-container button",
+        ".shaka-controls-container button[aria-label*='play' i]",
+
+        # --------------------------------------------------
+        # YouTube
+        # --------------------------------------------------
         ".ytp-large-play-button",
+        ".ytp-play-button",
+        "button.ytp-large-play-button",
+        "button.ytp-play-button",
+
+        # --------------------------------------------------
+        # MediaElement.js
+        # --------------------------------------------------
+        ".mejs__overlay-button",
+        ".mejs__play button",
+        ".mejs-playpause-button button",
+
+        # --------------------------------------------------
+        # Flowplayer
+        # --------------------------------------------------
+        ".fp-play",
+        ".fp-ui .fp-play",
+        ".flowplayer .fp-play",
+
+        # --------------------------------------------------
+        # Clappr
+        # --------------------------------------------------
+        ".media-control-center-panel .play-wrapper",
+        ".play-wrapper",
+        "[data-playpause]",
+        ".container[data-container] .play-wrapper",
+
+        # --------------------------------------------------
+        # Bitmovin
+        # --------------------------------------------------
+        ".bmpui-ui-hugeplaybacktogglebutton",
+        ".bmpui-ui-playbacktogglebutton",
+        "button[class*='playbacktogglebutton' i]",
+
+        # --------------------------------------------------
+        # THEOplayer
+        # --------------------------------------------------
+        ".theoplayer-play-button",
+        ".theoplayer-control-playpause-button",
+        "[class*='theoplayer'][class*='play' i]",
+
+        # --------------------------------------------------
+        # Kaltura / generic embedded players
+        # --------------------------------------------------
+        ".largePlayBtn",
+        ".playkit-pre-playback-play-button",
+        ".playkit-control-button.playkit-playback-button",
+
+        # --------------------------------------------------
+        # Odysee / LBRY / generic React players
+        # --------------------------------------------------
+        "button[data-testid*='play' i]",
+        "[data-testid='play-button']",
+        "[data-testid='playback-button']",
+        "[data-testid*='playback' i]",
+
+        # --------------------------------------------------
+        # Generic IDs / classes
+        # --------------------------------------------------
+        "#play-button",
+        "#playButton",
+        "#play_button",
+        "#playback-button",
+        "#playback_button",
+
+        ".play-button",
+        ".playButton",
+        ".play_button",
+        ".playback-button",
+        ".playback_button",
+        ".big-play-button",
+        ".bigPlayButton",
+
+        # Your existing custom names
+        "playback_button_svg",
+        "playback_button",
+
+        # --------------------------------------------------
+        # Accessible buttons
+        # --------------------------------------------------
+        "button[aria-label='Play']",
+        "button[aria-label='play']",
         "button[aria-label*='play' i]",
+        "button[aria-label*='resume' i]",
+        "button[aria-label*='start' i]",
+
+        "button[aria-label*='abspielen' i]",
+        "button[aria-label*='wiedergabe' i]",
+        "button[aria-label*='fortsetzen' i]",
+        "button[aria-label*='starten' i]",
+
+        # --------------------------------------------------
+        # Title attributes
+        # --------------------------------------------------
+        "button[title='Play']",
         "button[title*='play' i]",
-        "[aria-label*='abspielen' i]",
-        "[title*='abspielen' i]",
+        "button[title*='resume' i]",
+        "button[title*='start' i]",
+
+        "button[title*='abspielen' i]",
+        "button[title*='wiedergabe' i]",
+        "button[title*='starten' i]",
+
+        # --------------------------------------------------
+        # role=button elements
+        # --------------------------------------------------
+        "[role='button'][aria-label*='play' i]",
+        "[role='button'][title*='play' i]",
+        "[role='button'][aria-label*='abspielen' i]",
+        "[role='button'][title*='abspielen' i]",
+
+        # --------------------------------------------------
+        # SVG/Icon-based buttons
+        # --------------------------------------------------
+        "button svg[aria-label*='play' i]",
+        "button [class*='play-icon' i]",
+        "button [class*='icon-play' i]",
+        "[role='button'] [class*='play-icon' i]",
+
+        # --------------------------------------------------
+        # Text fallbacks
+        # --------------------------------------------------
+        "button:has-text('Play')",
+        "button:has-text('Abspielen')",
+        "button:has-text('Wiedergabe starten')",
+        "button:has-text('Video starten')",
+
+        "[role='button']:has-text('Play')",
+        "[role='button']:has-text('Abspielen')",
+
+        # --------------------------------------------------
+        # Generic class/id contains play
+        # Be careful: these are intentionally late
+        # --------------------------------------------------
+        "button[class*='play' i]",
+        "button[id*='play' i]",
+        "[role='button'][class*='play' i]",
+        "[role='button'][id*='play' i]",
+
+        # --------------------------------------------------
+        # Last resort
+        # --------------------------------------------------
         "video",
     ]
 
@@ -177,18 +442,49 @@ def _tryPressPlay(page, max_attempts: int = 4, wait_ms: int = 2000) -> bool:
         try:
             return frame.evaluate("""
                 () => {
-                    const v = document.querySelector("video");
-                    if (!v) return false;
-                    return !!(
-                        v.currentSrc &&
-                        !v.paused &&
-                        !v.ended &&
-                        v.readyState >= 2
+                    const mediaElements = [
+                        ...document.querySelectorAll("video, audio")
+                    ];
+
+                    return mediaElements.some(media =>
+                        !media.paused &&
+                        !media.ended &&
+                        media.readyState > 0
                     );
                 }
             """)
         except Exception:
             return False
+
+    def _looks_like_pause_button(loc) -> bool:
+        try:
+            aria_label = (loc.get_attribute("aria-label") or "").lower()
+            title = (loc.get_attribute("title") or "").lower()
+            classes = (loc.get_attribute("class") or "").lower()
+
+            pause_keywords = (
+                "pause",
+                "pausieren",
+            )
+
+            return any(
+                keyword in value
+                for value in (aria_label, title, classes)
+                for keyword in pause_keywords
+            )
+        except Exception:
+            return False
+
+    def _is_any_media_playing() -> bool:
+        try:
+            frames = list(page.frames)
+        except Exception:
+            frames = [page.main_frame]
+
+        return any(
+            _is_video_playing(frame)
+            for frame in frames
+        )
 
     def _try_js_play(frame) -> bool:
         try:
@@ -244,6 +540,11 @@ def _tryPressPlay(page, max_attempts: int = 4, wait_ms: int = 2000) -> bool:
                 pass
 
     for attempt in range(max_attempts):
+
+        if _is_any_media_playing():
+            print("[Play] Media already playing")
+            return True
+
         print(f"[Play] Attempt {attempt + 1}/{max_attempts}")
 
         # WICHTIG: jedes Mal frisch holen
@@ -265,12 +566,21 @@ def _tryPressPlay(page, max_attempts: int = 4, wait_ms: int = 2000) -> bool:
 
             for selector in selectors:
                 try:
+                    if _is_any_media_playing():
+                        print("[Play] Media already playing")
+                        return True
+
                     loc = frame.locator(selector).first
 
                     if loc.count() == 0:
                         continue
+
                     if not loc.is_visible(timeout=700):
                         continue
+
+                    if _looks_like_pause_button(loc):
+                        print("[Play] Player already appears to be playing")
+                        return True
 
                     print(f"[Play] Trying selector: {selector}")
                     clicked_anything = True
@@ -419,6 +729,40 @@ def _buildOrigin(
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
+def _removeByteRangeParams(url: str) -> str:
+    import urllib.parse
+
+    parsed = urllib.parse.urlsplit(url)
+
+    params_to_remove = {
+        "bytestart",
+        "byteend",
+        "bytes",
+    }
+
+    filtered_query_parts = []
+
+    for part in parsed.query.split("&"):
+        if not part:
+            continue
+
+        key = part.split("=", 1)[0]
+        key = urllib.parse.unquote_plus(key).lower()
+
+        if key in params_to_remove:
+            continue
+
+        filtered_query_parts.append(part)
+
+    return urllib.parse.urlunsplit((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        "&".join(filtered_query_parts),
+        parsed.fragment,
+    ))
+
+
 def _saveMedia(
     response,
     foundMedia: dict[str, media.Media],
@@ -428,9 +772,11 @@ def _saveMedia(
 ):
     request = response.request
 
-    url = response.url
-    if not url:
+    raw_url = response.url
+    if not raw_url:
         return
+
+    url = _removeByteRangeParams(raw_url)
 
     lower = url.lower()
 
@@ -442,6 +788,13 @@ def _saveMedia(
 
     is_media_request = (
         resource_type == "media"
+
+        or content_type.startswith("video/")
+        or content_type.startswith("audio/")
+        or "application/vnd.apple.mpegurl" in content_type
+        or "application/x-mpegurl" in content_type
+        or "application/dash+xml" in content_type
+
         or "getvid" in lower
         or ".m3u8" in lower
         or ".mpd" in lower
@@ -484,7 +837,7 @@ def _saveMedia(
 
     _fileExtension = _guess_File_Extension(content_type)
 
-    _streamType, _mediaType, _priority = _guessMediaType(url)
+    _streamType, _mediaType, _priority = _guessMediaType(url, content_type)
 
     if url not in foundMedia:
         foundMedia[url] = media.Media(
@@ -512,16 +865,16 @@ def _saveMedia(
 
 
 def _guessMediaType(
-    url: str
+    url: str,
+    content_type: str
 ) -> tuple[media.StreamType, media.MediaType, int]:
     import urllib.parse
-
-    lower = url.lower()
 
     parsed = urllib.parse.urlparse(url)
 
     hostname = (parsed.hostname or "").lower()
     path = parsed.path.lower()
+    content_type = (content_type or "").lower().split(";", 1)[0].strip()
 
     query = urllib.parse.parse_qs(
         parsed.query,
@@ -570,13 +923,14 @@ def _guessMediaType(
         _streamType = media.StreamType.DIRECT
         _mediaType = media.MediaType.FILE
         _priority = 120
+
     # --------------------------------------------------
-    # Tiktok / Musically
+    # TikTok / Musically
     # --------------------------------------------------
+
     elif (
         hostname.endswith("tiktokcdn.com")
         or hostname.endswith("prime.tiktok.com")
-  
     ):
         _streamType = media.StreamType.DIRECT
         _mediaType = media.MediaType.FILE
@@ -592,22 +946,16 @@ def _guessMediaType(
         _mediaType = media.MediaType.FILE
         _priority = 100
 
-        # evid strongly suggests an actual media token
         if "evid" in query:
             _priority += 30
 
-        # JSON variant is likely metadata / resolver
         if "json" in query:
             _priority -= 80
-
-        # Non-JSON /getvid is much more likely the actual file
         else:
             _priority += 40
 
-
-
     # --------------------------------------------------
-    # HLS
+    # HLS by URL
     # --------------------------------------------------
 
     elif ".m3u8" in path:
@@ -632,7 +980,21 @@ def _guessMediaType(
             _priority = 50
 
     # --------------------------------------------------
-    # MPEG-DASH
+    # HLS by Content-Type
+    # --------------------------------------------------
+
+    elif content_type in (
+        "application/vnd.apple.mpegurl",
+        "application/x-mpegurl",
+        "audio/mpegurl",
+        "audio/x-mpegurl",
+    ):
+        _streamType = media.StreamType.HLS
+        _mediaType = media.MediaType.UNKNOWN_M3U8
+        _priority = 75
+
+    # --------------------------------------------------
+    # MPEG-DASH by URL
     # --------------------------------------------------
 
     elif ".mpd" in path:
@@ -642,7 +1004,17 @@ def _guessMediaType(
         _priority = 100
 
     # --------------------------------------------------
-    # Direct files
+    # MPEG-DASH by Content-Type
+    # --------------------------------------------------
+
+    elif content_type == "application/dash+xml":
+
+        _streamType = media.StreamType.DASH
+        _mediaType = media.MediaType.MASTER_MPD
+        _priority = 90
+
+    # --------------------------------------------------
+    # Direct files by URL
     # --------------------------------------------------
 
     elif any(
@@ -675,6 +1047,32 @@ def _guessMediaType(
             _priority = 70
 
     # --------------------------------------------------
+    # Direct media by Content-Type
+    # --------------------------------------------------
+
+    elif (
+        content_type.startswith("video/")
+        or content_type.startswith("audio/")
+    ):
+        _streamType = media.StreamType.DIRECT
+        _mediaType = media.MediaType.FILE
+        _priority = 65
+
+    # --------------------------------------------------
+    # Generic binary responses
+    # --------------------------------------------------
+
+    elif content_type == "application/octet-stream":
+
+        # Could be media, but Content-Type alone is not enough
+        # to identify it safely.
+        return (
+            media.StreamType.UNKNOWN,
+            media.MediaType.UNKNOWN,
+            -1
+        )
+
+    # --------------------------------------------------
     # Unknown
     # --------------------------------------------------
 
@@ -693,20 +1091,9 @@ def _guessMediaType(
         if keyword in searchable:
             _priority -= 20
 
-    for keyword in badKeywords:
+    for keyword in goodKeywords:
         if keyword in searchable:
-            _priority -= 20
-    #if any(
-    #    keyword in searchable
-    #    for keyword in badKeywords
-    #):
-    #    _priority -= 50
-
-    #if any(
-    #    keyword in searchable
-    #    for keyword in goodKeywords
-    #):
-    #    _priority += 20
+            _priority += 10
 
     return (
         _streamType,
@@ -742,19 +1129,16 @@ def _buildMediaList(
     return mediaList if mediaList.candidates else None
 
 
-def _blockAds(route, request):
 
+
+def _blockAds(route, request):
     url = request.url.lower()
 
     parsed = urlparse(url)
-
-    host = parsed.netloc.lower()
-
+    host = parsed.hostname or ""
     path = parsed.path.lower()
-
     resource_type = request.resource_type
 
-#Very very bad hosts!
     bad_hosts = [
         "doubleclick.net",
         "googlesyndication.com",
@@ -780,16 +1164,11 @@ def _blockAds(route, request):
         "outbrain.com",
         "mgid.com",
 
-        "facebook.net",
-        "facebook.com/tr",
         "clarity.ms",
         "hotjar.com",
         "histats.com",
-        "yandex.ru/metrika",
-        "yandex.net",
     ]
 
-    # Typische Ad-/Tracker-Pfade
     bad_path_keywords = [
         "/ads/",
         "/ad/",
@@ -799,40 +1178,38 @@ def _blockAds(route, request):
         "/popup",
         "/clickunder",
         "/tracking",
-        "/track",
+        "/tracker",
         "/analytics",
         "/beacon",
         "/pixel",
         "/collect",
         "/stats",
-        "/tag.js",
-        "/gtag/js",
         "/fbevents",
     ]
 
-    # Sehr verdächtige Query-Parameter
     bad_query_keywords = [
-        "utm_source=",
-        "utm_campaign=",
         "ad_id=",
         "adid=",
         "clickid=",
         "campaignid=",
-        "tracking",
         "advert",
         "popup",
         "popunder",
     ]
 
-    # Never block -> Player/Video relevant ressources
     allow_keywords = [
         ".m3u8",
         ".mpd",
         ".mp4",
         ".m4s",
         ".ts",
+        ".m4a",
+        ".aac",
+        ".mp3",
+        ".webm",
         ".vtt",
         ".srt",
+        "videoplayback",
         "hls",
         "dash",
         "jw_player",
@@ -844,33 +1221,51 @@ def _blockAds(route, request):
         "video",
     ]
 
-    suspicious_image_words = [
-                "banner",
-                "advert",
-                "ads",
-                "promo",
-            ]
+    suspicious_resource_words = [
+        "banner",
+        "advert",
+        "promo",
+        "popunder",
+        "popup",
+    ]
 
+    # --------------------------------------------------
+    # Never block obvious media/player resources
+    # --------------------------------------------------
 
-    if any(good in url for good in allow_keywords):
+    if any(keyword in url for keyword in allow_keywords):
         return route.continue_()
 
+    # --------------------------------------------------
+    # Known ad/tracking domains
+    # --------------------------------------------------
 
-    if any(bad in host for bad in bad_hosts):
+    if any(
+        host == bad_host or host.endswith("." + bad_host)
+        for bad_host in bad_hosts
+    ):
         return route.abort()
 
+    # --------------------------------------------------
+    # Suspicious paths / query
+    # --------------------------------------------------
 
-    if any(bad in path for bad in bad_path_keywords):
+    if any(keyword in path for keyword in bad_path_keywords):
         return route.abort()
 
-
-    if any(bad in url for bad in bad_query_keywords):
+    if any(keyword in parsed.query.lower() for keyword in bad_query_keywords):
         return route.abort()
 
-#Optional -> if xy ressource types have bad key words then it will will be blocked
-    if resource_type in ("image", "media", "font"):
-        
-        if any(k in url for k in suspicious_image_words):
+    # --------------------------------------------------
+    # Suspicious static resources
+    # --------------------------------------------------
+
+    if resource_type in (
+        "image",
+        "font",
+        "stylesheet",
+    ):
+        if any(keyword in url for keyword in suspicious_resource_words):
             return route.abort()
 
     return route.continue_()
@@ -889,8 +1284,10 @@ def BrowserDiscoverStreamURLs(
     foundMedia: dict[str, media.Media] = {}
 
     with sync_playwright() as p:
-        browserLauncher = getattr(p, "chromium")
-        browser = browserLauncher.launch(headless=headless)
+        browser = p.chromium.launch(
+            headless=headless,
+            channel="chromium" if headless else None
+        )
 
         try:
 
@@ -903,7 +1300,20 @@ def BrowserDiscoverStreamURLs(
             if extra_headers:
                 headers.update(extra_headers)
 
-            context = browser.new_context(extra_http_headers=headers)
+            context = browser.new_context(
+                extra_http_headers=headers,
+
+                viewport={
+                    "width": 1920,
+                    "height": 1080
+                },
+
+                locale="de-DE",
+
+                timezone_id="Europe/Vienna",
+
+                color_scheme="dark"
+            )
             if ad_block == True:
                 context.route("**/*", _blockAds)
 
@@ -934,7 +1344,15 @@ def BrowserDiscoverStreamURLs(
 #Goes to the requested website and waits a brief period of time to get ressources before trying to click something
             try:
                 page.goto(url, wait_until="domcontentloaded", timeout=15000)
-                page.wait_for_timeout(4000)
+                page.wait_for_timeout(1500)
+
+                _tryPressCookieAccept(page)
+
+                page.wait_for_selector(
+                    "video, iframe, [class*='player' i], [id*='player' i]",
+                    timeout=10000
+                )
+                
             except Exception:
                 pass
 
@@ -943,6 +1361,7 @@ def BrowserDiscoverStreamURLs(
             
 #Trys to press variety of default buttons            
             _tryPressPlay(page)
+            print("Now waiting for timeout")
             page.wait_for_timeout(4000)
 
             return _buildMediaList(foundMedia)
@@ -974,8 +1393,10 @@ def BrowserDiscoverStreamURLs_ButtonList(
     foundMedia: dict[str, media.Media] = {}
 
     with sync_playwright() as p:
-        browserLauncher = getattr(p, "chromium")
-        browser = browserLauncher.launch(headless=headless)
+        browser = p.chromium.launch(
+            headless=headless,
+            channel="chromium" if headless else None
+        )
 
         try:
             headers = {
@@ -986,7 +1407,20 @@ def BrowserDiscoverStreamURLs_ButtonList(
             if extraHeaders:
                 headers.update(extraHeaders)
 
-            context = browser.new_context(extra_http_headers=headers)
+            context = browser.new_context(
+                extra_http_headers=headers,
+
+                viewport={
+                    "width": 1920,
+                    "height": 1080
+                },
+
+                locale="de-DE",
+
+                timezone_id="Europe/Vienna",
+
+                color_scheme="dark"
+            )
 
             if adBlock == True:
                 context.route("**/*", _blockAds)
@@ -1015,7 +1449,13 @@ def BrowserDiscoverStreamURLs_ButtonList(
 
             try:
                 page.goto(url, wait_until="domcontentloaded", timeout=15000)
-                page.wait_for_timeout(4000)
+                page.wait_for_timeout(1500)
+
+                _tryPressCookieAccept(page)
+                page.wait_for_selector(
+                    "video, iframe, [class*='player' i], [id*='player' i]",
+                    timeout=10000
+                )
             except Exception:
                 pass
 
@@ -1064,8 +1504,10 @@ def WCOFLIXBrowserDiscoverStreamUrls(
     foundMedia: dict[str, media.Media] = {}
 
     with sync_playwright() as p:
-        browserLauncher = getattr(p, "chromium")
-        browser = browserLauncher.launch(headless=headless)
+        browser = p.chromium.launch(
+            headless=headless,
+            channel="chromium" if headless else None
+        )
 
         try:
 
@@ -1078,7 +1520,20 @@ def WCOFLIXBrowserDiscoverStreamUrls(
             if extra_headers:
                 headers.update(extra_headers)
 
-            context = browser.new_context(extra_http_headers=headers)
+            context = browser.new_context(
+                extra_http_headers=headers,
+
+                viewport={
+                    "width": 1920,
+                    "height": 1080
+                },
+
+                locale="de-DE",
+
+                timezone_id="Europe/Vienna",
+
+                color_scheme="dark"
+            )
             if ad_block == True:
                 context.route("**/*", _blockAds)
 
@@ -1186,9 +1641,19 @@ def BrowserButtonPress(
 
         try:
             context = browser.new_context(
-                extra_http_headers=headers
-            )
+                extra_http_headers=headers,
 
+                viewport={
+                    "width": 1920,
+                    "height": 1080
+                },
+
+                locale="de-DE",
+
+                timezone_id="Europe/Vienna",
+
+                color_scheme="dark"
+            )
             # Vorhandene Mozilla-/Netscape-Cookies laden
             cookies = _load_mozilla_cookies_for_playwright(
                 cookie_file
@@ -1215,6 +1680,9 @@ def BrowserButtonPress(
                 wait_until="domcontentloaded",
                 timeout=30_000
             )
+            page.wait_for_timeout(1500)
+
+            _tryPressCookieAccept(page)
 
             page.wait_for_timeout(wait_before_click_ms)
 
@@ -1262,3 +1730,12 @@ def BrowserButtonPress(
                 context.close()
 
             browser.close()
+
+
+
+
+
+
+
+
+

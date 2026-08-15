@@ -37,6 +37,8 @@ class DownloadTarget:
 
     resolved_url: str = ""
 
+    file_name: str = ""
+
     out_file: str = ""
 
     file_ending: str = "mp4"

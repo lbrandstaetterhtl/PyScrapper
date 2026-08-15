@@ -15,6 +15,7 @@ class ProviderTypes(enum.Enum):
     Wcoflix = enum.auto()
     Aniworld = enum.auto()
     Newgrounds = enum.auto()
+    Dailymotion = enum.auto()
 
 
 
@@ -29,18 +30,31 @@ providerDownloadMapping: dict = {
 PROVIDER_GETRESULTS_MAPPING: dict = {
     ProviderTypes.Default : p.Default.getMediaInformation,
     ProviderTypes.Soundcloud : p.Soundcloud.getMediaInformation,
-    ProviderTypes.Bandcamp : p.Bandcamp.getMediaInformation
+    ProviderTypes.Bandcamp : p.Bandcamp.getMediaInformation,
+    ProviderTypes.Wcoflix : p.wcoflix.getMediaInformation,
+    ProviderTypes.Archive : p.Archive.getMediaInformation,
+    ProviderTypes.Suno : p.Suno.getMediaInformation,
+    ProviderTypes.Newgrounds : p.Newgrounds.getMediaInformation,
+    ProviderTypes.Youtube : p.Youtube.getMediaInformation,
+
 }
 
 PROVIDER_SEARCH_MAPPING: dict = {
     ProviderTypes.Soundcloud : p.Soundcloud.search,
-    ProviderTypes.Bandcamp : p.Bandcamp.search
+    ProviderTypes.Bandcamp : p.Bandcamp.search,
+    ProviderTypes.Archive : p.Archive.search,
+    ProviderTypes.Newgrounds : p.Newgrounds.search,
+    ProviderTypes.Youtube : p.Youtube.search
 }
     
 
 
 
-
+VALIDDAILYMOTIONNAMES = [
+    "dailymotion",
+    "dailymotion.com",
+    "www.dailymotion.com"
+]
 
 VALIDARCHIVENAMES = [
     "archive",
@@ -100,59 +114,11 @@ SUPPORTEDPROVIDERS = {
     ProviderTypes.Soundcloud : VALIDSOUNDCLOUDNAMES,
     ProviderTypes.Wcoflix : VALIDWCOFLIXNAMES,
     ProviderTypes.Newgrounds : VALIDNEWGROUNDSNAMES,
-}
-
-SUPPORTEDARCHIVEFILES = [
-    ".mp3",
-    ".mp4",
-    "mp3",
-    "mp4",
-    ".wav",
-    "wav",
-    ".mkv",
-    "mkv"
-]
-
-SUPPORTEDYOUTUBEFILES = [
-    ".mp3",
-    ".mp4",
-    "mp3",
-    "mp4"
-]
-
-SUPPORTEDSUNOFILES = [
-    ".mp3",
-    ".mp4",
-    "mp3",
-    "mp4"
-]
-SUPPORTEDBANDCAMPFILES = [
-    ".mp3",
-    "mp3"
-]
-
-SUPPORTEDFILES = {
-    "archive" : SUPPORTEDARCHIVEFILES,
-    "bandcamp" : SUPPORTEDBANDCAMPFILES,
-    "youtube" : SUPPORTEDYOUTUBEFILES,
-    "suno" : SUPPORTEDSUNOFILES
+    ProviderTypes.Dailymotion : VALIDDAILYMOTIONNAMES
 }
 
 
-
-PROGRESSDICT = {
-            "id": "",
-            "status": "queued",
-            "downloadProgress": 0,
-            "errorMessage": "",
-            "totalBytes" : 0,
-            "downloadedBytes" : 0,
-            "speed" : 0,
-            "eta" : 0,
-            "totalSegments" : 0,
-            "downloadedSegments" : 0,
-            "convertProgress" : core.models.Convert.CONVERT_PROGRESS_DICT.copy(),
-        }
+        
 
 SUPPORTEDCOMMANDS = [
     "quit"

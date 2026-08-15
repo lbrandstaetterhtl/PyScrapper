@@ -1,9 +1,21 @@
 #Core Imports
 import PythonModule.core as core
+
+from PythonModule.core.network.Session import Session
+from PythonModule.core.network import html
+from PythonModule.core.network import EmergencyBrowser
+
 from PythonModule.models.requests import SearchFilters
+
+# Own imports
+
+from . import models
+
 
 #Python Default Imports
 import urllib.parse, urllib.error
+from html import unescape
+from pathlib import Path
 
 
 SEARCH_TYPE_MAPPING = {
@@ -28,16 +40,16 @@ SEARCH_CLASS_MAPPING = {
 def search(
         search_term: str,
         filters: SearchFilters,
-        session: core.request.Session.Session,
+        session: Session,
         top: int = 5,
         retry: bool = True
 ) -> list[dict[str, str]]:
 
-    core.general.Validate.validateStr(argument_name="search_term", string=search_term, caller="[providers] Newgrounds.search")
-    core.general.Validate.validateGeneralType(argument_name="filters", obj=filters, objType=SearchFilters, caller="[providers] Newgrounds.search")
-    core.general.Validate.validateSession(session=session, argument_name="session", caller="[providers] Newgrounds.search")
-    core.general.Validate.validateInt(argument_name="top", integer=top, caller="[providers] Newgrounds.search")
-    core.general.Validate.validateBool(boolean=retry, argument_name="retry", caller="[providers] Newgrounds.search")
+    core.general.Validate.general.validateStr(argument_name="search_term", string=search_term, caller="[providers] Newgrounds.search")
+    core.general.Validate.general.validateGeneralType(argument_name="filters", obj=filters, objType=SearchFilters, caller="[providers] Newgrounds.search")
+    core.general.Validate.special.validateSession(session=session, argument_name="session", caller="[providers] Newgrounds.search")
+    core.general.Validate.general.validateInt(argument_name="top", integer=top, caller="[providers] Newgrounds.search")
+    core.general.Validate.general.validateBool(boolean=retry, argument_name="retry", caller="[providers] Newgrounds.search")
 
     results: list[dict] = []
    
@@ -52,14 +64,14 @@ def search(
     try:
         for searchUrl in searchUrlList:
 
-            html = core.general.Html.getHtml(
+            searchHtml = html.getHtml(
             session,
             searchUrl
         )
-            core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Newgrounds.search")
+            core.general.Validate.general.validateStr(argument_name="searchHtml", string=searchHtml, caller="[providers] Newgrounds.search")
     #Pattern with every that find every relevant block and their ressources which this finder uses. There are a lot more "<a href" in newgroudns search html, but with this pattern we find everything we need
             resourceBlockPattern =  r'(<a\s+href="[^"]+"\s+class="[^"]+"\s+title="[^"]+".*?<img\s+src="[^"]+").*?</a>'
-            blocks = core.general.DataSearch.searchBlocksAll(resourceBlockPattern, html, return_regex_exception=True)
+            blocks = core.general.DataSearch.searchBlocksAll(resourceBlockPattern, searchHtml, return_regex_exception=True)
             searchBlockList.append(blocks)
     
             
@@ -97,7 +109,7 @@ def search(
 
     except urllib.error.HTTPError as e:
             if e.code == 403 and retry:
-                core.request.EmergencyBrowser.BrowserButtonPress(
+                EmergencyBrowser.BrowserButtonPress(
                     url=searchUrl,
                     button_name="",
                     headless=False,
@@ -214,35 +226,137 @@ def _buildSearchUrl(
     
 
         
+def getMediaInformation(
+        request: models.ProviderResultRequest,
+) -> models.ProviderResult:
+
+    core.general.Validate.general.validateGeneralType(
+        argument_name="request", obj=request, objType=models.ProviderResultRequest, caller="Newgrounds.getMediaInformation"
+    )
+
+    core.general.Validate.special.validateHostPro(
+        url=request.url,
+        allowed_hostnames_list=["newgrounds.com", "www.newgrounds.com"],
+        caller="[providers] Newgrounds.getMediaInformation"
+    )
+
+    siteHtml = html.getHtml(
+        session=request.ses,
+        url=request.url,
+        extra_headers=request.extra_headers
+    )
+    if not siteHtml:
+        raise core.models.errors.TaskFailedError(
+            task="Newgrounds.getMediaInformation",
+            reason="Couldn't get html",
+            extraMessages=[
+                f"Used url: {request.url}"
+            ],
+            caller="[providers] Newgrounds.getMediaInformation"
+        )
+        
+    siteHtml = siteHtml.replace("\\/", "/")
+
+    patterns = [
+    # OpenGraph Audio
+    r'<meta[^>]+property=["\']og:audio(?::url)?["\'][^>]+content=["\']([^"\']+)["\']',
+
+    # OpenGraph Video
+    r'<meta[^>]+property=["\']og:video(?::url)?["\'][^>]+content=["\']([^"\']+)["\']',
+
+    # Direkte Media-URLs im HTML / Script-State
+    r'https?://[^"\'\\ ]+\.(?:mp4|webm|mkv|mov|flac|wav|m4a|aac|opus|ogg|mp3)(?:\?[^"\'\\ ]*)?',
+]    
+    foundUrls = set()
+    
+    for pattern in patterns:
+        matches = core.general.DataSearch.searchBlocksAll(pattern, siteHtml, return_regex_exception=False)
+
+        for url in matches:
+            foundUrls.add(unescape(url))
+
+    if not foundUrls:
+        raise core.models.errors.TaskFailedError(
+            task="Newgrounds.getMediaInformation",
+            reason="No video or audio url was found at all",
+            extraMessages=[
+                f"Used url: {request.url}"
+            ],
+            caller="[providers] Newgrounds.getMediaInformation"
+        )
+
+
+    bestUrl: str | None = None
+    bestPriority = -1
+
+    for url in foundUrls:
+        extension = (
+            Path(urllib.parse.urlparse(url).path)
+            .suffix
+            .lower()
+            .removeprefix(".")
+        )
+
+        prio = models.NEWGROUNDS_MEDIA_PRIORITY.get(extension)
+
+        if prio is None:
+            continue
+
+        if prio > bestPriority:
+            bestUrl = url
+            bestPriority = prio
+    if bestUrl is None:
+        raise core.models.errors.TaskFailedError(
+            task="Newgrounds.getMediaInformation",
+            reason="No valid url was found",
+            extraMessages=[
+                f"Now listening all urls that got found:",
+                f", ".join(foundUrls) 
+            ],
+            caller="[providers] Newgrounds.getMediaInformation"
+        )
+
+    fileEnding = models.getContentType(bestUrl, request.ses, request.extra_headers)
+    
+    return models.makeProviderResult(
+            url=bestUrl,
+            fileending=fileEnding,
+            type = core.models.Download.DownloadType.FILE,
+            extra_headers=request.extra_headers
+    
+        )
+        
+
+
     
     
 
-def download(
-        download_information: core.models.General.DownloadInformations
-) -> None:
+#def download(
+#        download_information: core.models.General.DownloadInformations
+#) -> None:
    
-    core.general.Validate.validateDownloadInformation(argument_name="download_information", download_information=download_information, caller="[providers] Newgrounds.download")
-    core.general.Validate.validateHostPro(
-        url=download_information.url,
-        allowed_hostnames_list=["newgrounds.com", "www.newgrounds.com", "51.79.77.157", "51.79.77.158", "15.235.14.84", "51.79.82.168"],
-        caller="[providers] Newgrounds.download"
-    )
-    html: str = core.general.Html.getHtml(
-        session=download_information.session, 
-        url= download_information.url
-    )
-    core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Newgrounds.download")
+#    core.general.Validate.validateDownloadInformation(argument_name="download_information", download_information=download_information, caller="[providers] Newgrounds.download")
+#    core.general.Validate.validateHostPro(
+#        url=download_information.url,
+#        allowed_hostnames_list=["newgrounds.com", "www.newgrounds.com", "51.79.77.157", "51.79.77.158", "15.235.14.84", "51.79.82.168"],
+#        caller="[providers] Newgrounds.download"
+#    )
+#    html: str = core.general.Html.getHtml(
+#        session=download_information.session, 
+#        url= download_information.url
+#    )
+#    core.general.Validate.validateStr(argument_name="html", string=html, caller="[providers] Newgrounds.download")
 
-    musicPattern = r'<meta property="og:audio"\s+content="(.*?)">'
-    musicUrl = core.general.DataSearch.searchBlocks(musicPattern, html, return_regex_exception=True)
+#    musicPattern = r'<meta property="og:audio"\s+content="(.*?)">'
+#    musicUrl = core.general.DataSearch.searchBlocks(musicPattern, html, return_regex_exception=True)
 
 
-    core.download.File.downloadToFile(
-        out_file=download_information.outFile,
-        session=download_information.session,
-        url=musicUrl,
-        progress_dict=download_information.downloadProgress
-    )
+#    core.download.File.downloadToFile(
+#        out_file=download_information.outFile,
+#        session=download_information.session,
+#        url=musicUrl,
+#        progress_dict=download_information.downloadProgress
+#    )
     
 
     

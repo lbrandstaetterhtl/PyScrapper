@@ -7,7 +7,8 @@ import  time, re, json, uuid
 
 from dataclasses import dataclass, field
 
-
+import os
+print("DISPLAY:", os.environ.get("DISPLAY"))
 
 import asyncio
 import sqlite3
@@ -114,6 +115,10 @@ class ServerState:
         default_factory=lambda: asyncio.Semaphore(10)
     )
 
+    download_path : str = field(
+        default_factory=lambda: os.path.dirname(__file__)
+    )
+
 
 
 #Global Variables
@@ -181,7 +186,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-server_state = ServerState()
+server_state = ServerState(
+    download_path=os.path.join(project_root, "downloads")
+)
 
 #"http://localhost:5173",
  #       "http://127.0.0.1:5173"
@@ -241,22 +248,44 @@ async def cleanup_server(CLEANUP_AFTER_SECONDS):
 async def cleanup_download(
         delay: float,
         *,
-        progress_task_id: str | None = None,
-        stream_task_id: str | None = None
+        task_id: str,
+        stream_id: str | None = None
 ):
     await asyncio.sleep(delay)
 
-    if progress_task_id is not None:
-        isNone = server_state.jobs.get(progress_task_id)
-        if isNone is not None:
-            server_state.jobs.pop(progress_task_id)
+    job = server_state.jobs.get(task_id)
+
+    if job is None: return
+
+    if stream_id is None:
+        server_state.jobs.pop(task_id, None)
+        return
+
+    job.stream_jobs.pop(stream_id, None)
+
+    job.download_information.contexts = [
+        context for context in job.download_information.contexts
+        if context.target.job_id != stream_id
+    ]
+
+    if (
+        not job.stream_jobs
+        and not job.download_information.contexts
+    ):
+        server_state.jobs.pop(task_id, None)
 
 
 async def cleanup_loop():
-    CLEANUP_AFTER_SECONDS = 24 * 60 * 60
-    while True:
-        await cleanup_server(CLEANUP_AFTER_SECONDS)
-        await asyncio.sleep(CLEANUP_AFTER_SECONDS)
+    try:
+        CHECK_INTERVAL = 60 * 10
+        JOB_AGE_LIMIT = 24 * 60 * 60
+
+        while True:
+            await cleanup_server(JOB_AGE_LIMIT)
+            await asyncio.sleep(CHECK_INTERVAL)
+
+    except asyncio.QueueFull:
+        pass
 
 
  
@@ -323,7 +352,8 @@ async def _resolveMediaAndCreateContexts(
                 download_type=result.download_type,
                 extra_headers=result.extra_headers,
                 file_ending=result.file_type,
-                out_file=filename
+                file_name = filename,
+                out_file=os.path.join(server_state.download_path, f"{filename}.{result.file_type}")
                 
                 
 
@@ -360,7 +390,17 @@ def _resolveProviderSearchFunction(provider: str) -> callable:
     return func
 
 
+async def _run_local_download(
+    task_id: str,
+    downloader: core.download.Dispatcher.DownloadDispatcher
+):
+    try:
+        await downloader.downloadToFile()
 
+    except Exception as e:
+        server_state.log_queue.put_nowait(
+            f"[ERROR] Download job {task_id} failed: {e}"
+        )
 
 
 @app.post("/download/video-audio/", dependencies=[Depends(require_admin)])
@@ -370,13 +410,12 @@ async def receive_download(data: requests.DownloadRequest):
 
     try:
     #Settings and creation
-        cleanupAfterSeconds: float = 300
+
         
         ses = Session()
 
         contexts : list[core.models.Download.DownloadContext] = await _resolveMediaAndCreateContexts(data, ses)
 
-        
 
         downloadInformation = core.models.Download.DownloadInformation(
             job_id=taskId,
@@ -395,22 +434,20 @@ async def receive_download(data: requests.DownloadRequest):
 #Depending on the strategie something different will happen
         if data.download_strategie == core.models.Download.DownloadStrategie.LOCAL:
             downloader = core.download.Dispatcher.DownloadDispatcher(downloadInformation)
-            await asyncio.to_thread(
-                downloader.downloadToFile
-            )
-
             asyncio.create_task(
-                cleanup_download(
-                    cleanupAfterSeconds,
-                    progress_task_id=taskId
+                _run_local_download(
+                    taskId,
+                    downloader
+                    )
                 )
-            )
+            
+
 
             return {
                     "task_id": taskId,
                     "download_progress" : f"/download/progress/{taskId}",
                     "streams": [],
-                    "info" : f"Progress will be deleted after {cleanupAfterSeconds} Seconds"
+                    "info" : f"Job will be deleted after one day"
                 }
 
 
@@ -438,8 +475,12 @@ async def receive_download(data: requests.DownloadRequest):
 
                     streamJob.segments = segments
                     streamJob.audio_segments = audioSegments
+                else:
+                    watchUrl += f"/{context.target.file_name}.{context.target.file_ending}"
                
-                server_state.jobs[taskId].stream_jobs[streamJob.stream_id] = streamJob   
+                server_state.jobs[taskId].stream_jobs[streamJob.stream_id] = streamJob
+
+                
 
             return {
                 "task_id": taskId,
@@ -580,8 +621,8 @@ async def stream_hls_segment(
 
     
 
-@app.get("/stream/watch/{task_id}/{stream_id}")
-async def client_watch_stream(task_id: str, stream_id: str, request: Request):
+@app.get("/stream/watch/{task_id}/{stream_id}/{file_name}.{file_type}")
+async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file_type: str, request: Request):
     job = server_state.jobs.get(task_id)
 
     if job is None:
@@ -594,6 +635,9 @@ async def client_watch_stream(task_id: str, stream_id: str, request: Request):
 
     context: core.models.Download.DownloadContext = stream_job.context
 
+    if context.target.file_name != file_name or context.target.file_ending != file_type:
+        raise HTTPException(status_code=404)
+
     start_byte: int = 0
     end_byte: int | None = None
 
@@ -603,9 +647,9 @@ async def client_watch_stream(task_id: str, stream_id: str, request: Request):
         start, end = value.split("-", 1)
 
         if start:
-            start_byte = start
+            start_byte = int(start)
         if end:
-            end_byte = end
+            end_byte = int(end)
 
     return StreamingResponse(
         file.asyncDownloadYieldSimple(
@@ -620,39 +664,57 @@ async def client_watch_stream(task_id: str, stream_id: str, request: Request):
 
 
 
+
 @app.get("/stream/download/{task_id}/{stream_id}")
 async def client_download_stream(task_id: str, stream_id: str):
     job = server_state.jobs.get(task_id)
-    streamJob = job.stream_jobs.get(stream_id)
+    
 
-    if job is None or streamJob is None:
+    if job is None:
         raise HTTPException(
             status_code=404,
             detail=f"Ressource /stream/download/{task_id}/{stream_id} doesn't exist"
             )
+
+    streamJob = job.stream_jobs.get(stream_id)
+    if streamJob is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Ressource /stream/download/{task_id}/{stream_id} doesn't exist"
+            )
+
     
     context: core.models.Download.DownloadContext = streamJob.context
 
     downloadInformation = job.download_information
     downloader = core.download.Dispatcher.DownloadDispatcher(downloadInformation)
 
-    try:
-        return StreamingResponse(
-            downloader.downloadContextAndYield(context),
-            media_type="application/octet-stream",
-            headers={
-                "Content-Disposition": f'attachment; filename="{context.target.out_file if context.target.out_file is not None else context.target.job_id}.{context.target.file_ending}"'
-            }
-        )
-    
-    
-    finally:
-        asyncio.create_task(
-            cleanup_download(
-                delay=5,
-                stream_task_id=context.target.job_id
+    async def download_and_cleanup():
+        try:
+            async for chunk in downloader.downloadContextAndYield(context):
+                yield chunk
+
+        finally:
+            asyncio.create_task(
+                cleanup_download(
+                    delay=60,
+                    task_id=task_id,
+                    stream_id=stream_id
+                )
             )
-        )
+
+
+    return StreamingResponse(
+        download_and_cleanup(),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{context.target.file_name if context.target.file_name is not None else context.target.job_id}.{context.target.file_ending}"'
+        }
+    )
+    
+    
+    
     
 
 
@@ -676,8 +738,9 @@ async def get_download_progress(task_id: str):
     ):
         asyncio.create_task(
             cleanup_download(
-                delay=5,
-                progress_task_id=info.job_id
+                delay=60,
+                task_id=task_id,
+                stream_id=None
             )
         )
 
@@ -687,7 +750,6 @@ async def get_download_progress(task_id: str):
             {
                 "stream_id" : context.target.job_id,
                 "download_progress" : context.download_progress,
-                "convert_progress" : context.convert_progress
             }
             for context in info.contexts
         ] 
