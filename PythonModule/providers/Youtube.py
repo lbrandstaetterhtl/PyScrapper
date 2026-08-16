@@ -232,11 +232,10 @@ def getMediaInformation(
 
     usable_formats = []
 
-    for format in formats:
+    for fmt in formats:
 
-        media_url = format.get("url")
-        extension = format.get("ext")
-
+        media_url = fmt.get("url")
+        extension = fmt.get("ext")
 
         if not media_url:
             continue
@@ -251,7 +250,11 @@ def getMediaInformation(
         ):
             continue
 
-        usable_formats.append(format)
+        # SABR URLs wollen wir nicht verwenden.
+        if "sabr=1" in media_url.lower():
+            continue
+
+        usable_formats.append(fmt)
 
     if not usable_formats:
         raise core.models.errors.TaskFailedError(
@@ -260,31 +263,100 @@ def getMediaInformation(
             caller="[providers] Youtube.getMediaInformation"
         )
 
-    best = max(
-        usable_formats,
-        key=lambda format: (
-            format.get("height") or 0,
-            format.get("tbr") or 0,
-            format.get("abr") or 0,
+    # ---------------------------------------------------------
+    # Gute Formate zuerst ausprobieren
+    # ---------------------------------------------------------
+
+    def formatScore(fmt: dict) -> tuple:
+
+        hasVideo = (
+            fmt.get("vcodec") is not None
+            and fmt.get("vcodec") != "none"
         )
+
+        hasAudio = (
+            fmt.get("acodec") is not None
+            and fmt.get("acodec") != "none"
+        )
+
+        hasVideoAndAudio = hasVideo and hasAudio
+
+        return (
+            hasVideoAndAudio,
+            fmt.get("height") or 0,
+            fmt.get("tbr") or 0,
+            fmt.get("abr") or 0,
+        )
+
+    usable_formats.sort(
+        key=formatScore,
+        reverse=True
     )
 
-   
-    fileType = models.getContentType(url=best["url"], session=request.ses, extra_headers=best.get("http_headers"))
-    
-    return models.ProviderResult(
-        url=best["url"],
+    # ---------------------------------------------------------
+    # Formate der Reihe nach testen
+    # ---------------------------------------------------------
 
-        download_type=(
-            core.models.Download.DownloadType.FILE
+    for fmt in usable_formats:
+
+        media_url = fmt["url"]
+        extra_headers = fmt.get("http_headers") or {}
+
+        try:
+            print(
+                "[Youtube] Trying format:",
+                fmt.get("format_id"),
+                fmt.get("ext"),
+                fmt.get("height"),
+                fmt.get("vcodec"),
+                fmt.get("acodec"),
+            )
+
+            print(f"[Youtube] now trying url: {media_url}")
+            fileType = models.getContentType(
+                url=media_url,
+                session=request.ses,
+                extra_headers=extra_headers
+            )
+
+            print(
+                "[Youtube] Successfully selected format:",
+                fmt.get("format_id"),
+                fileType
+            )
+
+            return models.ProviderResult(
+                url=media_url,
+
+                download_type=(
+                    core.models.Download.DownloadType.FILE
+                ),
+
+                extra_headers=extra_headers,
+
+                file_type=fileType
+            )
+
+        except Exception as error:
+
+            print(
+                "[Youtube] Format failed:",
+                fmt.get("format_id"),
+                str(error)
+            )
+
+
+            continue
+
+
+
+    raise core.models.errors.TaskFailedError(
+        task="Youtube.getMediaInformation",
+        reason=(
+            "yt-dlp returned formats, but none of the "
+            "direct media URLs could be used"
         ),
-
-        extra_headers=(
-            best.get("http_headers")
-            or {}
-        ),
-
-        file_type=fileType
+        caller="[providers] Youtube.getMediaInformation"
     )
 
 

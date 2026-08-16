@@ -1,0 +1,43 @@
+.auth-panel {
+    max-width: 850px;
+}
+
+.password-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-field input {
+    width: 100%;
+    padding-right: 70px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 8px;
+
+    padding: 5px 9px;
+
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    border-radius: 6px;
+
+    background: rgba(74, 222, 128, 0.06);
+    color: #86efac;
+
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+
+.password-toggle:hover {
+    background: rgba(74, 222, 128, 0.12);
+    border-color: rgba(74, 222, 128, 0.4);
+}
+
+.password-toggle:active {
+    transform: translateY(1px);
+}

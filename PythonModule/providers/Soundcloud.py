@@ -73,7 +73,7 @@ def search(
     hrefList: list[str] = core.general.DataSearch.searchBlocksAll(hrefPattern, resultsBlock, return_regex_exception=True)
 
     for href in hrefList:
-        if len(results) == top:
+        if len(results) >= top:
             continue
 
 
@@ -83,6 +83,9 @@ def search(
             session,
 
         )
+        if not result:
+            continue
+
         result["identifier"] = href
 
         
@@ -113,7 +116,7 @@ def _inFilter(
 #Gettign result type, if it somehow is None, it will be marked as unknown an for safety and inspection it will still be marked as saveable
     resultType:str = result.get("type", None)
     if resultType == None:
-        result["type"] == "unknown"
+        result["type"] = "unknown"
         return True
 
 #Now checking if the result type is in tags

@@ -292,7 +292,27 @@ def getMediaInformation(
         session=request.ses
     )
     url = streamingURLList[0]
-    extension = models.getContentType(url, request.ses)
+    retry = True
+    try:
+        extension = models.getContentType(url, request.ses)
+    except Exception:
+        if retry == True:
+            trackHTML = html.getHtml(
+                    url=request.url,
+                    session=request.ses
+                 )
+            core.general.Validate.general.validateStr(argument_name="trackHTML", string=trackHTML, caller="[providers] Bandcamp.download.error")
+
+            embeddedplayer_pattern = r'<meta property="og:video".*?content="(https://bandcamp.com/EmbeddedPlayer.*?)">'
+            embeddedPlayerUrl = core.general.DataSearch.searchBlocks(
+                    pattern=embeddedplayer_pattern,
+                    search_block=trackHTML
+            )
+            core.general.Validate.general.validateStr(argument_name="embeddedPlayerUrl", string=embeddedPlayerUrl, caller="[providers] Bandcamp.download.error")
+
+            EmergencyBrowser.BrowserButtonPress(url=embeddedPlayerUrl, button_name="#big_play_button")
+            extension = models.getContentType(url, request.ses)
+
     
 
     result = models.makeProviderResult(url, extension, core.models.Download.DownloadType.FILE)

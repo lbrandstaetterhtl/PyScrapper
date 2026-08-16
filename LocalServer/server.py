@@ -184,6 +184,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"]
 )
 
 server_state = ServerState(
@@ -471,12 +472,14 @@ async def receive_download(data: requests.DownloadRequest):
                         context
                     )
                     watchUrl += "/index.m3u8"
+                    streamType = "hls"
 
 
                     streamJob.segments = segments
                     streamJob.audio_segments = audioSegments
                 else:
                     watchUrl += f"/{context.target.file_name}.{context.target.file_ending}"
+                    streamType = "file"
                
                 server_state.jobs[taskId].stream_jobs[streamJob.stream_id] = streamJob
 
@@ -489,7 +492,9 @@ async def receive_download(data: requests.DownloadRequest):
                     {
                         "task_id": context.target.job_id,
                         "download_url": f"/stream/download/{taskId}/{context.target.job_id}",
-                        "watch_url" : watchUrl
+                        "watch_url" : watchUrl,
+                        "stream_type": streamType,
+                        "media_type" : providermodels.EXTENSION_CONTENT_TYPES.get(context.target.file_ending)
                     }
                     for context in downloadInformation.contexts
                 ],
@@ -690,18 +695,11 @@ async def client_download_stream(task_id: str, stream_id: str):
     downloader = core.download.Dispatcher.DownloadDispatcher(downloadInformation)
 
     async def download_and_cleanup():
-        try:
-            async for chunk in downloader.downloadContextAndYield(context):
-                yield chunk
+        
+        async for chunk in downloader.downloadContextAndYield(context):
+            yield chunk
 
-        finally:
-            asyncio.create_task(
-                cleanup_download(
-                    delay=60,
-                    task_id=task_id,
-                    stream_id=stream_id
-                )
-            )
+        
 
 
     return StreamingResponse(

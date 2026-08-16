@@ -1,95 +1,163 @@
-import SearchPanel from "./components/panels/searchPanel"
-import SearchPanelResults from "./components/panels/searchPanelResults";
-import DownloadRequestPanel from "./components/panels/dowloadRequestPanel";
-import DownloadProgressPanel from "./components/panels/downloadProgressPanel";
-import type { SearchResult } from "./components/models/types";
-import TextBoxPanel from "./components/panels/textBoxPanel";
-import { HOME_INFO_TEXT } from "./components/models/text/HOME_INFO";
-import { useState} from "react"
-import "./designs/App.css"
+import { useState } from "react"
+
+import type { Authorization } from "./components/general"
+
+import { Panel, SERVER_BASE_ADRESS } from "./components/general"
+import type { Panel as PanelType } from "./components/general"
+
+import type { SearchResult } from "./components/search/models"
+import { type DownloadResult, ProvidersDownload, type DownloadRequest } from "./components/download/models"
+
+import AuthPanel from "./components/authorization/auth-panel"
+import SearchPanel from "./components/search/search-panel"
+import SearchResultPanel from "./components/search/search-result-panel"
+import DownloadPanel from "./components/download/download-panel"
+import DownloadResultPanel from "./components/download/download-result-panel"
+
+import "./components/general.css"
+import "./components/authorization/auth-design.css"
+import "./components/search/search-design.css"
+import "./components/download/download-panel.css"
+
 
 function App() {
-  const [results, setResults] = useState<any[] | null>(null)
-  const [selectedResult, setSelectedResult] = useState<SearchResult | null>()
-  const [activePanel, setActivePanel] = useState<"results" | "request" | "progress">("results")
-  const [downloadProgress, setDownloadProgress] = useState<any | null>(null)
+    const [auth, updateAuth] = useState<Authorization>({
+        key_name: "",
+        key_value: ""
+    })
 
-  function handleCloseProgressPanel(){
-    setActivePanel("results")
-    setDownloadProgress(null)
-  }
+    const [searchResults, updateSearchResults] = useState<SearchResult[]>([])
 
-  function handleCloseRequestPanel(){
-    setActivePanel("results")
-    setSelectedResult(null)
-  }
-  function handleStartDownload(response :any){
-    setActivePanel("progress")
-    setDownloadProgress(response)
+    const [curPanel, setPanel] =useState<PanelType>(Panel.AUTHORIZATION)
 
-  }
+    const [downloadHistory, updateDownloadResult] = useState<DownloadResult[]>([])
 
-  function handleSelectResults(result: SearchResult){
-    setSelectedResult(result)
-    setActivePanel("request")
-  }
+    const [curDownloadRequest, updateDownloadRequest] = useState<DownloadRequest>({
+        provider: ProvidersDownload.Youtube,
+        download_strategie: "stream",
+        urls: [],
+        filenames: [],
+        download_path: "",
+        extra_headers: {}
 
-  return (
-    
-    <div className="app">
-      <div className="app-shell">
-      <h1>PyScrapper Web GUI</h1>
-      
-      
-      <SearchPanel ifResults={(newResult) =>{
-        setResults(newResult)
-        setActivePanel("results")
-      }
+    })
 
+    return (
+        <div className="app-shell">
+            <aside className="sidebar">
+                <div className="brand">
+                    <div className="brand-mark">&gt;_</div>
+                    <div>
+                        <div className="brand-name"><span>Py</span>Scrapper</div>
+                        <div className="brand-subtitle">media control interface</div>
+                    </div>
+                </div>
 
-      }
-      
-      />
+                <nav className="sidebar-nav" aria-label="Main navigation">
+                    <button
+                        className={`nav-button ${curPanel === Panel.AUTHORIZATION ? "active" : ""}`}
+                        onClick={() => setPanel(Panel.AUTHORIZATION)}
+                    >
+                        <span className="nav-index">01</span>
+                        <span>Authorize</span>
+                    </button>
 
+                    <button
+                        className={`nav-button ${curPanel === Panel.SEARCH ? "active" : ""}`}
+                        onClick={() => setPanel(Panel.SEARCH)}
+                    >
+                        <span className="nav-index">02</span>
+                        <span>Search</span>
+                    </button>
 
-      {results && activePanel === "results" &&(
-        <SearchPanelResults
-          searchResults={results}
-          saveResult={handleSelectResults}
-          
-          />
-      )}
+                    <button
+                        className={`nav-button ${curPanel === Panel.SEARCH_RESULT ? "active" : ""}`}
+                        onClick={() => setPanel(Panel.SEARCH_RESULT)}
+                    >
+                        <span className="nav-index">03</span>
+                        <span>Search Results</span>
+                    </button>
 
-      {selectedResult && activePanel === "request"&&(
-        <DownloadRequestPanel
-        result={selectedResult}
-        onClose={handleCloseRequestPanel}
-        onStartDownload={handleStartDownload}
-        />
-      )}
+                    <button
+                        className={`nav-button ${curPanel === Panel.DOWNLOAD ? "active" : ""}`}
+                        onClick={() => setPanel(Panel.DOWNLOAD)}
+                    >
+                        <span className="nav-index">04</span>
+                        <span>Request</span>
+                    </button>
 
-      {downloadProgress && activePanel === "progress" &&(
-        <DownloadProgressPanel
-          responseForDownload={downloadProgress}
-          onClose={handleCloseProgressPanel}
+                    <button
+                        className={`nav-button ${curPanel === Panel.DOWNLOAD_RESULT ? "active" : ""}`}
+                        onClick={() => setPanel(Panel.DOWNLOAD_RESULT)}
+                    >
+                        <span className="nav-index">05</span>
+                        <span>Results & History</span>
+                    </button>
+                </nav>
 
-        />
-      )}
+                <div className="sidebar-footer">
+                    <span className="status-dot" />
+                    <span>PyScrapper Web</span>
+                </div>
+            </aside>
 
-      
+            <main className="main-content">
+                <header className="topbar">
+                    <div>
+                        <p className="eyebrow">PYTHON MEDIA TOOLKIT</p>
+                        <h1>{curPanel.replaceAll("_", " ")}</h1>
+                    </div>
+                    <div className="topbar-chip">
+                        <span className="status-dot" /> {SERVER_BASE_ADRESS}
+                    </div>
+                </header>
 
-      
-      
+                <section className="workspace">
+                    {curPanel === Panel.AUTHORIZATION && (
+                        <AuthPanel
+                            auth={auth}
+                            updateAuth={updateAuth}
+                        />
+                    )}
 
-      
-      
-      </div>
-      <TextBoxPanel message={HOME_INFO_TEXT}/>
-    </div>
-      
-      
-    
-  );
+                    {curPanel === Panel.SEARCH &&(
+                        <SearchPanel
+                            auth={auth}
+                            updateResults={updateSearchResults}
+                            onSearchFinished={() => setPanel(Panel.SEARCH_RESULT)}
+                        />
+                    )}
+
+                    {curPanel === Panel.SEARCH_RESULT && (
+                        <SearchResultPanel
+                            results={searchResults}
+                            updateResults={updateSearchResults}
+                            updateDownloadRequest={updateDownloadRequest}
+                            onSearchResultFinished={() => setPanel(Panel.DOWNLOAD)}
+                            onResultReset={() => setPanel(Panel.SEARCH)}
+                        />
+                    )}
+                    {curPanel === Panel.DOWNLOAD && (
+                        <DownloadPanel
+                            auth={auth}
+                            request={curDownloadRequest}
+                            updateDownloadRequest={updateDownloadRequest}
+                            updateDownloadHistory={updateDownloadResult}
+                            onFinishedDownload={() => setPanel(Panel.DOWNLOAD_RESULT)}
+                        />
+                    )}
+
+                    {curPanel === Panel.DOWNLOAD_RESULT && (
+                        <DownloadResultPanel
+                            history={downloadHistory}
+                            auth={auth}
+                            updateDownloadHistory={updateDownloadResult}
+                        />
+                    )}
+                </section>
+            </main>
+        </div>
+    )
 }
 
-export default App;
+export default App
