@@ -6,6 +6,7 @@ from PythonModule.core.network.Session import Session
 #Python default imports
 from dataclasses import dataclass, field
 from enum import Enum
+import urllib.request
 
 
 
@@ -126,6 +127,8 @@ class ProviderResult:
 
     file_type: str = "mp4"
 
+    total_size : int | None = None
+
 
 
 
@@ -136,6 +139,8 @@ class ProviderResultRequest:
     ses: Session
 
     extra_headers: dict | None = None
+
+    
 
     def __post_init__(self):
         core.general.Validate.download.validateHostDefault(
@@ -175,7 +180,39 @@ def getContentType(
             return CONTENT_TYPE_EXTENSIONS.get(content_type, None)
 
         return None
-            
+
+
+def getFileInformations(
+        session,
+        url: str,
+        extra_headers: dict | None = None
+):
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Range" : "bytes=0-0"
+        }
+    )
+
+    with session.open(request=req, headers=extra_headers) as response:
+        content_range = response.headers.get("Content-Range")
+        content_length = response.headers.get("Content-Length")
+
+        if content_range:
+
+            total = content_range.split("/")[-1]
+
+            if total != "*":
+                total_size = int(total)
+
+        elif content_length:
+            total_size = int(content_length)
+
+        return total_size
+
+
+
+    
 
 
 def makeProviderResultFromCandidate(candidate: core.models.media.Media):
@@ -194,7 +231,8 @@ def makeProviderResultFromCandidate(candidate: core.models.media.Media):
         url = candidate.mediaUrl,
         download_type=downloadType,
         extra_headers=candidate.headers.to_dict(),
-        file_type=candidate.mediaExtension
+        file_type=candidate.mediaExtension,
+        
     )
 
     return result

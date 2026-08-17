@@ -80,7 +80,9 @@ Websites with partial support:
         )
 
     bestCandidate = medialist.candidates[0]
-    return models.makeProviderResultFromCandidate(bestCandidate)
+    result = models.makeProviderResultFromCandidate(bestCandidate)
+    result.total_size = models.getFileInformations(session=request.ses, url=result.url, extra_headers=result.extra_headers)
+    return result
     
     
 

@@ -47,6 +47,8 @@ class DownloadTarget:
 
     job_id: str = "unknown"
 
+    total_size : int = 0
+
     def __post_init__(self):
         self.resolved_url = self.url
 

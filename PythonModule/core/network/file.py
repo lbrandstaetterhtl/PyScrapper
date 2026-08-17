@@ -246,6 +246,8 @@ def downloadYieldSimple(
     if end_byte is not None:
         byteRange += str(end_byte)
 
+    
+
     req = urllib.request.Request(
         url,
         headers={
@@ -348,6 +350,7 @@ async def asyncDownloadYieldSimple(
     if end_byte is not None:
         byteRange += str(end_byte)
 
+    print(byteRange)
     req = urllib.request.Request(
         url,
         headers={

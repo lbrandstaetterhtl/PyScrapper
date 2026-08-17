@@ -95,6 +95,7 @@ def getMediaInformation(
         )
 
     result = models.makeProviderResultFromCandidate(candidate=medialist.candidates[0])
+
     return result
 
 

@@ -354,10 +354,8 @@ async def _resolveMediaAndCreateContexts(
                 extra_headers=result.extra_headers,
                 file_ending=result.file_type,
                 file_name = filename,
+                total_size=result.total_size,
                 out_file=os.path.join(server_state.download_path, f"{filename}.{result.file_type}")
-                
-                
-
             )
             context = core.models.Download.DownloadContext(target=target)
             contexts.append(context)
@@ -643,18 +641,51 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
     if context.target.file_name != file_name or context.target.file_ending != file_type:
         raise HTTPException(status_code=404)
 
-    start_byte: int = 0
-    end_byte: int | None = None
+    status_code = 200
+
+    headers = {
+        "Accept-Ranges" : "bytes"
+    }
+    total_size = context.target.total_size
 
     range_headers = request.headers.get("range")
+    start_byte = 0
+    end_byte = None
+
     if range_headers:
+        print("[WATCH] Browser Range: ", range_headers)
         value = range_headers.removeprefix("bytes=")
         start, end = value.split("-", 1)
 
         if start:
             start_byte = int(start)
+
         if end:
             end_byte = int(end)
+        else:
+            end_byte = total_size - 1
+
+        status_code = 206
+
+        headers["Content-Range"] = (
+            f"bytes {start_byte}-{end_byte}/{total_size}"
+        )
+
+        headers["Content-Length"] = str(
+            end_byte - start_byte + 1
+        )
+    else:
+        headers["Content-Length"] = str(total_size)
+
+    print(
+        "Serving:",
+        start_byte,
+        end_byte,
+        "/",
+        total_size
+    )
+    
+
 
     return StreamingResponse(
         file.asyncDownloadYieldSimple(
@@ -664,7 +695,11 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
             start_byte=start_byte,
             end_byte=end_byte,
         ),
-        media_type=providermodels.EXTENSION_CONTENT_TYPES.get(context.target.file_ending),
+        status_code=status_code,
+        headers=headers,
+        media_type=providermodels.EXTENSION_CONTENT_TYPES.get(
+            context.target.file_ending
+        ),
     )
 
 

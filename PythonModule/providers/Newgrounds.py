@@ -318,13 +318,15 @@ def getMediaInformation(
 
     fileEnding = models.getContentType(bestUrl, request.ses, request.extra_headers)
     
-    return models.makeProviderResult(
+    result = models.makeProviderResult(
             url=bestUrl,
             fileending=fileEnding,
             type = core.models.Download.DownloadType.FILE,
             extra_headers=request.extra_headers
     
         )
+    result.total_size = models.getFileInformations(session=request.ses, url=bestUrl, extra_headers=request.extra_headers)
+    return result
         
 
 

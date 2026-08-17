@@ -212,14 +212,14 @@ def getMediaInformation(
         "cookiefile": request.ses.cookieFile,
 
         "extractor_args": {
-            "youtube": {
-                "player_client": [
-                    "default",
-                    "android_vr",
-                    "web_safari",
-                ]
-            }
-        },
+                    "youtube": {
+                        "player_client": [
+                            "default",
+                            "android_vr",
+                            "web_safari",
+                        ]
+                    }
+                },
     }
 
     with YoutubeDL(ydl_opts) as ydl:
@@ -318,6 +318,11 @@ def getMediaInformation(
                 session=request.ses,
                 extra_headers=extra_headers
             )
+            total_size = models.getFileInformations(
+                url=media_url,
+                session=request.ses,
+                extra_headers=extra_headers
+            )
 
             print(
                 "[Youtube] Successfully selected format:",
@@ -334,7 +339,8 @@ def getMediaInformation(
 
                 extra_headers=extra_headers,
 
-                file_type=fileType
+                file_type=fileType,
+                total_size=total_size
             )
 
         except Exception as error:

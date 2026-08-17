@@ -315,7 +315,12 @@ def getMediaInformation(
 
     
 
-    result = models.makeProviderResult(url, extension, core.models.Download.DownloadType.FILE)
+    result:models.ProviderResult = models.makeProviderResult(
+        url,
+        extension,
+        core.models.Download.DownloadType.FILE,
+        )
+    result.total_size = models.getFileInformations(session=request.ses, url=url, extra_headers=request.extra_headers)
     return result
     
     
