@@ -1734,8 +1734,3 @@ def BrowserButtonPress(
 
 
 
-
-
-
-
-

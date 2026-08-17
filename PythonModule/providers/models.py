@@ -88,6 +88,7 @@ CONTENT_TYPE_EXTENSIONS = {
     "video/mp2t": "ts",
 
     "audio/mpeg": "mp3",
+    "audio/mp3" : "mp3",
     "audio/mp4": "m4a",
     "audio/aac": "aac",
     "audio/wav": "wav",
@@ -175,6 +176,7 @@ def getContentType(
 
     with session.open(url=url, headers=extra_headers) as response:
         content_type: str = response.headers.get("Content-Type")
+        print(content_type)
         if content_type:
             content_type = content_type.split(";", 1)[0].strip()
             return CONTENT_TYPE_EXTENSIONS.get(content_type, None)
