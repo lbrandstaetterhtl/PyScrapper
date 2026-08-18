@@ -1,7 +1,7 @@
 #Core Imports
 import PythonModule.core as core
 from PythonModule.core.network import html
-from PythonModule.core.network import Session
+from PythonModule.core.network.Session import Session
 from PythonModule.core.network import EmergencyBrowser
 
 # Own imports
@@ -200,7 +200,7 @@ def getMediaInformation(
         url=request.url,
         allowed_hostnames_list=[
             "youtube.com",
-            "www.youtube.com"
+            "www.youtube.com",
         ],
         caller="[providers] Youtube.getMediaInformation"
     )
@@ -366,7 +366,151 @@ def getMediaInformation(
     )
 
 
-   
+
+
+
+def _getMusicClientVersion(session: Session) -> str:
+    url = "https://music.youtube.com"
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 "
+                "Chrome/151.0.0.0 Safari/537.36"
+            )
+        }
+    )
+
+    with session.open(request=req) as response:
+        musicHtml: str = response.read().decode("utf-8", errors="replace")
+        finalUrl = response.geturl()
+
+    if "consent.youtube.com" in finalUrl or \
+       'base href="https://consent.youtube.com/' in musicHtml:
+        print("[Youtube] consent site was found, sending emergency browser")
+        EmergencyBrowser.BrowserButtonPress(
+            url=url,
+            button_name="",
+            headless=False
+        )
+        session.reloadCookies()
+
+        test_req = urllib.request.Request(
+            "https://music.youtube.com/"
+        )
+
+        session.cookieJar.add_cookie_header(test_req)
+
+        print("COOKIE HEADER:")
+        print(test_req.get_header("Cookie"))
+
+        with session.open(request=req) as response:
+                musicHtml: str = response.read().decode("utf-8", errors="replace")
+                finalUrl = response.geturl()
+
+    patterns = [
+        r'"INNERTUBE_CLIENT_VERSION":"([^"]+)"',
+        r'"innertubeClientVersion":"([^"]+)"',
+    ]
+
+    for pattern in patterns:
+        clientVersion = core.general.DataSearch.searchBlocks(pattern, musicHtml, return_regex_exception=False)
+
+        if clientVersion:
+            return clientVersion
+
+    raise core.models.errors.TaskFailedError(
+        task="[providers] Youtube._getMusicClientVersion",
+        reason="Couldn't find music client version in html",
+        extraMessages=[
+            f"Patterns: {', '.join(patterns)}",
+            f"Searched html: {musicHtml}"
+        ]
+    )
+        
+
+
+
+
+
+
+
+def getMediaInformationMusic(
+    request: models.ProviderResultRequest,
+) -> models.ProviderResult:
+
+    print(request)
+
+
+    core.general.Validate.general.validateGeneralType(
+        argument_name="request",
+        obj=request,
+        objType=models.ProviderResultRequest,
+        caller="Youtube.getMediaInformation"
+    )
+
+    core.general.Validate.special.validateHostPro(
+        url=request.url,
+        allowed_hostnames_list=[
+            "music.youtube.com",
+        ],
+        caller="[providers] Youtube.getMediaInformation"
+    )
+    medialist = EmergencyBrowser.BrowserDiscoverStreamURLs(url=request.url, headless=False, ad_block=True)
+    candidate = medialist.candidates[0]
+    parsedUrl = urllib.parse.urlparse(candidate.mediaUrl)
+    query = urllib.parse.parse_qs(parsedUrl.query)
+
+    poToken = query.get("pot", [None])[0]
+    print(poToken)
+
+    
+    client_version = _getMusicClientVersion(request.ses)
+    print(f"[Youtube] Music client version: {client_version}")
+    video_id = request.url.split("?v=", 1)[1].split("&")[0]
+
+    
+
+    headers={
+            "Content-Type": "application/json",
+            "Origin": "https://music.youtube.com",
+            "Referer": "https://music.youtube.com/",
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 "
+                "Chrome/151.0.0.0 Safari/537.36"
+            )
+        }
+
+    body = {
+        "context": {
+            "client": {
+                "clientName": "WEB_REMIX",
+                "clientVersion": client_version,
+                "hl": "en",
+                "gl": "US"
+            }
+        },
+        "videoId": video_id
+    }
+
+    data = json.dumps(body).encode("utf-8")
+
+    ytRequest = urllib.request.Request(
+        "https://music.youtube.com/youtubei/v1/player?prettyPrint=false",
+        data=data,
+        headers=headers,
+        method="POST"
+    )
+
+    with request.ses.open(request=ytRequest) as response:
+        raw = response.read()
+        jsonData = json.loads(raw.decode("utf-8"))
+
+    print(jsonData)
+
 
     
 

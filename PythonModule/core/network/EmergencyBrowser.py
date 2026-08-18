@@ -1602,6 +1602,93 @@ def WCOFLIXBrowserDiscoverStreamUrls(
 from playwright.sync_api import sync_playwright
 
 
+def POTokenBrowser(
+        url: str,
+        headless: bool = False,
+        cookie_file: str = COOKIE_FILE,
+        wait: int = 4000,
+        extra_headers: dict | None = None
+):
+    headers = {
+            "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Upgrade-Insecure-Requests": "1",
+        }
+    if extra_headers:
+        headers.update(extra_headers)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=headless
+        )
+
+        context = None
+
+        try:
+            context = browser.new_context(
+                extra_http_headers=headers,
+
+                viewport={
+                    "width": 1920,
+                    "height": 1080
+                },
+
+                locale="de-DE",
+
+                timezone_id="Europe/Vienna",
+
+                color_scheme="dark"
+            )
+            # Vorhandene Mozilla-/Netscape-Cookies laden
+            cookies = _load_mozilla_cookies_for_playwright(
+                cookie_file
+            )
+
+            if cookies:
+                try:
+                    context.add_cookies(cookies)
+                    print(
+                        f"[Cookies] {len(cookies)} cookies "
+                        "added to Playwright context"
+                    )
+                except Exception as e:
+                    print(
+                        f"[Cookies] add_cookies failed: {e}"
+                    )
+
+            page = context.new_page()
+
+            def handle_request(req):
+                if "/youtubei/v1/player" in req.url:
+                    print(req.post_data)
+
+            page.on("request", handle_request)
+
+            page.goto(url)
+            page.wait_for_timeout(wait)
+
+
+        finally:
+            
+            if context is not None:
+                try:
+                    _save_playwright_cookies_to_mozilla(
+                        context,
+                        cookie_file
+                    )
+                    print(
+                        f"[Cookies] saved to {cookie_file}"
+                    )
+                except Exception as e:
+                    print(
+                        f"[Cookies] saving failed: {e}"
+                    )
+
+                context.close()
+
+            browser.close()
+
+    
+
 def BrowserButtonPress(
         url: str,
         button_name: str | None = None,

@@ -16,6 +16,7 @@ class ProviderTypes(enum.Enum):
     Aniworld = enum.auto()
     Newgrounds = enum.auto()
     Dailymotion = enum.auto()
+    YoutubeMusic = enum.auto()
 
 
 
@@ -36,6 +37,7 @@ PROVIDER_GETRESULTS_MAPPING: dict = {
     ProviderTypes.Suno : p.Suno.getMediaInformation,
     ProviderTypes.Newgrounds : p.Newgrounds.getMediaInformation,
     ProviderTypes.Youtube : p.Youtube.getMediaInformation,
+    ProviderTypes.YoutubeMusic : p.Youtube.getMediaInformationMusic
 
 }
 
@@ -49,7 +51,11 @@ PROVIDER_SEARCH_MAPPING: dict = {
 
 }
     
-
+VALIDYOUTUBEMUSICNAMES = [
+    "music.youtube.com",
+    "youtubemusic",
+    "musicyoutube"
+]
 
 
 VALIDDAILYMOTIONNAMES = [
@@ -116,7 +122,8 @@ SUPPORTEDPROVIDERS = {
     ProviderTypes.Soundcloud : VALIDSOUNDCLOUDNAMES,
     ProviderTypes.Wcoflix : VALIDWCOFLIXNAMES,
     ProviderTypes.Newgrounds : VALIDNEWGROUNDSNAMES,
-    ProviderTypes.Dailymotion : VALIDDAILYMOTIONNAMES
+    ProviderTypes.Dailymotion : VALIDDAILYMOTIONNAMES,
+    ProviderTypes.YoutubeMusic : VALIDYOUTUBEMUSICNAMES
 }
 
 
