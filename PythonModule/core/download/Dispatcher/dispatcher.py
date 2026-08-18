@@ -33,6 +33,7 @@ class DownloadDispatcher():
 
         self.downloadInformationFile = replace(self.downloadInformation, contexts = [])
         self.downloadInformationHLS = replace(self.downloadInformation, contexts = [])
+        self.downloadInformationUMP = replace(self.downloadInformation, contexts=[])
 
         self._splitContext()
 
@@ -42,6 +43,7 @@ class DownloadDispatcher():
 
         from ..File import FileDispatcher
         from ..HLS import HLSDispatcher
+        from ..UMP import UMPDispatcher
         Validate.download.validateDownloadContext(argument_name="context", download_context=context, caller="[CORE] DownloadDispatcher.downloadContextAndYield")
         if context.target.download_type == Download.DownloadType.FILE:
             dispatcher = FileDispatcher(
@@ -55,6 +57,13 @@ class DownloadDispatcher():
                 replace(
                     self.downloadInformation,
                     contexts=[context]
+                )
+            )
+        elif context.target.download_type == Download.DownloadType.UMP:
+            dispatcher = UMPDispatcher(
+                replace(
+                    self.downloadInformation,
+                    contexts=[context]    
                 )
             )
         else:
@@ -75,6 +84,7 @@ class DownloadDispatcher():
         tasks = []
         from ..File import FileDispatcher
         from ..HLS import HLSDispatcher
+        from ..UMP import UMPDispatcher
 
         
         if self.downloadInformationFile.contexts:
@@ -90,6 +100,13 @@ class DownloadDispatcher():
                     HLSDispatcher(self.downloadInformationHLS).downloadToFile()
                 )
             )
+        if self.downloadInformationUMP.contexts:
+            tasks.append(
+                asyncio.create_task(
+                    UMPDispatcher(self.downloadInformationUMP).downloadToFile()
+                )
+            )
+
 
         if tasks:
             await asyncio.gather(*tasks)
@@ -105,6 +122,7 @@ class DownloadDispatcher():
 
         from ..File import FileDispatcher
         from ..HLS import HLSDispatcher
+        from ..UMP import UMPDispatcher
         
         if self.downloadInformationFile.contexts:
             async for chunk in FileDispatcher(self.downloadInformationFile).downloadAndYield():
@@ -112,6 +130,10 @@ class DownloadDispatcher():
 
         if self.downloadInformationHLS.contexts:
             async for chunk in HLSDispatcher(self.downloadInformationHLS).downloadAndYield():
+                yield chunk
+
+        if self.downloadInformationUMP.contexts:
+            async for chunk in UMPDispatcher(self.downloadInformationUMP).downloadAndYield():
                 yield chunk
 
 
@@ -124,6 +146,9 @@ class DownloadDispatcher():
 
             elif context.target.download_type == Download.DownloadType.HLS:
                 self.downloadInformationHLS.contexts.append(context)
+
+            elif context.target.download_type == Download.DownloadType.UMP:
+                self.downloadInformationUMP.contexts.append(context)
 
             else:
                 context.download_progress.status = Download.TaskStatus.FAILED

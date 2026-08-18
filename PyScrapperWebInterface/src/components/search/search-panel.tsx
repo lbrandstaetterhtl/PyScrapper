@@ -101,7 +101,7 @@ function SearchPanel({auth, updateResults, onSearchFinished} : AuthProp )
                         value={request.top}
                         onChange={(e) =>{
                             const num = Number(e.target.value)
-                            if (isNaN! && num > 0)
+                            if (!isNaN(num) && num > 0)
                             {
                                 updateSearchRequest(
                                     {

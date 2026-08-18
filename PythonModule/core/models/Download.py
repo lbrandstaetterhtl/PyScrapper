@@ -25,6 +25,7 @@ class DownloadType(Enum):
     HLS = auto()
     FILE = auto()
     DASH = auto()
+    UMP = auto()
 
 
 

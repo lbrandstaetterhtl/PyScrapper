@@ -2,7 +2,7 @@ import { useState } from "react"
 
 import type { Authorization } from "./components/general"
 
-import { Panel, SERVER_BASE_ADRESS } from "./components/general"
+import { Panel } from "./components/general"
 import type { Panel as PanelType } from "./components/general"
 
 import type { SearchResult } from "./components/search/models"
@@ -108,7 +108,7 @@ function App() {
                         <h1>{curPanel.replaceAll("_", " ")}</h1>
                     </div>
                     <div className="topbar-chip">
-                        <span className="status-dot" /> {SERVER_BASE_ADRESS}
+                        <span className="status-dot" /> Server
                     </div>
                 </header>
 

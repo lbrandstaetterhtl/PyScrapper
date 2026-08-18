@@ -104,6 +104,7 @@ CONTENT_TYPE_EXTENSIONS = {
 EXTENSION_CONTENT_TYPES = {
     "mp4": "video/mp4",
     "webm": "video/webm",
+    "webm-audio" : "audio/webm",
     "mkv": "video/x-matroska",
     "ts": "video/mp2t",
 

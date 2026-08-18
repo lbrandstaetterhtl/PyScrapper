@@ -266,62 +266,93 @@ function MediaPlayer(
         stream
     }: MediaPlayerProp
 ) {
-    const mediaRef = useRef<HTMLMediaElement>(null)
+    const audioRef = useRef<HTMLAudioElement>(null)
+    const videoRef = useRef<HTMLVideoElement>(null)
  
     useEffect(() => {
-        const media = mediaRef.current
+    const media =
+    stream.media_type.startsWith("audio/")
+        ? audioRef.current
+        : videoRef.current
 
-        if (!media) {
-            return
-        }
+    if (!media)
+        return
 
-        if (stream.stream_type === "file") {
-            media.src = stream.watch_url
-            return
-        }
+    media.pause()
+    media.removeAttribute("src")
+    media.load()
 
-        if (stream.stream_type === "hls") {
-            if (Hls.isSupported()) {
-                const hls = new Hls()
+    if (stream.stream_type === "file")
+    {
+        media.src = stream.watch_url
+        return
+    }
 
+    if (stream.stream_type === "hls")
+    {
+        if (Hls.isSupported())
+        {
+            const hls = new Hls()
+
+            hls.attachMedia(media)
+
+            hls.on(Hls.Events.MEDIA_ATTACHED, () => {
                 hls.loadSource(stream.watch_url)
-                hls.attachMedia(media)
+            })
 
-                hls.on(Hls.Events.ERROR, (_, data) => {
-                    console.error("HLS Error:", data)
-                })
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                console.log("HLS manifest parsed")
+            })
 
-                return () => {
-                    hls.destroy()
+            hls.on(Hls.Events.ERROR, (_, data) => {
+                console.error("HLS Error:", data)
+
+                if (data.fatal)
+                {
+                    console.error(
+                        "Fatal HLS error:",
+                        data.type,
+                        data.details
+                    )
                 }
-            }
+            })
 
-            if (media.canPlayType("application/vnd.apple.mpegurl")) {
-                media.src = stream.watch_url
+            return () => {
+                hls.destroy()
+
+                media.pause()
+                media.removeAttribute("src")
+                media.load()
             }
         }
 
-    }, [
-        stream.watch_url,
-        stream.stream_type,
-        stream.media_type
-    ])
+        if (media.canPlayType("application/vnd.apple.mpegurl"))
+        {
+            media.src = stream.watch_url
+        }
+    }
+
+}, [
+    stream.watch_url,
+    stream.stream_type
+])
 
     if (stream.media_type.startsWith("audio/"))
     {
         return (
             <audio
-                ref={mediaRef}
+                ref={audioRef}
                 className="media-player audio-player"
                 controls
             />
         )
     }
+   
     if (stream.media_type.startsWith("video/"))
     {
         return (
             <video
-                ref={mediaRef}
+                ref={videoRef}
                 className="media-player video-player"
                 controls
             />

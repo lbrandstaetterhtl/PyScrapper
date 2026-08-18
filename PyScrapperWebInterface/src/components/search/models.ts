@@ -1,12 +1,12 @@
-import { SERVER_BASE_ADRESS } from "../general";
 
 
-export const ServerAdressSearch = SERVER_BASE_ADRESS + "/search"
+
+export const ServerAdressSearch = "/api/search"
 
 export type SearchRequest = {
     provider: string;
     search: string;
-    top: Number;
+    top: number;
     filters: {
         tags: string[]
     }
@@ -20,6 +20,7 @@ export const ProvidersSearch = {
     Newgrounds : "newgrounds",
     Archive : "archive",
     Soundcloud : "soundcloud",
+    Suno : "suno"
 
 } as const
 

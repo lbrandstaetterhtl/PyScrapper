@@ -1,7 +1,7 @@
 import type { Authorization } from "../general"
 import { DownloadStrategie, ProvidersDownload, type DownloadRequest, type ProviderDownload } from "./models"
 import type { DownloadResult, ServerResultDownload, StreamResult } from "./models"
-import { SERVER_BASE_ADRESS } from "../general"
+
 
 import { sendDownloadRequest } from "./api"
 
@@ -38,8 +38,8 @@ function DownloadPanel(
         {
             const stream_result: StreamResult = {
                 task_id: stream.task_id,
-                download_url: SERVER_BASE_ADRESS + stream.download_url,
-                watch_url: SERVER_BASE_ADRESS + stream.watch_url,
+                download_url: stream.download_url,
+                watch_url: stream.watch_url,
                 stream_type: stream.stream_type,
                 media_type : stream.media_type,
                 download_progress : {
@@ -54,9 +54,10 @@ function DownloadPanel(
         }
         const result: DownloadResult = {
             task_id : server_result.task_id,
-            download_progress : SERVER_BASE_ADRESS + server_result.download_progress,
+            download_progress :"/api" + server_result.download_progress,
             streams : streams,
-            download_request : request
+            download_request : request,
+            info: server_result.info ?? ""
         }
 
         updateDownloadHistory((oldHistory) => [

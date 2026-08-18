@@ -1,4 +1,4 @@
-export const SERVER_BASE_ADRESS = "http://127.0.0.1:8000"
+
 
 export type Authorization = {
     key_name : string;

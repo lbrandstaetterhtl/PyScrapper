@@ -1,5 +1,5 @@
-import { SERVER_BASE_ADRESS } from "../general"
-export const ServerAdressDownload = SERVER_BASE_ADRESS + "/download/video-audio/"
+
+export const ServerAdressDownload = "/api/download/video-audio/"
 
 
 

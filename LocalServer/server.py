@@ -448,6 +448,7 @@ async def receive_download(data: requests.DownloadRequest):
                     "streams": [],
                     "info" : f"Job will be deleted after one day"
                 }
+    
 
 
 
@@ -763,19 +764,7 @@ async def get_download_progress(task_id: str):
 
     info: core.models.Download.DownloadInformation = job.download_information
 
-    if all(context.download_progress.status in (
-        core.models.Download.TaskStatus.FAILED,
-        core.models.Download.TaskStatus.FINISHED,
-    )
-    for context in info.contexts
-    ):
-        asyncio.create_task(
-            cleanup_download(
-                delay=60,
-                task_id=task_id,
-                stream_id=None
-            )
-        )
+    
 
     return {
         "task_id" : info.job_id,
