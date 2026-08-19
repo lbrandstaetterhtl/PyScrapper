@@ -33,7 +33,7 @@ function App() {
     const [downloadHistory, updateDownloadResult] = useState<DownloadResult[]>([])
 
     const [curDownloadRequest, updateDownloadRequest] = useState<DownloadRequest>({
-        provider: ProvidersDownload.Youtube,
+        provider: ProvidersDownload.Youtube_Music,
         download_strategie: "stream",
         urls: [],
         filenames: [],

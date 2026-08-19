@@ -28,28 +28,7 @@ def validateMediatype(
     
 
 
-def validate_url(url: str, session):
-    
-    if url.lower().startswith("http://"):
-            raise ValueError("Given url was http")
-    if not url.lower().startswith("https://"):
-        raise ValueError("Invalid URL. Given url has to start with https://")
-    
-    request = urllib.request.Request(
-         url,
-         method="GET"
-    )
 
-    try:
-        with session.open(request=request) as response:
-            if response:
-                print(response)
-    
-    except urllib.error.URLError:
-        raise ValueError("Didn't reach anything")
-    
-    except Exception as e:
-        raise Exception(str(e))
     
 
 def make_out_file(

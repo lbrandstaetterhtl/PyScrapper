@@ -11,7 +11,9 @@ export const ProvidersDownload = {
     Soundcloud: "soundcloud",
     Default : "default",
     Wcoflix : "wcoflix",
-    Suno : "suno"
+    Suno : "suno",
+    Youtube_Music : "youtubemusic"
+    
 } as const
 
 export type ProviderDownload =

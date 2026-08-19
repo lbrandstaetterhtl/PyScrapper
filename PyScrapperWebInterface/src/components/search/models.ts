@@ -20,7 +20,8 @@ export const ProvidersSearch = {
     Newgrounds : "newgrounds",
     Archive : "archive",
     Soundcloud : "soundcloud",
-    Suno : "suno"
+    Suno : "suno",
+    Youtube_Music : "youtubemusic"
 
 } as const
 

@@ -47,7 +47,8 @@ PROVIDER_SEARCH_MAPPING: dict = {
     ProviderTypes.Archive : p.Archive.search,
     ProviderTypes.Newgrounds : p.Newgrounds.search,
     ProviderTypes.Youtube : p.Youtube.search,
-    ProviderTypes.Suno : p.Suno.search
+    ProviderTypes.Suno : p.Suno.search,
+    ProviderTypes.YoutubeMusic : p.Youtube.searchMusic
 
 }
     

@@ -924,17 +924,6 @@ def _guessMediaType(
         _mediaType = media.MediaType.FILE
         _priority = 120
 
-    # --------------------------------------------------
-    # TikTok / Musically
-    # --------------------------------------------------
-
-    elif (
-        hostname.endswith("tiktokcdn.com")
-        or hostname.endswith("prime.tiktok.com")
-    ):
-        _streamType = media.StreamType.DIRECT
-        _mediaType = media.MediaType.FILE
-        _priority = 100
 
     # --------------------------------------------------
     # WCO-style /getvid endpoint

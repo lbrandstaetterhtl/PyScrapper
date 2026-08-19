@@ -72,7 +72,7 @@ function DownloadPanel(
             urls: [],
             filenames: [],
             extra_headers: {},
-            provider: ProvidersDownload.Youtube
+            provider: ProvidersDownload.Youtube_Music
 
         }))
 
