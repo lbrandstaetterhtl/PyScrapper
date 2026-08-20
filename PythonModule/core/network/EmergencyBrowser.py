@@ -1112,7 +1112,8 @@ def _guessMediaType(
     # --------------------------------------------------
 
     if (
-        hostname.endswith("googlevideo.com")
+        hostname.endswith(".googlevideo.com")
+        or hostname == "googlevideo.com"
         and path.endswith("/videoplayback")
     ):
         _streamType = media.StreamType.DIRECT
@@ -2008,6 +2009,7 @@ def POTokenBrowser(
             page = context.new_page()
 
             def handle_request(req):
+                parsed = urlparse(req.url)
                 if "youtubei/v1/player" in url:
                     print("\n===== YOUTUBE PLAYER REQUEST =====")
                     print("URL:", url)
@@ -2015,7 +2017,10 @@ def POTokenBrowser(
                     print("HEADERS:", req.headers)
                     print("POST DATA:", req.post_data)
 
-                elif "googlevideo.com" in url and "sabr=1" in url:
+                elif (
+                    parsed.hostname.endswith(".googlevideo.com")
+                    and "&sabr=1" in url
+                ):
                     print("\n===== SABR REQUEST =====")
                     print("URL:", url)
                     print("METHOD:", req.method)
