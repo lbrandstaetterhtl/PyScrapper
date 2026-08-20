@@ -545,6 +545,8 @@ def getMediaInformationMusic(
         caller="[providers] Youtube.getMediaInformation"
     )
     medialist = EmergencyBrowser.BrowserDiscoverStreamURLs(url=request.url, headless=False, ad_block=True)
+    if not medialist:
+        raise ValueError("Didn't get valid media")
     candidate = medialist.candidates[0]
 
 
