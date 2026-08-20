@@ -31,7 +31,6 @@ def getMediaInformation(
     - PeerTube.tv
     - Twitch videos (individual stream parts)
     - Imgur.com videos
-    - Instagram Reels
     - Reddit videos
     - Threads.com posts
     - Tumblr.com
@@ -49,6 +48,9 @@ Websites with partial support:
     - Bilibili:
         Audio can be discovered, but video delivery uses MPEG-DASH, which is
         currently not supported by the core.
+
+    
+    - Instagram reels video only
 
     Support for these websites is not guaranteed, as their delivery methods
     and website implementations may change at any time.

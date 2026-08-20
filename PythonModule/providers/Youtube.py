@@ -189,6 +189,42 @@ def searchMusic(
     
     jsondata = json.loads(decodedJson)
 
+
+
+    for renderer in core.general.DataSearch.iterValueFromJson(
+        jsondata,
+        "musicCardShelfRenderer"
+    ):
+        if len(results) >= top:
+            break
+        try:
+            titleRun = renderer["title"]["runs"][0]
+
+            title = titleRun["text"]
+            videoId = (
+                titleRun["navigationEndpoint"]
+                ["watchEndpoint"]
+                ["videoId"]
+            )
+
+            thumbnail = (
+                renderer["thumbnail"]
+                ["musicThumbnailRenderer"]
+                ["thumbnail"]
+                ["thumbnails"][-1]
+                ["url"]
+            )
+
+        except (KeyError, IndexError, TypeError):
+            continue
+
+        results.append({
+            "identifier": videoId,
+            "url": f"https://music.youtube.com/watch?v={videoId}",
+            "title": title,
+            "thumbnail": thumbnail,
+        })
+
     
 
     for musicRenderer in core.general.DataSearch.iterValueFromJson(jsondata, "musicResponsiveListItemRenderer"):
