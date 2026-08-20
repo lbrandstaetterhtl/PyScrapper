@@ -280,7 +280,29 @@ def getYoutubeFormats(
 
     return info
 
+def getMediaInformation2(
+    request: models.ProviderResultRequest,
+) -> models.ProviderResult:
 
+    core.general.Validate.general.validateGeneralType(
+        argument_name="request",
+        obj=request,
+        objType=models.ProviderResultRequest,
+        caller="Youtube.getMediaInformation"
+    )
+
+    core.general.Validate.special.validateHostPro(
+        url=request.url,
+        allowed_hostnames_list=[
+            "youtube.com",
+            "www.youtube.com",
+        ],
+        caller="[providers] Youtube.getMediaInformation"
+    )
+    EmergencyBrowser.POTokenBrowser(
+        url=request.url,
+        headless=False,
+    )
 
 
 def getMediaInformation(

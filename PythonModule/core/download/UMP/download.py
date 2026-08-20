@@ -66,8 +66,108 @@ async def downloadAndYieldUMP(
                 parsed._replace(query=new_query)
             )
 
-            
 
+#This functioins made by AI
+async def downloadAndYieldUMPRange(
+    session,
+    start_url: str,
+    extra_headers: dict,
+    max_len: int,
+    media_start: int = 0,
+    media_end: int | None = None,
+):
+    media_position = 0
+
+    async for chunk in downloadAndYieldUMPSimple(
+        session=session,
+        start_url=start_url,
+        extra_headers=extra_headers,
+        max_len=max_len,
+    ):
+        chunk_start = media_position
+        chunk_end = media_position + len(chunk)
+
+        media_position = chunk_end
+
+        # kompletter Chunk liegt vor dem gewünschten Bereich
+        if chunk_end <= media_start:
+            continue
+
+        # Start liegt innerhalb dieses Chunks
+        offset = max(0, media_start - chunk_start)
+
+        data = chunk[offset:]
+
+        if media_end is not None:
+            remaining = media_end - max(chunk_start, media_start) + 1
+
+            if remaining <= 0:
+                break
+
+            if len(data) > remaining:
+                data = data[:remaining]
+
+        if data:
+            yield data
+
+        if media_end is not None and media_position > media_end:
+            break
+
+
+
+
+            
+async def downloadAndYieldUMPSimple(
+        session,
+        start_url: str,
+        extra_headers: dict,
+        max_len: int
+):
+
+
+    nextChunkUrl = start_url
+
+
+    while True:
+        with session.open(url=nextChunkUrl, headers=extra_headers) as response:
+            print(f"[CORE] UMP: opened url {nextChunkUrl}")
+            data = await asyncio.to_thread(
+                response.read
+            )
+
+            parts = _parseUMP(data)
+
+            media_data = _extractMediaData(parts)
+            yield media_data
+
+            size = _getSize(parts)
+
+            parsed = urllib.parse.urlparse(nextChunkUrl)
+            query = urllib.parse.parse_qs(parsed.query)
+
+
+            current_end = int(
+            query["range"][0].split("-", 1)[1]
+        )
+
+            next_start = current_end + 1
+            next_end = min(
+                next_start + size - 1,
+                max_len - 1
+            )
+
+       
+            if next_start >= max_len:
+                break
+
+            query["range"] = [f"{next_start}-{next_end}"]
+            
+        
+            new_query = urllib.parse.urlencode(query, doseq=True)
+
+            nextChunkUrl = urllib.parse.urlunparse(
+                parsed._replace(query=new_query)
+            )
             
 
 

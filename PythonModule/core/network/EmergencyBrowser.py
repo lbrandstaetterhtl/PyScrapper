@@ -6,6 +6,39 @@ import http.cookiejar
 import shlex
 from urllib.parse import urlparse
 
+ITAG_PRIORITY = {
+    # Video + Audio
+    "22": 100,   # MP4 720p + audio
+    "18": 90,    # MP4 360p + audio
+    "17": 80,    # 3GP low quality
+
+    # Audio only
+    "251": 70,   # WebM Opus ~160 kbps
+    "141": 68,   # M4A AAC ~256 kbps (wenn verfügbar)
+    "140": 65,   # M4A AAC ~128 kbps
+    "250": 60,   # WebM Opus ~70 kbps
+    "249": 55,   # WebM Opus ~50 kbps
+    "139": 50,   # M4A AAC low quality
+
+    # Video only
+    "313": 30,
+    "271": 29,
+    "248": 28,
+    "247": 27,
+    "244": 26,
+    "243": 25,
+    "242": 24,
+    "278": 23,
+
+    "137": 22,
+    "136": 21,
+    "135": 20,
+    "134": 19,
+    "133": 18,
+    "160": 17,
+}
+
+
 CONTENT_TYPE_EXTENSIONS = {
     "video/mp4": "mp4",
     "video/webm": "webm",
@@ -25,6 +58,100 @@ CONTENT_TYPE_EXTENSIONS = {
 
 REQUESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 COOKIE_FILE = os.path.join(REQUESTS_DIR, "cookies.txt")
+
+
+AD_SKIP_BUTTON_NAMES = [
+    # English
+    "Skip Ad",
+    "Skip Ads",
+    "Skip ad",
+    "Skip ads",
+    "Skip this ad",
+    "Skip advertisement",
+    "Skip commercial",
+    "Skip video",
+
+    # German
+    "Werbung überspringen",
+    "Anzeige überspringen",
+    "Anzeigen überspringen",
+    "Werbeanzeige überspringen",
+
+    # Other common variants
+    "Skip",
+    "Überspringen",
+]
+
+AD_BAD_KEYWORDS = [
+    # General advertising
+    "advertisement",
+    "advertising",
+    "advert",
+    "sponsored",
+    "sponsor",
+    "promotion",
+    "promoted",
+    "commercial",
+
+    # Ad delivery / tracking
+    "adserver",
+    "adservice",
+    "adunit",
+    "ad-unit",
+    "adslot",
+    "ad-slot",
+    "adbreak",
+    "ad-break",
+    "preroll",
+    "pre-roll",
+    "midroll",
+    "mid-roll",
+    "postroll",
+    "post-roll",
+    "instream-ad",
+    "instream_ad",
+    "video_ad",
+    "audio_ad",
+
+    # Common ad technologies
+    "doubleclick",
+    "googlesyndication",
+    "googleads",
+    "pagead",
+    "vpaid",
+    "vast",
+
+    # YouTube DOM / player
+    "ytp-ad",
+    "ytp-ad-player",
+    "ytp-ad-module",
+    "ytp-ad-overlay",
+    "ytp-ad-overlay-container",
+    "ytp-ad-preview",
+    "ytp-ad-preview-container",
+    "ytp-ad-skip-button",
+    "ytp-ad-skip-button-container",
+    "ytp-skip-ad-button",
+    "ytp-ad-duration-remaining",
+    "video-ads",
+    "player-ads",
+    "ad-showing",
+    "ad-interrupting",
+
+    # YouTube / Google request hints
+    "adformat",
+    "ad_type",
+    "adunit_id",
+    "adplacement",
+    "ad_placement",
+
+    # YouTube UMP hints observed in your case
+    "ctier=l",
+    "pcm2cms=yes",
+    "ms=aub",
+    "rms=aub",
+]
+
 
 def _load_mozilla_cookies_for_playwright(cookie_file: str) -> list[dict]:
     if not os.path.exists(cookie_file):
@@ -650,7 +777,65 @@ def _tryPressPlay(page, max_attempts: int = 4, wait_ms: int = 2000) -> bool:
 
 
 
-    
+def _try_Press_Skip(
+    page,
+    timeout_ms=4000
+):
+    try:
+        frames = list(page.frames)
+    except Exception:
+        frames = [page.main_frame]
+
+    for frame in frames:
+        for button_name in AD_SKIP_BUTTON_NAMES:
+            try:
+                locator = frame.get_by_role(
+                    "button",
+                    name=button_name,
+                    exact=True
+                ).first
+
+                if locator.count() == 0:
+                    continue
+
+                try:
+                    locator.wait_for(
+                        state="visible",
+                        timeout=timeout_ms
+                    )
+                except Exception:
+                    continue
+
+                print(
+                    f"[BROWSER] Trying AD skip button: "
+                    f"{button_name}"
+                )
+
+                try:
+                    locator.click(
+                        timeout=timeout_ms
+                    )
+
+                except Exception:
+                    try:
+                        locator.click(
+                            timeout=timeout_ms,
+                            force=True
+                        )
+                    except Exception:
+                        continue
+
+                print(
+                    f"[BROWSER] AD skip button pressed: "
+                    f"{button_name}"
+                )
+
+                return True
+
+            except Exception:
+                continue
+
+    return False
         
 
 def _buildCurlCommand(
@@ -761,6 +946,16 @@ def _removeByteRangeParams(url: str) -> str:
         "&".join(filtered_query_parts),
         parsed.fragment,
     ))
+
+
+
+    
+
+
+
+    
+
+
 
 
 def _saveMedia(
@@ -923,6 +1118,9 @@ def _guessMediaType(
         _streamType = media.StreamType.DIRECT
         _mediaType = media.MediaType.FILE
         _priority = 120
+        itag = query.get("itag", [None])[0]
+        _priority += ITAG_PRIORITY.get(itag, 0)
+
 
 
     # --------------------------------------------------
@@ -1075,7 +1273,7 @@ def _guessMediaType(
     # --------------------------------------------------
     # Generic priority adjustments
     # --------------------------------------------------
-
+    
     for keyword in badKeywords:
         if keyword in searchable:
             _priority -= 20
@@ -1318,6 +1516,21 @@ def BrowserDiscoverStreamURLs(
             page = context.new_page()
 
             def handleResponse(response):
+                global AD_BAD_KEYWORDS
+                adLikelyhood = 0
+
+                for badWord in AD_BAD_KEYWORDS:
+
+                    if badWord in response.url.lower():
+                        adLikelyhood += 1
+
+                    if adLikelyhood >= 2:
+                        print("[BROWSER] Url gotten is mostlikly an AD. Waiting 5 Seconds and then trying to skip")
+                        page.wait_for_timeout(5000)
+                        _try_Press_Skip(page)
+                        return
+
+
                 _saveMedia(
                     response,
                     foundMedia,
@@ -1426,12 +1639,28 @@ def BrowserDiscoverStreamURLs_ButtonList(
             page = context.new_page()
 
             def handleResponse(response):
+              
+                global AD_BAD_KEYWORDS
+                adLikelyhood = 0
+
+                for badWord in AD_BAD_KEYWORDS:
+
+                    if badWord in response.url.lower():
+                        adLikelyhood += 1
+
+                    if adLikelyhood >= 2:
+                        print("[BROWSER] Url gotten is mostlikly an AD. Waiting 5 Seconds and then trying to skip")
+                        page.wait_for_timeout(5000)
+                        _try_Press_Skip(page)
+                        return
+
+
                 _saveMedia(
                     response,
                     foundMedia,
                     cookieFile=cookie_file,
                     pageUrl=page.url if page.url else url,
-                    includeCookieHeaderInCurl=includeCookieHeaderInCurl
+                    includeCookieHeaderInCurl=True
                 )
 
             page.on("response", handleResponse)
@@ -1591,92 +1820,6 @@ def WCOFLIXBrowserDiscoverStreamUrls(
 from playwright.sync_api import sync_playwright
 
 
-def POTokenBrowser(
-        url: str,
-        headless: bool = False,
-        cookie_file: str = COOKIE_FILE,
-        wait: int = 4000,
-        extra_headers: dict | None = None
-):
-    headers = {
-            "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Upgrade-Insecure-Requests": "1",
-        }
-    if extra_headers:
-        headers.update(extra_headers)
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=headless
-        )
-
-        context = None
-
-        try:
-            context = browser.new_context(
-                extra_http_headers=headers,
-
-                viewport={
-                    "width": 1920,
-                    "height": 1080
-                },
-
-                locale="de-DE",
-
-                timezone_id="Europe/Vienna",
-
-                color_scheme="dark"
-            )
-            # Vorhandene Mozilla-/Netscape-Cookies laden
-            cookies = _load_mozilla_cookies_for_playwright(
-                cookie_file
-            )
-
-            if cookies:
-                try:
-                    context.add_cookies(cookies)
-                    print(
-                        f"[Cookies] {len(cookies)} cookies "
-                        "added to Playwright context"
-                    )
-                except Exception as e:
-                    print(
-                        f"[Cookies] add_cookies failed: {e}"
-                    )
-
-            page = context.new_page()
-
-            def handle_request(req):
-                if "/youtubei/v1/player" in req.url:
-                    print(req.post_data)
-
-            page.on("request", handle_request)
-
-            page.goto(url)
-            page.wait_for_timeout(wait)
-
-
-        finally:
-            
-            if context is not None:
-                try:
-                    _save_playwright_cookies_to_mozilla(
-                        context,
-                        cookie_file
-                    )
-                    print(
-                        f"[Cookies] saved to {cookie_file}"
-                    )
-                except Exception as e:
-                    print(
-                        f"[Cookies] saving failed: {e}"
-                    )
-
-                context.close()
-
-            browser.close()
-
-    
 
 def BrowserButtonPress(
         url: str,
@@ -1809,4 +1952,102 @@ def BrowserButtonPress(
 
 
 
+def POTokenBrowser(
+        url: str,
+        headless: bool = False,
+        cookie_file: str = COOKIE_FILE,
+        wait: int = 4000,
+        extra_headers: dict | None = None
+):
+    headers = {
+            "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Upgrade-Insecure-Requests": "1",
+        }
+    if extra_headers:
+        headers.update(extra_headers)
 
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=headless
+        )
+
+        context = None
+
+        try:
+            context = browser.new_context(
+                extra_http_headers=headers,
+
+                viewport={
+                    "width": 1920,
+                    "height": 1080
+                },
+
+                locale="de-DE",
+
+                timezone_id="Europe/Vienna",
+
+                color_scheme="dark"
+            )
+            # Vorhandene Mozilla-/Netscape-Cookies laden
+            cookies = _load_mozilla_cookies_for_playwright(
+                cookie_file
+            )
+
+            if cookies:
+                try:
+                    context.add_cookies(cookies)
+                    print(
+                        f"[Cookies] {len(cookies)} cookies "
+                        "added to Playwright context"
+                    )
+                except Exception as e:
+                    print(
+                        f"[Cookies] add_cookies failed: {e}"
+                    )
+
+            page = context.new_page()
+
+            def handle_request(req):
+                if "youtubei/v1/player" in url:
+                    print("\n===== YOUTUBE PLAYER REQUEST =====")
+                    print("URL:", url)
+                    print("METHOD:", req.method)
+                    print("HEADERS:", req.headers)
+                    print("POST DATA:", req.post_data)
+
+                elif "googlevideo.com" in url and "sabr=1" in url:
+                    print("\n===== SABR REQUEST =====")
+                    print("URL:", url)
+                    print("METHOD:", req.method)
+                    print("RESOURCE TYPE:", req.resource_type)
+                    print("HEADERS:", req.headers)
+
+                    post_data = req.post_data
+                    print("POST DATA:", post_data)
+
+            page.on("request", handle_request)
+
+            page.goto(url)
+            _tryPressCookieAccept(page)
+            page.wait_for_timeout(wait)
+
+
+        finally:
+            
+            if context is not None:
+                try:
+                    _save_playwright_cookies_to_mozilla(
+                        context,
+                        cookie_file
+                    )
+                    print(
+                        f"[Cookies] saved to {cookie_file}"
+                    )
+                except Exception as e:
+                    print(
+                        f"[Cookies] saving failed: {e}"
+                    )
+
+                context.close()
+
+            browser.close()

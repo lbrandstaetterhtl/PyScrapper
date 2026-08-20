@@ -645,7 +645,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
     status_code = 200
 
     headers = {
-        "Accept-Ranges" : "bytes"
+      "Accept-Ranges": "bytes"
     }
     total_size = context.target.total_size
 
@@ -657,6 +657,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
         print("[WATCH] Browser Range: ", range_headers)
         value = range_headers.removeprefix("bytes=")
         start, end = value.split("-", 1)
+     
 
         if start:
             start_byte = int(start)
@@ -688,20 +689,38 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
     
 
 
-    return StreamingResponse(
-        file.asyncDownloadYieldSimple(
-            session=job.download_information.session,
-            url=context.target.url,
-            extra_headers=context.target.extra_headers,
-            start_byte=start_byte,
-            end_byte=end_byte,
-        ),
-        status_code=status_code,
-        headers=headers,
-        media_type=providermodels.EXTENSION_CONTENT_TYPES.get(
-            context.target.file_ending
-        ),
-    )
+    if context.target.download_type == core.models.Download.DownloadType.FILE:
+        return StreamingResponse(
+            file.asyncDownloadYieldSimple(
+                session=job.download_information.session,
+                url=context.target.url,
+                extra_headers=context.target.extra_headers,
+                start_byte=start_byte,
+                end_byte=end_byte,
+            ),
+            status_code=status_code,
+            headers=headers,
+            media_type=providermodels.EXTENSION_CONTENT_TYPES.get(
+                context.target.file_ending
+            ),
+        )
+
+    elif context.target.download_type == core.models.Download.DownloadType.UMP:
+        from PythonModule.core.download.UMP import download
+
+        return StreamingResponse(
+            download.downloadAndYieldUMPRange(
+                session=job.download_information.session,
+                start_url=context.target.url,
+                extra_headers=context.target.extra_headers,
+                max_len=total_size,
+                media_start=start_byte,
+                media_end=end_byte,
+            ),
+            status_code=status_code,
+            headers=headers,
+            media_type="audio/webm"
+        )
 
 
 

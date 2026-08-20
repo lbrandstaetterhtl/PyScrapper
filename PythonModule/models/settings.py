@@ -36,7 +36,7 @@ PROVIDER_GETRESULTS_MAPPING: dict = {
     ProviderTypes.Archive : p.Archive.getMediaInformation,
     ProviderTypes.Suno : p.Suno.getMediaInformation,
     ProviderTypes.Newgrounds : p.Newgrounds.getMediaInformation,
-    ProviderTypes.Youtube : p.Youtube.getMediaInformation,
+    ProviderTypes.Youtube : p.Youtube.getMediaInformation2,
     ProviderTypes.YoutubeMusic : p.Youtube.getMediaInformationMusic
 
 }
