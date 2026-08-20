@@ -549,6 +549,56 @@ def getMediaInformationMusic(
         raise ValueError("Didn't get valid media")
     candidate = medialist.candidates[0]
 
+    parsedUrl = urllib.parse.urlparse(candidate.mediaUrl)
+    query = urllib.parse.parse_qs(
+        parsedUrl.query,
+        keep_blank_values=True
+    )
+
+    # ---------------------------------------------------------
+    # Bandaid:
+    # UMP needs a valid byte range.
+    # If browser discovery caught playback in the middle,
+    # force an initial range so we get the WebM header.
+    # ---------------------------------------------------------
+
+    current_range = query.get("range", [None])[0]
+
+    if current_range:
+        try:
+            range_start = int(
+                current_range.split("-", 1)[0]
+            )
+        except (ValueError, IndexError):
+            range_start = None
+
+        if range_start is not None and range_start != 0:
+            print(
+                f"[Youtube] UMP candidate starts at "
+                f"{range_start}, forcing initial range"
+            )
+
+            query["range"] = ["0-64000"]
+
+            new_query = urllib.parse.urlencode(
+                query,
+                doseq=True
+            )
+
+            candidate.mediaUrl = urllib.parse.urlunparse(
+                parsedUrl._replace(
+                    query=new_query
+                )
+            )
+
+    # URL nach eventuellem Bandaid erneut parsen
+    parsedUrl = urllib.parse.urlparse(candidate.mediaUrl)
+
+    query = urllib.parse.parse_qs(
+        parsedUrl.query,
+        keep_blank_values=True
+    )
+
 
     parsedUrl = urllib.parse.urlparse(candidate.mediaUrl)
     query = urllib.parse.parse_qs(parsedUrl.query)
