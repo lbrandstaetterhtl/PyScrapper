@@ -1533,14 +1533,14 @@ def BrowserDiscoverStreamURLs(
                         print("[BROWSER] Googlevideo media belongs to active YouTube AD")
                         return
 
-                    _saveMedia(
-                        response,
-                        foundMedia,
-                        cookieFile=cookie_file,
-                        pageUrl=page.url if page.url else url,
-                        includeCookieHeaderInCurl=include_cookie_header_in_curl
-                    )
-                    return
+                _saveMedia(
+                    response,
+                    foundMedia,
+                    cookieFile=cookie_file,
+                    pageUrl=page.url if page.url else url,
+                    includeCookieHeaderInCurl=include_cookie_header_in_curl
+                )
+                    
 
             page.on("response", handleResponse)
                 
@@ -1643,18 +1643,9 @@ def BrowserDiscoverStreamURLs_ButtonList(
 
             def handleResponse(response):
               
-                global AD_BAD_KEYWORDS
-                adLikelyhood = 0
-
-                for badWord in AD_BAD_KEYWORDS:
-
-                    if badWord in response.url.lower():
-                        adLikelyhood += 1
-
-                    if adLikelyhood >= 2:
-                        print("[BROWSER] Url gotten is mostlikly an AD. Waiting 5 Seconds and then trying to skip")
-                        page.wait_for_timeout(5000)
-                        _try_Press_Skip(page)
+                if "googlevideo.com/videoplayback" in lower:
+                    if _youtubeAdShowing(page):
+                        print("[BROWSER] Googlevideo media belongs to active YouTube AD")
                         return
 
 

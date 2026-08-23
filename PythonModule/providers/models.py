@@ -129,7 +129,7 @@ class ProviderResult:
 
     file_type: str = "mp4"
 
-    total_size : int | None = None
+    total_size : int = 0
 
 
 
@@ -189,13 +189,15 @@ def getFileInformations(
         session,
         url: str,
         extra_headers: dict | None = None
-):
+) -> int | None:
     req = urllib.request.Request(
         url,
         headers={
             "Range" : "bytes=0-0"
         }
     )
+
+    total_size = None
 
     with session.open(request=req, headers=extra_headers) as response:
         content_range = response.headers.get("Content-Range")
