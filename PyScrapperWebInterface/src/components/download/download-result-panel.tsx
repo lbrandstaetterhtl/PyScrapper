@@ -52,8 +52,7 @@ function DownloadResultPanel(
             }
 
             if (
-                newProgress.status !== "complete" &&
-                newProgress.status !== "error"
+                newProgress.status !== "complete" && newProgress.status !== "error"
             ) {
                 allFinished = false
             }
@@ -85,6 +84,20 @@ function DownloadResultPanel(
             return
         }
 
+        if (curResultPanel !== DownloadResultPanelType.SHOW_ONE) {
+            return
+        }
+
+        const alreadyFinished = curResult.streams.every(
+            stream =>
+                stream.download_progress.status === "complete" ||
+                stream.download_progress.status === "error"
+        )
+
+        if (alreadyFinished) {
+            return
+        }
+
         const progressUrl = curResult.download_progress
 
         const interval = setInterval(async () => {
@@ -93,10 +106,10 @@ function DownloadResultPanel(
             if (done === true) {
                 clearInterval(interval)
             }
-        }, 500)
+        }, 1000)
 
         return () => clearInterval(interval)
-    }, [curResult?.task_id, curResultPanel === DownloadResultPanelType.SHOW_ONE])
+    }, [curResult?.task_id, curResultPanel])
 
     function removeFromHistory(result: DownloadResult)
     {

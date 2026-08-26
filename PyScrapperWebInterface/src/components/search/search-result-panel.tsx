@@ -56,10 +56,17 @@ function SearchResultPanel({results,updateResults, updateDownloadRequest,  onSea
                 {results.map((result, index) =>
                     <article className="result-card" key={`${result.url}-${index}`}>
                         <div className="result-image-wrap">
-                            <img
+                            <a
+                                href={result.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <img
                                 src={result.thumbnail}
                                 alt={result.title}
                             />
+                            </a>
+                            
                             <span className="provider-badge">{result.provider}</span>
                         </div>
 
