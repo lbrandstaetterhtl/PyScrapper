@@ -22,7 +22,7 @@ import "./components/download/download-panel.css"
 
 function App() {
     const [auth, updateAuth] = useState<Authorization>({
-        key_name: "",
+        key_name: "X-Admin-Key",
         key_value: ""
     })
 

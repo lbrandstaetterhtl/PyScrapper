@@ -17,7 +17,7 @@ function SearchPanel({auth, updateResults, onSearchFinished} : AuthProp )
 {
     const [request, updateSearchRequest] = useState<SearchRequest>({
         search: "",
-        provider: "youtube",
+        provider: "youtubemusic",
         top: 5,
         filters: {
             tags: [
@@ -26,24 +26,45 @@ function SearchPanel({auth, updateResults, onSearchFinished} : AuthProp )
         }
     })
 
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
     async function startSearch() {
-        const searchResult = await sendSearchRequest(request, auth)
+        setLoading(true)
+        setError(null)
+        try
+        {
+            const searchResult = await sendSearchRequest(request, auth)
 
-        const results: SearchResult[] = []
+            const results: SearchResult[] = []
 
-        for (const result of searchResult.results) {
-            const item: SearchResult = {
-                url: result.url,
-                thumbnail: result.thumbnail,
-                title: result.title,
-                provider: searchResult.provider
+            for (const result of searchResult.results) {
+                const item: SearchResult = {
+                    url: result.url,
+                    thumbnail: result.thumbnail,
+                    title: result.title,
+                    provider: searchResult.provider
+                }
+
+                results.push(item)
             }
 
-            results.push(item)
+            updateResults(results)
+            onSearchFinished()
+        }
+        catch (error)
+        {
+            setError(error instanceof Error
+                ? error.message
+                : "Unknown search error"
+            )
+        }
+        finally
+        {
+            setLoading(false)
         }
 
-        updateResults(results)
-        onSearchFinished()
+        
     }
     
     return (
@@ -122,11 +143,35 @@ function SearchPanel({auth, updateResults, onSearchFinished} : AuthProp )
                     />
                 </label>
             </div>
+            {error && (
+                <div className="error-box">
+                    <strong>Search failed</strong>
+                    <span>{error}</span>
+                </div>
+            )}
 
             <div className="panel-actions">
-                <button className="button button-primary" onClick={startSearch}>
+                <button 
+                className="button button-primary" 
+                onClick={startSearch}
+                disabled={loading}
+                >
+                {loading ? (
+                    <>
+                    <span className="spinner" />
+                    </>
+                )
+                :
+                (
+                    <>
                     <span className="button-prompt">$</span> Start Search
+                    </>
+                )
+            
+            }
+                    
                 </button>
+
             </div>
         </div>
     )

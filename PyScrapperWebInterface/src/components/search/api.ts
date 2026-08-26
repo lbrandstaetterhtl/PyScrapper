@@ -9,31 +9,50 @@ async function sendSearchRequest(
     auth: Authorization
 )
 {
-    try
-    {
-        const response = await fetch(ServerAdressSearch, 
+
+    if (!auth.key_name) {
+    throw new Error("Authorization header name is empty")
+    }
+
+    if (!auth.key_value) {
+        throw new Error("Authorization key is empty")
+    }
+    
+    const response = await fetch(ServerAdressSearch, 
+        {
+        method: "POST",
+        headers: 
             {
-            method: "POST",
-            headers: 
-                {
-                "Content-Type": "application/json",
-                [auth.key_name] : auth.key_value
-                
-                },
-            body: JSON.stringify(request)
-            });
+            "Content-Type": "application/json",
+            [auth.key_name] : auth.key_value
+            
+            },
+        body: JSON.stringify(request)
+        });
 
-        const data = await response.json();
-        console.log("Server response:", data);
-        return data
+    
+    let data
+
+    try {
+        data = await response.json()
+    } catch {
+        data = null
     }
 
-
-    catch (error)
-    {
-        console.error("An error occured:", error)
-        return null
+    if (!response.ok) {
+        throw new Error(
+            data?.detail ??
+            data?.message ??
+            `HTTP Error ${response.status}: ${response.statusText}`
+        )
     }
+
+    console.log("Server response:", data);
+    return data
+    
+
+
+   
 }
 
 export default sendSearchRequest

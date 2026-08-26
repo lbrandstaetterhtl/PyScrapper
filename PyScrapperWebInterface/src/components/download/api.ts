@@ -9,31 +9,45 @@ export async function sendDownloadRequest(
     auth: Authorization
 )
 {
-    try
-    {
-        const response = await fetch(ServerAdressDownload, 
+    if (!auth.key_name) {
+    throw new Error("Authorization header name is empty")
+    }
+
+    if (!auth.key_value) {
+        throw new Error("Authorization key is empty")
+    }
+    
+    const response = await fetch(ServerAdressDownload, 
+        {
+        method: "POST",
+        headers: 
             {
-            method: "POST",
-            headers: 
-                {
-                "Content-Type": "application/json",
-                [auth.key_name] : auth.key_value
-                
-                },
-            body: JSON.stringify(request)
-            });
+            "Content-Type": "application/json",
+            [auth.key_name] : auth.key_value
+            
+            },
+        body: JSON.stringify(request)
+        });
 
-        const data = await response.json();
-        console.log("Server response:", data);
-        return data
+    
+    let data
+
+    try {
+        data = await response.json()
+    } catch {
+        data = null
     }
 
-
-    catch (error)
-    {
-        console.error("An error occured:", error)
-        return null
+    if (!response.ok) {
+        throw new Error(
+            data?.detail ??
+            data?.message ??
+            `HTTP Error ${response.status}: ${response.statusText}`
+        )
     }
+    console.log("Server response:", data);
+    return data
+   
 }
 
 
@@ -43,28 +57,31 @@ export async function getDownloadProgress(
     auth: Authorization
 ): Promise<DownloadProgressResponse | null> 
 {
-    try {
-        const response = await fetch(url, 
-            {
-            method: "GET",
-            headers: 
-            {
-                [auth.key_name]: auth.key_value
-            }
-        })
-
-        if (!response.ok) 
-            {
-            throw new Error(`HTTP ${response.status}`)
-            }
-
-        return await response.json()
+    if (!auth.key_name) {
+        throw new Error("Authorization header name is empty")
     }
-    catch (error) 
-    {
-        console.error("Failed to get download progress:", error)
-        return null
+
+    if (!auth.key_value) {
+        throw new Error("Authorization key is empty")
     }
+        
+    const response = await fetch(url, 
+        {
+        method: "GET",
+        headers: 
+        {
+            [auth.key_name]: auth.key_value
+        }
+    })
+
+    if (!response.ok) 
+        {
+        throw new Error(`HTTP ${response.status}`)
+        }
+
+    return await response.json()
+    
+
 }
 
 

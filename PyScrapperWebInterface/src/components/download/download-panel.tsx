@@ -1,7 +1,7 @@
 import type { Authorization } from "../general"
 import { DownloadStrategie, ProvidersDownload, type DownloadRequest, type ProviderDownload } from "./models"
 import type { DownloadResult, ServerResultDownload, StreamResult } from "./models"
-
+import { useState } from "react"
 
 import { sendDownloadRequest } from "./api"
 
@@ -24,60 +24,86 @@ function DownloadPanel(
 } : DownloadProps
 )
 {
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+
     async function sendDownload()
     {
-        const server_result: ServerResultDownload = await sendDownloadRequest(request, auth)
-        if (server_result.detail !== undefined) 
-            {
-                console.log("An error occured: ", server_result.detail)
-                return
-            }
-
-        const streams : StreamResult[] = []
-        for (const stream of server_result.streams)
+        setLoading(true)
+        setError(null)
+        try
         {
-            const stream_result: StreamResult = {
-                task_id: stream.task_id,
-                download_url: stream.download_url,
-                watch_url: stream.watch_url,
-                stream_type: stream.stream_type,
-                media_type : stream.media_type,
-                download_progress : {
-                    status: "queued",
-                    progress: 0,
-                    downloaded_bytes: 0,
-                    speed: 0,
-                    eta: null
+            const server_result: ServerResultDownload = await sendDownloadRequest(request, auth)
+
+            if (server_result.detail !== undefined) 
+                {
+                    console.log("An error occured: ", server_result.detail)
+                    return
                 }
+
+            const streams : StreamResult[] = []
+
+            for (const stream of server_result.streams)
+            {
+                const stream_result: StreamResult = {
+                    task_id: stream.task_id,
+                    download_url: stream.download_url,
+                    watch_url: stream.watch_url,
+                    stream_type: stream.stream_type,
+                    media_type : stream.media_type,
+                    download_progress : {
+                        status: "queued",
+                        progress: 0,
+                        downloaded_bytes: 0,
+                        speed: 0,
+                        eta: null
+                    }
+                }
+                streams.push(stream_result)
             }
-            streams.push(stream_result)
+            const result: DownloadResult = {
+                task_id : server_result.task_id,
+                download_progress :"/api" + server_result.download_progress,
+                streams : streams,
+                download_request : request,
+                info: server_result.info ?? ""
+            }
+
+            updateDownloadHistory((oldHistory) => [
+                ...oldHistory,
+                result
+            ])
+
+            updateDownloadRequest(prev => ({
+                ...prev,
+                download_strategie: DownloadStrategie.Stream,
+                download_path: "",
+                urls: [],
+                filenames: [],
+                extra_headers: {},
+                provider: ProvidersDownload.Youtube_Music
+
+            }))
+
+            onFinishedDownload()
         }
-        const result: DownloadResult = {
-            task_id : server_result.task_id,
-            download_progress :"/api" + server_result.download_progress,
-            streams : streams,
-            download_request : request,
-            info: server_result.info ?? ""
+        
+        catch (error)
+        {
+        
+            setError(
+                error instanceof Error
+                    ? error.message
+                    : "Unknown download error"
+                )
         }
-
-        updateDownloadHistory((oldHistory) => [
-            ...oldHistory,
-            result
-        ])
-
-        updateDownloadRequest(prev => ({
-            ...prev,
-            download_strategie: DownloadStrategie.Stream,
-            download_path: "",
-            urls: [],
-            filenames: [],
-            extra_headers: {},
-            provider: ProvidersDownload.Youtube_Music
-
-        }))
-
-        onFinishedDownload()
+        finally
+        {
+            setLoading(false)
+        }
     }
+        
 
     return (
         <div className="panel-card download-panel">
@@ -181,10 +207,32 @@ function DownloadPanel(
                 </div>
             )}
 
+            {error && (
+                <div className="error-box">
+                    <strong>Resolve failed</strong>
+                    <span>{error}</span>
+                </div>
+                )}
+
             <div className="panel-actions">
-                <button className="button button-primary button-large" onClick={sendDownload}>
-                    <span className="button-prompt">$</span> Download
+                <button
+                    className="button button-primary button-large"
+                    onClick={sendDownload}
+                    disabled={loading}
+                >
+                    {loading ? (
+                        <>
+                            <span className="spinner" />
+                            Resolving...
+                        </>
+                    ) : (
+                        <>
+                            <span className="button-prompt">$</span>
+                            Resolve
+                        </>
+                    )}
                 </button>
+
             </div>
         </div>
     )
