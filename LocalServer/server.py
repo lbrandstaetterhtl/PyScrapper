@@ -46,6 +46,7 @@ from PythonModule.models.responses import (
 )
 
 from PythonModule.models import requests as requests
+from PythonModule.models import responses as responses
 from PythonModule.models import settings
 
 import PythonModule.core as core
@@ -294,11 +295,6 @@ async def cleanup_loop():
 
 
 
-
-
-
-
-
 @app.post("/command")
 async def receive_command(data: requests.CommandRequest):
     global log_file
@@ -325,6 +321,7 @@ async def receive_command(data: requests.CommandRequest):
 async def _resolveMediaAndCreateContexts(
         data: requests.DownloadRequest,
         session: Session,
+        task_id: str,
         ):
     
     searchFunc = _resolveProviderSearchFunction(data.provider)
@@ -334,30 +331,48 @@ async def _resolveMediaAndCreateContexts(
     contexts : list[core.models.Download.DownloadContext] = []
 
     async with server_state.search_limiter:
-        for url in data.urls:
+        for url, filename in zip(data.urls, data.filenames):
             request = providermodels.ProviderResultRequest(
                 url,
                 ses=session,
-                extra_headers=data.extra_headers
+                extra_headers=data.extra_headers,
+                preferred_file=data.preferred_file,
+                preferred_type=data.preferred_type
             )
 
-            result = await asyncio.to_thread(
+        
+
+            result: providermodels.ProviderResult = await asyncio.to_thread(
                 searchFunc,
                 request
             )
-            results.append(result)
-
-        for result, filename in zip(results, data.filenames):
+        
             target = core.models.Download.DownloadTarget(
-                url=result.url,
+                url=url,
+                resolved_url=result.url,
                 download_type=result.download_type,
-                extra_headers=result.extra_headers,
-                file_ending=result.file_type,
-                file_name = filename,
-                total_size=result.total_size,
-                out_file=os.path.join(server_state.download_path, f"{filename}.{result.file_type}")
+                extra_headers=result.extra_headers
             )
-            context = core.models.Download.DownloadContext(target=target)
+
+            info = core.models.Download.MediaInfo(
+                mime_type=result.mime_type,
+                file_extension=result.file_ending,
+                total_size=result.total_size
+            )
+
+            outputTarget = core.models.Download.OutputTarget(
+                full_filename=f"{filename}.{result.file_ending}",
+                download_path=data.download_path
+            )
+
+            context = core.models.Download.DownloadContext(
+                context_id=f"{task_id}{filename}",
+                target=target,
+                media_info=info,
+                output=outputTarget,
+                provider_info=result.info
+                
+                )
             contexts.append(context)
 
     return contexts
@@ -373,7 +388,7 @@ def _resolveProviderSearchFunction(provider: str) -> callable:
     if providerResolved is None:
         raise core.models.errors.TaskFailedError(
             task="/download/video-audio/",
-            reason="Invalid provider strign was given that couldn't be resolved",
+            reason="Invalid provider string was given that couldn't be resolved",
             caller="server/download/video-audio"
         )
 
@@ -391,30 +406,33 @@ def _resolveProviderSearchFunction(provider: str) -> callable:
 
 async def _run_local_download(
     task_id: str,
-    downloader: core.download.Dispatcher.DownloadDispatcher
+    downloader: core.download.Dispatcher.DownloadDispatcher,
+    convert: bool = False
 ):
     try:
         await downloader.downloadToFile()
+        if convert is True:
+            raise ValueError("Converting isn't supported yet")
 
     except Exception as e:
         server_state.log_queue.put_nowait(
             f"[ERROR] Download job {task_id} failed: {e}"
         )
+        raise e
+
+
 
 
 @app.post("/download/video-audio/", dependencies=[Depends(require_admin)])
 async def receive_download(data: requests.DownloadRequest):
+#Settings and creation
     global server_state
     taskId = str(uuid.uuid4())
+    ses = Session()
 
     try:
-    #Settings and creation
 
-        
-        ses = Session()
-
-        contexts : list[core.models.Download.DownloadContext] = await _resolveMediaAndCreateContexts(data, ses)
-
+        contexts : list[core.models.Download.DownloadContext] = await _resolveMediaAndCreateContexts(data, ses, taskId)
 
         downloadInformation = core.models.Download.DownloadInformation(
             job_id=taskId,
@@ -439,29 +457,24 @@ async def receive_download(data: requests.DownloadRequest):
                     downloader
                     )
                 )
+
             
-
-
-            return {
-                    "task_id": taskId,
-                    "download_progress" : f"/download/progress/{taskId}",
-                    "streams": [],
-                    "info" : f"Job will be deleted after one day"
-                }
+            for context in downloadInformation.contexts:
+                ressource = responses.Ressources(
+                    context=context,
+                    progress_url=f"/download/progress/{taskId}/{context.context_id}"
+                )
     
-
-
 
         elif data.download_strategie == core.models.Download.DownloadStrategie.STREAM:
             for context in downloadInformation.contexts:
     
                 streamJob = ServerStream(
-
-                    stream_id=context.target.job_id,
+                    stream_id=context.context_id,
                     context=context,
                 )
 
-                watchUrl = f"/stream/watch/{taskId}/{context.target.job_id}"
+             
 
                 if context.target.download_type == core.models.Download.DownloadType.HLS:
                     segments, audioSegments = await asyncio.to_thread(
@@ -470,36 +483,29 @@ async def receive_download(data: requests.DownloadRequest):
                         streamJob.stream_id,
                         context
                     )
-                    watchUrl += "/index.m3u8"
+                    watchUrlExtension = "/index.m3u8"
                     streamType = "hls"
 
 
                     streamJob.segments = segments
                     streamJob.audio_segments = audioSegments
+
+#Includes UMP and FILE
                 else:
-                    watchUrl += f"/{context.target.file_name}.{context.target.file_ending}"
+                    watchUrlExtension = f"/{context.target.file_name}.{context.target.file_ending}"
                     streamType = "file"
                
                 server_state.jobs[taskId].stream_jobs[streamJob.stream_id] = streamJob
 
-                
-
-            return {
-                "task_id": taskId,
-                "download_progress" : f"/download/progress/{taskId}",
-                "streams": [
-                    {
-                        "task_id": context.target.job_id,
-                        "download_url": f"/stream/download/{taskId}/{context.target.job_id}",
-                        "watch_url" : watchUrl,
-                        "stream_type": streamType,
-                        "media_type" : providermodels.EXTENSION_CONTENT_TYPES.get(context.target.file_ending)
-                    }
-                    for context in downloadInformation.contexts
-                ],
-                "info" : "Progress and endpoints will be deleted after downloading enpoint file"
-            }
+            ressource = responses.Ressources(
+                    context=context,
+                    progress_url=f"/download/progress/{taskId}/{context.context_id}",
+                    download_url=f"/stream/download/{taskId}/{context.target.job_id}",
+                    watch_url=f"/stream/watch/{taskId}/{context.target.job_id}{watchUrlExtension}",
+                    stream_type = streamType
+                )
             
+        
 
         else:
             raise core.models.errors.TaskFailedError(
@@ -507,15 +513,20 @@ async def receive_download(data: requests.DownloadRequest):
                 reason="Unknown download strategie was given",
                 caller="server/download/video-audio"
             )
+        
+        return responses.DownloadResponse(
+            task_id=taskId,
+            ressources=ressource
+        )
 
 
 
-    except (ValueError, TypeError) as e:
-        server_state.log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.urls}, .\nError Message: Invalid type for {str(e)}")
+    except (ValueError, TypeError, core.models.errors.ArgumentError, core.models.errors.ArgumentErrorCompare) as e:
+        server_state.log_queue.put_nowait(f"[ERROR] failed to create download task with given request: {data}")
         raise HTTPException(status_code=400, detail=f"Invalid type for {str(e)}")
 
-    except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] failed to create download task with arguments given: provider {data.provider}, url: {data.urls},.\nError Message: {str(e)}")
+    except core.models.errors.TaskFailedError as e:
+        server_state.log_queue.put_nowait(f"[ERROR] Failed download. Request: {data}. Message from Resolver: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -769,11 +780,16 @@ async def client_download_stream(task_id: str, stream_id: str):
     
     
     
+def _findContext(download_information, context_id):
+    for context in download_information.contexts:
+        if context.context_id == context_id:
+            return context
+
+    return None
 
 
-
-@app.get("/download/progress/{task_id}")
-async def get_download_progress(task_id: str):
+@app.get("/download/progress/{task_id}/{context_id}")
+async def get_download_progress(task_id: str, context_id: str):
 
     job = server_state.jobs.get(task_id)
     
@@ -783,18 +799,12 @@ async def get_download_progress(task_id: str):
 
     info: core.models.Download.DownloadInformation = job.download_information
 
+    context = _findContext(info, context_id)
+    if context is None: 
+        raise HTTPException(status_code=404)
     
 
-    return {
-        "task_id" : info.job_id,
-        "streams" : [
-            {
-                "stream_id" : context.target.job_id,
-                "download_progress" : context.download_progress,
-            }
-            for context in info.contexts
-        ] 
-    }
+    return context.download_progress
 
 
 

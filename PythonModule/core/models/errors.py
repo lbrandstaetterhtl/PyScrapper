@@ -1,5 +1,24 @@
 _MISSING = object()
 
+class ArgumentErrorCompare(Exception):
+    def __init__(
+            self,
+            argument_list: list[str],
+            reason: str,
+            caller: str
+
+            ):
+
+        exceptionMessage = (
+            f"[ARGUMENT ERROR COMPARE] {caller}:"
+            f"Compared arguments: {', '.join(argument_list)}"
+            f"Reason: {reason}"
+        )
+
+
+        super().__init__(exceptionMessage)
+
+
 class ArgumentError(Exception):
     def __init__(
             self,

@@ -1,7 +1,34 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+import PythonModule.core as core
 
 import os
+from dataclasses import dataclass, field
+
+
+
+
+@dataclass
+class Ressources:
+    context: core.models.Download.DownloadContext
+
+    progress_url : str
+    download_url: str = ""
+    watch_url : str = ""
+    
+
+    stream_type :str = ""
+
+
+class DownloadResponse(BaseModel):
+    task_id: str
+
+    ressources: list[Ressources] = field(
+        default_factory=list
+    )
+
+
+
 
 class MessageResponse(BaseModel):
     message: str

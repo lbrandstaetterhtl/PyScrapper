@@ -87,54 +87,29 @@ def getMediaInformation(
 
     identifier = request.url.rstrip("/").split("/")[-1]
 
+    urls: list[str] = []
+   
+
 #Looking every file and priorites them. since this is used by a video/audio download containers like mkv are more important than mp3
 #Saves the file with highest priority and result will be that file
     for file in metadata.get("files", []):
         name: str = file.get('name')
         
-
         if not name:
             continue
 
-        source = file.get("source")
+        url = f"https://archive.org/download/{identifier}/{urllib.parse.quote(name)}"
+        urls.append(url)
 
-        extension = name.rsplit(".", 1)[-1]
-        prio = models.MEDIA_EXTENSION_PRIORITY.get(extension.lower(), None)
 
-        if prio is None:
-            continue
-
-        if source and source == "original":
-            prio += 15
-
-        if prio > bestPriority:
-            bestPriority = prio
-            bestFile = name
-            
-
-    if bestFile is None:
-        raise core.models.errors.TaskFailedError(
-            task="Archive.getMediaInformation",
-            reason="No supported audio/video file found",
-            extraMessages=[
-                f"Used metadata url: {request.url}"
-            ],
-            caller="[providers] Archive.getMediaInformation"
-        )
- 
-    downloadUrl: str = f"https://archive.org/download/{identifier}/{urllib.parse.quote(bestFile)}"
-
-    fileEnding = models.getContentType(downloadUrl, request.ses, request.extra_headers)
-
-    result = models.makeProviderResult(
-        url=downloadUrl,
-        fileending=fileEnding,
-        type = core.models.Download.DownloadType.FILE,
-        extra_headers=request.extra_headers
-
+   
+    return models.get_best_Url(
+        urls,
+        request,
+        core.models.Download.DownloadType.FILE
     )
-    result.total_size = models.getFileInformations(session=request.ses, url=downloadUrl, extra_headers=request.extra_headers)
-    return result
+
+    
 
     
     

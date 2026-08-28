@@ -6,9 +6,51 @@ from PythonModule.core.network.Session import Session
 #Python default imports
 from dataclasses import dataclass, field
 from enum import Enum
-import urllib.request
+import urllib.request, urllib.parse
+import os
 
+AUDIO_EXTENSIONS = [
+    "mp3",
+    "m4a",
+    "aac",
+    "flac",
+    "wav",
+    "ogg",
+    "opus",
+]
 
+VIDEO_EXTENSIONS = [
+    "mp4",
+    "mkv",
+    "webm",
+    "mov",
+    "m4v",
+    "avi",
+    "wmv",
+    "mpg",
+    "mpeg",
+    "ts",
+]
+
+SUPPORTED_EXTENSIONS = [
+    "mp4",
+    "mkv",
+    "webm",
+    "mov",
+    "m4v",
+    "avi",
+    "wmv",
+    "mpg",
+    "mpeg",
+    "ts",
+    "mp3",
+    "m4a",
+    "aac",
+    "flac",
+    "wav",
+    "ogg",
+    "opus",
+]
 
 NEWGROUNDS_MEDIA_PRIORITY = {
     # Lossless Audio
@@ -71,9 +113,9 @@ MEDIA_PRIORITY_FOR_QUALITY_AUDIO = {
     "ogg": 75,
 
     # video less important
-        "mp4": 70,
-        "mkv": 65,
-        "webm": 50,
+    "mp4": 70,
+    "mkv": 65,
+    "webm": 50,
 
     # poor old mp3
     "mp3": 40,
@@ -119,6 +161,9 @@ EXTENSION_CONTENT_TYPES = {
     "mpd": "application/dash+xml",
 }
 
+
+
+
 @dataclass
 class ProviderResult:
     url: str 
@@ -127,9 +172,18 @@ class ProviderResult:
 
     extra_headers: dict | None = None
 
-    file_type: str = "mp4"
+#Example mp3
+    file_ending: str | None = None
+
+#Example audio
+    media_type: str | None = None
+
+#Example audio/mp3
+    mime_type : str | None = None
 
     total_size : int = 0
+
+    info : core.models.Download.Info = field(default_factory=core.models.Download.Info)
 
 
 
@@ -142,6 +196,9 @@ class ProviderResultRequest:
 
     extra_headers: dict | None = None
 
+    preferred_type: str | None = None
+
+    preferred_file: str | None = None
     
 
     def __post_init__(self):
@@ -157,6 +214,29 @@ class ProviderResultRequest:
             core.general.Validate.general.validateDict(
                 argument_name="extra_headers", dictionary=self.extra_headers, caller="ProviderResultRequest.__post_init__"
             )
+
+        if self.preferred_type is not None:
+            core.general.Validate.general.validateStr(argument_name="preferred_type", string=self.preferred_type, caller="ProviderResultRequest.__post_init__")
+
+            if self.preferred_type not in ["audio", "video"]:
+                raise core.models.errors.ArgumentError(argument="preferred_type", wanted_type="string with value 'audio' or 'video'", caller="ProviderResultRequest.__post_init__")
+
+        if self.preferred_file is not None:
+            core.general.Validate.general.validateStr(argument_name="preferred_file", string=self.preferred_file, caller="ProviderResultRequest.__post_init__")
+
+
+            supported_files: list[str] = []
+            for key in MEDIA_EXTENSION_PRIORITY.keys():
+                supported_files.append(key)
+
+            if not any(file == self.preferred_file for file in supported_files):
+                raise core.models.errors.ArgumentError(
+                    argument="preferred_type",
+                    wanted_type=f"string with value: {', '.join(supported_files)}",
+                    caller="ProviderResultRequest.__post_init__")
+                
+
+
 
 
 class ProviderNames(Enum):
@@ -185,11 +265,11 @@ def getContentType(
         return None
 
 
-def getFileInformations(
+def getUrlInformation(
         session,
         url: str,
         extra_headers: dict | None = None
-) -> int | None:
+)-> tuple[int | None, str | None]:
     req = urllib.request.Request(
         url,
         headers={
@@ -202,6 +282,9 @@ def getFileInformations(
     with session.open(request=req, headers=extra_headers) as response:
         content_range = response.headers.get("Content-Range")
         content_length = response.headers.get("Content-Length")
+        content_type = response.headers.get("Content-Type")
+        if content_type:
+            mime_type = content_type.split(";", 1)[0].strip().lower()
 
         if content_range:
 
@@ -213,7 +296,7 @@ def getFileInformations(
         elif content_length:
             total_size = int(content_length)
 
-        return total_size
+        return total_size, mime_type
 
 
 
@@ -260,4 +343,149 @@ def makeProviderResult(
     )
 
     return result
+
+
+@dataclass
+class BestMedia:
+    url: str | None = None
+    prio : int = -1
+
+    is_preferred_type: bool = False
+    is_preferred_file : bool = False
+
+    media_type : str | None = None
+    file_ending : str | None = None
+
+
+def get_best_Url(
+        urls: list[str],
+        request: ProviderResultRequest,
+        download_type : core.models.Download.DownloadType
+    ):
+
+    preferredFile = request.preferred_file
+
+    if preferredFile:
+        preferredFile = preferredFile.strip().lower().removeprefix(".")
+        print(f"'{preferredFile}'")
+        if preferredFile not in SUPPORTED_EXTENSIONS:
+            raise core.models.errors.ArgumentError(
+                argument="preferred_file",
+                wanted_type=f"string -> with value {', '.join(SUPPORTED_EXTENSIONS)}",
+                caller="[providers] get_best_Url"
+            )
+
+    if request.preferred_type:
+        if request.preferred_type not in ["audio", "video"]:
+            raise core.models.errors.ArgumentError(
+                argument="preferred_type",
+                wanted_type=f"string -> with value 'audio', 'video'",
+                caller="[providers] get_best_Url"
+            )
+
+    bestMedia = BestMedia(
+        url=None
+    )
+
+    for url in urls:
+        foundPreferredType: bool = False
+        foundPreferredFile: bool = False
+
+        path = urllib.parse.urlparse(url).path
+
+        filename = os.path.basename(path)
+        name, extension = os.path.splitext(filename)
+
+        prio: int = MEDIA_EXTENSION_PRIORITY.get(extension, None)
+
+        if prio is None:
+            continue
+
+        mediaKind = get_media_kind(extension)
+        if request.preferred_type and mediaKind == request.preferred_type.lower():
+            foundPreferredType = True
+            prio += 200
+
+        if preferredFile and extension == preferredFile.lower():
+            foundPreferredFile = True
+            prio += 1000
+
+        if prio > bestMedia.prio:
+            bestMedia.prio = prio
+            bestMedia.url = url
+            bestMedia.file_ending = extension
+            bestMedia.media_type = mediaKind
+            bestMedia.is_preferred_file = foundPreferredFile
+            bestMedia.is_preferred_type = foundPreferredType
+
+    if bestMedia.url is None:
+        raise core.models.errors.TaskFailedError(
+            task="[providers] get_best_Url",
+            reason="Didn't find any media with supported extensions",
+            extraMessages=[
+                "Now listing the supported files:",
+                f"{', '.join(SUPPORTED_EXTENSIONS)}",
+            ],
+            caller="[providers] get_best_Url"
+        )
     
+
+    result = _makeProviderResult(
+        bestMedia,
+        request
+    )
+    result.download_type = download_type
+    return result
+
+
+
+
+
+def _makeProviderResult(
+        media : BestMedia,
+        request: ProviderResultRequest,
+) -> ProviderResult:
+
+    fileEnding = media.file_ending
+
+    if fileEnding.lower() == "m3u8":
+        fileEnding = "ts"
+
+    size, mime = getUrlInformation(
+        session=request.ses,
+        url=media.url,
+        extra_headers=request.extra_headers
+    )
+    
+    result = ProviderResult(
+        url=media.url,
+        download_type=None,
+        extra_headers=request.extra_headers,
+        file_ending=fileEnding,
+        media_type=media.media_type,
+        mime_type=mime,
+        total_size=size,
+    )
+
+    info = core.models.Download.Info(
+        url=media.url,
+        found_file=media.file_ending,
+        wanted_file=request.preferred_file if request.preferred_file else media.file_ending,
+        found_type=media.media_type,
+        wanted_type=request.preferred_type if request.preferred_type else media.media_type
+    )
+
+    return result
+    
+
+    
+def get_media_kind(extension: str) -> str | None:
+    extension = extension.lower()
+
+    if extension in AUDIO_EXTENSIONS:
+        return "audio"
+
+    if extension in VIDEO_EXTENSIONS:
+        return "video"
+
+    return None

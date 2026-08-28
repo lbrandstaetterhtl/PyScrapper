@@ -7,6 +7,7 @@ from ..general.render import makeBorder
 from dataclasses import dataclass, field, asdict
 from enum import Enum, auto
 import asyncio
+import os
 
 
 
@@ -28,30 +29,40 @@ class DownloadType(Enum):
     UMP = auto()
 
 
+@dataclass
+class MediaInfo:
+    mime_type: str | None = None
 
+    file_extension: str | None = None
+
+    total_size : int | None = None
+
+    extra_info: str | None = None
+
+    
+
+@dataclass
+class OutputTarget:
+#Includes name + extension
+    full_filename: str | None = None
+
+    download_path: str | None = None
+
+    out_file: str | None = None
+
+    def __post_init__(self):
+        self.out_file = os.path.join(self.download_path, self.full_filename)
 
 @dataclass
 class DownloadTarget:
     url: str
 
+    resolved_url: str
+
     download_type : DownloadType
-
-    resolved_url: str = ""
-
-    file_name: str = ""
-
-    out_file: str = ""
-
-    file_ending: str = "mp4"
 
     extra_headers: dict[str, str] = field(default_factory=dict)
 
-    job_id: str = "unknown"
-
-    total_size : int = 0
-
-    def __post_init__(self):
-        self.resolved_url = self.url
 
     def __str__(self) -> str:
         strings = [
@@ -148,44 +159,41 @@ class ConvertProgress:
         )
         
 
+@dataclass
+class Info:
+    url: str | None = None
+    found_type : str | None = None
+    wanted_type : str | None = None
+    found_file : str | None = None
+    wanted_file : str | None = None
     
 @dataclass
 class DownloadContext:
 
-    target: DownloadTarget
+    context_id: str = "unknown"
+
+    target: DownloadTarget = field(
+        default_factory=DownloadTarget
+    )
+
+    media_info : MediaInfo = field(
+        default_factory=MediaInfo
+    )
+
+    output : OutputTarget =  field(
+        default_factory=OutputTarget
+    )
 
     download_progress : DownloadProgress = field(
         default_factory=DownloadProgress
     )
 
-    convert_progress : ConvertProgress = field(
-        default_factory=ConvertProgress
-    )
 
-    download_limiter: asyncio.Semaphore = field(
-        default_factory=lambda: asyncio.Semaphore(1)
+    info : Info = field(
+        default_factory=Info
     )
 
 
-
-    def __str__(self) -> str:
-        strings = [
-            f"[JOB] {self.target.job_id}",
-            f"URL: {self.target.url}",
-            (
-                "Download: "
-                f"{self.download_progress.progress:.2f}%"
-            ),
-            (
-                "Convert: "
-                f"{self.convert_progress.convert_progress:.2f}%"
-            )
-        ]
-
-        return makeBorder(
-            "DOWNLOAD CONTEXT",
-            strings
-        )
 
 
 
@@ -214,7 +222,7 @@ class DownloadInformation:
     
 
         for index, context in enumerate(self.contexts):
-            if context.target.job_id == "unknown":
+            if context.job_id == "unknown":
                 context_id = f"{self.job_id}-Context{index}"
 
                 context.target.job_id = context_id
@@ -251,7 +259,7 @@ class DownloadInformation:
 #Converts the whole struct to a dict and returns it
     def toDict(self) -> dict:
         return {
-            "job_id": self.job_id,
+            "job_id": self.context_id,
             "contexts": [
                 {
                     "target": asdict(context.target),
