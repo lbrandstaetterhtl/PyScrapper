@@ -337,7 +337,6 @@ def makeProviderResult(
 
     if preferredFile:
         preferredFile = preferredFile.strip().lower().removeprefix(".")
-        print(f"'{preferredFile}'")
         if preferredFile not in SUPPORTED_EXTENSIONS:
             raise core.models.errors.ArgumentError(
                 argument="preferred_file",

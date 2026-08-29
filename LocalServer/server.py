@@ -350,9 +350,12 @@ async def _resolveMediaAndCreateContexts(
 
     results = await asyncio.gather(*tasks)
 
-    for result in results:
-        result: providermodels.ProviderResult
-
+    for result, url, filename in zip(
+        results,
+        data.urls,
+        data.filenames
+    ):
+        result : providermodels.ProviderResult
         target = core.models.Download.DownloadTarget(
             url=url,
             resolved_url=result.url,
@@ -372,13 +375,13 @@ async def _resolveMediaAndCreateContexts(
         )
 
         context = core.models.Download.DownloadContext(
-            context_id=f"{task_id}{filename}",
+            context_id=f"{task_id}-{filename}",
             target=target,
             media_info=info,
             output=outputTarget,
             info=result.info
-            
-            )
+        )
+
         contexts.append(context)
             
             

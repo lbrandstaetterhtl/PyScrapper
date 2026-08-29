@@ -13,11 +13,11 @@ class Ressources:
     context: core.models.Download.DownloadContext
 
     progress_url : str
-    download_url: str = ""
-    watch_url : str = ""
+    download_url: str | None= None
+    watch_url : str | None= None
     
 
-    stream_type :str = ""
+    stream_type :str | None= None
 
 
 class DownloadResponse(BaseModel):
