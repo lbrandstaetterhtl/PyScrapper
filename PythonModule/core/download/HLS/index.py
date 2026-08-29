@@ -29,7 +29,6 @@ class IndexHLSDownload(HLSDownload):
     Class for handling HLS download from an index m3u8 file.
     Takes in url of the index file and optional audio url, downloads the segments, and optionally merges them using ffmpeg.
     Use the run() method to start the download process.
-    Optionally, you can specify whether to download with ffmpeg and whether to convert the final file.
     """
     def __init__(
             self,
@@ -165,20 +164,7 @@ class IndexHLSDownload(HLSDownload):
 
 
         
-    def _convert_file(self):
-        #Converter finally puts the file into the correct codec instead of loading bytes in wrong file extension
-            from ...models.Convert import ConvertRequest
-            from ...general import Converter
-            convertRequest = ConvertRequest(
-                input_file_list=[self.downloadContext.target.out_file],
-                output_file_list=[self.downloadContext.target.out_file],
-                inputs_per_output=1,
-                convert_progress_dict=self.downloadContext.convert_progress
-            )
-            Converter.FileConverter(
-                convert_request=convertRequest,
-                caller=f"DownloadJob: {self.downloadContext.convert_progress.job_id}"
-            ).run()
+    
 
 
 
@@ -192,8 +178,8 @@ class IndexHLSDownload(HLSDownload):
 
 
         if self.audioUrl and segment_audio_list:
-            audioOutFile = self.downloadContext.target.out_file + ".audio_tmp"
-            videoOutFile = self.downloadContext.target.out_file + ".video_tmp"
+            audioOutFile = self.downloadContext.output.out_file + ".audio_tmp"
+            videoOutFile = self.downloadContext.output.out_file + ".video_tmp"
 
             Validate.download.validateOutFile(out_file=audioOutFile, caller="[CORE] IndexHLSDownload._downloadSegmentsManual")
             Validate.download.validateOutFile(out_file=videoOutFile, caller="[CORE] IndexHLSDownload._downloadSegmentsManual")
@@ -242,7 +228,7 @@ class IndexHLSDownload(HLSDownload):
                 self._downloadWrapperToFile(
                     segment,
 
-                    self.downloadContext.target.out_file
+                    self.downloadContext.output.out_file
                     )
 
 

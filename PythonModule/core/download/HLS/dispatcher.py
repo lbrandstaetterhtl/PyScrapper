@@ -57,7 +57,7 @@ class HLSDispatcher(Dispatcher):
             file = await asyncio.to_thread(
                 html.getHtml,
                 session=self.downloadInformation.session,
-                url=context.target.url,
+                url=context.target.resolved_url,
                 extra_headers=context.target.extra_headers
             )
 
@@ -103,7 +103,7 @@ class HLSDispatcher(Dispatcher):
                 else:
                     raise TaskFailedError(
                         task="[CORE] HLSDispatcher._runContext",
-                        reason=f"Couldn't determine file type: {context.target.url}"
+                        reason=f"Couldn't determine file type: {context.target.resolved_url}"
                     )
                 
             except Exception as e:
@@ -125,7 +125,7 @@ class HLSDispatcher(Dispatcher):
             file = await asyncio.to_thread(
                 html.getHtml,
                 session=self.downloadInformation.session,
-                url=context.target.url,
+                url=context.target.resolved_url,
                 extra_headers=context.target.extra_headers
             )
 
@@ -178,7 +178,7 @@ class HLSDispatcher(Dispatcher):
                 else:
                     raise TaskFailedError(
                         task="[CORE] HLSDispatcher._runContext",
-                        reason=f"Couldn't determine file type: {context.target.url}"
+                        reason=f"Couldn't determine file type: {context.target.resolved_url}"
                     )
             except Exception as e:
                 context.download_progress.status = Download.TaskStatus.FAILED

@@ -103,7 +103,7 @@ def getMediaInformation(
 
 
    
-    return models.get_best_Url(
+    return models.makeProviderResult(
         urls,
         request,
         core.models.Download.DownloadType.FILE

@@ -33,9 +33,9 @@ class FileDispatcher(Dispatcher):
             try:
                 await asyncio.to_thread(
                     file.downloadToFile,
-                    out_file=context.target.out_file,
+                    out_file=context.output.out_file,
                     session=self.downloadInformation.session,
-                    url=context.target.url,
+                    url=context.target.resolved_url,
                     extra_headers=context.target.extra_headers,
                     download_progress=context.download_progress
                 )
@@ -54,7 +54,7 @@ class FileDispatcher(Dispatcher):
             try:
                 async for chunk in file.asyncDownloadYield(
                     session=self.downloadInformation.session,
-                    url=context.target.url,
+                    url=context.target.resolved_url,
                     extra_headers=context.target.extra_headers,
                     download_progress=context.download_progress
                 ):

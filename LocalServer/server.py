@@ -315,6 +315,13 @@ async def receive_command(data: requests.CommandRequest):
 
 
 
+async def _resolve_provider(request, searchFunc):
+    async with server_state.search_limiter:
+        result: providermodels.ProviderResult = await asyncio.to_thread(
+            searchFunc,
+            request
+        )
+        return result
 
 
 
@@ -325,55 +332,56 @@ async def _resolveMediaAndCreateContexts(
         ):
     
     searchFunc = _resolveProviderSearchFunction(data.provider)
-
-    results:list[providermodels.ProviderResult] = []
-
+    
     contexts : list[core.models.Download.DownloadContext] = []
 
-    async with server_state.search_limiter:
-        for url, filename in zip(data.urls, data.filenames):
-            request = providermodels.ProviderResultRequest(
-                url,
-                ses=session,
-                extra_headers=data.extra_headers,
-                preferred_file=data.preferred_file,
-                preferred_type=data.preferred_type
-            )
-
+    tasks = []
+    
+    for url, filename in zip(data.urls, data.filenames):
         
+        request = providermodels.ProviderResultRequest(
+            url,
+            ses=session,
+            extra_headers=data.extra_headers,
+            preferred_file=data.preferred_file,
+            preferred_type=data.preferred_type
+        )
+        tasks.append(_resolve_provider(request, searchFunc))
 
-            result: providermodels.ProviderResult = await asyncio.to_thread(
-                searchFunc,
-                request
-            )
-        
-            target = core.models.Download.DownloadTarget(
-                url=url,
-                resolved_url=result.url,
-                download_type=result.download_type,
-                extra_headers=result.extra_headers
-            )
+    results = await asyncio.gather(*tasks)
 
-            info = core.models.Download.MediaInfo(
-                mime_type=result.mime_type,
-                file_extension=result.file_ending,
-                total_size=result.total_size
-            )
+    for result in results:
+        result: providermodels.ProviderResult
 
-            outputTarget = core.models.Download.OutputTarget(
-                full_filename=f"{filename}.{result.file_ending}",
-                download_path=data.download_path
-            )
+        target = core.models.Download.DownloadTarget(
+            url=url,
+            resolved_url=result.url,
+            download_type=result.download_type,
+            extra_headers=result.extra_headers
+        )
 
-            context = core.models.Download.DownloadContext(
-                context_id=f"{task_id}{filename}",
-                target=target,
-                media_info=info,
-                output=outputTarget,
-                provider_info=result.info
-                
-                )
-            contexts.append(context)
+        info = core.models.Download.MediaInfo(
+            mime_type=result.mime_type,
+            file_extension=result.file_ending,
+            total_size=result.total_size
+        )
+
+        outputTarget = core.models.Download.OutputTarget(
+            full_filename=f"{filename}.{result.file_ending}",
+            download_path=data.download_path
+        )
+
+        context = core.models.Download.DownloadContext(
+            context_id=f"{task_id}{filename}",
+            target=target,
+            media_info=info,
+            output=outputTarget,
+            info=result.info
+            
+            )
+        contexts.append(context)
+            
+            
 
     return contexts
 
@@ -447,6 +455,7 @@ async def receive_download(data: requests.DownloadRequest):
             creation_timestamp=time.monotonic()
         )
         server_state.jobs[taskId] = job
+        ressources : list[responses.Ressources] = []
         
 #Depending on the strategie something different will happen
         if data.download_strategie == core.models.Download.DownloadStrategie.LOCAL:
@@ -464,6 +473,7 @@ async def receive_download(data: requests.DownloadRequest):
                     context=context,
                     progress_url=f"/download/progress/{taskId}/{context.context_id}"
                 )
+                ressources.append(ressource)
     
 
         elif data.download_strategie == core.models.Download.DownloadStrategie.STREAM:
@@ -492,18 +502,20 @@ async def receive_download(data: requests.DownloadRequest):
 
 #Includes UMP and FILE
                 else:
-                    watchUrlExtension = f"/{context.target.file_name}.{context.target.file_ending}"
+                    watchUrlExtension = f"/{context.output.full_filename}"
                     streamType = "file"
                
                 server_state.jobs[taskId].stream_jobs[streamJob.stream_id] = streamJob
 
-            ressource = responses.Ressources(
-                    context=context,
-                    progress_url=f"/download/progress/{taskId}/{context.context_id}",
-                    download_url=f"/stream/download/{taskId}/{context.target.job_id}",
-                    watch_url=f"/stream/watch/{taskId}/{context.target.job_id}{watchUrlExtension}",
-                    stream_type = streamType
-                )
+                ressource = responses.Ressources(
+                        context=context,
+                        progress_url=f"/download/progress/{taskId}/{context.context_id}",
+                        download_url=f"/stream/download/{taskId}/{context.context_id}",
+                        watch_url=f"/stream/watch/{taskId}/{context.context_id}{watchUrlExtension}",
+                        stream_type = streamType
+                    )
+                ressources.append(ressource)
+                
             
         
 
@@ -516,7 +528,7 @@ async def receive_download(data: requests.DownloadRequest):
         
         return responses.DownloadResponse(
             task_id=taskId,
-            ressources=ressource
+            ressources=ressources
         )
 
 
@@ -650,7 +662,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
 
     context: core.models.Download.DownloadContext = stream_job.context
 
-    if context.target.file_name != file_name or context.target.file_ending != file_type:
+    if context.output.full_filename != f"{file_name}.{file_type}":
         raise HTTPException(status_code=404)
 
     status_code = 200
@@ -658,7 +670,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
     headers = {
       "Accept-Ranges": "bytes"
     }
-    total_size = context.target.total_size
+    total_size = context.media_info.total_size
 
     range_headers = request.headers.get("range")
     start_byte = 0
@@ -704,7 +716,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
         return StreamingResponse(
             file.asyncDownloadYieldSimple(
                 session=job.download_information.session,
-                url=context.target.url,
+                url=context.target.resolved_url,
                 extra_headers=context.target.extra_headers,
                 start_byte=start_byte,
                 end_byte=end_byte,
@@ -712,7 +724,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
             status_code=status_code,
             headers=headers,
             media_type=providermodels.EXTENSION_CONTENT_TYPES.get(
-                context.target.file_ending
+                context.media_info.file_extension
             ),
         )
 
@@ -773,7 +785,7 @@ async def client_download_stream(task_id: str, stream_id: str):
         media_type="application/octet-stream",
         headers={
             "Content-Disposition":
-                f'attachment; filename="{context.target.file_name if context.target.file_name is not None else context.target.job_id}.{context.target.file_ending}"'
+                f'attachment; filename="{context.output.full_filename if context.output.full_filename is not None else context.context_id}.{context.media_info.file_extension}"'
         }
     )
     

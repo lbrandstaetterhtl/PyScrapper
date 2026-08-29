@@ -179,7 +179,7 @@ def downloadToFile(
             file.write(chunk)
 
             progress.updateDownloadProgress(
-                download_progress,  len(chunk), f"[CORE] downloadToFile: {download_progress.job_id}")
+                download_progress=download_progress,  downloaded_bytes=len(chunk), caller=f"[CORE] downloadToFile: {download_progress.job_id}")
 
      
 

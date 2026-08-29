@@ -249,20 +249,7 @@ class ProviderNames(Enum):
 
 
 
-def getContentType(
-        url: str,
-        session: Session,
-        extra_headers: dict | None = None
-) -> str | None:
 
-    with session.open(url=url, headers=extra_headers) as response:
-        content_type: str = response.headers.get("Content-Type")
-        print(content_type)
-        if content_type:
-            content_type = content_type.split(";", 1)[0].strip()
-            return CONTENT_TYPE_EXTENSIONS.get(content_type, None)
-
-        return None
 
 
 def getUrlInformation(
@@ -296,7 +283,7 @@ def getUrlInformation(
         elif content_length:
             total_size = int(content_length)
 
-        return total_size, mime_type
+        return int(total_size) if total_size is not None else None, mime_type
 
 
 
@@ -325,24 +312,7 @@ def makeProviderResultFromCandidate(candidate: core.models.media.Media):
 
     return result
 
-def makeProviderResult(
-        url: str,
-        fileending: str,
-        type : core.models.Download.DownloadType,
-        extra_headers: dict | None = None
-):
 
-    if fileending == "m3u8":
-        fileending = "ts"
-
-    result = ProviderResult(
-        url=url,
-        download_type=type,
-        extra_headers=extra_headers,
-        file_type=fileending
-    )
-
-    return result
 
 
 @dataclass
@@ -357,7 +327,7 @@ class BestMedia:
     file_ending : str | None = None
 
 
-def get_best_Url(
+def makeProviderResult(
         urls: list[str],
         request: ProviderResultRequest,
         download_type : core.models.Download.DownloadType
@@ -395,6 +365,7 @@ def get_best_Url(
 
         filename = os.path.basename(path)
         name, extension = os.path.splitext(filename)
+        extension = extension.lower().removeprefix(".")
 
         prio: int = MEDIA_EXTENSION_PRIORITY.get(extension, None)
 
@@ -430,7 +401,7 @@ def get_best_Url(
         )
     
 
-    result = _makeProviderResult(
+    result = _buildProviderResult(
         bestMedia,
         request
     )
@@ -441,7 +412,7 @@ def get_best_Url(
 
 
 
-def _makeProviderResult(
+def _buildProviderResult(
         media : BestMedia,
         request: ProviderResultRequest,
 ) -> ProviderResult:
@@ -465,15 +436,15 @@ def _makeProviderResult(
         media_type=media.media_type,
         mime_type=mime,
         total_size=size,
+        info = core.models.Download.Info(
+            url=media.url,
+            found_file=media.file_ending,
+            preferred_file=request.preferred_file if request.preferred_file else media.file_ending,
+            found_type=media.media_type,
+            preferred_type=request.preferred_type if request.preferred_type else media.media_type
+        )
     )
 
-    info = core.models.Download.Info(
-        url=media.url,
-        found_file=media.file_ending,
-        wanted_file=request.preferred_file if request.preferred_file else media.file_ending,
-        found_type=media.media_type,
-        wanted_type=request.preferred_type if request.preferred_type else media.media_type
-    )
 
     return result
     

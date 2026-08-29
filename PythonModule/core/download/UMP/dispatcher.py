@@ -34,12 +34,12 @@ class UMPDispatcher(Dispatcher):
                 try:
                     await asyncio.to_thread(
                         download.downloadToFileUMP,
-                            out_file=context.target.out_file,
+                            out_file=context.output.out_file,
                             session=self.downloadInformation.session,
                             start_url=context.target.url,
                             extra_headers=context.target.extra_headers,
                             download_progress=context.download_progress,
-                            max_len=context.target.total_size
+                            max_len=context.media_info.total_size
                              
                         
                     )
@@ -63,7 +63,7 @@ class UMPDispatcher(Dispatcher):
                         start_url=context.target.url,
                         extra_headers=context.target.extra_headers,
                         download_progress=context.download_progress,
-                        max_len=context.target.total_size
+                        max_len=context.media_info.total_size
                     ):
                         yield chunk
     

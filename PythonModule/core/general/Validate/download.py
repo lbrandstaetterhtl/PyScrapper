@@ -71,19 +71,6 @@ def validateDownloadContext(
             obj=download_context,
             caller=caller
         )
-    if (
-        not download_context.download_limiter
-        or not isinstance(
-            download_context.download_limiter,
-            asyncio.Semaphore
-        )
-    ):
-        raise ArgumentError(
-            argument=f"{argument_name}.download_limiter",
-            wanted_type="asyncio.Semaphore",
-            obj=download_context.download_limiter,
-            caller=caller
-        )
 
     validateDownloadTarget(
         argument_name=f"{argument_name}.target",
@@ -97,11 +84,7 @@ def validateDownloadContext(
         caller=caller
     )
 
-    validateConvertProgress(
-        argument_name=f"{argument_name}.convert_progress",
-        convert_progress=download_context.convert_progress,
-        caller=caller
-    ) 
+
 
 
 def validateDownloadTarget(
@@ -138,22 +121,13 @@ def validateDownloadTarget(
 
         )
 
-    validateStr(
-        argument_name=f"{argument_name}.job_id",
-        string=download_target.job_id,
-        caller=caller
-    )
 
     validateHostDefault(
         url=download_target.url,
         caller=caller
     )
 
-    if download_target.download_type == Download.DownloadType.FILE:
-        validateOutFile(
-            out_file=download_target.out_file,
-            caller=caller
-        )
+  
 
     if download_target.extra_headers:
         if not isinstance(

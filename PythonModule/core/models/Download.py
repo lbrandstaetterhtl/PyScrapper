@@ -23,10 +23,10 @@ class DownloadStrategie(Enum):
     CACHED_STREAM = "cached_stream"
 
 class DownloadType(Enum):
-    HLS = auto()
-    FILE = auto()
-    DASH = auto()
-    UMP = auto()
+    HLS = "hls"
+    FILE = "file"
+    DASH = "dash"
+    UMP = "ump"
 
 
 @dataclass
@@ -37,7 +37,7 @@ class MediaInfo:
 
     total_size : int | None = None
 
-    extra_info: str | None = None
+
 
     
 
@@ -163,9 +163,9 @@ class ConvertProgress:
 class Info:
     url: str | None = None
     found_type : str | None = None
-    wanted_type : str | None = None
+    preferred_type : str | None = None
     found_file : str | None = None
-    wanted_file : str | None = None
+    preferred_file : str | None = None
     
 @dataclass
 class DownloadContext:
@@ -222,12 +222,12 @@ class DownloadInformation:
     
 
         for index, context in enumerate(self.contexts):
-            if context.job_id == "unknown":
-                context_id = f"{self.job_id}-Context{index}"
+            if context.context_id == "unknown":
+                context.context_id = f"{self.job_id}-Context{index}"
 
-                context.target.job_id = context_id
-                context.download_progress.job_id = context_id
-                context.convert_progress.job_id = context_id
+            if context.download_progress.job_id == "unknown":
+                context.download_progress.job_id = context.context_id
+             
 
 
 
@@ -266,9 +266,6 @@ class DownloadInformation:
                     "download_progress": asdict(
                         context.download_progress
                     ),
-                    "convert_progress": asdict(
-                        context.convert_progress
-                    )
                 }
                 for context in self.contexts
             ]

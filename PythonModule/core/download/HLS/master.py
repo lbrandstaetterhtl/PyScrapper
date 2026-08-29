@@ -68,7 +68,7 @@ class MasterHLSDownload(HLSDownload):
             )
 
         message =(
-            f"DownloadJob {self.downloadContext.target.job_id}: Successfully found stream valid stream"
+            f"DownloadJob {self.downloadContext.context_id}: Successfully found stream valid stream"
             f"Found stream data:"
             f"Stream URL: {stream.stream_url}"
             f"Stream Bandwidth: {stream.stream_bandwidth}"
