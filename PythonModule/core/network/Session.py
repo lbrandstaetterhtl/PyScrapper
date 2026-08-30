@@ -8,8 +8,8 @@ import os
 
 
 
-REQUESTS_DIR = os.path.dirname(os.path.abspath(__file__))
-COOKIE_FILE = os.path.join(REQUESTS_DIR, "cookies.txt")
+ROOT_DIR = os.getcwd()
+COOKIE_FILE = os.path.join(ROOT_DIR, "cookies.txt")
 
 class Session:
     def __init__(

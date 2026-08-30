@@ -1,6 +1,6 @@
 #Core Imports
 #Python Default Imports
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 
 
@@ -57,7 +57,17 @@ class Headers:
         }
 
 
+@dataclass
+class Media2:
+    response_url: str
+    response_status : int 
+    response_headers: dict[str, str] = field(default_factory=dict)
 
+   
+
+    request_url: str | None = None
+    request_headers: dict[str, str] = field(default_factory=dict)
+    request_body: str = ""
 
 @dataclass
 class Media:

@@ -737,7 +737,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
         return StreamingResponse(
             download.downloadAndYieldUMPRange(
                 session=job.download_information.session,
-                start_url=context.target.url,
+                start_url=context.target.resolved_url,
                 extra_headers=context.target.extra_headers,
                 max_len=total_size,
                 media_start=start_byte,

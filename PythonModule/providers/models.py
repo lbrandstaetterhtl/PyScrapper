@@ -327,6 +327,46 @@ class BestMedia:
     file_ending : str | None = None
 
 
+def makeProviderResultFromBrowserMedia(
+    media: core.models.media.Media2,
+    download_type: core.models.Download.DownloadType
+) -> ProviderResult:
+
+    content_type = media.response_headers.get(
+        "content-type",
+        ""
+    )
+
+    mime_type = (
+        content_type
+        .split(";", 1)[0]
+        .strip()
+        .lower()
+    )
+
+    file_ending = CONTENT_TYPE_EXTENSIONS.get(
+        mime_type
+    )
+
+    media_type = None
+
+    if mime_type.startswith("audio/"):
+        media_type = "audio"
+
+    elif mime_type.startswith("video/"):
+        media_type = "video"
+
+    return ProviderResult(
+        url=media.response_url,
+        download_type=download_type,
+
+        extra_headers=media.request_headers,
+
+        file_ending=file_ending,
+        media_type=media_type,
+        mime_type=mime_type,
+    )
+
 def makeProviderResult(
         urls: list[str],
         request: ProviderResultRequest,

@@ -36,7 +36,7 @@ class UMPDispatcher(Dispatcher):
                         download.downloadToFileUMP,
                             out_file=context.output.out_file,
                             session=self.downloadInformation.session,
-                            start_url=context.target.url,
+                            start_url=context.target.resolved_url,
                             extra_headers=context.target.extra_headers,
                             download_progress=context.download_progress,
                             max_len=context.media_info.total_size
@@ -60,7 +60,7 @@ class UMPDispatcher(Dispatcher):
                 try:
                     async for chunk in download.downloadAndYieldUMP(
                         session=self.downloadInformation.session,
-                        start_url=context.target.url,
+                        start_url=context.target.resolved_url,
                         extra_headers=context.target.extra_headers,
                         download_progress=context.download_progress,
                         max_len=context.media_info.total_size

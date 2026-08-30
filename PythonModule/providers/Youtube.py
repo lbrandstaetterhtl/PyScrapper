@@ -3,6 +3,7 @@ import PythonModule.core as core
 from PythonModule.core.network import html
 from PythonModule.core.network.Session import Session
 from PythonModule.core.network import EmergencyBrowser
+from PythonModule.core.network import browser
 
 # Own imports
 from . import models
@@ -17,6 +18,7 @@ import pathlib
 import urllib.parse
 import json
 import re
+import time
 
 
 
@@ -25,6 +27,52 @@ import re
 from yt_dlp import YoutubeDL
 
 
+
+ITAG_PRIORITY = {
+    # Video + Audio
+    "22": 100,   # MP4 720p + audio
+    "18": 90,    # MP4 360p + audio
+    "17": 80,    # 3GP low quality
+
+    # Audio only
+    "251": 70,   # WebM Opus ~160 kbps
+    "141": 68,   # M4A AAC ~256 kbps (wenn verfügbar)
+    "140": 65,   # M4A AAC ~128 kbps
+    "250": 60,   # WebM Opus ~70 kbps
+    "249": 55,   # WebM Opus ~50 kbps
+    "139": 50,   # M4A AAC low quality
+
+    # Video only
+    "313": 30,
+    "271": 29,
+    "248": 28,
+    "247": 27,
+    "244": 26,
+    "243": 25,
+    "242": 24,
+    "278": 23,
+
+    "137": 22,
+    "136": 21,
+    "135": 20,
+    "134": 19,
+    "133": 18,
+    "160": 17,
+}
+
+ITAG_RESOLVE_TYPE = {
+    "22" : "video",
+    "18" : "video",
+    "17" : "video",
+
+    "251": "audio",   
+    "141": "audio",  
+    "140": "audio",   
+    "250": "audio",  
+    "249": "audio",   
+    "139": "audio"
+}
+    
 
 
 
@@ -45,18 +93,6 @@ def find_ffmpeg() -> str | None:
                     return str(hit.resolve())
 
     return None
-
-
-class NoSearchError(Exception): ...
-
-class SignaturCipherError(Exception): ...
-
-class SessionError(Exception): ...
-
-class YoutubeArgumentError(Exception): ...
-
-class YoutubeDownloadError(Exception): ...
-
 
 
 def search(
@@ -316,210 +352,108 @@ def getYoutubeFormats(
 
     return info
 
-def getMediaInformation2(
-    request: models.ProviderResultRequest,
-) -> models.ProviderResult:
-
-    core.general.Validate.general.validateGeneralType(
-        argument_name="request",
-        obj=request,
-        objType=models.ProviderResultRequest,
-        caller="Youtube.getMediaInformation"
-    )
-
-    core.general.Validate.special.validateHostPro(
-        url=request.url,
-        allowed_hostnames_list=[
-            "youtube.com",
-            "www.youtube.com",
-        ],
-        caller="[providers] Youtube.getMediaInformation"
-    )
-    EmergencyBrowser.POTokenBrowser(
-        url=request.url,
-        headless=False,
-    )
-
-
 def getMediaInformation(
     request: models.ProviderResultRequest,
+    retrys: int = 3
 ) -> models.ProviderResult:
 
+    core.general.Validate.general.validateInt(
+            argument_name="retrys",
+            integer=retrys,
+            caller="Youtube.getMediaInformationMusic"
+        )
+
     core.general.Validate.general.validateGeneralType(
-        argument_name="request",
-        obj=request,
-        objType=models.ProviderResultRequest,
-        caller="Youtube.getMediaInformation"
-    )
+            argument_name="request",
+            obj=request,
+            objType=models.ProviderResultRequest,
+            caller="Youtube.getMediaInformation"
+        )
 
     core.general.Validate.special.validateHostPro(
         url=request.url,
         allowed_hostnames_list=[
-            "youtube.com",
             "www.youtube.com",
+            "youtube.com"
         ],
         caller="[providers] Youtube.getMediaInformation"
     )
 
-    ydl_opts = {
-        "quiet": True,
-        "skip_download": True,
 
-        "cookiefile": request.ses.cookieFile,
+    googleVideoMediaList: list[core.models.media.Media2] = []
+    
+    def _getMedia(Browser):
 
-        "extractor_args": {
-                    "youtube": {
-                        "player_client": [
-                            "default",
-                            "android_vr",
-                            "web_safari",
-                        ]
-                    }
-                },
-    }
+        Browser.run(headless=False)
+        mediaList, unknownList = Browser.stop()
+        
 
-    with YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(
-            request.url,
-            download=False
+        YOUTUBE_INTERESTING_URLS = (
+            "/youtubei/v1/player",
+            "/api/stats/playback",
+            "/api/stats/qoe",
+            "/videoplayback",
         )
 
-    formats = info.get("formats", [])
+        for _media in mediaList:
+            _media: core.models.media.Media2
 
-    usable_formats = []
+            if any(keyword in _media.response_url.lower() for keyword in YOUTUBE_INTERESTING_URLS):
+                googleVideoMediaList.append(_media)
 
-    for fmt in formats:
+        for _media in unknownList:
 
-        media_url = fmt.get("url")
-        extension = fmt.get("ext")
+            if any(keyword in _media.response_url.lower() for keyword in YOUTUBE_INTERESTING_URLS):
+                googleVideoMediaList.append(_media)
+            
+            
 
-        if not media_url:
-            continue
+        
+    retry: int = 0
+    Browser = browser.MediaBrowser(request.url)
 
-        if extension not in (
-            "mp4",
-            "webm",
-            "m4a",
-            "mp3",
-            "ogg",
-            "opus",
-        ):
-            continue
+    while retry <= retrys:
+        if googleVideoMediaList:
+            break
+        print(f"[providers] Youtube.getMEdiaInformationMusic: Trying to get media. Try: {retry}/{retrys}")
+        retry += 1
+        _getMedia(Browser)
+    
+    
 
-        # SABR URLs wollen wir nicht verwenden.
-        if "sabr=1" in media_url.lower():
-            continue
-
-        usable_formats.append(fmt)
-
-    if not usable_formats:
+    if not googleVideoMediaList:
         raise core.models.errors.TaskFailedError(
-            task="Youtube.getMediaInformation",
-            reason="yt-dlp returned no usable direct media URL",
-            caller="[providers] Youtube.getMediaInformation"
+            task="[providers] Youtube.getMediaInformationMusic",
+            reason="Couldn't find valid url",
+            caller="[providers] Youtube.getMediaInformationMusic"
         )
+    test = None
+    for media in googleVideoMediaList:
+        if "sabr=1" in media.response_url:
+            test = media
+            break
 
-    # ---------------------------------------------------------
-    # Gute Formate zuerst ausprobieren
-    # ---------------------------------------------------------
+    import urllib.request
 
-    def formatScore(fmt: dict) -> tuple:
-
-        hasVideo = (
-            fmt.get("vcodec") is not None
-            and fmt.get("vcodec") != "none"
-        )
-
-        hasAudio = (
-            fmt.get("acodec") is not None
-            and fmt.get("acodec") != "none"
-        )
-
-        hasVideoAndAudio = hasVideo and hasAudio
-
-        return (
-            hasVideoAndAudio,
-            fmt.get("height") or 0,
-            fmt.get("tbr") or 0,
-            fmt.get("abr") or 0,
-        )
-
-    usable_formats.sort(
-        key=formatScore,
-        reverse=True
+    req = urllib.request.Request(
+        url=test.request_url,
+        headers=test.request_headers,
+        data=test.request_body
     )
 
-    # ---------------------------------------------------------
-    # Formate der Reihe nach testen
-    # ---------------------------------------------------------
+    with open("youtubetest", "wb") as f:
+        with request.ses.open(request=req) as response:
+            while True:
+                chunk = response.read(8192)
 
-    for fmt in usable_formats:
-
-        media_url = fmt["url"]
-        extra_headers = fmt.get("http_headers") or {}
-
-        try:
-            print(
-                "[Youtube] Trying format:",
-                fmt.get("format_id"),
-                fmt.get("ext"),
-                fmt.get("height"),
-                fmt.get("vcodec"),
-                fmt.get("acodec"),
-            )
-
-            print(f"[Youtube] now trying url: {media_url}")
-            fileType = models.getContentType(
-                url=media_url,
-                session=request.ses,
-                extra_headers=extra_headers
-            )
-            total_size = models.getFileInformations(
-                url=media_url,
-                session=request.ses,
-                extra_headers=extra_headers
-            )
-
-            print(
-                "[Youtube] Successfully selected format:",
-                fmt.get("format_id"),
-                fileType
-            )
-
-            return models.ProviderResult(
-                url=media_url,
-
-                download_type=(
-                    core.models.Download.DownloadType.FILE
-                ),
-
-                extra_headers=extra_headers,
-
-                file_type=fileType,
-                total_size=total_size
-            )
-
-        except Exception as error:
-
-            print(
-                "[Youtube] Format failed:",
-                fmt.get("format_id"),
-                str(error)
-            )
-
-
-            continue
+                if not chunk:
+                    break
+                f.write(chunk)
 
 
 
-    raise core.models.errors.TaskFailedError(
-        task="Youtube.getMediaInformation",
-        reason=(
-            "yt-dlp returned formats, but none of the "
-            "direct media URLs could be used"
-        ),
-        caller="[providers] Youtube.getMediaInformation"
-    )
+
+
 
 
 
@@ -527,6 +461,7 @@ def getMediaInformation(
 
 def getMediaInformationMusic(
     request: models.ProviderResultRequest,
+    retrys: int = 3
 ) -> models.ProviderResult:
 
 
@@ -534,7 +469,12 @@ def getMediaInformationMusic(
         argument_name="request",
         obj=request,
         objType=models.ProviderResultRequest,
-        caller="Youtube.getMediaInformation"
+        caller="Youtube.getMediaInformationMusic"
+    )
+    core.general.Validate.general.validateInt(
+        argument_name="retrys",
+        integer=retrys,
+        caller="Youtube.getMediaInformationMusic"
     )
 
     core.general.Validate.special.validateHostPro(
@@ -542,18 +482,90 @@ def getMediaInformationMusic(
         allowed_hostnames_list=[
             "music.youtube.com",
         ],
-        caller="[providers] Youtube.getMediaInformation"
+        caller="[providers] Youtube.getMediaInformationMusic"
     )
-    medialist = EmergencyBrowser.BrowserDiscoverStreamURLs(url=request.url, headless=False, ad_block=True)
-    if not medialist:
-        raise ValueError("Didn't get valid media")
-    candidate = medialist.candidates[0]
 
-    parsedUrl = urllib.parse.urlparse(candidate.mediaUrl)
-    query = urllib.parse.parse_qs(
-        parsedUrl.query,
-        keep_blank_values=True
-    )
+    googleVideoMediaList: list[core.models.media.Media2] = []
+
+
+    def _getMedia(Browser):
+
+        Browser.run(headless=False)
+        mediaList, unknownList = Browser.stop()
+        
+
+        bad_keywords = (
+        "ctier=l",
+        "pcm2cms=yes",
+        "ms=aub",
+        "rms=aub",
+    )   
+
+        for _media in mediaList:
+            _media: core.models.media.Media2
+            if any(
+                keyword in _media.response_url.lower() for keyword in bad_keywords
+            ):
+                continue
+
+            if "googlevideo.com/videoplayback" in _media.response_url:
+                googleVideoMediaList.append(_media)
+
+    
+        for _media in unknownList:
+            if any(
+                keyword in _media.response_url.lower() for keyword in bad_keywords
+            ):
+                continue
+            if "googlevideo.com/videoplayback" in _media.response_url:
+               googleVideoMediaList.append(_media)
+
+        
+    retry: int = 0
+    Browser = browser.MediaBrowser(request.url)
+
+    while retry <= retrys:
+        if googleVideoMediaList:
+            break
+        print(f"[providers] Youtube.getMEdiaInformationMusic: Trying to get media. Try: {retry}/{retrys}")
+        retry += 1
+        _getMedia(Browser)
+    
+
+    if not googleVideoMediaList:
+        raise core.models.errors.TaskFailedError(
+            task="[providers] Youtube.getMediaInformationMusic",
+            reason="Couldn't find valid url",
+            caller="[providers] Youtube.getMediaInformationMusic"
+        )
+
+    bestMedia: core.models.media.Media2 = None
+    bestPrio : int = -1
+
+    for media in googleVideoMediaList:
+
+        parsedUrl = urllib.parse.urlparse(media.response_url)
+
+        query = urllib.parse.parse_qs(
+            parsedUrl.query,
+            keep_blank_values=True
+        )
+        itag = query.get("itag")[0]
+
+        prio:int = ITAG_PRIORITY.get(itag, 0)
+        itagType: str = ITAG_RESOLVE_TYPE.get(itag, "video-only")
+
+        if request.preferred_type == itagType:
+            prio += 100
+        if prio > bestPrio:
+            bestMedia = media
+            bestPrio = prio
+        
+
+
+
+    resolvedUrl = bestMedia.response_url
+
 
     # ---------------------------------------------------------
     # Bandaid:
@@ -580,38 +592,85 @@ def getMediaInformationMusic(
 
             query["range"] = ["0-64000"]
 
-            new_query = urllib.parse.urlencode(
-                query,
-                doseq=True
-            )
-
-            candidate.mediaUrl = urllib.parse.urlunparse(
-                parsedUrl._replace(
-                    query=new_query
+            resolvedUrl = urllib.parse.urlunparse(
+            parsedUrl._replace(
+                query=urllib.parse.urlencode(
+                    query,
+                    doseq=True
                 )
             )
+        )
 
     # URL nach eventuellem Bandaid erneut parsen
-    parsedUrl = urllib.parse.urlparse(candidate.mediaUrl)
+    parsedUrl = urllib.parse.urlparse(resolvedUrl)
+    query = urllib.parse.parse_qs(parsedUrl.query)
+
+    maxSize = int(query["clen"][0])
+
+
+    parsedUrl = urllib.parse.urlparse(bestMedia.response_url)
 
     query = urllib.parse.parse_qs(
         parsedUrl.query,
         keep_blank_values=True
     )
+    maxSize = query.get('clen')[0]
+
+    mimeType = query.get("mime", [None])[0]
+
+    if mimeType is None:
+        mimeType = (
+            media.response_headers
+            .get("content-type", "")
+            .split(";", 1)[0]
+            .strip()
+            .lower()
+        )
+
+    file_ending = models.CONTENT_TYPE_EXTENSIONS.get(
+        mimeType
+    )
+
+    mediaType = None
+
+    if mimeType:
+        if mimeType.startswith("audio/"):
+            mediaType = "audio"
+        elif mimeType.startswith("video/"):
+            mediaType = "video"
 
 
-    parsedUrl = urllib.parse.urlparse(candidate.mediaUrl)
-    query = urllib.parse.parse_qs(parsedUrl.query)
-    max_size = query.get('clen')[0]
+    if not file_ending:
+        file_ending = "webm"
     
 
-    return models.ProviderResult(
-        url=candidate.mediaUrl,
-        download_type=core.models.Download.DownloadType.UMP,
-        extra_headers=candidate.headers.to_dict(),
-        file_type="webm",
-        total_size=int(max_size)
+    result = models.ProviderResult(
+        url=resolvedUrl,
+
+        download_type=(
+            core.models.Download.DownloadType.UMP
+        ),
+
+        extra_headers=media.request_headers,
+
+        file_ending=file_ending,
+        media_type=mediaType,
+        mime_type=mimeType,
+
+        total_size=int(maxSize)
+            if maxSize is not None
+            else 0,
+        info=core.models.Download.Info(
+            url=resolvedUrl,
+            preferred_type=request.preferred_type,
+            found_type=mediaType,
+            preferred_file=request.preferred_file,
+            found_file=file_ending
+        )
+
     )
+
+    return result
 
     
 
