@@ -3,6 +3,7 @@ from ...network.progress import updateDownloadProgress
 from ...models import Download
 
 # Own imports
+from . import byte
 
 #Python default imports 
 from dataclasses import dataclass
@@ -500,3 +501,332 @@ def _extractMediaData(parts: list[UMPPart]) -> bytes:
         media_data.extend(part.payload[1:])
 
     return bytes(media_data)
+
+
+
+
+def detectMediaChunk(data: bytes) -> str | None:
+    if data.startswith(b"\x1a\x45\xdf\xa3"):
+        return "audio"
+
+    if data.startswith(b"\x1f\x43\xb6\x75"):
+        return "audio"
+
+    if b"ftyp" in data[:64]:
+        return "video"
+
+    if b"moof" in data[:64]:
+        return "video"
+
+    return None
+
+def _parse_proto(data: bytes):
+    fields = []
+    pos = 0
+
+    while pos < len(data):
+        key, pos = byte._read_varint(data, pos)
+
+        number = key >> 3
+        wire = key & 7
+
+        if wire == 0:
+            value, pos = byte._read_varint(data, pos)
+            fields.append([number, wire, value])
+
+        elif wire == 2:
+            size, pos = byte._read_varint(data, pos)
+            value = data[pos:pos + size]
+            pos += size
+
+            fields.append([number, wire, value])
+
+        elif wire == 1:
+            value = data[pos:pos + 8]
+            pos += 8
+            fields.append([number, wire, value])
+
+        elif wire == 5:
+            value = data[pos:pos + 4]
+            pos += 4
+            fields.append([number, wire, value])
+
+        else:
+            raise ValueError(f"Unsupported protobuf wire type {wire}")
+
+    return fields
+
+
+def _encode_proto(fields):
+    out = bytearray()
+
+    for number, wire, value in fields:
+        out += byte._write_varint((number << 3) | wire)
+
+        if wire == 0:
+            out += byte._write_varint(value)
+
+        elif wire == 2:
+            out += byte._write_varint(len(value))
+            out += value
+
+        elif wire in (1, 5):
+            out += value
+
+    return bytes(out)
+
+
+def patch_sabr_request(
+    body: bytes,
+    *,
+    playback_ms: int | None = None,
+
+    # Vermuteter Buffer-/Segment-State
+    ranges: dict[int, dict] | None = None,
+) -> bytes:
+    """
+    Experimental SABR request patcher.
+
+    ranges example:
+
+    {
+        251: {
+            "start_ms": 0,
+            "duration_ms": 30000,
+            "first_segment": 1,
+            "last_segment": 3,
+        },
+
+        136: {
+            "start_ms": 18000,
+            "duration_ms": 24000,
+            "first_segment": 4,
+            "last_segment": 7,
+        },
+    }
+    """
+
+    fields = _parse_proto(body)
+
+    for field in fields:
+
+        # ----------------------------------------------------
+        # TOP LEVEL FIELD 1
+        # Playback / ABR state
+        # ----------------------------------------------------
+        if field[0] == 1 and field[1] == 2:
+            state = _parse_proto(field[2])
+
+            if playback_ms is not None:
+                for sub in state:
+
+                    # experimentell beobachtet:
+                    # field 29 ~ playback position
+                    if sub[0] == 29 and sub[1] == 0:
+                        print(
+                            "[SABR PATCH] playback field 29:",
+                            sub[2],
+                            "->",
+                            playback_ms
+                        )
+
+                        sub[2] = playback_ms
+
+                    # field 36 folgt field 29 mit +20
+                    elif sub[0] == 36 and sub[1] == 0:
+                        print(
+                            "[SABR PATCH] playback field 36:",
+                            sub[2],
+                            "->",
+                            playback_ms + 20
+                        )
+
+                        sub[2] = playback_ms + 20
+
+            field[2] = _encode_proto(state)
+
+        # ----------------------------------------------------
+        # TOP LEVEL FIELD 3
+        # vermutlich bereits vorhandene Media-/Buffer-Ranges
+        # ----------------------------------------------------
+        elif (
+            field[0] == 3
+            and field[1] == 2
+            and ranges is not None
+        ):
+            try:
+                range_state = _parse_proto(field[2])
+            except Exception:
+                continue
+
+            itag = None
+
+            # Inner field 1 scheint wiederum die
+            # Representation-Beschreibung zu enthalten.
+            for sub in range_state:
+                if sub[0] != 1 or sub[1] != 2:
+                    continue
+
+                try:
+                    representation = _parse_proto(sub[2])
+                except Exception:
+                    continue
+
+                for rep_field in representation:
+
+                    # representation.field1 = itag
+                    if rep_field[0] == 1 and rep_field[1] == 0:
+                        itag = rep_field[2]
+                        break
+
+                if itag is not None:
+                    break
+
+            if itag is None:
+                continue
+
+            if itag not in ranges:
+                continue
+
+            patch = ranges[itag]
+
+            print(
+                f"[SABR PATCH] Found range for itag {itag}"
+            )
+
+            for sub in range_state:
+
+                if sub[1] != 0:
+                    continue
+
+                # field 2:
+                # observed start of buffered range
+                if (
+                    sub[0] == 2
+                    and "start_ms" in patch
+                ):
+                    print(
+                        f"    start_ms: {sub[2]} "
+                        f"-> {patch['start_ms']}"
+                    )
+
+                    sub[2] = patch["start_ms"]
+
+                # field 3:
+                # observed duration / covered range
+                elif (
+                    sub[0] == 3
+                    and "duration_ms" in patch
+                ):
+                    print(
+                        f"    duration_ms: {sub[2]} "
+                        f"-> {patch['duration_ms']}"
+                    )
+
+                    sub[2] = patch["duration_ms"]
+
+                # field 4:
+                # observed first segment-ish value
+                elif (
+                    sub[0] == 4
+                    and "first_segment" in patch
+                ):
+                    print(
+                        f"    first_segment: {sub[2]} "
+                        f"-> {patch['first_segment']}"
+                    )
+
+                    sub[2] = patch["first_segment"]
+
+                # field 5:
+                # observed last segment-ish value
+                elif (
+                    sub[0] == 5
+                    and "last_segment" in patch
+                ):
+                    print(
+                        f"    last_segment: {sub[2]} "
+                        f"-> {patch['last_segment']}"
+                    )
+
+                    sub[2] = patch["last_segment"]
+
+            field[2] = _encode_proto(range_state)
+
+    return _encode_proto(fields)
+
+
+def downloadToFileSABR(
+    out_file: str,
+    session,
+    start_url: str,
+    extra_headers: dict,
+    post_body: bytes,
+    download_progress: Download.DownloadProgress,
+):
+    import urllib.request
+    import urllib.parse
+
+    req = urllib.request.Request(
+        url=start_url,
+        headers=extra_headers,
+        data=post_body,
+        method="POST",
+    )
+
+    positions = [
+        15000,
+        30000,
+        45000,
+        60000,
+        75000,
+        90000,
+        115000
+    ]
+    with open(f"videoplayback1", "wb") as f:
+        with session.open(request=req) as response:
+            data = response.read()
+            f.write(data)
+    index = 1
+    for pos in positions:
+        index += 1
+        
+
+        body2 = patch_sabr_request(
+            post_body,
+            playback_ms=15000,
+
+            ranges={
+                251: {
+                    "start_ms": 0,
+                    "duration_ms": 20000,
+                    "first_segment": 1,
+                    "last_segment": 2,
+                },
+
+                134: {
+                    "start_ms": 0,
+                    "duration_ms": 18000,
+                    "first_segment": 1,
+                    "last_segment": 3,
+                },
+            }
+        )
+
+        req2 = urllib.request.Request(
+            url=start_url,
+            headers=extra_headers,
+            data=body2,
+            method="POST"
+        )
+
+        with open(f"videoplayback{index}", "wb") as f:
+            with session.open(request=req2) as response:
+                data = response.read()
+                f.write(data)
+
+        
+
+
+            
+

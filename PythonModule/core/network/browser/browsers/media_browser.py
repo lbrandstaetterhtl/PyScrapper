@@ -78,14 +78,19 @@ class MediaBrowser(Browser):
         request = response.request
         ressourceType: str = request.resource_type
         requestHeaders: dict = request.headers or {}
-
+        body = None
+        try:
+            body = response.body()
+        except Exception:
+            pass
         foundMedia = media.Media2(
                     response_url=helpers.utils.removeByteRangeParams(response.url),
                     response_status=response.status,
                     response_headers=responseHeaders,
                     request_url=request.url,
                     request_body=helpers.utils.getRequestBody(request),
-                    request_headers=requestHeaders
+                    request_headers=requestHeaders,
+                    response_body=body
                 )
 
         if not (

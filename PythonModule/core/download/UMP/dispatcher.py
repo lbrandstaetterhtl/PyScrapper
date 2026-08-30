@@ -33,17 +33,33 @@ class UMPDispatcher(Dispatcher):
         ):
             async with self.downloadInformation.download_limiter:
                 try:
-                    await asyncio.to_thread(
-                        download.downloadToFileUMP,
-                            out_file=context.output.out_file,
-                            session=self.downloadInformation.session,
-                            start_url=context.target.resolved_url,
-                            extra_headers=context.target.extra_headers,
-                            download_progress=context.download_progress,
-                            max_len=context.media_info.total_size
-                             
-                        
-                    )
+                    mode = self.getUMPMode(context)
+             
+
+                    if mode == "sabr":
+                        await asyncio.to_thread(
+                            download.downloadToFileSABR,
+                                out_file=context.output.out_file,
+                                session=self.downloadInformation.session,
+                                start_url=context.target.resolved_url,
+                                extra_headers=context.target.extra_headers,
+                                download_progress=context.download_progress,
+                                post_body=context.target.post_body
+                            
+                        )
+                    else:
+                        await asyncio.to_thread(
+                            download.downloadToFileUMP,
+                                out_file=context.output.out_file,
+                                session=self.downloadInformation.session,
+                                start_url=context.target.resolved_url,
+                                extra_headers=context.target.extra_headers,
+                                download_progress=context.download_progress,
+                                max_len=context.media_info.total_size
+                                
+                            
+                        )
+                        context.download_progress.speed = Download.TaskStatus.FINISHED
     
                 except Exception as e:
                     context.download_progress.status = Download.TaskStatus.FAILED

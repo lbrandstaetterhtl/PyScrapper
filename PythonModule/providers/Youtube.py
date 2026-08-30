@@ -402,9 +402,9 @@ def getMediaInformation(
 
     googleVideoMediaList: list[core.models.media.Media2] = []
     
-    def _getMedia(Browser):
+    def _getMedia(Browser: browser.MediaBrowser):
 
-        Browser.run(headless=False)
+        Browser.run(headless=False, wait_ms=4000)
         mediaList, unknownList = Browser.stop()
         
 
@@ -448,7 +448,9 @@ def getMediaInformation(
             caller="[providers] Youtube.getMediaInformationMusic"
         )
     _media = None
+
     for media in googleVideoMediaList:
+        
         if "sabr=1" in media.response_url:
             _media = media
             break
