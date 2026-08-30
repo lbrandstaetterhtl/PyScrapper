@@ -39,6 +39,10 @@ async def downloadAndYieldUMP(
 
             size = _getSize(parts)
 
+            if size is None:
+                print("[CORE] UMP: No media part in response, assuming end of stream")
+                break
+
             parsed = urllib.parse.urlparse(nextChunkUrl)
             query = urllib.parse.parse_qs(parsed.query)
 
@@ -114,7 +118,35 @@ async def downloadAndYieldUMPRange(
             break
 
 
+async def downloadAndYieldSABRSimple(
+    session,
+    start_url: str,
+    extra_headers: dict,
+    post_body: bytes,
+    download_progress,
+):
+    req = urllib.request.Request(
+        url=start_url,
+        headers=extra_headers,
+        data=post_body,
+        method="POST",
+    )
 
+    with session.open(request=req) as response:
+        data = await asyncio.to_thread(response.read)
+
+    parts = _parseUMP(data)
+
+    chunks = extractUMPChunks(parts)
+
+    # erstmal nur debug / später gezielte Stream-Auswahl
+    for chunk_id, chunk in chunks.items():
+        print(
+            "[SABR]",
+            chunk_id,
+            len(chunk),
+            chunk[:16].hex(" ")
+        )
 
             
 async def downloadAndYieldUMPSimple(
@@ -141,6 +173,11 @@ async def downloadAndYieldUMPSimple(
             yield media_data
 
             size = _getSize(parts)
+
+
+            if size is None:
+                print("[CORE] UMP: No media part in response, assuming end of stream")
+                break
 
             parsed = urllib.parse.urlparse(nextChunkUrl)
             query = urllib.parse.parse_qs(parsed.query)
@@ -198,6 +235,9 @@ def downloadToFileUMP(
                 download_progress=download_progress,downloaded_bytes=len(media_data), caller="[CORE] UMP.downloadToFileUMP"
             )
             size: int = _getSize(parts)
+            if size is None:
+                print("[CORE] UMP: No media part in response, assuming end of stream")
+                break
             print(f"[CORE] UMP: size of file: {size}")
 
             parsed = urllib.parse.urlparse(nextChunkUrl)
@@ -318,6 +358,77 @@ def _readUMPVarInt(data: bytes, pos: int) -> tuple[int, int]:
 
     return value, pos + byte_length
 
+def extractUMPChunks(parts):
+    chunks: dict[int, bytearray] = {}
+
+    for part in parts:
+        if part.part_type != 0x15:
+            continue
+
+        if not part.payload:
+            continue
+
+        chunk_id = part.payload[0]
+        media_data = part.payload[1:]
+
+        if chunk_id not in chunks:
+            chunks[chunk_id] = bytearray()
+
+        chunks[chunk_id].extend(media_data)
+
+    return {
+        chunk_id: bytes(data)
+        for chunk_id, data in chunks.items()
+    }
+
+def inspectUMP(data: bytes):
+    import re
+    parts = _parseUMP(data)
+
+    for i, part in enumerate(parts):
+        payload = part.payload
+
+        print(
+            f"[{i:02}] "
+            f"type={part.part_type:#04x} "
+            f"size={len(payload):6}"
+        )
+
+        # Stream-/Metadatenparts: hier sind Strings interessant
+        if part.part_type == 0x2A:
+            strings = re.findall(rb"[\x20-\x7e]{4,}", payload)
+
+            for value in strings:
+                print("     TEXT:", value.decode("ascii", errors="replace"))
+
+        # Media data
+        elif part.part_type == 0x15:
+            if not payload:
+                continue
+
+            stream_id = payload[0]
+            media = payload[1:]
+
+            print(f"     id={stream_id}")
+            print(f"     first={media[:16].hex(' ')}")
+
+            if media.startswith(b"\x1a\x45\xdf\xa3"):
+                print("     >>> WEBM HEADER")
+
+            elif b"ftyp" in media[:64]:
+                print("     >>> MP4 HEADER")
+
+            elif b"moof" in media[:64]:
+                print("     >>> MP4 FRAGMENT")
+
+            elif b"mdat" in media[:64]:
+                print("     >>> MP4 MEDIA DATA")
+
+        elif part.part_type == 0x16:
+            print(
+                "     id=",
+                payload[0] if payload else None
+            )
 
 def _parseUMP(data: bytes) -> list[UMPPart]:
     parts = []

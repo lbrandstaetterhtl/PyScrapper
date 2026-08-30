@@ -267,7 +267,7 @@ async def cleanup_download(
 
     job.download_information.contexts = [
         context for context in job.download_information.contexts
-        if context.target.job_id != stream_id
+        if context.context_id != stream_id
     ]
 
     if (
@@ -360,7 +360,8 @@ async def _resolveMediaAndCreateContexts(
             url=url,
             resolved_url=result.url,
             download_type=result.download_type,
-            extra_headers=result.extra_headers
+            extra_headers=result.extra_headers,
+            post_body=result.post_body
         )
 
         info = core.models.Download.MediaInfo(
@@ -379,7 +380,8 @@ async def _resolveMediaAndCreateContexts(
             target=target,
             media_info=info,
             output=outputTarget,
-            info=result.info
+            info=result.info,
+            
         )
 
         contexts.append(context)
@@ -532,6 +534,18 @@ async def receive_download(data: requests.DownloadRequest):
         return responses.DownloadResponse(
             task_id=taskId,
             ressources=ressources
+        ).model_dump(
+            exclude={
+                "ressources": {
+                    "__all__": {
+                        "context": {
+                            "target": {
+                                "post_body"
+                            }
+                        }
+                    }
+                }
+            }
         )
 
 

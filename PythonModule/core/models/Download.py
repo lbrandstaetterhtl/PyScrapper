@@ -63,6 +63,8 @@ class DownloadTarget:
 
     extra_headers: dict[str, str] = field(default_factory=dict)
 
+    post_body: str | None = None
+
 
     def __str__(self) -> str:
         strings = [
@@ -166,6 +168,7 @@ class Info:
     preferred_type : str | None = None
     found_file : str | None = None
     preferred_file : str | None = None
+
     
 @dataclass
 class DownloadContext:

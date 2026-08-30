@@ -183,6 +183,8 @@ class ProviderResult:
 
     total_size : int = 0
 
+    post_body : str | None = None
+
     info : core.models.Download.Info = field(default_factory=core.models.Download.Info)
 
 

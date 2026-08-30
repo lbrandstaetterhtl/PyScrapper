@@ -61,17 +61,37 @@ ITAG_PRIORITY = {
 }
 
 ITAG_RESOLVE_TYPE = {
-    "22" : "video",
-    "18" : "video",
-    "17" : "video",
+    # Video + Audio
+    "22": "video",
+    "18": "video",
+    "17": "video",
 
-    "251": "audio",   
-    "141": "audio",  
-    "140": "audio",   
-    "250": "audio",  
-    "249": "audio",   
-    "139": "audio"
+    # Audio only
+    "251": "audio",
+    "141": "audio",
+    "140": "audio",
+    "250": "audio",
+    "249": "audio",
+    "139": "audio",
+
+    # Video only
+    "313": "video-only",
+    "271": "video-only",
+    "248": "video-only",
+    "247": "video-only",
+    "244": "video-only",
+    "243": "video-only",
+    "242": "video-only",
+    "278": "video-only",
+
+    "137": "video-only",
+    "136": "video-only",
+    "135": "video-only",
+    "134": "video-only",
+    "133": "video-only",
+    "160": "video-only",
 }
+
     
 
 
@@ -427,34 +447,60 @@ def getMediaInformation(
             reason="Couldn't find valid url",
             caller="[providers] Youtube.getMediaInformationMusic"
         )
-    test = None
+    _media = None
     for media in googleVideoMediaList:
         if "sabr=1" in media.response_url:
-            test = media
+            _media = media
             break
 
-    import urllib.request
 
-    req = urllib.request.Request(
-        url=test.request_url,
-        headers=test.request_headers,
-        data=test.request_body
+    return models.ProviderResult(
+        url=_media.request_url,
+        download_type=core.models.Download.DownloadType.UMP,
+        extra_headers=_media.request_headers,
+        file_ending="webm",
+        media_type="video",
+        mime_type="video/webm",
+        total_size=0,
+        post_body=_media.request_body,
+        info=core.models.Download.Info(
+            url=_media.request_url,
+            found_file="webm",
+            found_type="video",
+            preferred_type=request.preferred_type,
+            preferred_file=request.preferred_file
+        )
     )
 
-    with open("youtubetest", "wb") as f:
-        with request.ses.open(request=req) as response:
-            while True:
-                chunk = response.read(8192)
-
-                if not chunk:
-                    break
-                f.write(chunk)
+    
 
 
 
+if __name__ == "__main__":
+    data= bytearray()
+    with request.ses.open(request=req) as response:
+        while True:
+            chunk = response.read(8192)
 
+            if not chunk:
+                break
+            data.extend(chunk)
 
+    parts = core.download.UMP.download._parseUMP(data)
+    chunks = core.download.UMP.download.extractUMPChunks(parts)
 
+    
+    with open("test_audio.webm", "wb") as f:
+        f.write(chunks[0])
+        f.write(chunks[2])
+        f.write(chunks[5])
+
+    with open("test_video.mp4", "wb") as f:
+        f.write(chunks[1])
+        f.write(chunks[3])
+        f.write(chunks[4])
+        f.write(chunks[6])
+        f.write(chunks[7])
 
 
 
@@ -541,6 +587,7 @@ def getMediaInformationMusic(
 
     bestMedia: core.models.media.Media2 = None
     bestPrio : int = -1
+    bestItagType: str = ""
 
     for media in googleVideoMediaList:
 
@@ -554,17 +601,31 @@ def getMediaInformationMusic(
 
         prio:int = ITAG_PRIORITY.get(itag, 0)
         itagType: str = ITAG_RESOLVE_TYPE.get(itag, "video-only")
+        
 
         if request.preferred_type == itagType:
             prio += 100
         if prio > bestPrio:
             bestMedia = media
             bestPrio = prio
+            bestItagType = itagType
         
 
-
+    if bestMedia is None:
+        raise core.models.errors.TaskFailedError(
+            task="[providers] Youtube.getMediaInformationMusic",
+            reason="Couldn't select a valid media",
+            caller="[providers] Youtube.getMediaInformationMusic"
+        )
 
     resolvedUrl = bestMedia.response_url
+
+    parsedUrl = urllib.parse.urlparse(resolvedUrl)
+
+    query = urllib.parse.parse_qs(
+        parsedUrl.query,
+        keep_blank_values=True
+    )
 
 
     # ---------------------------------------------------------
@@ -660,10 +721,11 @@ def getMediaInformationMusic(
         total_size=int(maxSize)
             if maxSize is not None
             else 0,
+
         info=core.models.Download.Info(
             url=resolvedUrl,
             preferred_type=request.preferred_type,
-            found_type=mediaType,
+            found_type=bestItagType,
             preferred_file=request.preferred_file,
             found_file=file_ending
         )

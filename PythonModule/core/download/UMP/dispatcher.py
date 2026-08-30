@@ -12,6 +12,7 @@ from . import download
 
 # python default imports
 import asyncio
+from urllib.parse import urlparse, parse_qs
 
 
 
@@ -50,7 +51,7 @@ class UMPDispatcher(Dispatcher):
                     raise
 
 
-
+    
 
     async def _runContextStream(
                 self,
@@ -58,14 +59,28 @@ class UMPDispatcher(Dispatcher):
         ):
             async with self.downloadInformation.download_limiter:
                 try:
-                    async for chunk in download.downloadAndYieldUMP(
+                    mode = self.getUMPMode(context)
+
+                    if mode == "sabr":
+                        generator = download.downloadAndYieldSABRSimple(
                         session=self.downloadInformation.session,
                         start_url=context.target.resolved_url,
                         extra_headers=context.target.extra_headers,
+                        post_body=context.target.post_body,
                         download_progress=context.download_progress,
-                        max_len=context.media_info.total_size
-                    ):
-                        yield chunk
+                    )
+
+                    else:
+                        generator = download.downloadAndYieldUMP(
+                            session=self.downloadInformation.session,
+                            start_url=context.target.resolved_url,
+                            extra_headers=context.target.extra_headers,
+                            download_progress=context.download_progress,
+                            max_len=context.media_info.total_size,
+                        )
+                        async for chunk in generator:
+                            yield chunk
+                    
     
                     context.download_progress.status = Download.TaskStatus.FINISHED
     
@@ -73,3 +88,22 @@ class UMPDispatcher(Dispatcher):
                     context.download_progress.status = Download.TaskStatus.FAILED
                     context.download_progress.error_message = str(e)
                     raise
+
+
+    
+
+    def getUMPMode(
+              self,
+              context: Download.DownloadContext
+              ):
+        query = parse_qs(
+            urlparse(context.target.resolved_url).query
+        )
+
+        if query.get("sabr") == ["1"]:
+            return "sabr"
+
+        if query.get("ump") == ["1"]:
+            return "ump"
+
+        raise ValueError("Unknown UMP transport")
