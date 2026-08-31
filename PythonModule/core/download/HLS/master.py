@@ -95,7 +95,7 @@ class MasterHLSDownload(HLSDownload):
 
     def _get_Master_File(self):
         masterFile: str = self._get_html(
-            self.downloadContext.target.url,
+            self.downloadContext.target.resolved_url,
             variable_name="masterFile",
             caller="[CORE] MasterHLSDownload._get_Master_File",
             extra_headers=self.downloadContext.target.extra_headers
@@ -129,7 +129,7 @@ class MasterHLSDownload(HLSDownload):
 #Searching for stream
         stream: models.M3U8Stream = finder.findBestQualityStream(
             streamBlocks,
-            master_url=self.downloadContext.target.url,
+            master_url=self.downloadContext.target.resolved_url,
             caller="[CORE] MasterHLSDownload._select_Index"
         )
 
@@ -138,7 +138,7 @@ class MasterHLSDownload(HLSDownload):
             finder.findAudioUrl(
                 mediaBlocks, 
                 preferred_languages=self.preferredLanguages,
-                master_url=self.downloadContext.target.url,
+                master_url=self.downloadContext.target.resolved_url,
                 audio_information=stream.audio_information,
                 caller="[CORE] MasterHLSDownload._select_Index"
             )

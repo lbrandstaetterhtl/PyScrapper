@@ -11,6 +11,8 @@ import os
 
 
 
+
+
 class TaskStatus(Enum):
     QUEUED = "queued"
     RUNNING = "running"
@@ -27,6 +29,7 @@ class DownloadType(Enum):
     FILE = "file"
     DASH = "dash"
     UMP = "ump"
+    UNKNOWN = "unknown"
 
 
 @dataclass
@@ -38,7 +41,25 @@ class MediaInfo:
     total_size : int | None = None
 
 
+DOWNLOAD_TYPE_MAPPING = {
+    ".m3u8": DownloadType.HLS,
+    "application/vnd.apple.mpegurl": DownloadType.HLS,
+    "application/x-mpegurl": DownloadType.HLS,
 
+    ".mpd": DownloadType.DASH,
+    "application/dash+xml": DownloadType.DASH,
+
+    ".mp3": DownloadType.FILE,
+    ".mp4": DownloadType.FILE,
+    ".m4a": DownloadType.FILE,
+    ".mkv": DownloadType.FILE,
+    ".webm": DownloadType.FILE,
+    ".flv": DownloadType.FILE,
+
+    "videoplayback": DownloadType.FILE,
+
+    "application/vnd.yt-ump": DownloadType.UMP,
+}
     
 
 @dataclass

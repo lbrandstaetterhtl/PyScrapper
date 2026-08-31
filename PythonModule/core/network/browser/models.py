@@ -2,6 +2,14 @@ import os
 ROOT_DIR = os.getcwd()
 COOKIE_FILE = os.path.join(ROOT_DIR, "cookies.txt")
 
+
+
+
+BROWSER_ACTIONS = {
+    "wait" : int,
+    "click" : str,
+}
+
 PLAY_BUTTON_SELECTORS = [
         # --------------------------------------------------
         # Video.js

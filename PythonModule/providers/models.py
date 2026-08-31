@@ -161,7 +161,51 @@ EXTENSION_CONTENT_TYPES = {
     "mpd": "application/dash+xml",
 }
 
+GOOD_URL_KEYWORDS = {
+    "master": 100,
+    "playlist": 80,
+    "index": 70,
+    "stream": 50,
+    "audio": 20,
+    "video": 20,
+}
 
+BAD_URL_KEYWORDS = {
+    "preview": -100,
+    "sample": -100,
+    "thumbnail": -500,
+    "image": -500,
+    "banner": -500,
+    "ads": -1000,
+}
+
+URL_EXTENSION_KEYWORDS = {
+    "master.m3u8": "m3u8",
+    "playlist.m3u8": "m3u8",
+    "index.m3u8": "m3u8",
+    ".m3u8": "m3u8",
+
+    ".mpd": "mpd",
+    "manifest.mpd": "mpd",
+
+    "mp3-128": "mp3",
+    "mp3-192": "mp3",
+    "mp3-256": "mp3",
+    "mp3-320": "mp3",
+
+    "aac_96k": "aac",
+    "aac_160k": "aac",
+    "aac-96": "aac",
+    "aac-160": "aac",
+
+    "opus": "opus",
+
+    "audio/webm": "webm",
+    "video/webm": "webm",
+
+    "mime_type=audio": "m4a",
+    "mime_type=video": "mp4",
+}
 
 
 @dataclass
@@ -241,18 +285,6 @@ class ProviderResultRequest:
 
 
 
-class ProviderNames(Enum):
-    YOUTUBE = "youtube"
-    BANDCAMP = "bandcamp"
-    DEFAULT = "default"
-    SOUNDCLOUD = "soundcloud"
-
-
-
-
-
-
-
 
 def getUrlInformation(
         session,
@@ -266,7 +298,8 @@ def getUrlInformation(
         }
     )
 
-    total_size = None
+    total_size = -1
+    mime_type = ""
 
     with session.open(request=req, headers=extra_headers) as response:
         content_range = response.headers.get("Content-Range")
@@ -285,13 +318,13 @@ def getUrlInformation(
         elif content_length:
             total_size = int(content_length)
 
-        return int(total_size) if total_size is not None else None, mime_type
+        return int(total_size) if total_size is not None else -1, mime_type
 
 
 
     
 
-
+#This is old, stays here just in case old browser and media gets used
 def makeProviderResultFromCandidate(candidate: core.models.media.Media):
     if  candidate.streamType == core.models.media.StreamType.HLS:
             downloadType = core.models.Download.DownloadType.HLS
@@ -329,45 +362,40 @@ class BestMedia:
     file_ending : str | None = None
 
 
-def makeProviderResultFromBrowserMedia(
-    media: core.models.media.Media2,
+
+
+def makeProviderResultFromBrowserMediaList(
+    medialist: list[core.models.media.Media2],
     download_type: core.models.Download.DownloadType
 ) -> ProviderResult:
 
-    content_type = media.response_headers.get(
-        "content-type",
-        ""
-    )
+    pass
 
-    mime_type = (
-        content_type
-        .split(";", 1)[0]
-        .strip()
-        .lower()
-    )
+def _getUrlPriority(url: str) -> int:
+    urlLower = url.lower()
+    prio = 0
 
-    file_ending = CONTENT_TYPE_EXTENSIONS.get(
-        mime_type
-    )
+    for keyword, points in GOOD_URL_KEYWORDS.items():
+        if keyword in urlLower:
+            prio += points
 
-    media_type = None
+    for keyword, points in BAD_URL_KEYWORDS.items():
+        if keyword in urlLower:
+            prio += points
 
-    if mime_type.startswith("audio/"):
-        media_type = "audio"
+    return prio
 
-    elif mime_type.startswith("video/"):
-        media_type = "video"
 
-    return ProviderResult(
-        url=media.response_url,
-        download_type=download_type,
+def _guessExtensionFromUrl(url: str) -> str:
+    urlLower = url.lower()
 
-        extra_headers=media.request_headers,
+    for keyword, extension in URL_EXTENSION_KEYWORDS.items():
+        if keyword in urlLower:
+            return extension
 
-        file_ending=file_ending,
-        media_type=media_type,
-        mime_type=mime_type,
-    )
+    return ""
+
+
 
 def makeProviderResult(
         urls: list[str],
@@ -375,7 +403,7 @@ def makeProviderResult(
         download_type : core.models.Download.DownloadType
     ):
 
-    print(urls)
+
     preferredFile = request.preferred_file
 
     if preferredFile:
@@ -409,24 +437,35 @@ def makeProviderResult(
         name, extension = os.path.splitext(filename)
         extension = extension.lower().removeprefix(".")
 
-        prio: int = MEDIA_EXTENSION_PRIORITY.get(extension, 1)
+        if not extension:
+            extension = _guessExtensionFromUrl(url)
 
-        mediaKind = get_media_kind(extension)
+        prio: int = MEDIA_EXTENSION_PRIORITY.get(extension, 1)
+        prio += _getUrlPriority(url)
+
+        mediaKind = _getMediaKind(extension)
+
+#Check if the type is the wanted one and add huge prio bonus
         if request.preferred_type and mediaKind == request.preferred_type.lower():
             foundPreferredType = True
             prio += 200
 
+#Check if the file is requested one and add way too much prio so it gets picked
         if preferredFile and extension == preferredFile.lower():
             foundPreferredFile = True
             prio += 1000
 
+
         if prio > bestMedia.prio:
-            bestMedia.prio = prio
-            bestMedia.url = url
-            bestMedia.file_ending = extension
-            bestMedia.media_type = mediaKind
-            bestMedia.is_preferred_file = foundPreferredFile
-            bestMedia.is_preferred_type = foundPreferredType
+            bestMedia = BestMedia(
+                url=url,
+                prio=prio,
+                file_ending=extension,
+                media_type=mediaKind,
+                is_preferred_file=foundPreferredFile,
+                is_preferred_type=foundPreferredType
+            )
+    
 
     if bestMedia.url is None:
         raise core.models.errors.TaskFailedError(
@@ -484,12 +523,14 @@ def _buildProviderResult(
         )
     )
 
+    print(result)
+
 
     return result
     
 
     
-def get_media_kind(extension: str) -> str | None:
+def _getMediaKind(extension: str) -> str | None:
     extension = extension.lower()
 
     if extension in AUDIO_EXTENSIONS:

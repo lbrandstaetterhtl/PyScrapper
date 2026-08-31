@@ -99,11 +99,6 @@ class IndexHLSDownload(HLSDownload):
 
 
 
-    
-      
-
-
-
 
 
 
@@ -120,11 +115,13 @@ class IndexHLSDownload(HLSDownload):
             variable_name="indexFile", 
             caller="[CORE] IndexHLSDownload.run",
             extra_headers=self.downloadContext.target.extra_headers)
+
         
-        segmentList = None
-        segmentAudioList = None
         
-        segmentList:list[models.HLSSegment] = finder.findSegments(
+        segmentList: list[models.HLSSegment] = []
+        segmentAudioList: list[models.HLSSegment] = []
+        
+        segmentList = finder.findSegments(
             indexFile,
             indexUrl,
             caller="[CORE] IndexHLSDownload.run"

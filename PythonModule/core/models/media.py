@@ -63,6 +63,7 @@ class Media2:
     response_status : int 
     response_headers: dict[str, str] = field(default_factory=dict)
     response_body : bytes | None = None
+    response_download_type: str = "unknown"
 
    
 

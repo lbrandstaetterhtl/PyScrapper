@@ -53,7 +53,7 @@ class HLSDispatcher(Dispatcher):
    
     async def _runContextStream(self, context: Download.DownloadContext):
         async with self.downloadInformation.download_limiter:
-
+            
             file = await asyncio.to_thread(
                 html.getHtml,
                 session=self.downloadInformation.session,

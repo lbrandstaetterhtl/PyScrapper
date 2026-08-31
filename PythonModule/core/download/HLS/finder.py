@@ -251,13 +251,13 @@ def findSegments(
 
 
         url = parseUrl(index_url, line, caller=caller)
-
+ 
         _update_SegmentList(
             url, (len(segmentList) + 1), length)
         length = None
 
 
-
+    print(segmentList)
     return segmentList
         
 

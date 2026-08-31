@@ -559,20 +559,28 @@ async def receive_download(data: requests.DownloadRequest):
 
 def _getIndexSegmentsForStreaming(job: ServerJob,stream_id: str ,context: core.models.Download.DownloadContext):
     from PythonModule.core.download.HLS import models as hlsmodels
+    segmentList = []
+
     file = html.getHtml(
         session=job.download_information.session,
-        url=context.target.url,
+        url=context.target.resolved_url,
         extra_headers=context.target.extra_headers
     )
+
     fileType:hlsmodels.FileType = core.download.HLSDispatcher(job.download_information).dertermineFileType(file)
+
+
     if fileType == hlsmodels.FileType.MASTER_FILE:
         masterResults = core.download.MasterHLSDownload(context, job.download_information.session).getUrls()
         indexUrl, audioUrl = masterResults
 
         context.target.resolved_url = indexUrl
         segmentList, audioSegmentList = core.download.IndexHLSDownload(context, job.download_information.session).getIndexSegmentList()
+
+
     elif fileType == hlsmodels.FileType.INDEX_FILE:
         segmentList, audioSegmentList = core.download.IndexHLSDownload(context, job.download_information.session).getIndexSegmentList()
+
 
     if not segmentList:
         raise core.models.errors.TaskFailedError(
@@ -797,7 +805,7 @@ async def client_download_stream(task_id: str, stream_id: str):
         media_type="application/octet-stream",
         headers={
             "Content-Disposition":
-                f'attachment; filename="{context.output.full_filename if context.output.full_filename is not None else context.context_id}.{context.media_info.file_extension}"'
+                f'attachment; filename="{context.output.full_filename if context.output.full_filename is not None else (context.context_id + context.media_info.file_extension)}"'
         }
     )
     
