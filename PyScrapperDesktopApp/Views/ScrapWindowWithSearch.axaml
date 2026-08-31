@@ -45,7 +45,7 @@
                                                 <NumericUpDown Minimum="1" Value="{Binding SearchResultsCount}" Maximum="25" AllowSpin="True" FormatString="0"/>
                                         </StackPanel>
                 
-                                        <StackPanel Grid.Row="2" Classes="UICell" x:Name="MediaTypePanel">
+                                        <StackPanel Grid.Row="2" Classes="UICell">
                                                 <TextBlock Text="Select Mediatype: " Classes="UILabel"/>
                                                 <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
                                         </StackPanel>

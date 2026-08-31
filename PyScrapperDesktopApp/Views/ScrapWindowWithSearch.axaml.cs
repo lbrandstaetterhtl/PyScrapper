@@ -45,10 +45,5 @@ public partial class ScrapWindowWithSearch : Window
                 buttonCount--;
             }
         };
-
-        if (provider == "bandcamp" || provider == "bandcamp.com")
-        {
-            MediaTypePanel.IsVisible = false;
-        }
     }
 }

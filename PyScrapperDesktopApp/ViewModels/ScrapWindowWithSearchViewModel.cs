@@ -41,7 +41,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     private List<string> _availableMediaTypes = AppData.ValidMediaTypes.Keys.ToList();
     
     [ObservableProperty]
-    private string _selectedMediaType = ".mp3";
+    private string _selectedMediaType = "mp3";
     
     private readonly Window _scrapWindow;
     
@@ -127,56 +127,41 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             var topLevel = TopLevel.GetTopLevel(_scrapWindow);
             var storageService = new StorageService(topLevel!);
             var folder = await topLevel.StorageProvider.TryGetFolderFromPathAsync(AppData.Settings.DownloadPath!);
-            string downloadPath = "";
-            
+
             foreach (var item in SelectedItems)
             {
-                _cts.Token.ThrowIfCancellationRequested();
-                
-                var filename = item.title;
-                
-
-                if (SelectedItems.Count == 1)
+                var options = new FilePickerSaveOptions()
                 {
-                    var options = new FilePickerSaveOptions()
-                    {
-                        SuggestedStartLocation = folder,
-                        SuggestedFileName = filename,
-                    };
-                    options.FileTypeChoices = new List<FilePickerFileType>
-                    {
-                        new("Media Files")
-                        {
-                            Patterns = new List<string> { $"*.{SelectedMediaType}" }
-                        }
-                    };
+                    SuggestedStartLocation = folder,
+                    SuggestedFileName = $"{item.title}{SelectedMediaType}",
+                };
+
+                var file = await storageService.SaveFilePickerAsync(options);
+
+                if (file == null)
+                {
                     
-                    var file = await storageService.SaveFilePickerAsync(options);
-                    
-                    if (file == null) continue;
-                    
-                    filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
-                    downloadPath = file.Path.LocalPath;
+                    continue;
                 }
                 
-                
+                var filename = file.Name.Substring(0, file.Name.LastIndexOf('.'));
                 var validFilename = DownloadedMedia.TryValidateFileName(filename, out var errorMessage);
-                
+                var downloadPath = file.Path.LocalPath;
                 
                 while (!validFilename)
                 {
                     await _dialogService.ShowAlertAsync($"The filename \"{filename}\" is invalid: {errorMessage} Please rename the file and try again.");
                     
-                    var log = new Message($"Invalid filename \"{filename}\" for item \"{item.title}\": {errorMessage}", DateTime.Now, "ERROR");
+                    var log = new Message($"Invalid filename \"{filename}\" for item \"{item.identifier}\": {errorMessage}", DateTime.Now, "ERROR");
                     _logger.LogNewMassage(log);
                     
-                    var options = new FilePickerSaveOptions()
+                    options = new FilePickerSaveOptions()
                     {
                         SuggestedStartLocation = folder,
                         SuggestedFileName = filename,
                     };
                     
-                    var file = await storageService.SaveFilePickerAsync(options);
+                    file = await storageService.SaveFilePickerAsync(options);
 
                     if (file == null)
                     {
@@ -200,7 +185,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 Urls = Urls,
                 Filenames = FileNames,
                 PreferredFile = SelectedMediaType.Trim('.'),
-                PreferredType = AppData.ValidMediaTypes[SelectedMediaType.Trim('.')],
+                PreferredType = AppData.ValidMediaTypes[SelectedMediaType],
                 DownloadStrategy = "stream"
             };
 
