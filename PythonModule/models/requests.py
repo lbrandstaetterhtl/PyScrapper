@@ -19,7 +19,7 @@ class DownloadRequest(BaseModel):
     
     filenames: list[str]
 
-    download_strategie: core.models.Download.DownloadStrategie = core.models.Download.DownloadStrategie.STREAM
+    download_strategy: core.models.Download.DownloadStrategie = core.models.Download.DownloadStrategie.STREAM
 
     preferred_type : str |None = None
 
