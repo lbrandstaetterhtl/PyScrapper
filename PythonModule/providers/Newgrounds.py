@@ -286,47 +286,11 @@ def getMediaInformation(
         )
 
 
-    bestUrl: str | None = None
-    bestPriority = -1
-
-    for url in foundUrls:
-        extension = (
-            Path(urllib.parse.urlparse(url).path)
-            .suffix
-            .lower()
-            .removeprefix(".")
-        )
-
-        prio = models.NEWGROUNDS_MEDIA_PRIORITY.get(extension)
-
-        if prio is None:
-            continue
-
-        if prio > bestPriority:
-            bestUrl = url
-            bestPriority = prio
-    if bestUrl is None:
-        raise core.models.errors.TaskFailedError(
-            task="Newgrounds.getMediaInformation",
-            reason="No valid url was found",
-            extraMessages=[
-                f"Now listening all urls that got found:",
-                f", ".join(foundUrls) 
-            ],
-            caller="[providers] Newgrounds.getMediaInformation"
-        )
-
-    fileEnding = models.getContentType(bestUrl, request.ses, request.extra_headers)
-    
-    result = models.makeProviderResult(
-            url=bestUrl,
-            fileending=fileEnding,
-            type = core.models.Download.DownloadType.FILE,
-            extra_headers=request.extra_headers
-    
-        )
-    result.total_size = models.getFileInformations(session=request.ses, url=bestUrl, extra_headers=request.extra_headers)
-    return result
+    return models.makeProviderResult(
+        urls=foundUrls,
+        request=request,
+        download_type=core.models.Download.DownloadType.FILE
+    )
         
 
 

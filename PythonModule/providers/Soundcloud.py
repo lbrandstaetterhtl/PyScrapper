@@ -1,6 +1,6 @@
 #Core Imports
 import PythonModule.core as core
-from PythonModule.core.network import EmergencyBrowser
+from PythonModule.core.network import browser
 from PythonModule.core.network.Session import Session
 from PythonModule.core.network import html
 from PythonModule.models.requests import SearchFilters
@@ -12,6 +12,7 @@ from . import models
 import urllib.parse
 import asyncio
 import subprocess
+import time
 
 
 
@@ -165,7 +166,8 @@ def _buildSearchResult(
 
 
 def _buildSearchUrl(
-          search_term: str
+          search_term: str,
+        
 ) -> str:
     core.general.Validate.general.validateStr(argument_name="search_term", string=search_term, caller="[providers] Soundcloud._buildSearchUrl")
     url = "https://soundcloud.com/search?" + urllib.parse.urlencode(
@@ -178,10 +180,15 @@ def _buildSearchUrl(
 
 def getMediaInformation(
         request: models.ProviderResultRequest,
+        retrys: int = 3,
 ) -> models.ProviderResult:
 
     core.general.Validate.general.validateGeneralType(
-        argument_name="request", obj=request, objType=models.ProviderResultRequest, caller="Soundcloud.getMediaInformation"
+        argument_name="request", obj=request, objType=models.ProviderResultRequest, caller="[providers] Soundcloud.getMediaInformation"
+    )
+
+    core.general.Validate.general.validateInt(
+        argument_name="retrys", integer=retrys, caller="[providers] Soundcloud.getMediaInformation"
     )
 
     core.general.Validate.special.validateHostPro(
@@ -191,29 +198,60 @@ def getMediaInformation(
         caller="[providers] Soundcloud.download"
         )
 
-    buttonList=[
-    "#onetrust-reject-all-handler",
-    "button.modal__closeButton[title='Close']"
-    ]
+    browserConfig = {
+        "click" : "#onetrust-reject-all-handler",
+        "wait" : 500,
+        "click" : "button.modal__closeButton[title='Close']",
+        "wait" : 500
+    }
+    
 
-    medialist: core.models.media.MediaList = EmergencyBrowser.BrowserDiscoverStreamURLs_ButtonList(
-        request.url,
-        headless=True,
-        adBlock=True,
-        buttonList=buttonList
-     )
+    mediaBrowser = browser.MediaBrowser(
+        url=request.url,
+    )
+
+    medialist: list[core.models.media.Media2] = []
+
+    def _getMedia(browser: browser.MediaBrowser):
+        nonlocal medialist
+        browser.run(
+            headless=False,
+            extra_headers=request.extra_headers,
+            actions=browserConfig
+        )
+        time.sleep(3)
+
+        medialist, unknownlist = browser.stop()
+
+    retry: int = 0
+    while retry < retrys:
+        if medialist:
+            break
+
+        _getMedia(mediaBrowser)
     
     if not medialist:
         raise core.models.errors.TaskFailedError(
-            task="[CORE] BrowserDiscoverStreamUrls_ButtonList",
+            task="[CORE] SoundCloud._getMedia",
             reason="Browser couldn't detect find valid media",
-            extraMessages=["Browser can't find media when the website is DRM protected/encrypted", "Try again with Headful Browser and see if Browser is now able to find Media"]
+            extraMessages=
+            [
+                "Browser can't find media when the website is DRM protected/encrypted",
+                "Try again with Headful Browser and see if Browser is now able to find Media"
+                ],
+            caller="[CORE] SoundCloud.getMediaInformation"
         )
 
-    bestCandidate = medialist.candidates[0]
-    result = models.makeProviderResultFromCandidate(bestCandidate)
-    result.total_size = models.getFileInformations(session=request.ses, url=result.url, extra_headers=result.extra_headers)
-    return result
+    urls: list[str] = []
+
+    for media in medialist:
+        urls.append(media.response_url)
+
+    return models.makeProviderResult(
+        urls=urls,
+        request=request,
+        download_type=core.models.Download.DownloadType.HLS
+    )
     
     
 

@@ -82,13 +82,23 @@ Websites with partial support:
         )
 
     bestCandidate = medialist.candidates[0]
-    print("test")
-    result: models.ProviderResult = models.makeProviderResultFromCandidate(bestCandidate)
-    print("test2")
-    result.total_size = models.getFileInformations(session=request.ses, url=result.url, extra_headers=result.extra_headers)
-    print(result)
 
-    return result
+    
+    if  bestCandidate.streamType == core.models.media.StreamType.HLS:
+        downloadType = core.models.Download.DownloadType.HLS
+        if bestCandidate.mediaExtension == "m3u8": 
+            bestCandidate.mediaExtension = "ts"
+
+    elif bestCandidate.streamType == core.models.media.StreamType.DIRECT:
+        downloadType = core.models.Download.DownloadType.FILE
+    else:
+        downloadType = None
+
+    return models.makeProviderResult(
+        urls=[bestCandidate.mediaUrl],
+        request=request,
+        download_type=downloadType
+    )
     
     
 

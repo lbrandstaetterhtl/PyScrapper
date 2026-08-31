@@ -50,7 +50,7 @@ def getMediaInformation(
 
     core.general.Validate.special.validateHostPro(
         url=request.url,
-        allowed_hostnames_list=["wcolfix.tv", "www.wcoflix.tv"],
+        allowed_hostnames_list=["wcoflix.tv", "www.wcoflix.tv"],
         caller="[providers] Wcoflix.getMediaInformation"
     )
 
@@ -94,9 +94,15 @@ def getMediaInformation(
             caller="[provider] Wcoflix.download"
         )
 
-    result = models.makeProviderResultFromCandidate(candidate=medialist.candidates[0])
+    print("TESTATASRFAR")
+    print(medialist.candidates[-1].mediaUrl)
+    request.extra_headers = medialist.candidates[-1].headers.to_dict()
 
-    return result
+    return models.makeProviderResult(
+        urls=[medialist.candidates[-1].mediaUrl],
+        request=request,
+        download_type=core.models.Download.DownloadType.FILE
+    )
 
 
 #def download(

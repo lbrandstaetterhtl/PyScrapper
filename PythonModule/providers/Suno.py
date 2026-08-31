@@ -147,7 +147,7 @@ def getMediaInformation(
         caller="[providers] Suno.getMediaInformation"
     )
 
-    def getUrls():
+    def _getUrls():
 
         siteHtml = html.getHtml(
             session=request.ses,
@@ -163,7 +163,7 @@ def getMediaInformation(
             return_regex_exception=True
         )
     try:
-        allUrls:list[str] = getUrls()
+        allUrls:list[str] = _getUrls()
 
     except Exception:
 #if there aren't urls found it will probably because of captcha
@@ -178,44 +178,23 @@ def getMediaInformation(
 
     identifier: str = request.url.rstrip(".")[0].split("/", 1)[-1]
 
-    allUrls = getUrls()
+    allUrls = _getUrls()
 
-    bestUrl: str | None
-    bestPrio: int = -1
+
+    cleanedUrls: list[str] = []
 
     for url in allUrls:
-        extension = url.rstrip(".")[-1]
         
-
         if identifier not in url:
             continue
-        prio = models.MEDIA_PRIORITY_FOR_QUALITY_AUDIO.get(extension, 0)
+        cleanedUrls.append(url)
 
-        if prio > bestPrio:
-            bestUrl = url
-            bestPrio = prio
-
-    if bestUrl is None:
-        raise core.models.errors.TaskFailedError(
-            task="Suno.getMediaInformation",
-            reason="No supported audio/video file found",
-            extraMessages=[
-                f"Used url: {request.url}"
-            ],
-            caller="[providers] Suno.getMediaInformation"
-        )
-
-    fileEnding = models.getContentType(bestUrl, request.ses, request.extra_headers)
-
-    result =  models.makeProviderResult(
-            url=bestUrl,
-            fileending=fileEnding,
-            type = core.models.Download.DownloadType.FILE,
-            extra_headers=request.extra_headers
-    
-        )
-    result.total_size = models.getFileInformations(session=request.ses, url=bestUrl, extra_headers=request.extra_headers)
-    return result
+    return models.makeProviderResult(
+        urls=cleanedUrls,
+        request=request,
+        download_type=core.models.Download.DownloadType.FILE
+    )
+        
     
 
 
