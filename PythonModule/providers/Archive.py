@@ -90,7 +90,7 @@ def getMediaInformation(
     urls: list[str] = []
    
 
-#Looking every file and priorites them. since this is used by a video/audio download containers like mkv are more important than mp3
+#Looking every file and prioritizes them. since this is used by a video/audio download containers like mkv are more important than mp3
 #Saves the file with highest priority and result will be that file
     for file in metadata.get("files", []):
         name: str = file.get('name')

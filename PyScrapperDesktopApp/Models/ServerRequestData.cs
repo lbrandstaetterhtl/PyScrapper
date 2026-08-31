@@ -11,18 +11,25 @@ public class DownloadRequestData
 {
     [JsonPropertyName("provider")]
     public string Provider { get; set; }
-        
-    [JsonPropertyName("url")]
-    public string Url { get; set; }
-        
-    [JsonPropertyName("mediatype")]
-    public string Mediatype { get; set; }
-        
-    [JsonPropertyName("filename")]
-    public string Filename { get; set; }
-        
-    [JsonPropertyName("download_path")]
-    public string? Download_path { get; set; }
+    
+    [JsonPropertyName("urls")]
+    public List<string> Urls { get; set; }
+    
+    [JsonPropertyName("filenames")]
+    public List<string> Filenames { get; set; }
+    
+    [JsonPropertyName("download_strategy")]
+    public string DownloadStrategy { get; set; }
+
+    [JsonPropertyName("extra_headers")] public Dictionary<string, string> ExtraHeaders { get; set; } = null;
+
+    [JsonPropertyName("download_path")] public string DownloadPath { get; set; } = "";
+    
+    [JsonPropertyName("preferred_type")]
+    public string PreferredType { get; set; }
+    
+    [JsonPropertyName("preferred_file")]
+    public string PreferredFile { get; set; }
 }
 
 /// <summary>

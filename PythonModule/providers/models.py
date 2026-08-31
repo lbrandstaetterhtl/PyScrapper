@@ -375,6 +375,7 @@ def makeProviderResult(
         download_type : core.models.Download.DownloadType
     ):
 
+    print(urls)
     preferredFile = request.preferred_file
 
     if preferredFile:
@@ -383,7 +384,7 @@ def makeProviderResult(
             raise core.models.errors.ArgumentError(
                 argument="preferred_file",
                 wanted_type=f"string -> with value {', '.join(SUPPORTED_EXTENSIONS)}",
-                caller="[providers] get_best_Url"
+                caller="[providers] makeProviderResult"
             )
 
     if request.preferred_type:
@@ -391,7 +392,7 @@ def makeProviderResult(
             raise core.models.errors.ArgumentError(
                 argument="preferred_type",
                 wanted_type=f"string -> with value 'audio', 'video'",
-                caller="[providers] get_best_Url"
+                caller="[providers] makeProviderResult"
             )
 
     bestMedia = BestMedia(
@@ -408,10 +409,7 @@ def makeProviderResult(
         name, extension = os.path.splitext(filename)
         extension = extension.lower().removeprefix(".")
 
-        prio: int = MEDIA_EXTENSION_PRIORITY.get(extension, None)
-
-        if prio is None:
-            continue
+        prio: int = MEDIA_EXTENSION_PRIORITY.get(extension, 1)
 
         mediaKind = get_media_kind(extension)
         if request.preferred_type and mediaKind == request.preferred_type.lower():
@@ -432,13 +430,13 @@ def makeProviderResult(
 
     if bestMedia.url is None:
         raise core.models.errors.TaskFailedError(
-            task="[providers] get_best_Url",
+            task="[providers] makeProviderResult",
             reason="Didn't find any media with supported extensions",
             extraMessages=[
                 "Now listing the supported files:",
                 f"{', '.join(SUPPORTED_EXTENSIONS)}",
             ],
-            caller="[providers] get_best_Url"
+            caller="[providers] makeProviderResult"
         )
     
 

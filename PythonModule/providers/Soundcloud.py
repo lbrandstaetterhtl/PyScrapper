@@ -113,7 +113,7 @@ def _inFilter(
     if not filters.tags or filters.tags == [""]:
         return True
 
-#Gettign result type, if it somehow is None, it will be marked as unknown an for safety and inspection it will still be marked as saveable
+#Getting result type, if it somehow is None, it will be marked as unknown and for safety and inspection it will still be marked as saveable
     resultType:str = result.get("type", None)
     if resultType == None:
         result["type"] = "unknown"
@@ -133,23 +133,23 @@ def _buildSearchResult(
 
 ) -> dict:
     
-#Search functions which calls this functions allready uses the right url
+#Search functions which calls this functions already uses the right url
     result: dict = {"url": url}
 #Open the url and search for title, thumbnail and type
     with session.open(url=url) as response:
         data = response.read().decode("utf-8")
 
-#Getting Type what this soundcloud ressource is
+#Getting Type what this soundcloud resource is
     typePattern: str = r'<meta property="og:type" content="([^"]*)">'
     ressourceType: str = core.general.DataSearch.searchBlocks(typePattern, data, return_regex_exception=False)
     result["type"] = TYPE_MAPPING.get(ressourceType, None)
 
-#Getting Title of this soudncloud ressource
+#Getting Title of this soundcloud resource
     titlePattern: str = r'<meta property="og:title" content="([^"]*)">'
     title: str = core.general.DataSearch.searchBlocks(titlePattern, data, return_regex_exception=False)
     result["title"] = title
 
-#Getting Thumbnail of this soundcloud ressource
+#Getting Thumbnail of this soundcloud resource
     thumbnailPattern: str = r'<meta property="og:image" content="([^"]*)">'
     thumbnail: str = core.general.DataSearch.searchBlocks(thumbnailPattern, data, return_regex_exception=False)
     result["thumbnail"] = thumbnail

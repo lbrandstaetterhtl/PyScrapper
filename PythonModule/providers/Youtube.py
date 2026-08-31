@@ -136,7 +136,7 @@ def search(
         url=search_url,
         session=session
         )
-    core.general.Validate.general.validateStr(argument_name="searchHtml", string=searchHtml, caller="[providers] Youtbe.search.getHtml")
+    core.general.Validate.general.validateStr(argument_name="searchHtml", string=searchHtml, caller="[providers] Youtube.search.getHtml")
     
     
     keyword = "var ytInitialData = "
@@ -826,7 +826,7 @@ def _buildProgressHook(progress_dict: dict):
             progress_dict["downloadProgress"] = 100
 
         elif status == "error":
-            raise YoutubeDownloadError("YOUTUBE_DOWNLOAD: an error occured while downloading")
+            raise YoutubeDownloadError("YOUTUBE_DOWNLOAD: an error occurred while downloading")
     
 
     return progress_hook

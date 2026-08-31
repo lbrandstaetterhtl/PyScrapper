@@ -56,8 +56,8 @@ CONTENT_TYPE_EXTENSIONS = {
     "application/dash+xml": "mpd",
 }
 
-REQUESTS_DIR = os.path.dirname(os.path.abspath(__file__))
-COOKIE_FILE = os.path.join(REQUESTS_DIR, "cookies.txt")
+ROOT_DIR = os.getcwd()
+COOKIE_FILE = os.path.join(ROOT_DIR, "cookies.txt")
 
 
 AD_SKIP_BUTTON_NAMES = [
@@ -754,7 +754,7 @@ def _tryPressPlay(page, max_attempts: int = 4, wait_ms: int = 2000) -> bool:
             #break aus selector-loop wegen redirect/popup → frame-loop auch abbrechen
             break
 
-        # Fallback -< JS play auf frischen Frames
+        # Fallback -> JS play auf frischen Frames
         try:
             fresh_frames = list(page.frames)
         except Exception:
@@ -866,7 +866,7 @@ def _buildCurlCommand(
     if include_cookie_header:
         wanted_headers.append("cookie")
 
-    # playwright normale gives headers in lower case.
+    # playwright normally gives headers in lower case.
     normalized = {str(k).lower(): str(v) for k, v in (headers or {}).items() if v is not None}
 
     lines = [f"curl {shlex.quote(url)}"]
@@ -1546,7 +1546,7 @@ def BrowserDiscoverStreamURLs(
                 
 
 
-#Goes to the requested website and waits a brief period of time to get ressources before trying to click something
+#Goes to the requested website and waits a brief period of time to get resources before trying to click something
             try:
                 page.goto(url, wait_until="domcontentloaded", timeout=15000)
                 page.wait_for_timeout(1500)
@@ -1564,7 +1564,7 @@ def BrowserDiscoverStreamURLs(
 
             
             
-#Trys to press variety of default buttons            
+#Tries to press variety of default buttons            
             _tryPressPlay(page)
             print("Now waiting for timeout")
             page.wait_for_timeout(4000)

@@ -48,7 +48,7 @@ def search(
 
 )-> list[dict]:
     core.general.Validate.general.validateStr(argument_name="search_term", string=search_term, caller="[providers] Suno.search")
-    core.general.Validate.special.validateSession(session=session, argument_name="session", caller="[provders] Suno.search")
+    core.general.Validate.special.validateSession(session=session, argument_name="session", caller="[providers] Suno.search")
 
 
     url = "https://studio-api-prod.suno.com/api/unified/feed"

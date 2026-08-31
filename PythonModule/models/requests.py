@@ -6,7 +6,7 @@ import os
 
 import PythonModule.core as core
 
-#Downlaod path
+#Download path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -19,7 +19,7 @@ class DownloadRequest(BaseModel):
     
     filenames: list[str]
 
-    download_strategy: core.models.Download.DownloadStrategie = core.models.Download.DownloadStrategie.STREAM
+    download_strategie: core.models.Download.DownloadStrategie = core.models.Download.DownloadStrategie.STREAM
 
     preferred_type : str |None = None
 

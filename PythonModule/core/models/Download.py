@@ -88,7 +88,7 @@ class DownloadProgress:
 
     status: TaskStatus = TaskStatus.QUEUED
 
-    start_time: float | None = None
+    start_time: float  = 0.0
 
     progress: float = 0.0
 
@@ -98,10 +98,10 @@ class DownloadProgress:
     downloaded_segments: int = 0
     total_segments: int = -1
 
-    speed: float = 0.
-    eta: float | None = None
+    speed: float = 0.0
+    eta: float = 0.0
 
-    error_message: str | None = None
+    error_message: str = ""
 
 
     def __str__(self) -> str:

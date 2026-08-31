@@ -72,7 +72,7 @@ async def downloadAndYieldUMP(
             )
 
 
-#This functioins made by AI
+#This functions made by AI
 async def downloadAndYieldUMPRange(
     session,
     start_url: str,

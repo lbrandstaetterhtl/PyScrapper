@@ -62,22 +62,22 @@ public class NormalResponse
 /// </summary>
 public class ProgressSuccessResponse
 {
-    [JsonPropertyName("id")]
+    [JsonPropertyName("job_id")]
     public string Id { get; set; }
         
     [JsonPropertyName("status")]
     public string Status { get; set; }
         
-    [JsonPropertyName("downloadProgress")]
+    [JsonPropertyName("progress")]
     public float DownloadProgress { get; set; }
         
-    [JsonPropertyName("errorMessage")]
+    [JsonPropertyName("error_message")]
     public string ErrorMessage { get; set; }
         
-    [JsonPropertyName("totalBytes")]
+    [JsonPropertyName("total_bytes")]
     public long TotalBytes { get; set; }
         
-    [JsonPropertyName("downloadedBytes")]
+    [JsonPropertyName("downloaded_bytes")]
     public long DownloadedBytes { get; set; }
         
     [JsonPropertyName("speed")]
@@ -86,10 +86,10 @@ public class ProgressSuccessResponse
     [JsonPropertyName("eta")]
     public float Eta { get; set; }
     
-    [JsonPropertyName("totalSegments")]
+    [JsonPropertyName("total_segments")]
     public int TotalSegments { get; set; }
     
-    [JsonPropertyName("downloadedSegments")]
+    [JsonPropertyName("downloaded_segments")]
     public int DownloadedSegments { get; set; }
 }
 
@@ -119,6 +119,69 @@ public class HttpErrorResponse
 {
     [JsonPropertyName("detail")] 
     public string Detail { get; set; }
+}
+
+public class DownloadResponse
+{
+    [JsonPropertyName("task_id")]
+    public string TaskId { get; set; }
+    
+    [JsonPropertyName("resources")]
+    public List<DownloadResource> Resources { get; set; }
+}
+
+public class DownloadResource
+{
+    [JsonPropertyName("context")]
+    public Context Context { get; set; }
+    
+    [JsonPropertyName("progress_url")]
+    public string ProgressUrl { get; set; }
+    
+    [JsonPropertyName("download_url")]
+    public string DownloadUrl { get; set; }
+    
+    [JsonPropertyName("watch_url")]
+    public string WatchUrl { get; set; }
+    
+    [JsonPropertyName("stream_type")]
+    public string StreamType { get; set; }
+}
+
+public class Context
+{
+    [JsonPropertyName("context_id")]
+    public string ContextId { get; set; }
+    
+    [JsonPropertyName("output")]
+    public OutputField Output { get; set; }
+    
+    [JsonPropertyName("media_info")]
+    public MediaInfoField MediaInfo { get; set; }
+}
+
+public class OutputField
+{
+    [JsonPropertyName("full_filename")]
+    public string FullFilename { get; set; }
+    
+    [JsonPropertyName("download_path")]
+    public string DownloadPath { get; set; }
+    
+    [JsonPropertyName("out_file")]
+    public string OutFile { get; set; }
+}
+
+public class MediaInfoField
+{
+    [JsonPropertyName("mime_type")]
+    public string MimeType { get; set; }
+    
+    [JsonPropertyName("file_extension")]
+    public string FileExtension { get; set; }
+    
+    [JsonPropertyName("total_size")]
+    public long TotalSize { get; set; }
 }
 
 public class CreateResponse

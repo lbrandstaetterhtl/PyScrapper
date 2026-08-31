@@ -205,7 +205,7 @@ def tryPressPlay(
             #break aus selector-loop wegen redirect/popup → frame-loop auch abbrechen
             break
 
-        # Fallback -< JS play auf frischen Frames
+        # Fallback -> JS play auf frischen Frames
         try:
             fresh_frames = list(page.frames)
         except Exception:

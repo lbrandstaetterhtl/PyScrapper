@@ -69,7 +69,7 @@ def search(
             searchUrl
         )
             core.general.Validate.general.validateStr(argument_name="searchHtml", string=searchHtml, caller="[providers] Newgrounds.search")
-    #Pattern with every that find every relevant block and their ressources which this finder uses. There are a lot more "<a href" in newgroudns search html, but with this pattern we find everything we need
+    #Pattern with every that find every relevant block and their resources which this finder uses. There are a lot more "<a href" in newgrounds search html, but with this pattern we find everything we need
             resourceBlockPattern =  r'(<a\s+href="[^"]+"\s+class="[^"]+"\s+title="[^"]+".*?<img\s+src="[^"]+").*?</a>'
             blocks = core.general.DataSearch.searchBlocksAll(resourceBlockPattern, searchHtml, return_regex_exception=True)
             searchBlockList.append(blocks)
@@ -82,7 +82,7 @@ def search(
 
         noItemStreak = 0
 
-    #If there are more tags and therefor more lists -> I didn't want to fill results with firstly data of tag1 and if there is still space to fill go to list with tag2, so with everyround a new list gets used and rounds back after max len has been reached
+    #If there are more tags and therefore more lists -> I didn't want to fill results with firstly data of tag1 and if there is still space to fill go to list with tag2, so with every round a new list gets used and rounds back after max len has been reached
         while True:
             if len(results) >= top:
                 return results
@@ -157,7 +157,7 @@ def _buildSearchResult(
     thumbnailPattern = r'<img\s+src="(.*?)"'
     thumbnail = core.general.DataSearch.searchBlocks(thumbnailPattern, block, return_regex_exception=False)
 
-#Sometimes newgrounds thumbnails start with just // so we need to check for that and add newground.com
+#Sometimes newgrounds thumbnails start with just // so we need to check for that and add newgrounds.com
     if thumbnail:
         if thumbnail.startswith("//"):
             thumbnail = urllib.parse.urljoin(

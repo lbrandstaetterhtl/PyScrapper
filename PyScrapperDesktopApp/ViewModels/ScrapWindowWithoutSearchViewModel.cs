@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -25,9 +26,9 @@ namespace PyScrapperDesktopApp.ViewModels;
 /// </summary>
 public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
 {
-    [ObservableProperty] private string _sunoUrl = "";
+    [ObservableProperty] private string _url = "";
     
-    private readonly List<string> _availableMediaType = AppData.ValidMediaTypes;
+    private readonly List<string> _availableMediaType = AppData.ValidMediaTypes.Keys.ToList();
 
     [ObservableProperty]
     private string _selectedMediaType = "";
@@ -66,58 +67,63 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
             var requestData = new DownloadRequestData()
             {
                 Provider = SelectedProvider,
-                Url = SunoUrl,
-                Mediatype = SelectedMediaType,
-                Filename = Filename,
-                Download_path = AppData.Settings.DownloadPath
+                Urls = new List<string>([Url]),
+                Filenames = new List<string>([Filename]),
+                PreferredFile = SelectedMediaType,
+                PreferredType = AppData.ValidMediaTypes[SelectedMediaType],
+                DownloadStrategy = "stream"
             };
 
             var result = await client.SendScrapRequest(requestData);
 
-            if (result != "-1")
+            foreach (var resource in result.Resources)
             {
-                Task.Delay(2000).Wait();
-
-                var progressWindow = new ProgressBarWindow();
-                progressWindow.Show();
-
-                bool errorWhileDownloading = false;
-                if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
-                    errorWhileDownloading = await vm.StartProgress(result);
-
-                if (!errorWhileDownloading)
+                if (result.TaskId != "-1")
                 {
                     Task.Delay(2000).Wait();
 
-                    var downloadedFilePath =
-                        Path.Combine(AppData.Settings.DownloadPath, $"{Filename}{SelectedMediaType}");
 
-                    bool isPlayable = false;
+                    var progressWindow = new ProgressBarWindow();
+                    progressWindow.Show();
 
-                    while (!isPlayable)
+                    bool errorWhileDownloading = false;
+                    if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
+                        errorWhileDownloading = await vm.StartProgress(resource);
+
+                    if (!errorWhileDownloading)
                     {
-                        isPlayable = File.Exists(downloadedFilePath);
+                        Task.Delay(2000).Wait();
+
+                        var downloadedFilePath =
+                            Path.Combine(AppData.Settings.DownloadPath, $"{Filename}{SelectedMediaType}");
+
+                        bool isPlayable = false;
+
+                        while (!isPlayable)
+                        {
+                            isPlayable = File.Exists(downloadedFilePath);
+                        }
+
+                        var req = new CreateDownloadedMediaRequest
+                        {
+                            UserIdentifier = AppData.CurrentUser.Identifier,
+                            DownloadPath = downloadedFilePath,
+                            DownloadedAt = DateTime.Now.ToString("o"),
+                            MediaType = SelectedMediaType,
+                            IsPlayable = isPlayable,
+                            Url = Url,
+                            Title = Filename
+                        };
+
+                        var media = await Database.CreateDownloadedMediaAsync(req);
+
+                        AppData.AddDownloadedMedia(media);
                     }
-
-                    var req = new CreateDownloadedMediaRequest
+                    else
                     {
-                        UserIdentifier = AppData.CurrentUser.Identifier,
-                        DownloadPath = downloadedFilePath,
-                        DownloadedAt = DateTime.Now.ToString("o"),
-                        MediaType = SelectedMediaType,
-                        IsPlayable = isPlayable,
-                        Url = SunoUrl,
-                        Title = Filename
-                    };
-
-                    var media = await Database.CreateDownloadedMediaAsync(req);
-
-                    AppData.AddDownloadedMedia(media);
-                }
-                else
-                {
-                    await _dialogService.ShowAlertAsync(
-                        "An error occurred while downloading the media. Please try again.");
+                        await _dialogService.ShowAlertAsync(
+                            "An error occurred while downloading the media. Please try again.");
+                    }
                 }
             }
 

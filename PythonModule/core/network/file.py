@@ -104,7 +104,7 @@ def downloadToFileSimple(
     
 
     downloadedBytes = 0
-#Actuall download part
+#Actual download part
     with session.open(url=url, headers=extra_headers) as response, open(out_file, open_file_method) as file:
         while True:
             chunk = response.read(chunk_size)

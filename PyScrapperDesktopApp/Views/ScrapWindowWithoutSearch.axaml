@@ -27,7 +27,7 @@
                         <StackPanel Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <StackPanel Classes="UICell">
                                         <TextBlock Text="Enter URL: " Classes="UILabel"/>
-                                        <TextBox Text="{Binding SunoUrl}" Classes="UI"/>
+                                        <TextBox Text="{Binding Url}" Classes="UI"/>
                                 </StackPanel>
                                 
                                 <StackPanel Classes="UICell">

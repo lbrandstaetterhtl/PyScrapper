@@ -41,7 +41,7 @@ class HLSDispatcher(Dispatcher):
         
         if preferred_languages is not None:
             Validate.general.validateListStr(
-                argument_name="prefered_languages",
+                argument_name="preferred_languages",
                 liste=preferred_languages,
                 caller="[CORE] HLSDispatcher.init"
             )

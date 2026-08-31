@@ -199,7 +199,7 @@ async def get_download_progress(task_id: str):
     progress = download_progress.get(task_id)
     if not progress:
         log_queue.put_nowait(f"[ERROR] Tried to access resource /download/progress/{task_id} which doesn't exist")
-        raise HTTPException(status_code=404, detail=f"No such ressource /download/progress/{task_id}")
+        raise HTTPException(status_code=404, detail=f"No such resource /download/progress/{task_id}")
     return progress
 
 

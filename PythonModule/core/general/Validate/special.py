@@ -49,10 +49,10 @@ def validateHostDefault(
     hostname = parsed.hostname
 
 
-#Allow IP adresses
+#Allow IP addresses
     try:
         ipaddress.ip_address(hostname)
-        invalidReasonList.append("Given hostname was a IP-Adress which core doesn't allow for safety")
+        invalidReasonList.append("Given hostname was a IP-Address which core doesn't allow for safety")
     
     
     except ValueError:
@@ -72,13 +72,13 @@ def validateHostDefault(
     labels = hostname.split(".")
 
     if len(labels) < 2:
-        invalidReasonList.append("Hostname needs atleast two labels.")
+        invalidReasonList.append("Hostname needs at least two labels.")
 
     labelPattern = re.compile(
         r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$"
     )
 
-#Now checking every label if their they have valid number or letter in it
+#Now checking every label if they have valid number or letter in it
     if not all(labelPattern.fullmatch(label) for label in labels):
         invalidReasonList.append("Invalid numbers and letters found in hostname.")
 

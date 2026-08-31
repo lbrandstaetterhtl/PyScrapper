@@ -38,7 +38,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     private List<ApiClient.SearchResultItem> _selectedItems = new();
     
     [ObservableProperty]
-    private List<string> _availableMediaTypes = AppData.ValidMediaTypes;
+    private List<string> _availableMediaTypes = AppData.ValidMediaTypes.Keys.ToList();
     
     [ObservableProperty]
     private string _selectedMediaType = ".mp3";
@@ -120,7 +120,9 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
 
             var client = new ApiClient(_dialogService);
 
-            List<DownloadRequestData> requestsDates = new();
+            List<string> Urls = new List<string>();
+            List<string> FileNames = new List<string>();
+            List<string> Paths = new List<string>();
             
             var topLevel = TopLevel.GetTopLevel(_scrapWindow);
             var storageService = new StorageService(topLevel!);
@@ -145,7 +147,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     {
                         new("Media Files")
                         {
-                            Patterns = new List<string> { $"*{SelectedMediaType}" }
+                            Patterns = new List<string> { $"*.{SelectedMediaType}" }
                         }
                     };
                     
@@ -187,28 +189,78 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     downloadPath = file.Path.LocalPath;
                 }
 
-                if (filename == null)
-                {
-                    continue;
-                }
-
-                var requestData = new DownloadRequestData
-                {
-                    Provider = _selectedProvider,
-                    Url = item.url,
-                    Mediatype = SelectedMediaType,
-                    Filename = filename,
-                    Download_path = string.IsNullOrEmpty(downloadPath) ? AppData.Settings.DownloadPath : Path.GetDirectoryName(downloadPath),
-                };
-
-                requestsDates.Add(requestData);
+                Urls.Add(item.url);
+                FileNames.Add(filename);
+                Paths.Add(downloadPath);
             }
 
-            var result = await client.SendListScrapRequest(requestsDates, _cts.Token);
-
-            if (result.Contains(false))
+            DownloadRequestData requestData = new DownloadRequestData()
             {
-                await _dialogService.ShowAlertAsync("Not all scrap requests were successful. Please check the logs for more information.");
+                Provider = _selectedProvider,
+                Urls = Urls,
+                Filenames = FileNames,
+                PreferredFile = SelectedMediaType.Trim('.'),
+                PreferredType = AppData.ValidMediaTypes[SelectedMediaType.Trim('.')],
+                DownloadStrategy = "stream"
+            };
+
+            var result = await client.SendScrapRequest(requestData);
+
+            int counter = 0;
+            foreach (var resource in result.Resources)
+            {
+                if (result.TaskId != "-1")
+                {
+                    Task.Delay(2000).Wait();
+
+
+                    var progressWindow = new ProgressBarWindow();
+                    progressWindow.Show();
+
+                    bool errorWhileDownloading = false;
+                    if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
+                        errorWhileDownloading = await vm.StartProgress(resource);
+                    
+                    var ct =  new CancellationTokenSource();
+                    
+                    await client.GetFileFromStream(resource.DownloadUrl, Paths[counter], ct.Token);
+                    if (!errorWhileDownloading)
+                    {
+                        Task.Delay(2000).Wait();
+
+                        var downloadedFilePath =
+                            Path.Combine(AppData.Settings.DownloadPath, $"{FileNames[counter]}{SelectedMediaType}");
+
+                        bool isPlayable = false;
+
+                        while (!isPlayable)
+                        {
+                            isPlayable = File.Exists(downloadedFilePath);
+                        }
+
+                        var req = new CreateDownloadedMediaRequest
+                        {
+                            UserIdentifier = AppData.CurrentUser.Identifier,
+                            DownloadPath = downloadedFilePath,
+                            DownloadedAt = DateTime.Now.ToString("o"),
+                            MediaType = SelectedMediaType,
+                            IsPlayable = isPlayable,
+                            Title = FileNames[counter],
+                            Url = Urls[counter]
+                        };
+
+                        var media = await Database.CreateDownloadedMediaAsync(req);
+
+                        AppData.AddDownloadedMedia(media);
+                    }
+                    else
+                    {
+                        await _dialogService.ShowAlertAsync(
+                            "An error occurred while downloading the media. Please try again.");
+                    }
+                }
+
+                counter++;
             }
 
             _cts.Cancel();
@@ -244,7 +296,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         {
             var client = new ApiClient(_dialogService);
 
-            List<string> tags = [""];
+            List<string> tags = ["track"];
 
             var filters = new SearchFilter()
             {

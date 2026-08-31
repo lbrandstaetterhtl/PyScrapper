@@ -116,7 +116,7 @@ class DownloadDispatcher():
     async def downloadAndYield(self):
         """
         Streams all contexts sequentially into one raw byte stream
-        For http requests or without knowing when one file ends it isn't recommend using this function
+        For http requests or without knowing when one file ends it isn't recommended using this function
         Recommendation: Use downloadContextAndYield() instead
         """
 

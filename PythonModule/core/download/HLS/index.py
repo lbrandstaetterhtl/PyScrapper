@@ -95,7 +95,7 @@ class IndexHLSDownload(HLSDownload):
 
         self.downloadContext.download_progress.status = Download.TaskStatus.FINISHED
 
-#Ich lasse getrennte auido und video streamen mal aus
+#Ich lasse getrennte audio und video streamen mal aus
 
 
 

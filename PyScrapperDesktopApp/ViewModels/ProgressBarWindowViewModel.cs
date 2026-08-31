@@ -55,7 +55,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     /// <param name="id"></param>
     /// <returns name="errorWhileDownloading"></returns>
     /// <exception cref="Exception"></exception>
-    public Task<bool> StartProgress(string id)
+    public Task<bool> StartProgress(DownloadResource resource)
     {
         try
         {
@@ -76,7 +76,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
 
                         try
                         {
-                            var progressResponse = _apiClient.GetDownloadProgress(id);
+                            var progressResponse = _apiClient.GetDownloadProgress(resource);
                             var progressData = progressResponse.Result;
 
                             if (progressData == null) throw new Exception("Failed to get progress data");

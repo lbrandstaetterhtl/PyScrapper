@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 import os
 print("DISPLAY:", os.environ.get("DISPLAY"))
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import asyncio
 import sqlite3
 import secrets
@@ -55,13 +57,6 @@ from PythonModule.core.network import file, html
 import PythonModule.providers.models as providermodels
 from PythonModule.core.network.Session import Session
 
-
-
-
-
-
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 
@@ -436,7 +431,7 @@ async def _run_local_download(
 
 
 
-@app.post("/download/video-audio/", dependencies=[Depends(require_admin)])
+@app.post("/download/video-audio", dependencies=[Depends(require_admin)])
 async def receive_download(data: requests.DownloadRequest):
 #Settings and creation
     global server_state
@@ -460,9 +455,9 @@ async def receive_download(data: requests.DownloadRequest):
             creation_timestamp=time.monotonic()
         )
         server_state.jobs[taskId] = job
-        ressources : list[responses.Ressources] = []
+        resources : list[responses.Resources] = []
         
-#Depending on the strategie something different will happen
+#Depending on the strategy something different will happen
         if data.download_strategie == core.models.Download.DownloadStrategie.LOCAL:
             downloader = core.download.Dispatcher.DownloadDispatcher(downloadInformation)
             asyncio.create_task(
@@ -474,11 +469,11 @@ async def receive_download(data: requests.DownloadRequest):
 
             
             for context in downloadInformation.contexts:
-                ressource = responses.Ressources(
+                resource = responses.Resources(
                     context=context,
                     progress_url=f"/download/progress/{taskId}/{context.context_id}"
                 )
-                ressources.append(ressource)
+                resources.append(resource)
     
 
         elif data.download_strategie == core.models.Download.DownloadStrategie.STREAM:
@@ -512,14 +507,14 @@ async def receive_download(data: requests.DownloadRequest):
                
                 server_state.jobs[taskId].stream_jobs[streamJob.stream_id] = streamJob
 
-                ressource = responses.Ressources(
+                resource = responses.Resources(
                         context=context,
                         progress_url=f"/download/progress/{taskId}/{context.context_id}",
                         download_url=f"/stream/download/{taskId}/{context.context_id}",
                         watch_url=f"/stream/watch/{taskId}/{context.context_id}{watchUrlExtension}",
                         stream_type = streamType
                     )
-                ressources.append(ressource)
+                resources.append(resource)
                 
             
         
@@ -533,10 +528,10 @@ async def receive_download(data: requests.DownloadRequest):
         
         return responses.DownloadResponse(
             task_id=taskId,
-            ressources=ressources
+            resources=resources
         ).model_dump(
             exclude={
-                "ressources": {
+                "resources": {
                     "__all__": {
                         "context": {
                             "target": {

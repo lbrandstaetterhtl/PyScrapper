@@ -34,7 +34,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     /// <param name="requestData"></param>
     /// <param name="ct"></param>
     /// <returns name="id"></returns>
-    public async Task<string> SendScrapRequest(DownloadRequestData requestData)
+    public async Task<DownloadResponse> SendScrapRequest(DownloadRequestData requestData)
     {
         using HttpClient client = new();
         client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
@@ -44,17 +44,26 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
         
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/download", content);
+        var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/download/video-audio", content);
+
+        if (response is null)
+        {
+            _logger.LogDebugMessage(new Message($"Response is null", DateTime.Now, "ERROR"));
+        }
+            
+        
         var responseData = await response.Content.ReadAsStringAsync();
         
         if (response.IsSuccessStatusCode)
         {
-            var deserializedResponse = JsonSerializer.Deserialize<NormalResponse>(responseData, JsonOptions);
+            var deserializedResponse = JsonSerializer.Deserialize<DownloadResponse>(responseData, JsonOptions);
 
-            var log = new Message($"Server received request and sent message: {deserializedResponse?.Message}", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
-
-            return deserializedResponse?.Id!;
+            foreach (var resource in deserializedResponse.Resources)
+            {
+                _logger.LogDebugMessage(new Message($"Resource: {resource.Context.ContextId}, Progress URL: {resource.ProgressUrl}, Download URL: {resource.DownloadUrl}", DateTime.Now, "DEBUG"));
+            }
+            
+            return deserializedResponse;
         }
         else
         {
@@ -65,7 +74,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
             var massageBox = new MessageBox($"Error sending download request: {deserializedError?.Detail}");
             await massageBox.ShowDialog(App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
             
-            return "-1";
+            return new DownloadResponse { TaskId = "-1" };
         }
     }
 
@@ -186,12 +195,12 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     /// <param name="downloadId"></param>
     /// <param name="ct"></param>
     /// <returns name="progressResponse"></returns>
-    public async Task<ProgressSuccessResponse> GetDownloadProgress(string downloadId)
+    public async Task<ProgressSuccessResponse> GetDownloadProgress(DownloadResource resource)
     {
         using HttpClient client = new();
         client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
 
-        var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/download/progress/{downloadId}");
+        var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}{resource.ProgressUrl}");
         var responseData = await response.Content.ReadAsStringAsync();
 
         if (response.IsSuccessStatusCode)
@@ -201,7 +210,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
                 var progressResponse = JsonSerializer.Deserialize<ProgressSuccessResponse>(responseData, JsonOptions);
 
                 var log = new Message(
-                    $"Download progress for ID: \"{downloadId}\": {progressResponse?.Status}, {progressResponse?.DownloadProgress}%, {progressResponse?.Speed} MB/s",
+                    $"Download progress for ID: \"{resource.Context.ContextId}\": {progressResponse?.Status}, {progressResponse?.DownloadProgress}%, {progressResponse?.Speed} MB/s",
                     DateTime.Now, "INFO");
                 _logger.LogNewMassage(log);
 
@@ -209,7 +218,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
             }
             catch (Exception ex)
             {
-                var log = new Message($"Error parsing progress response for ID: \"{downloadId}\": {ex.Message}", DateTime.Now, "ERROR");
+                var log = new Message($"Error parsing progress response for ID: \"{resource.Context.ContextId}\": {ex.Message}", DateTime.Now, "ERROR");
                 _logger.LogNewMassage(log);
                 return null;
             }
@@ -238,6 +247,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
     /// <param name="ct"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
+    /*
     public async Task<List<bool>> SendListScrapRequest(List<DownloadRequestData> requestDataList, CancellationToken ct)
     {
         using HttpClient client = new();
@@ -320,7 +330,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
             _logger.LogNewMassage(log);
             return null;
         }
-    }
+    }*/
 
     /// <summary>
     /// Sends a login request to the server with the given username and password. If successful, it logs the login information, sets the current user in AppData, and returns true.
@@ -412,6 +422,34 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
             await massageBox.ShowDialog(App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null);
             
             return false;
+        }
+    }
+
+    public async Task GetFileFromStream(string downloadUrl, string downloadPath, CancellationToken ct)
+    {
+        _logger.LogDebugMessage(new Message($"Starting download from {downloadUrl} to {downloadPath}", DateTime.Now, "DEBUG"));
+        using var client = new HttpClient();
+        using var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}{downloadUrl}", HttpCompletionOption.ResponseHeadersRead, ct);
+        
+        response.EnsureSuccessStatusCode();
+        
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+
+        if (!File.Exists(downloadPath))
+        {
+            File.Create(downloadPath).Dispose();
+        }
+        
+        await using var fileStream = new FileStream(downloadPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 81920, useAsync: true);
+        
+        var buffer = new byte[8192];
+        int read;
+
+        while ((read = await stream.ReadAsync(buffer, ct)) > 0)
+        {
+            await fileStream.WriteAsync(buffer.AsMemory(0, read), ct);
+            
+            Task.Delay(100).Wait();
         }
     }
 

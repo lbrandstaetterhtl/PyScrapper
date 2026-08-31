@@ -54,7 +54,7 @@ def findBestQualityStream(
         
         curStream.stream_bandwidth = int(bandwidth) if bandwidth else 0
 
-#Checking if current found stream has higher bandwidth, if yes get bonus informations
+#Checking if current found stream has higher bandwidth, if yes get bonus information
         if curStream.stream_bandwidth > bestStream.stream_bandwidth:
             curStream.audio_information.audio_type = DataSearch.searchBlocks(
                 models.PATTERN_MAPPING.get(models.PatternTypes.AUDIO_STREAM_TYPE), stream, False
@@ -184,14 +184,14 @@ def findSegments(
     )
     length: float | None = None
 
-#Checking if it has decrypted segments
+#Checking if it has encrypted segments
     if "#EXT-X-KEY" in index_file or "#EXT-X-SESSION-KEY" in index_file:
         raise TaskFailedError(
             task="[CORE] IndexHLSDownload._get_Segments",
-            reason="Ecrypted segments found in index file",
+            reason="Encrypted segments found in index file",
             extraMessages=[
                 "Decryption will likely never be implemented sorry",
-                "Index file comming up",
+                "Index file coming up",
                 index_file
             ],
             caller=caller

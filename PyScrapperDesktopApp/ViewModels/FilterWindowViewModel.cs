@@ -19,7 +19,7 @@ public partial class FilterWindowViewModel : ObservableObject
     private string? _searchQuery = null;
 
     [ObservableProperty] 
-    private List<string> _availableMediaTypes = AppData.ValidMediaTypes;
+    private List<string> _availableMediaTypes = AppData.ValidMediaTypes.Keys.ToList();
 
     [ObservableProperty]
     private ObservableCollection<string> _selectedMediaTypes = new();

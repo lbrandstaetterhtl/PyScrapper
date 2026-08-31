@@ -25,10 +25,10 @@ public static class Interfaces
     /// </summary>
     public interface IApiClient
     {
-        Task<string> SendScrapRequest(DownloadRequestData data);
+        Task<DownloadResponse> SendScrapRequest(DownloadRequestData data);
         Task<HealthResponse> GetHealth(bool logResponse = true);
         Task<List<ApiClient.SearchResultItem>> SendSearchRequest(SearchRequestData data);
-        Task<ProgressSuccessResponse> GetDownloadProgress(string id);
+        Task<ProgressSuccessResponse> GetDownloadProgress(DownloadResource resource);
     }
     
     /// <summary>

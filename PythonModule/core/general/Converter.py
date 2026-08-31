@@ -41,7 +41,7 @@ class FileConverter():
                 task="[CORE] FileConverter.init",
                 reason="Given input file doesn't exist",
                 caller=caller,
-                extraMessages=["Atleast one given input file doesn't exist", f"Files that didn't exist: {', '.join(fileMissingList)}"]
+                extraMessages=["At least one given input file doesn't exist", f"Files that didn't exist: {', '.join(fileMissingList)}"]
             )
 
         for output_file in convert_request.output_file_list:
@@ -51,7 +51,7 @@ class FileConverter():
             if parentDir and not os.path.isdir(parentDir) or not parentDir:
                 raise TaskFailedError(
                     task="[CORE] FileConvert.init",
-                    reason="Invlaid Parent dir",
+                    reason="Invalid Parent dir",
                     caller=caller
                 )
 
@@ -96,7 +96,7 @@ class FileConverter():
                     raise TaskFailedError(
                         task="[CORE] FileConverter.run",
                         reason="ffmpeg encountered a problem while converting files",
-                        extraMessages=["The following ffmpeg error has occured", e.stderr or str(e)],
+                        extraMessages=["The following ffmpeg error has occurred", e.stderr or str(e)],
                         caller=self.caller
                     ) from e
 
@@ -225,7 +225,7 @@ class FileConverter():
 
                     _, currentBest = bestAudio
 #Python compares tuples one after each other, the first value to win is the general winner
-#This just makes sure if fore example bitsPerSample are both times the same that the other values also gets checked and compared
+#This just makes sure if for example bitsPerSample are both times the same that the other values also gets checked and compared
                     currentQuality = (
                         audio.channels,
                         audio.sampleRate,

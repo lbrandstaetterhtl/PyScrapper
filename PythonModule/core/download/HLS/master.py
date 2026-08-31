@@ -1,4 +1,4 @@
-# Core Improts
+# Core Imports
 
 from ...models.Download import DownloadContext
 from ...models.errors import TaskFailedError
@@ -15,7 +15,7 @@ from .downloader import HLSDownload
 
 
 
-#Doesn't actually download anything, just prepares download_informations for IndexDownload and chooses audio and stream url
+#Doesn't actually download anything, just prepares download_information for IndexDownload and chooses audio and stream url
 class MasterHLSDownload(HLSDownload):
     """
     Class for handling HLS download from a master m3u8 file.
@@ -39,7 +39,7 @@ class MasterHLSDownload(HLSDownload):
         if preferred_languages is not None:
             from ...general import Validate
             Validate.general.validateListStr(
-                argument_name="prefered_languages",
+                argument_name="preferred_languages",
                 liste=preferred_languages,
                 caller="[CORE] HLSDownload.init"
                 )
@@ -76,8 +76,8 @@ class MasterHLSDownload(HLSDownload):
         )
         if stream.audio_information.audio_seperated:
             message += (
-                "Extra audio informations were found:"
-                "Audio is in a seperated file"
+                "Extra audio information was found:"
+                "Audio is in a separated file"
                 f"Audio URL: {stream.audio_information.audio_url}"
                 f"Audio Language: {stream.audio_information.audio_language}"
             )
@@ -120,7 +120,7 @@ class MasterHLSDownload(HLSDownload):
 
         )
 
-#Actuall Streamblocks with "video"
+#Actual Streamblocks with "video"
         streamBlocks: list[tuple[str, str]] = DataSearch.searchBlocksAll(
             models.PATTERN_MAPPING.get(models.PatternTypes.STREAM),
             master_file
