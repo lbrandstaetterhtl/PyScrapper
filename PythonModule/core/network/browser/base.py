@@ -39,6 +39,8 @@ class Browser():
         self.browser = None
         self.playwright = None
 
+        self.fatalError: Exception | None = None
+
     
         
 
@@ -225,6 +227,12 @@ class Browser():
         self.browser = None
 
         print("[CORE] Browser.stop: Stopped browser")
+
+    def _raiseFatalError(self):
+        if getattr(self, "fatalError", None) is not None:
+            error = self.fatalError
+            self.fatalError = None
+            raise error
 
 
     

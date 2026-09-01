@@ -208,11 +208,18 @@ URL_EXTENSION_KEYWORDS = {
 }
 
 
+class StreamType(Enum):
+    HLS = "hls",
+    FILE = "file",
+    DASH = "dash",
+    UMP = "ump",
+    UNKNOWN = "unknown"
+
 @dataclass
 class ProviderResult:
     url: str 
 
-    download_type: core.models.Download.DownloadType
+    download_type: StreamType
 
     extra_headers: dict | None = None
 
@@ -349,17 +356,18 @@ def makeProviderResultFromCandidate(candidate: core.models.media.Media):
 
 
 
-
 @dataclass
-class BestMedia:
-    url: str | None = None
+class FoundMedia:
+    url: str
     prio : int = -1
 
-    is_preferred_type: bool = False
-    is_preferred_file : bool = False
+    stream_type : core.models.Download.DownloadType = core.models.Download.DownloadType.UNKNOWN
+    media_type : str = ""
 
-    media_type : str | None = None
-    file_ending : str | None = None
+    extension: str = ""
+    mime_type: str = ""
+
+    extra_headers : dict[str, str] = field(default_factory=dict)
 
 
 
@@ -386,6 +394,7 @@ def _getUrlPriority(url: str) -> int:
     return prio
 
 
+
 def _guessExtensionFromUrl(url: str) -> str:
     urlLower = url.lower()
 
@@ -398,9 +407,8 @@ def _guessExtensionFromUrl(url: str) -> str:
 
 
 def makeProviderResult(
-        urls: list[str],
+        found_media_list: list[FoundMedia],
         request: ProviderResultRequest,
-        download_type : core.models.Download.DownloadType
     ):
 
 
@@ -423,51 +431,28 @@ def makeProviderResult(
                 caller="[providers] makeProviderResult"
             )
 
-    bestMedia = BestMedia(
-        url=None
+    bestMedia = FoundMedia(
+        url=""
     )
 
-    for url in urls:
-        foundPreferredType: bool = False
-        foundPreferredFile: bool = False
+    for i, media in enumerate(found_media_list):
 
-        path = urllib.parse.urlparse(url).path
+        #Add check that checks if stuff like media type is unknown just in case and then update media object to continue normally
+        print(f"Checking entry: {i}/{len(found_media_list)}")
+        print(media)
 
-        filename = os.path.basename(path)
-        name, extension = os.path.splitext(filename)
-        extension = extension.lower().removeprefix(".")
+        if media.extension == request.preferred_file.lower():
+            media.prio += 1000
 
-        if not extension:
-            extension = _guessExtensionFromUrl(url)
+        if media.media_type == request.preferred_type.lower():
+            media.prio += 200
 
-        prio: int = MEDIA_EXTENSION_PRIORITY.get(extension, 1)
-        prio += _getUrlPriority(url)
+        if media.prio > bestMedia.prio:
+            bestMedia = media
 
-        mediaKind = _getMediaKind(extension)
+        
 
-#Check if the type is the wanted one and add huge prio bonus
-        if request.preferred_type and mediaKind == request.preferred_type.lower():
-            foundPreferredType = True
-            prio += 200
-
-#Check if the file is requested one and add way too much prio so it gets picked
-        if preferredFile and extension == preferredFile.lower():
-            foundPreferredFile = True
-            prio += 1000
-
-
-        if prio > bestMedia.prio:
-            bestMedia = BestMedia(
-                url=url,
-                prio=prio,
-                file_ending=extension,
-                media_type=mediaKind,
-                is_preferred_file=foundPreferredFile,
-                is_preferred_type=foundPreferredType
-            )
-    
-
-    if bestMedia.url is None:
+    if not bestMedia.url:
         raise core.models.errors.TaskFailedError(
             task="[providers] makeProviderResult",
             reason="Didn't find any media with supported extensions",
@@ -479,45 +464,46 @@ def makeProviderResult(
         )
     
 
-    result = _buildProviderResult(
+    return _buildProviderResultFromFoundMedia(
         bestMedia,
         request
     )
-    result.download_type = download_type
-    return result
 
 
 
 
 
-def _buildProviderResult(
-        media : BestMedia,
+
+
+def _buildProviderResultFromFoundMedia(
+        media : FoundMedia,
         request: ProviderResultRequest,
 ) -> ProviderResult:
 
-    fileEnding = media.file_ending
 
-    if fileEnding.lower() == "m3u8":
-        fileEnding = "ts"
+
 
     size, mime = getUrlInformation(
         session=request.ses,
         url=media.url,
-        extra_headers=request.extra_headers
+        extra_headers=media.extra_headers
     )
+#Server works with total size or total segments depending on file or hls
+    if media.stream_type == StreamType.HLS:
+        size = -1
     
     result = ProviderResult(
         url=media.url,
-        download_type=None,
-        extra_headers=request.extra_headers,
-        file_ending=fileEnding,
+        download_type=media.stream_type,
+        extra_headers=media.extra_headers,
+        file_ending=media.extension,
         media_type=media.media_type,
-        mime_type=mime,
+        mime_type=media.mime_type,
         total_size=size,
         info = core.models.Download.Info(
             url=media.url,
-            found_file=media.file_ending,
-            preferred_file=request.preferred_file if request.preferred_file else media.file_ending,
+            found_file=media.extension,
+            preferred_file=request.preferred_file if request.preferred_file else media.extension,
             found_type=media.media_type,
             preferred_type=request.preferred_type if request.preferred_type else media.media_type
         )

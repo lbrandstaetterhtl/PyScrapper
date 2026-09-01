@@ -529,18 +529,6 @@ async def receive_download(data: requests.DownloadRequest):
         return responses.DownloadResponse(
             task_id=taskId,
             resources=resources
-        ).model_dump(
-            exclude={
-                "resources": {
-                    "__all__": {
-                        "context": {
-                            "target": {
-                                "post_body"
-                            }
-                        }
-                    }
-                }
-            }
         )
 
 
@@ -552,6 +540,17 @@ async def receive_download(data: requests.DownloadRequest):
     except core.models.errors.TaskFailedError as e:
         server_state.log_queue.put_nowait(f"[ERROR] Failed download. Request: {data}. Message from Resolver: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+    except core.models.errors.DRMProtectedMediaError as e:
+        server_state.log_queue.put_nowait(
+        f"[ERROR] DRM protected media. Request: {data}. Error: {e}"
+        )
+
+        raise HTTPException(
+            status_code=422,
+            detail=str(e)
+        )
+
 
 
 

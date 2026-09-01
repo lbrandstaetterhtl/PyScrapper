@@ -124,3 +124,34 @@ class TaskFailedError(Exception):
                 exceptionMessage += f"- {message}\n"
 
         super().__init__(exceptionMessage)
+
+
+
+
+class DRMProtectedMediaError(Exception):
+    def __init__(
+        self,
+        detected_url: str,
+        source_url: str | None = None,
+        caller: str | None = None,
+        drm_type: str | None = None,
+    ):
+        self.detected_url = detected_url
+        self.source_url = source_url
+        self.caller = caller
+        self.drm_type = drm_type
+
+        parts = ["DRM protected media detected"]
+
+        if drm_type:
+            parts.append(f"DRM: {drm_type}")
+
+        parts.append(f"Detected URL: {detected_url}")
+
+        if source_url:
+            parts.append(f"Source URL: {source_url}")
+
+        if caller:
+            parts.append(f"Caller: {caller}")
+
+        super().__init__(" | ".join(parts))

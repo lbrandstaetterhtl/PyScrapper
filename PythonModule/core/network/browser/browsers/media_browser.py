@@ -60,13 +60,19 @@ class MediaBrowser(Browser):
         if actions:
             self._handleActions(actions)
 
+        self._raiseFatalError()
+
 
         helpers.button.tryPressPlay(
             self.page,
             own_selectors=self.playbuttonSelectors
         )
 
+        self._raiseFatalError()
+
         self.page.wait_for_timeout(wait_ms)
+
+        self._raiseFatalError()
 
 
     def _handleActions(
