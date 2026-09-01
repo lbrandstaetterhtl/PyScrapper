@@ -17,7 +17,7 @@ def updateDownloadProgress(
     caller: str = "[CORE] updateDownloadProgress"
 ):
 
-    if download_progress.start_time is None:
+    if download_progress.start_time is None or download_progress.start_time == 0:
         download_progress.start_time = time.monotonic()
     
     
