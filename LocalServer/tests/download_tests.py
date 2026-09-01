@@ -1,91 +1,46 @@
-﻿"""
-download_endpoint_test.py
---------------------------
-Robustheits- und Negativtest fuer den PyScrapper /download-Endpoint.
+"""Auth- und Robustheitstests fuer den PyScrapper Download-Endpoint.
 
-Liegt in: LocalServer/tests/
-Zweck: pruefen, ob die serverseitige Auth UND Input-Validierung halten.
+Beispiele:
+    python download_tests.py quick
+    python download_tests.py normal --base-url http://127.0.0.1:8765
+    python download_tests.py --mode intense
 
-Getestet werden zwei Ebenen:
-  1. AUTH   - fehlender / falscher X-Admin-Key -> 401 erwartet
-  2. INPUT  - mit gueltigem Key: kaputter/unsinniger Body -> 4xx erwartet
-
-Der ADMIN_KEY wird aus LocalServer/.env geladen und als Header
-"X-Admin-Key" mitgeschickt.
-
-Nutzung (aus beliebigem Verzeichnis, Pfade sind skript-relativ):
-    python download_endpoint_test.py
-    python download_endpoint_test.py --base-url http://127.0.0.1:8765
+Modi:
+    quick   - Auth + wichtigste Schema-/Security-Checks
+    normal  - quick + komplette bisherige Negativtest-Suite
+    intense - normal + weitere Grenz-, Schema- und Pfadfaelle
 """
 
+from __future__ import annotations
+
 import argparse
-import json
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 
 try:
-    import requests
-except ImportError:
-    print("Bitte 'requests' installieren: pip install requests")
-    sys.exit(1)
+    from test_common import (
+        Reporter,
+        TestOutcome,
+        add_common_arguments,
+        load_env_value,
+        mask_secret,
+        mode_at_least,
+        perform_request,
+        selected_mode,
+    )
+except ImportError as exc:
+    print(f"Test-Hilfsmodul konnte nicht geladen werden: {exc}")
+    sys.exit(2)
 
-
-# --------------------------------------------------------------------------
-# Pfade - skript-relativ
-#   Skript:      LocalServer/tests/download_endpoint_test.py
-#   TESTS_DIR:   LocalServer/tests
-#   SERVER_DIR:  LocalServer      <- hier liegt die .env
-#   REPO_ROOT:   PyScrapper
-# --------------------------------------------------------------------------
 TESTS_DIR = Path(__file__).resolve().parent
 SERVER_DIR = TESTS_DIR.parent
-REPO_ROOT = SERVER_DIR.parent
+PROJECT_ROOT = SERVER_DIR.parent
 LOG_FILE = TESTS_DIR / "download_endpoint_test.log"
-ENV_FILE = SERVER_DIR / ".env"
-
+ENV_FILE = PROJECT_ROOT / ".env"
 HEADER_NAME = "X-Admin-Key"
+DEFAULT_ENDPOINT = "/download/video-audio"
 
-
-# --------------------------------------------------------------------------
-# .env laden: ADMIN_KEY aus LocalServer/.env
-# Bevorzugt python-dotenv, faellt auf simplen Eigenparser zurueck.
-# --------------------------------------------------------------------------
-def load_admin_key():
-    # 1) python-dotenv, falls installiert
-    try:
-        from dotenv import dotenv_values
-        vals = dotenv_values(ENV_FILE)
-        if vals.get("ADMIN_KEY"):
-            return vals["ADMIN_KEY"]
-    except ImportError:
-        pass
-
-    # 2) simpler Eigenparser
-    if ENV_FILE.exists():
-        for raw in ENV_FILE.read_text(encoding="utf-8").splitlines():
-            line = raw.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            if key.strip() == "ADMIN_KEY":
-                # umschliessende Quotes entfernen
-                return val.strip().strip('"').strip("'")
-    return None
-
-
-def log(msg, to_file=True):
-    line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}"
-    print(line)
-    if to_file:
-        with open(LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
-
-
-# --------------------------------------------------------------------------
-# Ein gueltiger Basis-Payload (wird fuer die Auth-Tests wiederverwendet)
-# --------------------------------------------------------------------------
 VALID_PAYLOAD = {
     "provider": "youtube",
     "url": "https://example.com/x",
@@ -93,183 +48,139 @@ VALID_PAYLOAD = {
     "filename": "test",
 }
 
-
-# --------------------------------------------------------------------------
-# INPUT-Testfaelle (jeweils MIT gueltigem Key gesendet)
-#   (name, payload, expectation)
-# --------------------------------------------------------------------------
-INPUT_CASES = [
+QUICK_CASES = [
     ("leerer Body", {}, "reject"),
     ("voellig falsche Felder", {"foo": "bar", "banana": 42}, "reject"),
-    ("null-Werte in Pflichtfeldern",
-     {"provider": None, "url": None, "mediatype": None, "filename": None}, "reject"),
+    ("null-Werte in Pflichtfeldern", {"provider": None, "url": None, "mediatype": None, "filename": None}, "reject"),
+    ("file://-Schema", {"provider": "youtube", "url": "file:///etc/passwd", "mediatype": ".mp3", "filename": "test"}, "reject"),
+    ("falsche Typen", {"provider": 12345, "url": ["not", "a", "string"], "mediatype": True, "filename": {"nested": "object"}}, "reject"),
+]
 
-    ("unbekannter Provider",
-     {"provider": "totallynotaprovider", "url": "https://example.com/x",
-      "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("leerer Provider",
-     {"provider": "", "url": "https://example.com/x",
-      "mediatype": ".mp3", "filename": "test"}, "reject"),
+NORMAL_CASES = QUICK_CASES + [
+    ("unbekannter Provider", {"provider": "totallynotaprovider", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "test"}, "reject"),
+    ("leerer Provider", {"provider": "", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "test"}, "reject"),
+    ("http statt https", {"provider": "youtube", "url": "http://example.com/x", "mediatype": ".mp3", "filename": "test"}, "reject"),
+    ("keine URL, nur Text", {"provider": "youtube", "url": "das ist keine url", "mediatype": ".mp3", "filename": "test"}, "reject"),
+    ("nicht erlaubter Media-Type", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".exe", "filename": "test"}, "reject"),
+    ("Path-Traversal Windows", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "..\\..\\..\\windows\\system32\\evil"}, "reject"),
+    ("Path-Traversal Unix", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "../../../../etc/cron.d/x"}, "reject"),
+    ("absoluter Windows-Pfad", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "C:\\Windows\\evil"}, "reject"),
+    ("Windows Reserved Name CON", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "CON"}, "reject"),
+    ("extrem langer Dateiname", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "A" * 5000}, "reject"),
+]
 
-    ("http statt https",
-     {"provider": "youtube", "url": "http://example.com/x",
-      "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("gar keine URL, nur Text",
-     {"provider": "youtube", "url": "das ist keine url",
-      "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("file://-Schema (lokaler Zugriff)",
-     {"provider": "youtube", "url": "file:///etc/passwd",
-      "mediatype": ".mp3", "filename": "test"}, "reject"),
-
-    ("nicht erlaubter Media-Type",
-     {"provider": "youtube", "url": "https://example.com/x",
-      "mediatype": ".exe", "filename": "test"}, "reject"),
-
-    ("Path-Traversal im Dateinamen",
-     {"provider": "youtube", "url": "https://example.com/x",
-      "mediatype": ".mp3", "filename": "..\\..\\..\\windows\\system32\\evil"}, "reject"),
-    ("Path-Traversal unix-style",
-     {"provider": "youtube", "url": "https://example.com/x",
-      "mediatype": ".mp3", "filename": "../../../../etc/cron.d/x"}, "reject"),
-    ("absoluter Pfad als Dateiname",
-     {"provider": "youtube", "url": "https://example.com/x",
-      "mediatype": ".mp3", "filename": "C:\\Windows\\evil"}, "reject"),
-    ("Windows-Reserved-Name (CON)",
-     {"provider": "youtube", "url": "https://example.com/x",
-      "mediatype": ".mp3", "filename": "CON"}, "reject"),
-
-    ("extrem langer Dateiname",
-     {"provider": "youtube", "url": "https://example.com/x",
-      "mediatype": ".mp3", "filename": "A" * 5000}, "reject"),
-    ("falscher Typ (Zahl statt String)",
-     {"provider": 12345, "url": ["not", "a", "string"],
-      "mediatype": True, "filename": {"nested": "object"}}, "reject"),
+INTENSE_CASES = NORMAL_CASES + [
+    ("leerer Dateiname", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": ""}, "reject"),
+    ("Dateiname nur Whitespace", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "   "}, "reject"),
+    ("Dateiname Punkt", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "."}, "reject"),
+    ("Dateiname Doppelpunkt", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": ".."}, "reject"),
+    ("absoluter Unix-Pfad", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "/etc/passwd"}, "reject"),
+    ("UNC-Pfad", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "\\\\server\\share\\evil"}, "reject"),
+    ("NUL im Dateinamen", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "evil\u0000.mp3"}, "reject"),
+    ("Reserved Name AUX", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "AUX"}, "reject"),
+    ("Reserved Name COM1", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "COM1"}, "reject"),
+    ("ftp://-Schema", {"provider": "youtube", "url": "ftp://example.com/x", "mediatype": ".mp3", "filename": "test"}, "reject"),
+    ("data:-Schema", {"provider": "youtube", "url": "data:text/plain,hello", "mediatype": ".mp3", "filename": "test"}, "reject"),
+    ("javascript:-Schema", {"provider": "youtube", "url": "javascript:alert(1)", "mediatype": ".mp3", "filename": "test"}, "reject"),
+    ("fehlender Provider", {"url": "https://example.com/x", "mediatype": ".mp3", "filename": "test"}, "reject"),
+    ("fehlende URL", {"provider": "youtube", "mediatype": ".mp3", "filename": "test"}, "reject"),
+    ("fehlender Media-Type", {"provider": "youtube", "url": "https://example.com/x", "filename": "test"}, "reject"),
+    ("fehlender Dateiname", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3"}, "reject"),
 ]
 
 
-# --------------------------------------------------------------------------
-# HTTP-Aufruf
-# --------------------------------------------------------------------------
-def post(base_url, payload, headers):
-    return requests.post(f"{base_url}/download", json=payload,
-                         headers=headers, timeout=10)
+def evaluate(status: int, expectation: str, response_text: str) -> TestOutcome:
+    if expectation == "unauth":
+        if status in (401, 403):
+            return TestOutcome("PASS", f"Auth blockiert den Request mit HTTP {status}.")
+        return TestOutcome("FAIL", f"Auth sollte vor der Endpoint-Logik mit 401/403/404 blockieren, bekam aber HTTP {status}.")
 
-
-def evaluate(status, expectation):
-    """Gibt (ok: bool, note: str) zurueck."""
     if expectation == "reject":
         if 400 <= status < 500:
-            return True, "OK - korrekt abgelehnt (4xx wie erwartet)"
-        if status >= 500:
-            return False, ("PROBLEM - Server-Crash (5xx). Sollte 4xx sein! "
-                           "-> Validierung faengt diesen Fall nicht sauber ab.")
-        return False, ("PROBLEM - Server hat AKZEPTIERT (2xx), obwohl er "
-                       "ablehnen sollte! -> Luecke.")
-    if expectation == "unauth":
-        if status == 401:
-            return True, "OK - 401 wie erwartet (Auth greift)"
-        if status == 403:
-            return True, "OK - 403 (Auth greift, wenn auch 403 statt 401)"
-        return False, (f"PROBLEM - erwartete 401, bekam {status}. "
-                       "-> Endpoint ist NICHT durch den Key geschuetzt!")
-    # accept
+            return TestOutcome("PASS", f"Ungueltiger Request wurde sauber clientseitig abgelehnt (HTTP {status}).")
+        if 500 <= status:
+            lower = response_text.lower()
+            if "url" in lower or "reach" in lower or "resolve" in lower:
+                return TestOutcome(
+                    "FAIL",
+                    "Der Request passierte die fruehe Eingabevalidierung und erreichte offenbar URL-/Media-Aufloesung; dort entstand ein 5xx. Erwartet war ein sauberer 4xx vor tieferer Verarbeitung.",
+                )
+            return TestOutcome("FAIL", "Ungueltiger Input fuehrte zu einem Serverfehler (5xx) statt zu einem kontrollierten 4xx.")
+        return TestOutcome("FAIL", f"Ungueltiger Input wurde mit HTTP {status} akzeptiert; erwartet war 4xx.")
+
+    if expectation == "note":
+        return TestOutcome("NOTE", f"HTTP {status}; dieser Fall wird nur beobachtet und nicht bewertet.")
+
     if 200 <= status < 300:
-        return True, "OK - korrekt angenommen (2xx wie erwartet)"
-    return False, f"unerwartet - erwartete 2xx, bekam {status}"
+        return TestOutcome("PASS", f"Request wurde wie erwartet akzeptiert (HTTP {status}).")
+    return TestOutcome("FAIL", f"Erwartet war 2xx, erhalten wurde HTTP {status}.")
 
 
-def run_case(base_url, name, payload, expectation, headers):
-    log("-" * 70)
-    log(f"TEST: {name}")
-    log(f"  Payload: {json.dumps(payload, ensure_ascii=False)[:200]}")
-    has_key = HEADER_NAME in headers
-    log(f"  Header {HEADER_NAME}: {'gesetzt' if has_key else 'NICHT gesetzt'}")
-
-    try:
-        resp = post(base_url, payload, headers)
-    except requests.exceptions.ConnectionError:
-        log(f"  ERGEBNIS: FEHLER - Server nicht erreichbar auf {base_url}.")
-        return False
-    except requests.exceptions.Timeout:
-        log("  ERGEBNIS: TIMEOUT - keine Antwort innerhalb 10s.")
-        return False
-    except Exception as e:
-        log(f"  ERGEBNIS: UNERWARTETER FEHLER - {type(e).__name__}: {e}")
-        return False
-
-    body_preview = resp.text[:300].replace("\n", " ")
-    log(f"  HTTP {resp.status_code}  |  Body: {body_preview}")
-    ok, note = evaluate(resp.status_code, expectation)
-    log(f"  ERGEBNIS: {note}")
-    return ok
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Auth- und Robustheitstest fuer /download")
-    parser.add_argument("--base-url", default="http://127.0.0.1:8765",
-                        help="Basis-URL (Default: http://127.0.0.1:8765)")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Auth- und Robustheitstest fuer den Download-Endpoint")
+    add_common_arguments(parser)
+    parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT, help=f"Endpoint-Pfad (Default: {DEFAULT_ENDPOINT})")
     args = parser.parse_args()
+    mode = selected_mode(args)
+    base_url = args.base_url.rstrip("/")
+    endpoint = "/" + args.endpoint.strip("/")
+    target = f"{base_url}{endpoint}"
 
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
-        f.write(f"PyScrapper /download Auth+Robustheitstest - {datetime.now()}\n")
+    reporter = Reporter("PyScrapper download tests", mode, base_url, LOG_FILE)
+    reporter.banner(target, Path(__file__), ENV_FILE)
 
-    log("=" * 70)
-    log(f"Skript:     {Path(__file__).resolve()}")
-    log(f"Server-Dir: {SERVER_DIR}")
-    log(f"Ziel:       {args.base_url}/download")
-
-    admin_key = load_admin_key()
+    admin_key = load_env_value(ENV_FILE, "ADMIN_KEY")
     if not admin_key:
-        log(f"ABBRUCH: ADMIN_KEY nicht in {ENV_FILE} gefunden. "
-            "Ohne Key koennen die Input-Tests nicht sinnvoll laufen "
-            "(alles wuerde 401 liefern).")
+        reporter.log(f"ABORT | ADMIN_KEY nicht in {ENV_FILE} gefunden. Input-Tests waeren sonst nur Auth-Fehler.")
         sys.exit(2)
-    # Key nicht im Klartext loggen - nur bestaetigen und maskieren
-    masked = admin_key[:3] + "***" + admin_key[-2:] if len(admin_key) > 5 else "***"
-    log(f"ADMIN_KEY aus .env geladen (maskiert): {masked}")
+    reporter.log(f"ADMIN_KEY  : {mask_secret(admin_key)}")
 
     valid_headers = {HEADER_NAME: admin_key}
-    passed = failed = 0
+    bad_headers = {HEADER_NAME: "definitiv-falscher-key"}
 
-    # ---- EBENE 1: AUTH -------------------------------------------------
-    log("=" * 70)
-    log("EBENE 1 - AUTH (Endpoint muss ohne/mit falschem Key ablehnen)")
+    reporter.section("AUTH")
     auth_cases = [
-        ("kein Key im Header", VALID_PAYLOAD, {}, "unauth"),
-        ("falscher Key", VALID_PAYLOAD, {HEADER_NAME: "definitiv-falscher-key"}, "unauth"),
-        ("leerer Key", VALID_PAYLOAD, {HEADER_NAME: ""}, "unauth"),
+        ("kein Admin-Key", {}),
+        ("falscher Admin-Key", bad_headers),
+        ("leerer Admin-Key", {HEADER_NAME: ""}),
     ]
-    for name, payload, hdr, exp in auth_cases:
-        ok = run_case(args.base_url, name, payload, exp, hdr)
-        passed += ok
-        failed += not ok
-        time.sleep(0.2)
+    for name, headers in auth_cases:
+        perform_request(
+            reporter,
+            name=name,
+            method="POST",
+            url=target,
+            headers=headers,
+            body=VALID_PAYLOAD,
+            expectation="401/403 before endpoint logic",
+            evaluator=lambda status, _expectation, text: evaluate(status, "unauth", text),
+            timeout=10,
+            header_name=HEADER_NAME,
+        )
+        time.sleep(0.08)
 
-    # ---- EBENE 2: INPUT-VALIDIERUNG (mit gueltigem Key) ---------------
-    log("=" * 70)
-    log("EBENE 2 - INPUT-VALIDIERUNG (mit gueltigem Key)")
-    # Health-Check
-    try:
-        h = requests.get(f"{args.base_url}/health",
-                         headers=valid_headers, timeout=5)
-        log(f"Health-Check: HTTP {h.status_code}")
-    except Exception:
-        log("WARNUNG: /health nicht erreichbar - laeuft der Server?")
+    reporter.section(f"INPUT VALIDATION ({mode})")
+    cases = QUICK_CASES if mode == "quick" else NORMAL_CASES if mode == "normal" else INTENSE_CASES
+    for name, payload, expectation in cases:
+        perform_request(
+            reporter,
+            name=name,
+            method="POST",
+            url=target,
+            headers=valid_headers,
+            body=payload,
+            expectation="4xx rejection" if expectation == "reject" else expectation,
+            evaluator=lambda status, _expectation, text, exp=expectation: evaluate(status, exp, text),
+            timeout=10,
+            header_name=HEADER_NAME,
+        )
+        time.sleep(0.08 if mode == "quick" else 0.12)
 
-    for name, payload, exp in INPUT_CASES:
-        ok = run_case(args.base_url, name, payload, exp, valid_headers)
-        passed += ok
-        failed += not ok
-        time.sleep(0.2)
+    if mode_at_least(mode, "normal"):
+        reporter.log("")
+        reporter.log("INFO | Filename-Faelle verwenden absichtlich keine echte Media-URL. Ein 5xx aus URL-Aufloesung zeigt daher, dass der Request bereits zu tief in die Verarbeitung gelangt ist; er beweist nicht isoliert eine Filename-Luecke.")
 
-    total = len(auth_cases) + len(INPUT_CASES)
-    log("=" * 70)
-    log(f"ZUSAMMENFASSUNG: {passed} wie erwartet, {failed} auffaellig (von {total})")
-    if failed:
-        log("-> Auffaellige Faelle oben pruefen: echte Luecke oder Sonderfall.")
-    log(f"Volles Log: {LOG_FILE}")
-
-    sys.exit(0 if failed == 0 else 1)
+    sys.exit(reporter.summary())
 
 
 if __name__ == "__main__":
