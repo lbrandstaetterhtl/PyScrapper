@@ -33,7 +33,7 @@ class MediaBrowser(Browser):
         headless: bool = False,
         extra_headers: dict | None = None,
         wait_ms: int = 4000,
-        actions: dict | None = None
+        actions: list[dict] | None = None
 
         ):
         Validate.general.validateInt(
@@ -77,32 +77,59 @@ class MediaBrowser(Browser):
 
     def _handleActions(
             self,
-            actions: dict
+            actions: list[dict]
     ):
-        Validate.general.validateDict(
+        Validate.general.validateGeneralType(
             argument_name="actions",
-            dictionary=actions,
-            caller="[CORE] MediaBrowser.run"
+            obj=actions,
+            objType=list,
+            caller="[CORE] MediaBrowser._handleActions"
         )
+        
+        
 
-        validActions:list[str] = models.BROWSER_ACTIONS.keys()
+        validActions = models.BROWSER_ACTIONS.keys()
 
-        for action, value in actions.items():
-            action = action.lower()
+        for action in actions:
+            Validate.general.validateDict(
+                argument_name="action",
+                dictionary=action,
+                caller="[CORE] MediaBrowser._handleActions"
+            )
 
-            if action not in validActions:
-                raise ValueError(f"[CORE] MediaBrowser._handleActions: Action '{action}' isn't supported. Supported actions -> {', '.join(validActions)}")
+            for command, value in action.items():
+                command = command.lower()
 
-            actionType = models.BROWSER_ACTIONS[action]
-            if not isinstance(value, actionType):
-                raise ValueError(f"[CORE] MediaBrowser._handleActions: Action '{action}' value must be from type '{actionType}'. Given type -> '{type(value)}'")
+                if command not in validActions:
+                    raise ValueError(
+                        f"[CORE] MediaBrowser._handleActions: "
+                        f"Action '{command}' isn't supported. "
+                        f"Supported actions -> {', '.join(validActions)}"
+                    )
 
+                commandType = models.BROWSER_ACTIONS[command]
 
-            if action == "wait":
-                self.page.wait_for_timeout(value)
+                if not isinstance(value, commandType):
+                    raise ValueError(
+                        f"[CORE] MediaBrowser._handleActions: "
+                        f"Action '{command}' value must be from type "
+                        f"'{commandType}'. Given type -> '{type(value)}'"
+                    )
 
-            elif action == "click":
-                self.page.locator(value).click(timeout=5000)
+                if command == "wait":
+                    self.page.wait_for_timeout(value)
+
+                elif command == "click":
+                    self.page.locator(value).click(timeout=5000)
+
+                elif command == "try_click":
+                    try:
+                        self.page.locator(value).click(timeout=5000)
+                    except Exception:
+                        print(
+                            f"[CORE] MediaBrowser._handleActions: "
+                            f"Optional click target not found -> {value}"
+                        )
 
             
 

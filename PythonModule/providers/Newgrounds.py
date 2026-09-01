@@ -285,11 +285,20 @@ def getMediaInformation(
             caller="[providers] Newgrounds.getMediaInformation"
         )
 
+    foundMediaList: list[models.FoundMedia] = []
+    for url in foundUrls:
+        media = models.FoundMedia(
+            url=url,
+            stream_type=core.models.Download.DownloadType.FILE,
+            extra_headers=request.extra_headers
+        )
+        foundMediaList.append(media)
+
 
     return models.makeProviderResult(
-        urls=foundUrls,
-        request=request,
-        download_type=core.models.Download.DownloadType.FILE
+        foundMediaList,
+        request,
+
     )
         
 

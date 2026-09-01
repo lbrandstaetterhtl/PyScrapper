@@ -382,10 +382,19 @@ def getMediaInformation(
             caller="[providers] Bandcamp.getMediaInformation"
         )
 
+    foundMediaList : list[models.FoundMedia] = []
+    for url in streamingURLList:
+        media = models.FoundMedia(
+            url=url,
+            stream_type=core.models.Download.DownloadType.FILE,
+            extra_headers=request.extra_headers
+        )
+        foundMediaList.append(media)
+
     return models.makeProviderResult(
-        streamingURLList,
+        foundMediaList,
         request,
-        core.models.Download.DownloadType.FILE
+
     )
 
 # def download(

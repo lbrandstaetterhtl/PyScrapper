@@ -8,6 +8,8 @@ COOKIE_FILE = os.path.join(ROOT_DIR, "cookies.txt")
 BROWSER_ACTIONS = {
     "wait" : int,
     "click" : str,
+    "try_click" : str,
+
 }
 
 PLAY_BUTTON_SELECTORS = [

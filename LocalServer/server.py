@@ -510,7 +510,7 @@ async def receive_download(data: requests.DownloadRequest):
                 resource = responses.Resources(
                         context=context,
                         progress_url=f"/download/progress/{taskId}/{context.context_id}",
-                        download_url=f"/stream/download/{taskId}/{context.context_id}",
+                        download_url=f"/stream/download/{taskId}/{context.output.full_filename}",
                         watch_url=f"/stream/watch/{taskId}/{context.context_id}{watchUrlExtension}",
                         stream_type = streamType
                     )
@@ -543,13 +543,16 @@ async def receive_download(data: requests.DownloadRequest):
 
     except core.models.errors.DRMProtectedMediaError as e:
         server_state.log_queue.put_nowait(
-        f"[ERROR] DRM protected media. Request: {data}. Error: {e}"
+        f"[ERROR] DRM protected media. Request: {data}. Error: {str(e)}"
         )
 
         raise HTTPException(
             status_code=422,
             detail=str(e)
         )
+    except Exception as e:
+        server_state.log_queue.put_nowait(f"[ERROR] Unknown error occured; {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 

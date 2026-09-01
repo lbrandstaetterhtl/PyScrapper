@@ -181,18 +181,24 @@ def getMediaInformation(
     allUrls = _getUrls()
 
 
-    cleanedUrls: list[str] = []
+    foundMediaList: list[models.FoundMedia] = []
 
     for url in allUrls:
         
         if identifier not in url:
             continue
-        cleanedUrls.append(url)
+
+        media = models.FoundMedia(
+            url=url,
+            stream_type=core.models.Download.DownloadType.FILE,
+            extra_headers=request.extra_headers
+        )
+        foundMediaList.append(media)
 
     return models.makeProviderResult(
-        urls=cleanedUrls,
-        request=request,
-        download_type=core.models.Download.DownloadType.FILE
+        foundMediaList,
+        request,
+
     )
         
     

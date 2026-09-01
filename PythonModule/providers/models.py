@@ -9,6 +9,7 @@ from enum import Enum
 import urllib.request, urllib.parse
 import os
 
+
 AUDIO_EXTENSIONS = [
     "mp3",
     "m4a",
@@ -180,46 +181,313 @@ BAD_URL_KEYWORDS = {
 }
 
 URL_EXTENSION_KEYWORDS = {
+    # ==================================================
+    # HLS
+    # ==================================================
+
     "master.m3u8": "m3u8",
     "playlist.m3u8": "m3u8",
     "index.m3u8": "m3u8",
     ".m3u8": "m3u8",
 
-    ".mpd": "mpd",
-    "manifest.mpd": "mpd",
+    "application/vnd.apple.mpegurl": "m3u8",
+    "application%2fvnd.apple.mpegurl": "m3u8",
+    "application/x-mpegurl": "m3u8",
+    "application%2fx-mpegurl": "m3u8",
 
+
+    # ==================================================
+    # DASH
+    # ==================================================
+
+    "manifest.mpd": "mpd",
+    ".mpd": "mpd",
+
+    "application/dash+xml": "mpd",
+    "application%2fdash%2bxml": "mpd",
+
+
+    # ==================================================
+    # MP3
+    # ==================================================
+
+    ".mp3": "mp3",
+
+    "mp3-64": "mp3",
+    "mp3-96": "mp3",
     "mp3-128": "mp3",
+    "mp3-160": "mp3",
     "mp3-192": "mp3",
     "mp3-256": "mp3",
     "mp3-320": "mp3",
 
-    "aac_96k": "aac",
-    "aac_160k": "aac",
-    "aac-96": "aac",
-    "aac-160": "aac",
+    "mp3_64": "mp3",
+    "mp3_96": "mp3",
+    "mp3_128": "mp3",
+    "mp3_160": "mp3",
+    "mp3_192": "mp3",
+    "mp3_256": "mp3",
+    "mp3_320": "mp3",
 
-    "opus": "opus",
+    "audio/mpeg": "mp3",
+    "audio%2fmpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio%2fmp3": "mp3",
+
+    "format=mp3": "mp3",
+    "ext=mp3": "mp3",
+
+
+    # ==================================================
+    # M4A
+    # ==================================================
+
+    ".m4a": "m4a",
+
+    "audio/mp4": "m4a",
+    "audio%2fmp4": "m4a",
+
+    "format=m4a": "m4a",
+    "ext=m4a": "m4a",
+
+    "mime=audio%2fmp4": "m4a",
+    "mime_type=audio%2fmp4": "m4a",
+
+
+    # ==================================================
+    # AAC
+    # ==================================================
+
+    ".aac": "aac",
+
+    "aac_64k": "aac",
+    "aac_96k": "aac",
+    "aac_128k": "aac",
+    "aac_160k": "aac",
+    "aac_192k": "aac",
+    "aac_256k": "aac",
+    "aac_320k": "aac",
+
+    "aac-64": "aac",
+    "aac-96": "aac",
+    "aac-128": "aac",
+    "aac-160": "aac",
+    "aac-192": "aac",
+    "aac-256": "aac",
+    "aac-320": "aac",
+
+    "audio/aac": "aac",
+    "audio%2faac": "aac",
+
+    "format=aac": "aac",
+    "ext=aac": "aac",
+
+
+    # ==================================================
+    # FLAC
+    # ==================================================
+
+    ".flac": "flac",
+
+    "audio/flac": "flac",
+    "audio%2fflac": "flac",
+    "audio/x-flac": "flac",
+    "audio%2fx-flac": "flac",
+
+    "format=flac": "flac",
+    "ext=flac": "flac",
+
+
+    # ==================================================
+    # WAV
+    # ==================================================
+
+    ".wav": "wav",
+
+    "audio/wav": "wav",
+    "audio%2fwav": "wav",
+    "audio/x-wav": "wav",
+    "audio%2fx-wav": "wav",
+    "audio/wave": "wav",
+    "audio%2fwave": "wav",
+
+    "format=wav": "wav",
+    "ext=wav": "wav",
+
+
+    # ==================================================
+    # OGG
+    # ==================================================
+
+    ".ogg": "ogg",
+    ".oga": "ogg",
+
+    "audio/ogg": "ogg",
+    "audio%2fogg": "ogg",
+    "application/ogg": "ogg",
+    "application%2fogg": "ogg",
+
+    "format=ogg": "ogg",
+    "ext=ogg": "ogg",
+
+
+    # ==================================================
+    # OPUS
+    # ==================================================
+
+    ".opus": "opus",
+
+    "audio/opus": "opus",
+    "audio%2fopus": "opus",
+
+    "format=opus": "opus",
+    "ext=opus": "opus",
+
+
+    # ==================================================
+    # WEBM
+    # ==================================================
+
+    ".webm": "webm",
 
     "audio/webm": "webm",
+    "audio%2fwebm": "webm",
     "video/webm": "webm",
+    "video%2fwebm": "webm",
 
-    "mime_type=audio": "m4a",
-    "mime_type=video": "mp4",
+    "format=webm": "webm",
+    "ext=webm": "webm",
+
+    "mime=audio%2fwebm": "webm",
+    "mime=video%2fwebm": "webm",
+    "mime_type=audio%2fwebm": "webm",
+    "mime_type=video%2fwebm": "webm",
+
+
+    # ==================================================
+    # MP4
+    # ==================================================
+
+    ".mp4": "mp4",
+
+    "video/mp4": "mp4",
+    "video%2fmp4": "mp4",
+
+    "format=mp4": "mp4",
+    "ext=mp4": "mp4",
+
+    "mime=video%2fmp4": "mp4",
+    "mime_type=video%2fmp4": "mp4",
+
+
+    # ==================================================
+    # MKV / Matroska
+    # ==================================================
+
+    ".mkv": "mkv",
+
+    "video/x-matroska": "mkv",
+    "video%2fx-matroska": "mkv",
+    "video/matroska": "mkv",
+    "video%2fmatroska": "mkv",
+
+    "format=mkv": "mkv",
+    "ext=mkv": "mkv",
+
+    "matroska": "mkv",
+
+
+    # ==================================================
+    # MOV / QuickTime
+    # ==================================================
+
+    ".mov": "mov",
+
+    "video/quicktime": "mov",
+    "video%2fquicktime": "mov",
+
+    "format=mov": "mov",
+    "ext=mov": "mov",
+
+
+    # ==================================================
+    # M4V
+    # ==================================================
+
+    ".m4v": "m4v",
+
+    "video/x-m4v": "m4v",
+    "video%2fx-m4v": "m4v",
+
+    "format=m4v": "m4v",
+    "ext=m4v": "m4v",
+
+
+    # ==================================================
+    # AVI
+    # ==================================================
+
+    ".avi": "avi",
+
+    "video/x-msvideo": "avi",
+    "video%2fx-msvideo": "avi",
+    "video/avi": "avi",
+    "video%2favi": "avi",
+
+    "format=avi": "avi",
+    "ext=avi": "avi",
+
+
+    # ==================================================
+    # WMV
+    # ==================================================
+
+    ".wmv": "wmv",
+
+    "video/x-ms-wmv": "wmv",
+    "video%2fx-ms-wmv": "wmv",
+
+    "format=wmv": "wmv",
+    "ext=wmv": "wmv",
+
+
+    # ==================================================
+    # MPEG / MPG
+    # ==================================================
+
+    ".mpeg": "mpeg",
+    ".mpg": "mpg",
+
+    "video/mpeg": "mpeg",
+    "video%2fmpeg": "mpeg",
+
+    "format=mpeg": "mpeg",
+    "ext=mpeg": "mpeg",
+
+    "format=mpg": "mpg",
+    "ext=mpg": "mpg",
+
+
+    # ==================================================
+    # MPEG-TS
+    # ==================================================
+
+    ".ts": "ts",
+
+    "video/mp2t": "ts",
+    "video%2fmp2t": "ts",
+
+    "format=ts": "ts",
+    "ext=ts": "ts",
 }
 
 
-class StreamType(Enum):
-    HLS = "hls",
-    FILE = "file",
-    DASH = "dash",
-    UMP = "ump",
-    UNKNOWN = "unknown"
 
 @dataclass
 class ProviderResult:
     url: str 
 
-    download_type: StreamType
+    download_type: core.models.Download.DownloadType
 
     extra_headers: dict | None = None
 
@@ -394,16 +662,97 @@ def _getUrlPriority(url: str) -> int:
     return prio
 
 
+def _getExtensionFromUrl(url: str) -> str:
+    decodedUrl = urllib.parse.unquote(url).lower()
+    parsed = urllib.parse.urlsplit(decodedUrl)
 
-def _guessExtensionFromUrl(url: str) -> str:
-    urlLower = url.lower()
+    path = parsed.path.lower()
 
-    for keyword, extension in URL_EXTENSION_KEYWORDS.items():
-        if keyword in urlLower:
+
+    fileName = path.rsplit("/", 1)[-1]
+
+    if "." in fileName:
+        extension = fileName.rsplit(".", 1)[-1]
+
+        if extension in MEDIA_EXTENSION_PRIORITY:
             return extension
+
+
+    for keyword, extension in sorted(
+        URL_EXTENSION_KEYWORDS.items(),
+        key=lambda item: len(item[0]),
+        reverse=True
+    ):
+        if keyword in url:
+            return extension
+
 
     return ""
 
+
+
+
+def _makeFoundMediaFromUrl(
+        media: FoundMedia
+):
+    url = urllib.parse.unquote(media.url).lower()
+
+
+    if not media.extension:
+        media.extension = _getExtensionFromUrl(url)
+
+
+
+    if not media.media_type and media.extension:
+        media.media_type = _getMediaKind(
+            media.extension
+        ) or ""
+
+
+    if not media.mime_type and media.extension:
+
+        if (
+            media.extension == "webm"
+            and media.media_type == "audio"
+        ):
+            media.mime_type = "audio/webm"
+
+        else:
+            media.mime_type = EXTENSION_CONTENT_TYPES.get(
+                media.extension,
+                ""
+            )
+
+    if (
+        not media.stream_type
+        or media.stream_type == core.models.Download.DownloadType.UNKNOWN
+    ):
+
+        if media.extension == "m3u8":
+            media.stream_type = core.models.Download.DownloadType.HLS
+
+        elif media.extension == "mpd":
+            media.stream_type = core.models.Download.DownloadType.DASH
+
+        elif media.extension in SUPPORTED_EXTENSIONS:
+            media.stream_type = core.models.Download.DownloadType.FILE
+
+    if media.prio < 0:
+        media.prio = 0
+
+        if media.extension:
+            media.prio += MEDIA_EXTENSION_PRIORITY.get(
+                media.extension,
+                0
+            )
+
+        media.prio += _getUrlPriority(url)
+
+    return media
+
+    
+
+    
 
 
 def makeProviderResult(
@@ -437,15 +786,24 @@ def makeProviderResult(
 
     for i, media in enumerate(found_media_list):
 
+        if (
+            not media.extension
+            
+        ):
+            media = _makeFoundMediaFromUrl(media)
+            
+
         #Add check that checks if stuff like media type is unknown just in case and then update media object to continue normally
         print(f"Checking entry: {i}/{len(found_media_list)}")
         print(media)
 
-        if media.extension == request.preferred_file.lower():
-            media.prio += 1000
+        if request.preferred_file:
+            if media.extension == request.preferred_file.lower():
+                media.prio += 1000
 
-        if media.media_type == request.preferred_type.lower():
-            media.prio += 200
+        if request.preferred_type:
+            if media.media_type == request.preferred_type.lower():
+                media.prio += 200
 
         if media.prio > bestMedia.prio:
             bestMedia = media
@@ -489,7 +847,7 @@ def _buildProviderResultFromFoundMedia(
         extra_headers=media.extra_headers
     )
 #Server works with total size or total segments depending on file or hls
-    if media.stream_type == StreamType.HLS:
+    if media.stream_type == core.models.Download.DownloadType.HLS:
         size = -1
     
     result = ProviderResult(

@@ -81,13 +81,11 @@ def getMediaInformation(
         metadata = json.loads(response.read().decode("utf-8"))
 
 
-    bestFile: str | None = None
 
-    bestPriority: int = 0
 
     identifier = request.url.rstrip("/").split("/")[-1]
 
-    urls: list[str] = []
+    foundMediaList: list[models.FoundMedia] = []
    
 
 #Looking every file and prioritizes them. since this is used by a video/audio download containers like mkv are more important than mp3
@@ -99,14 +97,20 @@ def getMediaInformation(
             continue
 
         url = f"https://archive.org/download/{identifier}/{urllib.parse.quote(name)}"
-        urls.append(url)
+        media = models.FoundMedia(
+            url=url,
+            stream_type=core.models.Download.DownloadType.FILE,
+            extra_headers=request.extra_headers
+            
+        )
+        foundMediaList.append(media)
 
 
    
     return models.makeProviderResult(
-        urls,
+        foundMediaList,
         request,
-        core.models.Download.DownloadType.FILE
+
     )
 
     

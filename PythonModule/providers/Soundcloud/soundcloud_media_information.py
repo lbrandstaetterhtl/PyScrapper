@@ -29,13 +29,18 @@ def getMediaInformation(
         caller="[providers] Soundcloud.download"
         )
 
-    browserConfig = {
-        "click" : "#onetrust-reject-all-handler",
-        "wait" : 500,
-        "click" : "button.modal__closeButton[title='Close']",
-        "wait" : 500
-    }
-    
+    browserConfig = [
+        {
+            "try_click" : "#onetrust-reject-all-handler",
+            "wait" : 500,
+        },
+        {
+            "try_click" : "button.modal__closeButton[title='Close']",
+            "wait" : 500
+        }
+    ]
+        
+
 
     mediaBrowser = SoundcloudMediaBrowser(
         url=request.url,
@@ -50,7 +55,7 @@ def getMediaInformation(
                 headless=False,
                 extra_headers=request.extra_headers,
                 actions=browserConfig,
-                wait_ms=10000
+                wait_ms=3000
             )
         finally:
             try:
