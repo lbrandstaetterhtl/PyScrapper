@@ -1,37 +1,37 @@
-"""Auth- und Robustheitstests fuer den PyScrapper Download-Endpoint.
+"""Auth- und Robustheitstest fuer den PyScrapper Download-Endpoint.
 
 Beispiele:
     python download_tests.py quick
     python download_tests.py normal --base-url http://127.0.0.1:8765
-    python download_tests.py --mode intense
+    python download_tests.py intense --verbose
 
-Modi:
-    quick   - Auth + wichtigste Schema-/Security-Checks
-    normal  - quick + komplette bisherige Negativtest-Suite
-    intense - normal + weitere Grenz-, Schema- und Pfadfaelle
+Der Body folgt DownloadRequest aus PythonModule/models/requests.py:
+    provider            str
+    urls                list[str]
+    filenames           list[str]     gleiche Laenge wie urls
+    download_strategie  stream | local | cached_stream     (Default stream)
+    preferred_type      audio | video | None
+    preferred_file      Endung ohne Punkt, z.B. mp3
+    extra_headers       dict | None
+    download_path       str           nur bei local geprueft
+    auto_convert        bool
+
+Die frueheren Felder url / filename / mediatype existieren im Modell nicht.
+Mit ihnen antwortete der Server auf jeden Fall mit 422 "Field required",
+wodurch die Suite gruen war, ohne je die Validierung dahinter zu erreichen.
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-import time
 from pathlib import Path
 
-try:
-    from test_common import (
-        Reporter,
-        TestOutcome,
-        add_common_arguments,
-        load_env_value,
-        mask_secret,
-        mode_at_least,
-        perform_request,
-        selected_mode,
-    )
-except ImportError as exc:
-    print(f"Test-Hilfsmodul konnte nicht geladen werden: {exc}")
-    sys.exit(2)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from test_common import (Case, Reporter, add_common_arguments, check_server,
+                         enable_colors, load_env_value, mask_secret,
+                         run_suite, select_cases, selected_mode)
 
 TESTS_DIR = Path(__file__).resolve().parent
 SERVER_DIR = TESTS_DIR.parent
@@ -41,145 +41,245 @@ ENV_FILE = PROJECT_ROOT / ".env"
 HEADER_NAME = "X-Admin-Key"
 DEFAULT_ENDPOINT = "/download/video-audio"
 
-VALID_PAYLOAD = {
+TIMEOUT = {"quick": 10, "normal": 15, "intense": 30}
+PAUSE = {"quick": 0.0, "normal": 0.1, "intense": 0.15}
+
+# Strukturell gueltiger Body. Nur fuer die Auth-Ebene - dort greift die Auth
+# vor jeder Verarbeitung, es wird also nichts heruntergeladen.
+VALID = {
     "provider": "youtube",
-    "url": "https://example.com/x",
-    "mediatype": ".mp3",
-    "filename": "test",
+    "urls": ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+    "filenames": ["pyscrapper_authtest"],
+    "download_strategie": "stream",
+    "preferred_type": "audio",
+    "preferred_file": "mp3",
 }
 
-QUICK_CASES = [
-    ("leerer Body", {}, "reject"),
-    ("voellig falsche Felder", {"foo": "bar", "banana": 42}, "reject"),
-    ("null-Werte in Pflichtfeldern", {"provider": None, "url": None, "mediatype": None, "filename": None}, "reject"),
-    ("file://-Schema", {"provider": "youtube", "url": "file:///etc/passwd", "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("falsche Typen", {"provider": 12345, "url": ["not", "a", "string"], "mediatype": True, "filename": {"nested": "object"}}, "reject"),
-]
-
-NORMAL_CASES = QUICK_CASES + [
-    ("unbekannter Provider", {"provider": "totallynotaprovider", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("leerer Provider", {"provider": "", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("http statt https", {"provider": "youtube", "url": "http://example.com/x", "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("keine URL, nur Text", {"provider": "youtube", "url": "das ist keine url", "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("nicht erlaubter Media-Type", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".exe", "filename": "test"}, "reject"),
-    ("Path-Traversal Windows", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "..\\..\\..\\windows\\system32\\evil"}, "reject"),
-    ("Path-Traversal Unix", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "../../../../etc/cron.d/x"}, "reject"),
-    ("absoluter Windows-Pfad", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "C:\\Windows\\evil"}, "reject"),
-    ("Windows Reserved Name CON", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "CON"}, "reject"),
-    ("extrem langer Dateiname", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "A" * 5000}, "reject"),
-]
-
-INTENSE_CASES = NORMAL_CASES + [
-    ("leerer Dateiname", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": ""}, "reject"),
-    ("Dateiname nur Whitespace", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "   "}, "reject"),
-    ("Dateiname Punkt", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "."}, "reject"),
-    ("Dateiname Doppelpunkt", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": ".."}, "reject"),
-    ("absoluter Unix-Pfad", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "/etc/passwd"}, "reject"),
-    ("UNC-Pfad", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "\\\\server\\share\\evil"}, "reject"),
-    ("NUL im Dateinamen", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "evil\u0000.mp3"}, "reject"),
-    ("Reserved Name AUX", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "AUX"}, "reject"),
-    ("Reserved Name COM1", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3", "filename": "COM1"}, "reject"),
-    ("ftp://-Schema", {"provider": "youtube", "url": "ftp://example.com/x", "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("data:-Schema", {"provider": "youtube", "url": "data:text/plain,hello", "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("javascript:-Schema", {"provider": "youtube", "url": "javascript:alert(1)", "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("fehlender Provider", {"url": "https://example.com/x", "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("fehlende URL", {"provider": "youtube", "mediatype": ".mp3", "filename": "test"}, "reject"),
-    ("fehlender Media-Type", {"provider": "youtube", "url": "https://example.com/x", "filename": "test"}, "reject"),
-    ("fehlender Dateiname", {"provider": "youtube", "url": "https://example.com/x", "mediatype": ".mp3"}, "reject"),
-]
+S_AUTH = "AUTH"
+S_SCHEMA = "SCHEMA"
+S_PROVIDER = "PROVIDER"
+S_URL = "URLS"
+S_FILE = "DATEINAMEN"
+S_OPT = "OPTIONEN"
+S_EDGE = "GRENZWERTE"
 
 
-def evaluate(status: int, expectation: str, response_text: str) -> TestOutcome:
-    if expectation == "unauth":
-        if status in (401, 403):
-            return TestOutcome("PASS", f"Auth blockiert den Request mit HTTP {status}.")
-        return TestOutcome("FAIL", f"Auth sollte vor der Endpoint-Logik mit 401/403/404 blockieren, bekam aber HTTP {status}.")
+def build_cases(admin_key: str) -> list[Case]:
+    def body(**overrides):
+        return {**VALID, **overrides}
 
-    if expectation == "reject":
-        if 400 <= status < 500:
-            return TestOutcome("PASS", f"Ungueltiger Request wurde sauber clientseitig abgelehnt (HTTP {status}).")
-        if 500 <= status:
-            lower = response_text.lower()
-            if "url" in lower or "reach" in lower or "resolve" in lower:
-                return TestOutcome(
-                    "FAIL",
-                    "Der Request passierte die fruehe Eingabevalidierung und erreichte offenbar URL-/Media-Aufloesung; dort entstand ein 5xx. Erwartet war ein sauberer 4xx vor tieferer Verarbeitung.",
-                )
-            return TestOutcome("FAIL", "Ungueltiger Input fuehrte zu einem Serverfehler (5xx) statt zu einem kontrollierten 4xx.")
-        return TestOutcome("FAIL", f"Ungueltiger Input wurde mit HTTP {status} akzeptiert; erwartet war 4xx.")
+    return [
+        # ---------------------------------------------------------- AUTH
+        Case("kein Admin-Key", "unauth", S_AUTH, VALID, headers={}, level="quick",
+             checks="Endpoint haengt an require_admin"),
+        Case("falscher Admin-Key", "unauth", S_AUTH, VALID,
+             headers={HEADER_NAME: "definitiv-falscher-key"}, level="quick",
+             checks="fremder Key darf nicht durchkommen"),
+        Case("leerer Admin-Key", "unauth", S_AUTH, VALID,
+             headers={HEADER_NAME: ""}, level="quick",
+             checks="leerer Header ist kein gueltiger Key"),
+        Case("Key im Authorization-Header", "unauth", S_AUTH, VALID,
+             headers={"Authorization": admin_key}, level="normal",
+             checks="nur X-Admin-Key zaehlt"),
+        Case("Key als Query-Parameter", "unauth", S_AUTH, VALID, headers={},
+             path=f"{DEFAULT_ENDPOINT}?key={admin_key}", level="intense",
+             checks="alter Aufrufstil mit Key im Pfad darf nicht greifen"),
 
-    if expectation == "note":
-        return TestOutcome("NOTE", f"HTTP {status}; dieser Fall wird nur beobachtet und nicht bewertet.")
+        # -------------------------------------------------------- SCHEMA
+        Case("leerer Body", "reject", S_SCHEMA, {}, level="quick",
+             checks="provider, urls und filenames fehlen"),
+        Case("voellig falsche Felder", "reject", S_SCHEMA,
+             {"foo": "bar", "banana": 42}, level="quick",
+             checks="keines der Pflichtfelder vorhanden"),
+        Case("altes Schema url/filename/mediatype", "reject", S_SCHEMA,
+             {"provider": "youtube", "url": "https://example.com/x",
+              "mediatype": ".mp3", "filename": "test"}, level="quick",
+             checks="Regression: Modell erwartet urls und filenames als Listen"),
+        Case("null in Pflichtfeldern", "reject", S_SCHEMA,
+             {"provider": None, "urls": None, "filenames": None}, level="normal",
+             checks="None ist fuer str und list[str] nicht zulaessig"),
+        Case("falsche Typen", "reject", S_SCHEMA,
+             {"provider": 12345, "urls": "keine liste", "filenames": {"a": 1}},
+             level="quick", checks="Pydantic-Typpruefung je Feld"),
+        Case("urls als String statt Liste", "reject", S_SCHEMA,
+             {"provider": "youtube", "urls": "https://example.com/x",
+              "filenames": ["a"]}, level="normal",
+             checks="urls muss list[str] sein"),
+        Case("Liste mit Nicht-Strings", "reject", S_SCHEMA,
+             {"provider": "youtube", "urls": [123, None], "filenames": ["a", "b"]},
+             level="normal", checks="validateListStr prueft jeden Eintrag"),
+        Case("Body ist eine Liste", "reject", S_SCHEMA, [1, 2, 3], level="normal",
+             checks="Body muss ein JSON-Objekt sein"),
+        Case("fehlendes filenames", "reject", S_SCHEMA,
+             {"provider": "youtube", "urls": ["https://example.com/x"]},
+             level="normal", checks="filenames ist Pflichtfeld"),
 
-    if 200 <= status < 300:
-        return TestOutcome("PASS", f"Request wurde wie erwartet akzeptiert (HTTP {status}).")
-    return TestOutcome("FAIL", f"Erwartet war 2xx, erhalten wurde HTTP {status}.")
+        # ------------------------------------------------------ PROVIDER
+        Case("unbekannter Provider", "reject", S_PROVIDER,
+             body(provider="totallynotaprovider"), level="quick",
+             checks="validateProviders findet keinen Alias"),
+        Case("leerer Provider", "reject", S_PROVIDER, body(provider=""),
+             level="normal", checks="leerer String trifft keinen Provider"),
+        Case("Provider nur Whitespace", "reject", S_PROVIDER, body(provider="   "),
+             level="intense", checks="Whitespace darf keinen Provider treffen"),
+        Case("Provider mit Steuerzeichen", "reject", S_PROVIDER,
+             body(provider="youtube\n"), level="intense",
+             checks="Alias-Vergleich soll Steuerzeichen nicht dulden"),
+        Case("Provider mit Pfadanteil", "reject", S_PROVIDER,
+             body(provider="../youtube"), level="intense",
+             checks="Alias-Lookup darf keine Pfade dulden"),
+
+        # ---------------------------------------------------------- URLS
+        Case("leere URL-Liste", "reject", S_URL, body(urls=[], filenames=[]),
+             level="normal", checks="ohne URL gibt es nichts aufzuloesen"),
+        Case("urls und filenames unterschiedlich lang", "reject", S_URL,
+             body(urls=["https://example.com/a", "https://example.com/b"],
+                  filenames=["nur_einer"]), level="quick",
+             checks="ArgumentErrorCompare in model_post_init"),
+        Case("http statt https", "reject", S_URL,
+             body(urls=["http://example.com/x"]), level="quick",
+             checks="validateHostDefault erlaubt nur https"),
+        Case("file://-Schema", "reject", S_URL,
+             body(urls=["file:///etc/passwd"]), level="quick",
+             checks="lokaler Dateizugriff ueber die URL"),
+        Case("ftp://-Schema", "reject", S_URL,
+             body(urls=["ftp://example.com/x"]), level="normal",
+             checks="nur http-Schemata sind vorgesehen"),
+        Case("data:-Schema", "reject", S_URL,
+             body(urls=["data:text/plain,hello"]), level="normal",
+             checks="Datenschema ist keine abrufbare Ressource"),
+        Case("javascript:-Schema", "reject", S_URL,
+             body(urls=["javascript:alert(1)"]), level="normal",
+             checks="Skriptschema darf nicht akzeptiert werden"),
+        Case("kein URL-Format, nur Text", "reject", S_URL,
+             body(urls=["das ist keine url"]), level="normal",
+             checks="urlparse liefert kein Schema"),
+        Case("localhost als Ziel", "reject", S_URL,
+             body(urls=["https://127.0.0.1:8765/health"]), level="intense",
+             checks="SSRF auf den eigenen Server"),
+        Case("interne IP als Ziel", "reject", S_URL,
+             body(urls=["https://192.168.0.1/admin"]), level="intense",
+             checks="SSRF ins lokale Netz"),
+        Case("Zugangsdaten in der URL", "reject", S_URL,
+             body(urls=["https://user:pass@example.com/x"]), level="intense",
+             checks="Credentials im URL-Teil"),
+
+        # ---------------------------------------------------- DATEINAMEN
+        Case("Path-Traversal Windows", "reject", S_FILE,
+             body(filenames=["..\\..\\..\\windows\\system32\\evil"]), level="quick",
+             checks="Ausbruch aus dem Zielordner"),
+        Case("Path-Traversal Unix", "reject", S_FILE,
+             body(filenames=["../../../../etc/cron.d/x"]), level="quick",
+             checks="Ausbruch aus dem Zielordner"),
+        Case("absoluter Windows-Pfad", "reject", S_FILE,
+             body(filenames=["C:\\Windows\\evil"]), level="normal",
+             checks="os.path.join ignoriert den Zielordner"),
+        Case("absoluter Unix-Pfad", "reject", S_FILE,
+             body(filenames=["/etc/passwd"]), level="normal",
+             checks="fuehrender Slash setzt den Zielordner ausser Kraft"),
+        Case("UNC-Pfad", "reject", S_FILE,
+             body(filenames=["\\\\server\\share\\evil"]), level="intense",
+             checks="Netzwerkfreigabe als Ziel"),
+        Case("Reservename CON", "reject", S_FILE, body(filenames=["CON"]),
+             level="normal", checks="reservierte Geraetenamen unter Windows"),
+        Case("Reservename COM1", "reject", S_FILE, body(filenames=["COM1"]),
+             level="intense", checks="reservierte Geraetenamen unter Windows"),
+        Case("leerer Dateiname", "reject", S_FILE, body(filenames=[""]),
+             level="normal", checks="Name ohne Stamm"),
+        Case("Dateiname nur Whitespace", "reject", S_FILE, body(filenames=["   "]),
+             level="intense", checks="Whitespace als Dateiname"),
+        Case("Dateiname ist ein Punkt", "reject", S_FILE, body(filenames=["."]),
+             level="intense", checks="Punkt verweist auf den Ordner selbst"),
+        Case("Nullbyte im Dateinamen", "reject", S_FILE,
+             body(filenames=["evil\u0000.mp3"]), level="intense",
+             checks="Nullbyte kann Pfadpruefungen abschneiden"),
+        Case("Steuerzeichen im Dateinamen", "reject", S_FILE,
+             body(filenames=["a\r\nb"]), level="intense",
+             checks="Zeilenumbrueche in Pfaden und Logs"),
+
+        # ------------------------------------------------------ OPTIONEN
+        Case("unbekannte Strategie", "reject", S_OPT,
+             body(download_strategie="teleport"), level="normal",
+             checks="Enum kennt nur stream, local und cached_stream"),
+        Case("preferred_type ungueltig", "reject", S_OPT,
+             body(preferred_type="hologram"), level="normal",
+             checks="erlaubt sind nur audio und video"),
+        Case("preferred_file nicht unterstuetzt", "reject", S_OPT,
+             body(preferred_file="exe"), level="quick",
+             checks="Endung steht nicht in SUPPORTED_EXTENSIONS"),
+        Case("preferred_file mit fuehrendem Punkt", "note", S_OPT,
+             body(preferred_file=".mp3"), level="intense",
+             checks="removeprefix('.') soll das abfangen - Verhalten dokumentieren"),
+        Case("extra_headers als String", "reject", S_OPT,
+             body(extra_headers="nicht-dict"), level="normal",
+             checks="extra_headers muss ein Objekt sein"),
+        Case("local mit nicht existentem Pfad", "reject", S_OPT,
+             body(download_strategie="local", download_path="Z:\\gibt\\es\\nicht"),
+             level="normal",
+             checks="bei local wird der Zielordner auf Existenz und Schreibrecht geprueft"),
+        Case("local mit Systemordner", "reject", S_OPT,
+             body(download_strategie="local", download_path="C:\\Windows\\System32"),
+             level="intense", checks="Schreibversuch in einen Systemordner"),
+        Case("auto_convert als String", "reject", S_OPT,
+             body(download_strategie="local", auto_convert="ja"), level="intense",
+             checks="bool wird erwartet"),
+
+        # ---------------------------------------------------- GRENZWERTE
+        Case("extrem langer Dateiname", "reject", S_EDGE,
+             body(filenames=["A" * 5000]), level="normal",
+             checks="Pfadlaengenbegrenzung des Dateisystems"),
+        Case("extrem lange URL", "reject", S_EDGE,
+             body(urls=["https://example.com/" + "a" * 20000]), level="intense",
+             checks="sehr langer Eingabewert"),
+        Case("500 URLs auf einmal", "reject", S_EDGE,
+             body(urls=[f"https://example.com/{i}" for i in range(500)],
+                  filenames=[f"f{i}" for i in range(500)]), level="intense",
+             checks="Obergrenze fuer die Anzahl Kontexte"),
+        Case("Unicode und Emoji im Dateinamen", "note", S_EDGE,
+             body(filenames=["taest_uenicode_musik"]), level="intense",
+             checks="Sonderzeichen im Zielnamen - Verhalten dokumentieren"),
+        Case("verschachteltes extra_headers", "note", S_EDGE,
+             body(extra_headers={"a": {"b": {"c": {"d": "e"}}}}), level="intense",
+             checks="verschachtelte Struktur in extra_headers"),
+    ]
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Auth- und Robustheitstest fuer den Download-Endpoint")
+    parser = argparse.ArgumentParser(
+        description="Auth- und Robustheitstest fuer den Download-Endpoint")
     add_common_arguments(parser)
-    parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT, help=f"Endpoint-Pfad (Default: {DEFAULT_ENDPOINT})")
+    parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT,
+                        help=f"Endpoint-Pfad (Default: {DEFAULT_ENDPOINT})")
     args = parser.parse_args()
+    enable_colors(args.no_color)
+
     mode = selected_mode(args)
     base_url = args.base_url.rstrip("/")
     endpoint = "/" + args.endpoint.strip("/")
-    target = f"{base_url}{endpoint}"
 
-    reporter = Reporter("PyScrapper download tests", mode, base_url, LOG_FILE)
-    reporter.banner(target, Path(__file__), ENV_FILE)
+    reporter = Reporter("PyScrapper · Download-Endpoint", mode, base_url,
+                        LOG_FILE, verbose=args.verbose)
 
     admin_key = load_env_value(ENV_FILE, "ADMIN_KEY")
     if not admin_key:
-        reporter.log(f"ABORT | ADMIN_KEY nicht in {ENV_FILE} gefunden. Input-Tests waeren sonst nur Auth-Fehler.")
+        reporter.banner(base_url + endpoint, Path(__file__), ENV_FILE)
+        reporter.out(f"\n ABBRUCH: ADMIN_KEY nicht in {ENV_FILE} gefunden.")
+        reporter.out(" Ohne Key antwortet jeder Fall mit 401 und sagt nichts aus.")
         sys.exit(2)
-    reporter.log(f"ADMIN_KEY  : {mask_secret(admin_key)}")
 
-    valid_headers = {HEADER_NAME: admin_key}
-    bad_headers = {HEADER_NAME: "definitiv-falscher-key"}
+    all_cases = build_cases(admin_key)
+    cases = select_cases(all_cases, mode, args)
+    reporter.banner(base_url + endpoint, Path(__file__), ENV_FILE,
+                    planned=len(cases), total=len(all_cases),
+                    extra={"Admin-Key": mask_secret(admin_key)})
+    check_server(reporter, base_url, {HEADER_NAME: admin_key})
 
-    reporter.section("AUTH")
-    auth_cases = [
-        ("kein Admin-Key", {}),
-        ("falscher Admin-Key", bad_headers),
-        ("leerer Admin-Key", {HEADER_NAME: ""}),
-    ]
-    for name, headers in auth_cases:
-        perform_request(
-            reporter,
-            name=name,
-            method="POST",
-            url=target,
-            headers=headers,
-            body=VALID_PAYLOAD,
-            expectation="401/403 before endpoint logic",
-            evaluator=lambda status, _expectation, text: evaluate(status, "unauth", text),
-            timeout=10,
-            header_name=HEADER_NAME,
-        )
-        time.sleep(0.08)
+    if not cases:
+        reporter.out("\n Kein Fall passt zu Modus und Filter.")
+        sys.exit(2)
 
-    reporter.section(f"INPUT VALIDATION ({mode})")
-    cases = QUICK_CASES if mode == "quick" else NORMAL_CASES if mode == "normal" else INTENSE_CASES
-    for name, payload, expectation in cases:
-        perform_request(
-            reporter,
-            name=name,
-            method="POST",
-            url=target,
-            headers=valid_headers,
-            body=payload,
-            expectation="4xx rejection" if expectation == "reject" else expectation,
-            evaluator=lambda status, _expectation, text, exp=expectation: evaluate(status, exp, text),
-            timeout=10,
-            header_name=HEADER_NAME,
-        )
-        time.sleep(0.08 if mode == "quick" else 0.12)
-
-    if mode_at_least(mode, "normal"):
-        reporter.log("")
-        reporter.log("INFO | Filename-Faelle verwenden absichtlich keine echte Media-URL. Ein 5xx aus URL-Aufloesung zeigt daher, dass der Request bereits zu tief in die Verarbeitung gelangt ist; er beweist nicht isoliert eine Filename-Luecke.")
-
+    run_suite(reporter, base_url, cases, endpoint, {HEADER_NAME: admin_key},
+              args, TIMEOUT[mode], PAUSE[mode])
     sys.exit(reporter.summary())
 
 
