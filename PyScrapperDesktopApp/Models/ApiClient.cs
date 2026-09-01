@@ -425,11 +425,12 @@ public class ApiClient : Interfaces.IApiClient
         }
     }
 
-    public async Task GetFileFromStream(string downloadUrl, string downloadPath, CancellationToken ct)
+    public async Task<string> GetFileFromStream(DownloadResource resource, string path, CancellationToken ct)
     {
-        _logger.LogDebugMessage(new Message($"Starting download from {downloadUrl} to {downloadPath}", DateTime.Now, "DEBUG"));
+        var downloadPath = path + "." + resource.Context.MediaInfo.FileExtension;
+        _logger.LogDebugMessage(new Message($"Starting download from {resource.DownloadUrl} to {downloadPath}", DateTime.Now, "DEBUG"));
         using var client = new HttpClient();
-        using var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}{downloadUrl}", HttpCompletionOption.ResponseHeadersRead, ct);
+        using var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}{resource.DownloadUrl}", HttpCompletionOption.ResponseHeadersRead, ct);
         
         response.EnsureSuccessStatusCode();
         
@@ -448,9 +449,9 @@ public class ApiClient : Interfaces.IApiClient
         while ((read = await stream.ReadAsync(buffer, ct)) > 0)
         {
             await fileStream.WriteAsync(buffer.AsMemory(0, read), ct);
-            
-            Task.Delay(500).Wait();
         }
+        
+        return downloadPath;
     }
 
     /// <summary>

@@ -56,6 +56,7 @@
                         <MenuItem Header="From Archive" Command="{Binding OpenArchiveScrapWindowCommand}"/>
                         <MenuItem Header="From SoundCloud" Command="{Binding OpenSoundCloudScrapWindowCommand}"/>
                         <MenuItem Header="From Newgrounds" Command="{Binding OpenNewgroundsScrapWindowCommand}"/>
+                        <MenuItem Header="From Youtube Music" Command="{Binding OpenYoutubeMusicScrapWindowCommand}"/>
                     </MenuItem>
                     
                     <MenuItem Header="Open Media Player" Command="{Binding OpenMediaPlayerWindowCommand}"/>

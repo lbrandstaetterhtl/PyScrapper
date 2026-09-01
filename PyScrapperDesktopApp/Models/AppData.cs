@@ -72,11 +72,12 @@ public class AppData : Interfaces.IAppDataService
         { ".wav", "audio" },
         { ".mkv", "video" },
         { ".flac", "audio" },
-        { ".ogg", "audio" }
+        { ".ogg", "audio" },
+        {".ts", "audio" }
     };
     
-    public static readonly List<string> ValidProviders = ["suno", "youtube", "bandcamp", "archive", "soundcloud", "wcoflix", "aniworld", "newgrounds"];
-    public static readonly List<string> ValidSearchProviders = ["youtube", "bandcamp", "archive", "soundcloud", "newgrounds"];
+    public static readonly List<string> ValidProviders = ["suno", "youtube", "bandcamp", "archive", "soundcloud", "wcoflix", "aniworld", "newgrounds", "youtubemusic"];
+    public static readonly List<string> ValidSearchProviders = ["youtube", "bandcamp", "archive", "soundcloud", "newgrounds", "youtubemusic"];
 
     public static AppConfig Config;
     

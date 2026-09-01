@@ -7,7 +7,7 @@ using PyScrapperDesktopApp.Views;
 
 namespace PyScrapperDesktopApp.ViewModels;
 
-public partial class LoginWindowViewModel(DialogService dialogService, LoginWindow window) : ObservableObject
+public partial class LoginWindowViewModel : ObservableObject
 {
     [ObservableProperty] 
     private string _username = "";
@@ -16,6 +16,19 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
     private string _password = "";
     
     private readonly AppLogger _logger = AppLogger.Instance;
+    private readonly DialogService _dialogService;
+    private readonly LoginWindow _window;
+
+    public LoginWindowViewModel(DialogService dialogService, LoginWindow window)
+    {
+        _dialogService = dialogService;
+        _window = window;
+
+        if (AppData.Config.LastLoggedInUser is not null)
+        {
+            Username = AppData.Config.LastLoggedInUser.Username;
+        }
+    }
 
     /// <summary>
     /// Command method that is executed when the user clicks the "Login" button.
@@ -32,7 +45,7 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
 
         if (!healthResponse.Ok)
         {
-            await dialogService.ShowAlertAsync("Health check failed. Please check your connection.");
+            await _dialogService.ShowAlertAsync("Health check failed. Please check your connection.");
             return;
         }
 
@@ -52,8 +65,8 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
 
             _logger.LogNewMassage(log);
 
-            window.Result = LoginResult.Success;
-            window.Close();
+            _window.Result = LoginResult.Success;
+            _window.Close();
         }
         else
         {
@@ -61,7 +74,7 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
 
             _logger.LogNewMassage(log);
 
-            await dialogService.ShowAlertAsync("Login failed. Please check your username and password.");
+            await _dialogService.ShowAlertAsync("Login failed. Please check your username and password.");
         }
     }
 
@@ -72,8 +85,8 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
     [RelayCommand]
     private void Cancel()
     {
-        window.Result = LoginResult.Cancelled;
-        window.Close();
+        _window.Result = LoginResult.Cancelled;
+        _window.Close();
     }
 
     /// <summary>
@@ -91,7 +104,7 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
 
         if (!healthResponse.Ok)
         {
-            await dialogService.ShowAlertAsync("Health check failed. Please check your connection.");
+            await _dialogService.ShowAlertAsync("Health check failed. Please check your connection.");
             return;
         }
 
@@ -109,7 +122,7 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
         }
         else
         {
-            await dialogService.ShowAlertAsync("Registration failed. Please check your username and password.");
+            await _dialogService.ShowAlertAsync("Registration failed. Please check your username and password.");
         }
     }
 }

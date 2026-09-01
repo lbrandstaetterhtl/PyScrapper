@@ -34,17 +34,14 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isFinished = false;
     
-    private DialogService _dialogService;
-    
     private readonly AppLogger _logger = AppLogger.Instance;
     
     /// <summary>
     /// Constructor for the ProgressBarWindowViewModel class, which initializes the API client used for fetching download progress data. This class is responsible for managing the state and logic of a progress bar window that displays the download progress, status, and speed of a download operation.
     /// It also handles cancellation of the progress tracking when necessary.
     /// </summary>
-    public ProgressBarWindowViewModel(DialogService dialogService)
+    public ProgressBarWindowViewModel()
     {
-        _dialogService = dialogService;
         _apiClient = new ApiClient();
     }
 
@@ -102,13 +99,15 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                                     ProgressSpeed = $"{progressData.Speed} Mb/s";
                                     Eta = $"{progressData.Eta} seconds";
 
-                                    if (progressData.Status.Equals("complete"))
+                                    if (progressData.Status.Equals("finished"))
                                     {
                                         IsFinished = true;
-                                        Status = "Completed";
+                                        Status = "Finished";
                                         ProgressSpeed = "0 Mb/s";
                                         Eta = "0 seconds";
                                         StopProgress();
+                                        Task.Delay(3500).Wait();
+                                        CloseRequested?.Invoke();
                                     }
                                 }
                                 else
@@ -130,13 +129,15 @@ public partial class ProgressBarWindowViewModel : ObservableObject
                                     ProgressSpeed = $"{progressData.Speed} Mb/s";
                                     Eta = $"{progressData.Eta} seconds";
 
-                                    if (progressData.Status.Equals("complete"))
+                                    if (progressData.Status.Equals("finished"))
                                     {
                                         IsFinished = true;
-                                        Status = "Completed";
+                                        Status = "Finished";
                                         ProgressSpeed = "0 Mb/s";
                                         Eta = "0 seconds";
                                         StopProgress();
+                                        Task.Delay(3500).Wait();
+                                        CloseRequested?.Invoke();
                                     }
                                 }
                             });

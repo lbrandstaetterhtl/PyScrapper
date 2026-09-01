@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Chrome;
 using PyScrapperDesktopApp.Models;
@@ -14,6 +15,19 @@ public partial class LoginWindow : Window
         InitializeComponent();
         TitleBar.Initialize(this);
         
-        DataContext = new LoginWindowViewModel(new DialogService(this), this);
+        var vm = new LoginWindowViewModel(new DialogService(this), this);
+        DataContext = vm;
+    }
+    
+    protected override void OnOpened(EventArgs e)
+    {
+        if (AppData.Config.LastLoggedInUser is null)
+        {
+            UsernameBox.Focus();
+        }
+        else
+        {
+            PasswordBox.Focus();
+        }
     }
 }

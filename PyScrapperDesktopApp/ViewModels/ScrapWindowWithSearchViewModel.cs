@@ -41,7 +41,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     private List<string> _availableMediaTypes = AppData.ValidMediaTypes.Keys.ToList();
     
     [ObservableProperty]
-    private string _selectedMediaType = "mp3";
+    private string _selectedMediaType = ".mp3";
     
     private readonly Window _scrapWindow;
     
@@ -198,7 +198,17 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 {
                     Task.Delay(2000).Wait();
 
-
+                    if (resource.Context.MediaInfo.FileExtension != SelectedMediaType.Trim('.'))
+                    {
+                        var userResponse = await _dialogService.ConfirmAsync($"Found only {resource.Context.MediaInfo.FileExtension} for item \"{Urls[counter]}\". Do you want to continue downloading it?");
+                        
+                        var log = new Message($"Downloaded media type \"{resource.Context.MediaInfo.FileExtension}\" does not match the selected media type \"{SelectedMediaType.Trim('.')}\" for item \"{Urls[counter]}\"", DateTime.Now, "ERROR");
+                        _logger.LogNewMassage(log);
+                        
+                        if (!userResponse)
+                            continue;
+                    }
+                    
                     var progressWindow = new ProgressBarWindow();
                     progressWindow.Show();
 
@@ -208,32 +218,28 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     
                     var ct =  new CancellationTokenSource();
                     
-                    Task fileTask = new Task(async () => await client.GetFileFromStream(resource.DownloadUrl, Paths[counter], ct.Token));
+                    var path = Paths[counter].Substring(0, Paths[counter].LastIndexOf('.'));
                     
-                    Thread fileThread = new Thread(fileTask.Start);
-                    
-                    fileThread.Start();
+                    var finalPath = await client.GetFileFromStream(resource, path, ct.Token);
                     
                     if (!errorWhileDownloading)
                     {
                         Task.Delay(2000).Wait();
 
-                        var downloadedFilePath =
-                            Path.Combine(AppData.Settings.DownloadPath, $"{FileNames[counter]}{SelectedMediaType}");
 
                         bool isPlayable = false;
 
                         while (!isPlayable)
                         {
-                            isPlayable = File.Exists(downloadedFilePath);
+                            isPlayable = File.Exists(finalPath);
                         }
 
                         var req = new CreateDownloadedMediaRequest
                         {
                             UserIdentifier = AppData.CurrentUser.Identifier,
-                            DownloadPath = downloadedFilePath,
+                            DownloadPath = finalPath,
                             DownloadedAt = DateTime.Now.ToString("o"),
-                            MediaType = SelectedMediaType,
+                            MediaType = finalPath.Substring(finalPath.LastIndexOf('.')),
                             IsPlayable = isPlayable,
                             Title = FileNames[counter],
                             Url = Urls[counter]

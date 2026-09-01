@@ -12,7 +12,7 @@ public partial class ProgressBarWindow : Window
         InitializeComponent();
         TitleBar.Initialize(this);
         
-        var vm = new ViewModels.ProgressBarWindowViewModel(new DialogService(this));
+        var vm = new ViewModels.ProgressBarWindowViewModel();
         vm.CloseRequested += Close;
         DataContext = vm;
     }

@@ -75,7 +75,7 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
             };
 
             var result = await client.SendScrapRequest(requestData);
-
+            
             foreach (var resource in result.Resources)
             {
                 if (result.TaskId != "-1")

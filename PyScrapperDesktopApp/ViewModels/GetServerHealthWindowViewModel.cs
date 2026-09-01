@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -113,12 +114,11 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
                                     .ToString(@"dd\.hh\:mm\:ss");
                                 MemoryFormatted = $"{health.MemoryMb} MB";
                                 Pid = health.Pid;
-                                Processes = new ObservableCollection<ApiClient.ServerProcess>(health.Processes);
-                                DownloadJobs =
-                                    new ObservableCollection<ApiClient.DownloadJobItem>(health.ActiveDownloads);
-                                DownloadsCount = health.ActiveDownloads.Count;
-                                ErrorMessages = new ObservableCollection<string>(health.ErrorMessages);
-                                ErrorsCount = health.ErrorMessages.Count;
+                                Processes = new ObservableCollection<ApiClient.ServerProcess>(health.Processes ?? []);
+                                DownloadJobs = new ObservableCollection<ApiClient.DownloadJobItem>(health.ActiveDownloads ?? []);
+                                DownloadsCount = health.ActiveDownloads?.Count ?? 0;
+                                ErrorMessages = new ObservableCollection<string>(health.ErrorMessages ?? []);
+                                ErrorsCount = health.ErrorMessages?.Count ?? 0;
                                 LastHealthCheckTime = "Last check: " + DateTime.Now.ToString("HH:mm:ss");
                             });
                         }

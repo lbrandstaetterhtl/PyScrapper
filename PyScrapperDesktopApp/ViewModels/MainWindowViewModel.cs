@@ -513,4 +513,11 @@ public partial class MainWindowViewModel : ObservableObject
         var scrapWindow = new ScrapWindowWithSearch("newgrounds");
         await scrapWindow.ShowDialog(_window);
     }
+
+    [RelayCommand]
+    private async Task OpenYoutubeMusicScrapWindow()
+    {
+        var scrapWindow = new ScrapWindowWithSearch("youtubemusic");
+        await scrapWindow.ShowDialog(_window);
+    }
 }
