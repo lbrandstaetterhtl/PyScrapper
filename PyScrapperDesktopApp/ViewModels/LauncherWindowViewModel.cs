@@ -194,7 +194,7 @@ public partial class LauncherWindowViewModel : ObservableObject
     {
         try
         {
-            var client = new ApiClient(_dialogService);
+            var client = new ApiClient();
             var response = await client.GetHealth();
 
             return response.Ok;

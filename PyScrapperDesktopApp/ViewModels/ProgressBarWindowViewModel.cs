@@ -45,7 +45,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     public ProgressBarWindowViewModel(DialogService dialogService)
     {
         _dialogService = dialogService;
-        _apiClient = new ApiClient(_dialogService);
+        _apiClient = new ApiClient();
     }
 
     /// <summary>

@@ -21,7 +21,7 @@ namespace PyScrapperDesktopApp.Models;
 /// Client for communicating with the server API.
 /// It provides methods for sending scrap requests, getting server health, sending search requests, and getting download progress.
 /// </summary>
-public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
+public class ApiClient : Interfaces.IApiClient
 {
     private readonly AppLogger _logger = AppLogger.Instance;
 
@@ -449,7 +449,7 @@ public class ApiClient(DialogService dialogService) : Interfaces.IApiClient
         {
             await fileStream.WriteAsync(buffer.AsMemory(0, read), ct);
             
-            Task.Delay(100).Wait();
+            Task.Delay(500).Wait();
         }
     }
 

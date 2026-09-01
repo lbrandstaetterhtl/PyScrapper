@@ -306,10 +306,7 @@ public partial class App : Application
             log = new Message("Saved user data successfully", DateTime.Now, "INFO");
             _logger.LogNewMassage(log);
             
-            var desktop = ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
-
-            var ds = new DialogService(desktop.MainWindow);
-            var client = new ApiClient(ds);
+            var client = new ApiClient();
             
             var loggedOut = await client.Logout();
             if (!loggedOut)

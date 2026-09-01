@@ -118,7 +118,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 _cts = new CancellationTokenSource();
             }
 
-            var client = new ApiClient(_dialogService);
+            var client = new ApiClient();
 
             List<string> Urls = new List<string>();
             List<string> FileNames = new List<string>();
@@ -208,7 +208,12 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     
                     var ct =  new CancellationTokenSource();
                     
-                    await client.GetFileFromStream(resource.DownloadUrl, Paths[counter], ct.Token);
+                    Task fileTask = new Task(async () => await client.GetFileFromStream(resource.DownloadUrl, Paths[counter], ct.Token));
+                    
+                    Thread fileThread = new Thread(fileTask.Start);
+                    
+                    fileThread.Start();
+                    
                     if (!errorWhileDownloading)
                     {
                         Task.Delay(2000).Wait();
@@ -279,7 +284,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     {
         try
         {
-            var client = new ApiClient(_dialogService);
+            var client = new ApiClient();
 
             List<string> tags = ["track"];
 

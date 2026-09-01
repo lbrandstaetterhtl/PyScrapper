@@ -62,7 +62,7 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
     {
         try
         {
-            ApiClient client = new(_dialogService);
+            ApiClient client = new();
 
             var requestData = new DownloadRequestData()
             {

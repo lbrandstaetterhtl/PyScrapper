@@ -67,7 +67,7 @@ public partial class GetServerHealthWindowViewModel : ObservableObject
     public GetServerHealthWindowViewModel(DialogService dialogService)
     {
         _dialogService = dialogService;
-        _apiClient = new ApiClient(_dialogService);
+        _apiClient = new ApiClient();
     }
     
     /// <summary>

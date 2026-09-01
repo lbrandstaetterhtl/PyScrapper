@@ -26,7 +26,7 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
     [RelayCommand]
     private async Task Login()
     {
-        var client = new ApiClient(dialogService);
+        var client = new ApiClient();
         
         var healthResponse = await client.GetHealth();
 
@@ -85,7 +85,7 @@ public partial class LoginWindowViewModel(DialogService dialogService, LoginWind
     [RelayCommand]
     private async Task Register()
     {
-        var client = new ApiClient(dialogService);
+        var client = new ApiClient();
         
         var healthResponse = await client.GetHealth();
 
