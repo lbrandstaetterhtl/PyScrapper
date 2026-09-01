@@ -109,6 +109,7 @@ npm run dev
 
 ## Installer
 
+VERALTETE VERSIONEN!!!!
 Im Repository liegen zwei Inno-Setup-Skripte, aber keine fertigen EXEs. Beide installieren pro
 Benutzer nach `%LOCALAPPDATA%\Programs\` und brauchen keine Adminrechte.
 
