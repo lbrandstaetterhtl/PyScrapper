@@ -131,6 +131,10 @@ class YoutubeMusicMediaBrowser(browser.MediaBrowser):
         if not ".googlevideo.com/videoplayback" in urlLower or not "range=" in urlLower or not "ump=1" in urlLower:
             return
 
+        if core.download.UMP.download.getStreamProtectionStatus(response.body()) != 1:
+            print("[Youtube] UMP candidate does not have valid protection status, skipping")
+            return
+
 
         itag = query.get("itag", [None])[0]
         totalSize = query.get("clen",[None])[0]
