@@ -143,9 +143,34 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
 
+class PlaylistModel(BaseModel):
+    Identifier: str
+    Name: str
+    Description: Optional[str] = None
+
+class MediaModel(BaseModel):
+    Identifier: str
+    Url: str
+    MediaType: str
+    DownloadedAt: str
+    DownloadPath: str
+    IsPlayable: bool
+    Title: str
+
+class PlaylistMediaModel(BaseModel):
+    PlaylistIdentifier: str
+    MediaIdentifier: str
+    Position: int
+
+class SettingsModel(BaseModel):
+    Identifier: str
+    DownloadPath: str
+    DarkModeEnabled: bool
+    ScanFolderOnStartup: bool
+
 class SaveUserDataRequest(BaseModel):
     user_identifier: str
-    playlists: List[PlaylistModel]
-    medias: List[MediaModel]
-    playlist_medias: List[PlaylistMediaModel]
+    playlists: list[PlaylistModel]
+    medias: list[MediaModel]
+    playlist_medias: list[PlaylistMediaModel]
     setting: SettingsModel

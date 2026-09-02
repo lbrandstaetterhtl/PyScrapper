@@ -9,8 +9,6 @@ from dataclasses import dataclass, field
 
 import os
 
-from models.requests import SaveUserDataRequest
-
 print("DISPLAY:", os.environ.get("DISPLAY"))
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -38,6 +36,7 @@ from fastapi.responses import StreamingResponse
 
 #PythonModule imports
 
+from PythonModule.models.requests import SaveUserDataRequest
 from PythonModule.models.responses import (
     MessageResponse,
     CreateResponse,
@@ -855,11 +854,11 @@ async def receive_search(data: requests.SearchRequest):
             session=ses,
             ).run()
 
-        server_state.log_queue.put_nowait(f"[INFO] Search succesfull for job {search_id} with query {data.search} and provider {data.provider}")
+        server_state.log_queue.put_nowait(f"[INFO] Search successful for job {search_id} with query {data.search} and provider {data.provider}")
         return response
 
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Failed search task with given arguments: id {search_id} provider {data.provider} and searchinput {data.search}.\n Error Message:{str(e)}")
+        server_state.log_queue.put_nowait(f"[ERROR] Failed search task with given arguments: id {search_id} provider {data.provider} and searching {data.search}.\n Error Message:{str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1021,31 +1020,6 @@ def connect_db():
     conn.execute("PRAGMA busy_timeout=5000")
     conn.row_factory = sqlite3.Row
     return conn
-
-class PlaylistModel(BaseModel):
-    Identifier: str
-    Name: str
-    Description: Optional[str] = None
-
-class MediaModel(BaseModel):
-    Identifier: str
-    Url: str
-    MediaType: str
-    DownloadedAt: str
-    DownloadPath: str
-    IsPlayable: bool
-    Title: str
-
-class PlaylistMediaModel(BaseModel):
-    PlaylistIdentifier: str
-    MediaIdentifier: str
-    Position: int
-
-class SettingsModel(BaseModel):
-    Identifier: str
-    DownloadPath: str
-    DarkModeEnabled: bool
-    ScanFolderOnStartup: bool
 
 def save_user_data(request: SaveUserDataRequest):
     user_identifier = request.user_identifier
