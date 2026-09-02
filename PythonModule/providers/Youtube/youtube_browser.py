@@ -128,8 +128,9 @@ class YoutubeMusicMediaBrowser(browser.MediaBrowser):
         ):
             return
 
-        if not ".googlevideo.com/videoplayback" in urlLower or not "range=" in urlLower:
+        if not ".googlevideo.com/videoplayback" in urlLower or not "range=" in urlLower or not "ump=1" in urlLower:
             return
+
 
         itag = query.get("itag", [None])[0]
         totalSize = query.get("clen",[None])[0]
@@ -146,6 +147,8 @@ class YoutubeMusicMediaBrowser(browser.MediaBrowser):
 
         if mediaType == "unknown":
             return
+
+        
 
         
 
@@ -292,8 +295,7 @@ class YoutubeMusicTokenBrowser(browser.MediaBrowser):
         if not ".googlevideo.com/videoplayback" in response.url:
             return
 
-        if not "ump=1" in response.url.lower():
-            return
+        
 
         contentType = (
             response.headers
