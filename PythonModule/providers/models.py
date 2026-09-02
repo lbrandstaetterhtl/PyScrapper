@@ -635,7 +635,10 @@ class FoundMedia:
     extension: str = ""
     mime_type: str = ""
 
+    total_size: int = -1
+
     extra_headers : dict[str, str] = field(default_factory=dict)
+    post_body : bytes | None = None
 
 
 
@@ -839,13 +842,13 @@ def _buildProviderResultFromFoundMedia(
 ) -> ProviderResult:
 
 
-
-
-    size, mime = getUrlInformation(
-        session=request.ses,
-        url=media.url,
-        extra_headers=media.extra_headers
-    )
+    size = media.total_size
+    if size< 0:
+        size, mime = getUrlInformation(
+            session=request.ses,
+            url=media.url,
+            extra_headers=media.extra_headers
+        )
 #Server works with total size or total segments depending on file or hls
     if media.stream_type == core.models.Download.DownloadType.HLS:
         size = -1
@@ -858,6 +861,7 @@ def _buildProviderResultFromFoundMedia(
         media_type=media.media_type,
         mime_type=media.mime_type,
         total_size=size,
+        post_body=media.post_body,
         info = core.models.Download.Info(
             url=media.url,
             found_file=media.extension,
@@ -865,6 +869,7 @@ def _buildProviderResultFromFoundMedia(
             found_type=media.media_type,
             preferred_type=request.preferred_type if request.preferred_type else media.media_type
         )
+        
     )
 
     print(result)

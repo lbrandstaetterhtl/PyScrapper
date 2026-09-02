@@ -763,6 +763,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
                 max_len=total_size,
                 media_start=start_byte,
                 media_end=end_byte,
+                post_body=context.target.post_body
             ),
             status_code=status_code,
             headers=headers,

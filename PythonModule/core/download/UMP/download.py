@@ -1,4 +1,8 @@
 # Core imports
+import re
+
+import re
+
 from ...network.progress import updateDownloadProgress
 from ...models import Download
 
@@ -9,6 +13,7 @@ from . import byte
 from dataclasses import dataclass
 import urllib.parse
 import asyncio
+import urllib.request
 
 
 async def downloadAndYieldUMP(
@@ -16,15 +21,24 @@ async def downloadAndYieldUMP(
         start_url: str,
         extra_headers: dict,
         download_progress: Download.DownloadProgress,
-        max_len: int
+        max_len: int,
+        post_body: bytes | None = None
 ):
     download_progress.total_bytes = max_len
 
     nextChunkUrl = start_url
 
+    
+
 
     while True:
-        with session.open(url=nextChunkUrl, headers=extra_headers) as response:
+        req = urllib.request.Request(
+                url=nextChunkUrl,
+                headers=extra_headers,
+                data=post_body,
+            )
+        
+        with session.open(request=req) as response:
             print(f"[CORE] UMP: opened url {nextChunkUrl}")
             data = await asyncio.to_thread(
                 response.read
@@ -80,6 +94,7 @@ async def downloadAndYieldUMPRange(
     max_len: int,
     media_start: int = 0,
     media_end: int | None = None,
+    post_body: bytes | None = None
 ):
     media_position = 0
 
@@ -88,6 +103,7 @@ async def downloadAndYieldUMPRange(
         start_url=start_url,
         extra_headers=extra_headers,
         max_len=max_len,
+        post_body=post_body
     ):
         chunk_start = media_position
         chunk_end = media_position + len(chunk)
@@ -154,15 +170,25 @@ async def downloadAndYieldUMPSimple(
         session,
         start_url: str,
         extra_headers: dict,
-        max_len: int
+        max_len: int,
+        post_body: bytes | None = None
 ):
+    import urllib.request
 
 
     nextChunkUrl = start_url
 
+    
+
 
     while True:
-        with session.open(url=nextChunkUrl, headers=extra_headers) as response:
+        req = urllib.request.Request(
+                url=nextChunkUrl,
+                headers=extra_headers,
+                data=post_body,
+                method="POST"
+            )
+        with session.open(request=req) as response:
             print(f"[CORE] UMP: opened url {nextChunkUrl}")
             data = await asyncio.to_thread(
                 response.read
@@ -827,6 +853,52 @@ def downloadToFileSABR(
 
         
 
+STREAM_PROTECTION_STATUS_PART = 58
 
-            
 
+def getStreamProtectionStatus(
+    data: bytes,
+) -> int | None:
+    parts = _parseUMP(data)
+
+    for part in parts:
+        if part.part_type != STREAM_PROTECTION_STATUS_PART:
+            continue
+
+        fields = _parse_proto(part.payload)
+
+        for fieldNumber, wireType, value in fields:
+            if fieldNumber == 1 and wireType == 0:
+                return int(value)
+
+    return None
+
+import re
+
+_POT_PATTERN = re.compile(
+    r"([?&]pot=)[^&]*"
+)
+
+
+def replacePoToken(
+    url: str,
+    token: str,
+) -> str:
+    encodedToken = urllib.parse.quote(
+        token,
+        safe="-_",
+    )
+
+    replacement = rf"\g<1>{encodedToken}"
+
+    result, replacementCount = _POT_PATTERN.subn(
+        replacement,
+        url,
+        count=1,
+    )
+
+    if replacementCount == 1:
+        return result
+
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}pot={encodedToken}"
