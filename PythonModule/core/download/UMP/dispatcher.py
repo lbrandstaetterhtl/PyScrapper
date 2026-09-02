@@ -9,6 +9,7 @@ from ..Dispatcher.base import Dispatcher
 # own imports
 
 from . import download
+from . import youtube_download_with_ytdlp
 
 # python default imports
 import asyncio
@@ -47,6 +48,10 @@ class UMPDispatcher(Dispatcher):
                                 post_body=context.target.post_body
                             
                         )
+
+                    
+
+
                     else:
                         await asyncio.to_thread(
                             download.downloadToFileUMP,
@@ -87,6 +92,11 @@ class UMPDispatcher(Dispatcher):
                         download_progress=context.download_progress,
                     )
 
+                    elif mode == "youtube":
+                        generator = youtube_download_with_ytdlp.downloadAndYieldYTDLPSimple(context)
+                        async for chunk in generator:
+                            yield chunk
+
                     else:
                         generator = download.downloadAndYieldUMP(
                             session=self.downloadInformation.session,
@@ -123,5 +133,8 @@ class UMPDispatcher(Dispatcher):
 
         if query.get("ump") == ["1"]:
             return "ump"
+
+        if "youtube.com/watch" in context.target.resolved_url:
+            return "youtube"
 
         raise ValueError("Unknown UMP transport")
