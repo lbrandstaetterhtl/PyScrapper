@@ -55,7 +55,8 @@ class UMPDispatcher(Dispatcher):
                                 start_url=context.target.resolved_url,
                                 extra_headers=context.target.extra_headers,
                                 download_progress=context.download_progress,
-                                max_len=context.media_info.total_size
+                                max_len=context.media_info.total_size,
+                                post_body=context.target.post_body
                                 
                             
                         )
@@ -93,6 +94,7 @@ class UMPDispatcher(Dispatcher):
                             extra_headers=context.target.extra_headers,
                             download_progress=context.download_progress,
                             max_len=context.media_info.total_size,
+                            post_body=context.target.post_body
                         )
                         async for chunk in generator:
                             yield chunk
