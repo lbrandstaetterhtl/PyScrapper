@@ -8,6 +8,9 @@ import  time, re, json, uuid
 from dataclasses import dataclass, field
 
 import os
+
+from models.requests import SaveUserDataRequest
+
 print("DISPLAY:", os.environ.get("DISPLAY"))
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -510,7 +513,7 @@ async def receive_download(data: requests.DownloadRequest):
                 resource = responses.Resources(
                         context=context,
                         progress_url=f"/download/progress/{taskId}/{context.context_id}",
-                        download_url=f"/stream/download/{taskId}/{context.output.full_filename}",
+                        download_url=f"/stream/download/{taskId}/{context.context_id}",
                         watch_url=f"/stream/watch/{taskId}/{context.context_id}{watchUrlExtension}",
                         stream_type = streamType
                     )
@@ -945,7 +948,8 @@ ConvertTo-Json
 
 
 #---------------- DB management ------------------------
-
+#User account definitions (admin, mod, normal)
+#API Key field for users
 def create_app_tables():
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
@@ -1042,14 +1046,6 @@ class SettingsModel(BaseModel):
     DownloadPath: str
     DarkModeEnabled: bool
     ScanFolderOnStartup: bool
-
-class SaveUserDataRequest(BaseModel):
-    user_identifier: str
-    playlists: List[PlaylistModel]
-    medias: List[MediaModel]
-    playlist_medias: List[PlaylistMediaModel]
-    setting: SettingsModel
-
 
 def save_user_data(request: SaveUserDataRequest):
     user_identifier = request.user_identifier

@@ -142,3 +142,10 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     username: str
     password: str
+
+class SaveUserDataRequest(BaseModel):
+    user_identifier: str
+    playlists: List[PlaylistModel]
+    medias: List[MediaModel]
+    playlist_medias: List[PlaylistMediaModel]
+    setting: SettingsModel
