@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -179,38 +180,8 @@ public partial class App : Application
             var medias = await Database.LoadDownloadedMediasFromApiAsync() ?? new ObservableCollection<DownloadedMedia>();
 
             var mediasToRemove = medias.Where(m => m.DownloadPath == "Does not exist").ToList();
-
-            foreach (var media in medias)
-            {
-                bool exists = File.Exists(media.DownloadPath);
-                bool isSupported = false;
-                if (exists)
-                {
-                    isSupported = !media.DownloadPath.EndsWith(".mp4") || await AudioPlayer.IsSupportedCodec(media.DownloadPath);
-                }
-
-                if (exists && isSupported)
-                {
-                    media.IsPlayable = true;
-                }
-                else
-                {
-                    media.IsPlayable = false;
-
-                    if (!exists)
-                    {
-                        mediasToRemove.Add(media);
-                    }
-                    else
-                    {
-                        log = new Message(
-                            $"Media with id {media.Identifier} has an unsupported codec and will be set to not playable",
-                            DateTime.Now, "WARN");
-                        _logger.LogNewMassage(log);
-                    }
-                }
-            }
-
+            mediasToRemove.AddRange(medias.Where(m => !File.Exists(m.DownloadPath)).ToList());
+            
             foreach (var mediaToRemove in mediasToRemove)
             {
                 medias.Remove(mediaToRemove);
@@ -378,13 +349,8 @@ public partial class App : Application
                 var media = await Database.CreateDownloadedMediaAsync(req);
 
                 bool exists = File.Exists(media.DownloadPath);
-                bool isSupported = false;
-                if (exists)
-                {
-                    isSupported = !media.DownloadPath.EndsWith(".mp4") || await AudioPlayer.IsSupportedCodec(media.DownloadPath);
-                }
 
-                if (exists && isSupported)
+                if (exists)
                 {
                     media.IsPlayable = true;
                 }
@@ -418,5 +384,43 @@ public partial class App : Application
         Current!.RequestedThemeVariant = AppData.Settings.DarkModeEnabled
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
+    }
+    
+    /// <summary>
+    /// Locates the ffprobe executable by checking PATH first, then the WinGet yt-dlp.FFmpeg package
+    /// directory, and finally the local ffmpeg folder placed by the launcher. This mirrors the lookup
+    /// logic of the Python find_ffmpeg() function so both sides of the application agree on the location.
+    /// Returns the full path to ffprobe.exe, or null if it cannot be found.
+    /// </summary>
+    public static string? FindExe(string name)
+    {
+        var where = Process.Start(new ProcessStartInfo
+        {
+            FileName               = "where",
+            Arguments              = name,
+            RedirectStandardOutput = true,
+            RedirectStandardError  = true,
+            UseShellExecute        = false,
+            CreateNoWindow         = true,
+        })!;
+        var result = where.StandardOutput.ReadToEnd().Trim();
+        where.WaitForExit();
+        if (where.ExitCode == 0 && !string.IsNullOrEmpty(result))
+            return result.Split('\n')[0].Trim();
+
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var pkgRoot = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");
+        if (Directory.Exists(pkgRoot))
+        {
+            var hit = Directory
+                .EnumerateFiles(pkgRoot, "ffprobe.exe", SearchOption.AllDirectories)
+                .FirstOrDefault(f => f.Contains("yt-dlp.FFmpeg"));
+            if (hit != null) return hit;
+        }
+
+        var localFfprobe = Path.Combine(AppData.PyScrapperPath, "LocalServer", "ffmpeg", "bin", "ffprobe.exe");
+        if (File.Exists(localFfprobe)) return localFfprobe;
+
+        return null;
     }
 }

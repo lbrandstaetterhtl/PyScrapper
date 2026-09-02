@@ -65,9 +65,9 @@
                         <MenuItem Header="Delete All Playlists" Command="{Binding DeleteAllPlaylistsCommand}"/>
                     </MenuItem>
                     <MenuItem Header="Medias">
-                        <MenuItem Header="Convert Video Codec" Command="{Binding ConvertCodecCommand}"/>
                         <MenuItem Header="Scan A Folder For Medias" Command="{Binding ScanFolderCommand}"/>
                         <MenuItem Header="Delete All Medias" Command="{Binding DeleteAllMediasCommand}"/>
+                        <MenuItem Header="Convert File" Command="{Binding OpenConverterWindowCommand}"/>
                     </MenuItem>
                     <MenuItem Header="Server">
                         <MenuItem Header="Get Health" Command="{Binding GetHealthCommand}"/>
@@ -89,7 +89,7 @@
                             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                           VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
-                                <DockPanel Grid.Row="0" HorizontalAlignment="Left" MinWidth="600">
+                                <DockPanel HorizontalAlignment="Left" MinWidth="600">
                                 <TextBlock Text="Playlists" Classes="UIHeader" DockPanel.Dock="Top" HorizontalAlignment="Left"/>
                                 <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
                                 <Border DockPanel.Dock="Top" Classes="Cell" HorizontalAlignment="Left" MaxWidth="900" MinWidth="600">
@@ -109,7 +109,7 @@
                                 <Border Classes="SeparatorHorizontal" DockPanel.Dock="Top" HorizontalAlignment="Stretch"/>
                             </DockPanel>
                                 
-                            <ItemsControl Grid.Row="2" ItemsSource="{Binding Playlists}">
+                            <ItemsControl ItemsSource="{Binding Playlists}">
                                 
                                 <ItemsControl.Template>
                                     <ControlTemplate>

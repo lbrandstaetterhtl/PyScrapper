@@ -53,18 +53,7 @@ public class AppData : Interfaces.IAppDataService
     public static string ServerLogsPath { get; set; } = Path.Combine(PyScrapperPath, "LocalServer", "logs");
     public static string DataPath { get; set; } =  Path.Combine(PyScrapperPath, "PyScrapperDesktopApp", "data");
     public static string AssetPath { get; set; } = Path.Combine(PyScrapperPath, "PyScrapperDesktopApp" ,"Assets"); //AppBasePath instead of PyScrapperPath if released!! and no PyScrapperDesktopApp
-    public static readonly List<FilePickerFileType> FileTypes = 
-    [
-        new ("Media Files") 
-        { 
-            Patterns = ["*.mp4", "*.mp3", "*.wav"] 
-        },
-        new ("Video Files")
-        {
-            Patterns = ["*.mp4"] 
-        }
-    ];
-
+    
     public static readonly Dictionary<string, string> ValidMediaTypes = new()
     {
         { ".mp3", "audio" },
@@ -73,8 +62,38 @@ public class AppData : Interfaces.IAppDataService
         { ".mkv", "video" },
         { ".flac", "audio" },
         { ".ogg", "audio" },
-        {".ts", "audio" }
-    };
+        { ".ts", "audio" },
+        { ".m4a", "audio" },
+        { ".opus", "audio"}
+    }; 
+    
+    public static readonly List<FilePickerFileType> FileTypes =
+    [
+        new("Media Files")
+        {
+            Patterns = ValidMediaTypes.Keys
+                .Select(ext => "*" + ext)
+                .ToList()
+        },
+        new("Audio Files")
+        {
+            Patterns = ValidMediaTypes
+                .Where(kv => kv.Value == "audio")
+                .Select(kv => "*" + kv.Key)
+                .ToList()
+        },
+        new("Video Files")
+        {
+            Patterns = ValidMediaTypes
+                .Where(kv => kv.Value == "video")
+                .Select(kv => "*" + kv.Key)
+                .ToList()
+        },
+        new("All Files")
+        {
+            Patterns = ["*"]
+        }
+    ];
     
     public static readonly List<string> ValidProviders = ["suno", "youtube", "bandcamp", "archive", "soundcloud", "wcoflix", "aniworld", "newgrounds", "youtubemusic"];
     public static readonly List<string> ValidSearchProviders = ["youtube", "bandcamp", "archive", "soundcloud", "newgrounds", "youtubemusic"];

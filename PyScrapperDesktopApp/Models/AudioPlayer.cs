@@ -185,45 +185,6 @@ public class AudioPlayer : IDisposable
     /// <param name="filePath"></param>
     private async Task PlayFile(string filePath)
     {
-        bool isSupported = true;
-
-        if (!isSupported)
-        {
-            var media = AppData.DownloadedMedias.FirstOrDefault(m => m.DownloadPath == filePath);
-
-            if (media != null)
-                media.IsPlayable = false;
-
-
-            if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
-
-            string message =
-                $"The video codec for the file '{filePath}' is not supported. Would you like to convert the file to the supported format H264.";
-            var confirmationWindow = new ConfirmationWindow(message);
-            var result = await confirmationWindow.ShowDialog<bool>(desktop.MainWindow);
-
-            if (!result)
-                return;
-
-            string outputPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(filePath) ?? "",
-                System.IO.Path.GetFileNameWithoutExtension(filePath) + "_converted.mp4");
-
-            var converterWindow = new CodecConverterWindow(inputPath: filePath, outputPath: outputPath);
-            bool finished = await converterWindow.ShowDialog<bool>(desktop.MainWindow);
-
-            if (!finished)
-            {
-                var logg = new Message($"User canceled the codec conversion for file '{filePath}'", DateTime.Now,
-                    "INFO");
-                _logger.LogNewMassage(logg);
-                return;
-            }
-            else
-            {
-                filePath = outputPath;
-            }
-        }
-
         CurrentFile = filePath;
 
         _currentMedia?.Dispose();
@@ -315,99 +276,6 @@ public class AudioPlayer : IDisposable
         _mediaPlayer.Dispose();
         _libVLC.Dispose();
     }
-
-    /// <summary>
-    /// Checks if the video codec of the specified file is supported by the application. It uses FFprobe to analyze the video file and extract the codec information.
-    /// If the codec is not supported, it returns false, indicating that the file cannot be played directly and may require conversion to a supported format.
-    /// If the codec is supported, it returns true, allowing the application to proceed with playing the file without any issues.
-    /// This method is crucial for ensuring that the application can handle the media files correctly and provide a smooth playback experience for the user by identifying any potential compatibility issues with the video codecs used in the media files.
-    /// </summary>
-    /// <param name="path"></param>
-    /// <returns></returns>
-    public static async Task<bool> IsSupportedCodec(string path)
-    {
-        var (success, streams) = await ProbeStreams(path);
-
-        if (!success)
-        {
-            throw new Exception($"Can't get streams for {path}");
-        }
-        
-        var videoStream = streams.FirstOrDefault(s => s.CodecType == "video");
-        if (videoStream == null)
-        {
-            var audioStreams = streams.FirstOrDefault(s => s.CodecType == "audio");
-            if (audioStreams == null)
-            {
-                throw new Exception($"{path} has no streams");
-            }
-            
-            return true;
-        }
-        
-        return videoStream.CodecName.Equals("h264", StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// Starts Ffprobe and gets all stream entries
-    /// Returns a bool and a list of codec_name and codec_type of the entries
-    /// /// </summary>
-    /// <param name="path"></param>
-    /// <returns></returns>
-    private static async Task<(bool, List<StreamInfo>)> ProbeStreams(string path)
-    {
-        var ffprobe = FindFfprobe() ?? "ffprobe";
-        var streams = new List<StreamInfo>();
-        var process = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = ffprobe,
-                Arguments = $"-v error -show_entries stream=codec_type,codec_name -of json \"{path}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            }
-        };
-            
-        process.Start();
-            
-        string outPut = await process.StandardOutput.ReadToEndAsync();
-        string error = await process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-
-        if (process.ExitCode != 0 || !string.IsNullOrEmpty(error))
-        {
-            var log = new Message($"FFprobe error for file '{path}': {error}", DateTime.Now, "ERROR");
-                _logger.LogNewMassage(log);
-                return (false, streams);
-        }
-            
-        using var doc = JsonDocument.Parse(outPut);
-        if (doc.RootElement.TryGetProperty("streams", out var streamsElement))
-        {
-            foreach (var streamInfo in streamsElement.EnumerateArray())
-            {
-                var stream = streamInfo.Deserialize<StreamInfo>();
-                    
-                if (stream != null)
-                {
-                    streams.Add(stream);
-                }
-                else
-                {
-                    return (true, new List<StreamInfo>());
-                }
-            }
-                
-            return (true, streams);
-        }
-        else
-        {
-            return (true, new List<StreamInfo>());
-        }
-    }
     
     /// <summary>
     /// Represents information about a media stream, including its codec type and codec name.
@@ -421,43 +289,5 @@ public class AudioPlayer : IDisposable
         
         [JsonPropertyName("codec_name")]
         public string? CodecName { get; set; }
-    }
-    
-    /// <summary>
-    /// Locates the ffprobe executable by checking PATH first, then the WinGet yt-dlp.FFmpeg package
-    /// directory, and finally the local ffmpeg folder placed by the launcher. This mirrors the lookup
-    /// logic of the Python find_ffmpeg() function so both sides of the application agree on the location.
-    /// Returns the full path to ffprobe.exe, or null if it cannot be found.
-    /// </summary>
-    private static string? FindFfprobe()
-    {
-        var where = Process.Start(new ProcessStartInfo
-        {
-            FileName               = "where",
-            Arguments              = "ffprobe",
-            RedirectStandardOutput = true,
-            RedirectStandardError  = true,
-            UseShellExecute        = false,
-            CreateNoWindow         = true,
-        })!;
-        var result = where.StandardOutput.ReadToEnd().Trim();
-        where.WaitForExit();
-        if (where.ExitCode == 0 && !string.IsNullOrEmpty(result))
-            return result.Split('\n')[0].Trim();
-
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var pkgRoot = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");
-        if (Directory.Exists(pkgRoot))
-        {
-            var hit = Directory
-                .EnumerateFiles(pkgRoot, "ffprobe.exe", SearchOption.AllDirectories)
-                .FirstOrDefault(f => f.Contains("yt-dlp.FFmpeg"));
-            if (hit != null) return hit;
-        }
-
-        var localFfprobe = Path.Combine(AppData.PyScrapperPath, "LocalServer", "ffmpeg", "bin", "ffprobe.exe");
-        if (File.Exists(localFfprobe)) return localFfprobe;
-
-        return null;
     }
 }

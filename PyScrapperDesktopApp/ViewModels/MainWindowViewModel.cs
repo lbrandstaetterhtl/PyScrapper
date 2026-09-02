@@ -296,59 +296,6 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Command method that is executed when the user clicks the button to convert a media file to a supported codec (e.g., H264).
-    /// It prompts the user to enter a file path for the media file they want to convert, checks if the file exists, and then asks for confirmation to proceed with the conversion.
-    /// </summary>
-    [RelayCommand]
-    private async Task ConvertCodec()
-    {
-        
-        var toplevel = TopLevel.GetTopLevel(_window);
-        var storageService = new StorageService(toplevel!);
-        var files = await storageService.OpenFilePickerAsync(new FilePickerOpenOptions()
-        {   
-            Title = "Select a media file to convert",
-            AllowMultiple = false,
-            FileTypeFilter = AppData.FileTypes.Where(ft => ft.Name == "Video Files").ToList()
-        });
-        
-        if (files.Count <= 0) return;
-
-        string path = files[0].Path.LocalPath;
-        
-        if (path == null)
-        {
-            return;
-        }
-        
-        if (!File.Exists(path))
-        {
-            await _dialogService.ShowAlertAsync("File does not exist. Please check the path and try again.");
-            return;
-        }
-        
-        var message = "Would you like to convert it to a supported codec H264?";
-        bool confirmationResult =  await _dialogService.ConfirmAsync(message);
-
-        if (!confirmationResult)
-            return;
-        
-        var outputPath = CodecConverterWindowViewModel.SetOutputPath(path);
-        var codecConverterWindow = new CodecConverterWindow(inputPath: path, outputPath: outputPath);
-        bool finished = await codecConverterWindow.ShowDialog<bool>(_window);
-
-        if (!finished)
-        {
-            var log = new Message($"Codec conversion for file '{path}' was cancelled.", DateTime.Now, "WARNING");
-            _logger.LogNewMassage(log);
-        }
-        else
-        {
-            await _dialogService.ShowAlertAsync("Conversion completed successfully. The converted file has been added to the media list.");
-        }
-    }
-
-    /// <summary>
     /// Command method that is executed when the user clicks the button to scan a folder for media files.
     /// It prompts the user to enter a folder path, and then calls the App.ScanFolder method with the provided path to scan for media files within that folder.
     /// </summary>
@@ -519,5 +466,12 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var scrapWindow = new ScrapWindowWithSearch("youtubemusic");
         await scrapWindow.ShowDialog(_window);
+    }
+    
+    [RelayCommand]
+    private async Task OpenConverterWindow()
+    {
+        var converterWindow = new MediaConverterWindow();
+        await converterWindow.ShowDialog(_window);
     }
 }
