@@ -21,6 +21,8 @@ public partial class MediaConverterWindowViewModel(DialogService ds, Window wind
     
     [ObservableProperty]
     private List<string> _availableMediaTypes = AppData.ValidMediaTypes.Keys.ToList();
+
+    [ObservableProperty] private string _selectButtonContent = "Select File";
     
     public event Action? CloseRequested;
 
@@ -45,6 +47,8 @@ public partial class MediaConverterWindowViewModel(DialogService ds, Window wind
         if (!File.Exists(path)) return;
         
         FilePath = path;
+        var filename = Path.GetFileName(path);
+        SelectButtonContent = $"Selected: {filename}";
     }
 
     [RelayCommand]
@@ -52,7 +56,7 @@ public partial class MediaConverterWindowViewModel(DialogService ds, Window wind
     {
         var result = await MediaConverter.Convert(FilePath, TargetContainer);
         var filename = Path.GetFileNameWithoutExtension(FilePath);
-        var extension = Path.GetExtension(FilePath);
+        var extension = Path.GetExtension(result);
 
         var createRequestData = new CreateDownloadedMediaRequest()
         {
