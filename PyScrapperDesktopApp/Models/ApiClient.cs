@@ -26,6 +26,8 @@ public class ApiClient : Interfaces.IApiClient
     private readonly AppLogger _logger = AppLogger.Instance;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    
+    private readonly string _encryptedApiKey = AppData.CurrentUser?.ApiKey ?? "";
 
     /// <summary>
     /// Sends a scrap request to the server and returns the download ID if successful, or "-1" if there was an error.
@@ -37,7 +39,7 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<DownloadResponse> SendScrapRequest(DownloadRequestData requestData)
     {
         using HttpClient client = new();
-        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
+        client.DefaultRequestHeaders.Add("X-Admin-key", SecretProtector.Decrypt(_encryptedApiKey));
         
         client.Timeout = TimeSpan.FromMinutes(30);
 
@@ -91,7 +93,6 @@ public class ApiClient : Interfaces.IApiClient
         {
 
             using HttpClient client = new();
-            client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/health");
             var responseData = await response.Content.ReadAsStringAsync();
@@ -158,7 +159,7 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<List<SearchResultItem>> SendSearchRequest(SearchRequestData requestData)
     {
         using HttpClient client = new();
-        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
+        client.DefaultRequestHeaders.Add("X-Admin-key", SecretProtector.Decrypt(_encryptedApiKey));
 
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
@@ -198,7 +199,7 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<ProgressSuccessResponse> GetDownloadProgress(DownloadResource resource)
     {
         using HttpClient client = new();
-        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
+        client.DefaultRequestHeaders.Add("X-Admin-key", SecretProtector.Decrypt(_encryptedApiKey));
 
         var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}{resource.ProgressUrl}");
         var responseData = await response.Content.ReadAsStringAsync();
@@ -341,7 +342,6 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<bool> Login(LoginRequest req)
     {
         using var client = new HttpClient();
-        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
         var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/login", content);
@@ -382,7 +382,7 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<bool> Logout()
     {
         using var  client = new HttpClient();
-        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
+        client.DefaultRequestHeaders.Add("X-Admin-key", SecretProtector.Decrypt(_encryptedApiKey));
         
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/logout/{AppData.Config.LastLoggedInUser?.Identifier}", null);
 
@@ -398,7 +398,6 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<bool> Register(RegisterRequest req)
     {
         using var client = new HttpClient();
-        client.DefaultRequestHeaders.Add("X-Admin-key", AppData.Config.ApiKey);
         var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/register", content);

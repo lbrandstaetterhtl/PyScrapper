@@ -223,6 +223,7 @@
                                                     <MenuItem Header="Copy URL" Click="CopyUrlClick"/>
                                                     <MenuItem Header="Delete File" Click="DeleteFile"/>
                                                     <MenuItem Header="Delete Only The Media Item" Click="DeleteMedia"/>
+                                                    <MenuItem Header="Convert Media" Click="ConvertMediaClick"/>
                                                 </MenuFlyout>
                                             </Border.ContextFlyout>
                                             <Grid>

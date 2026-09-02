@@ -166,6 +166,9 @@ public class RegisterRequest
     
     [JsonPropertyName("password")]
     public string Password { get; set; }
+    
+    [JsonPropertyName("apikey")]
+    public string ApiKey { get; set; }
 }
 
 /// <summary>

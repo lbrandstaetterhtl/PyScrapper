@@ -19,6 +19,7 @@ namespace PyScrapperDesktopApp.Models;
 public abstract class Database
 {
     private static readonly AppLogger _logger = AppLogger.Instance;
+    private static readonly string EncryptedApiKey = AppData.CurrentUser?.ApiKey ?? "";
 
     /// <summary>
     /// Asynchronously loads the downloaded media items for the current user from the backend API.
@@ -32,7 +33,7 @@ public abstract class Database
             var downloadedMedias = new ObservableCollection<DownloadedMedia>();
 
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/getuser/downloadedmedias/{AppData.CurrentUser.Identifier}");
             var json = await response.Content.ReadAsStringAsync();
@@ -76,7 +77,7 @@ public abstract class Database
             var playlists = new ObservableCollection<Playlist>();
 
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/getuser/playlists/{AppData.CurrentUser.Identifier}");
 
@@ -119,7 +120,7 @@ public abstract class Database
         try
         {
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/settings/{AppData.CurrentUser.Identifier}");
 
@@ -164,7 +165,7 @@ public abstract class Database
             var playlistMediaList = new List<PlaylistMedia>();
 
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/playlistmedias/{playlistIdentifier}");
 
@@ -221,7 +222,7 @@ public abstract class Database
         try
         {
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));   
 
             var jsonContent = JsonSerializer.Serialize(req);
             var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
@@ -270,7 +271,7 @@ public abstract class Database
         try
         {
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey); 
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey)); 
 
             var jsonContent = JsonSerializer.Serialize(req);
             var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
@@ -317,7 +318,7 @@ public abstract class Database
         try
         {
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));   
 
             var jsonContent = JsonSerializer.Serialize(req);
             var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
@@ -363,7 +364,7 @@ public abstract class Database
         try
         {
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));   
 
             var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/downloadedmedia/{identifier}", null);   
             var json = await response.Content.ReadAsStringAsync();
@@ -397,7 +398,7 @@ public abstract class Database
             var content = new StringContent(JsonSerializer.Serialize(new { Identifier = identifier }), System.Text.Encoding.UTF8, "application/json");
 
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);  
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));
 
             var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/playlist", content);   
 
@@ -431,7 +432,7 @@ public abstract class Database
             var content = new StringContent(JsonSerializer.Serialize(new { PlaylistIdentifier = playlistIdentifier, MediaIdentifier = mediaIdentifier }), System.Text.Encoding.UTF8, "application/json");
 
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));   
 
             var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/playlistmedia", content);   
 
@@ -465,7 +466,7 @@ public abstract class Database
             var content = new StringContent(JsonSerializer.Serialize(req), System.Text.Encoding.UTF8,
                 "application/json");
             var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));   
 
             var response =
                 await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/create/settings/", content);  
@@ -516,7 +517,6 @@ public abstract class Database
     public static async Task<User> GetUserAsync(string identifier)
     {
         var client = new HttpClient();
-        client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
         var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/user/{identifier}");
 
         if (!response.IsSuccessStatusCode)
@@ -551,7 +551,7 @@ public abstract class Database
     public static async Task<bool> SaveUserDataAsync(SaveDataRequest req)
     {
             using var client  = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);
+            client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));
 
             var content = new StringContent(JsonSerializer.Serialize(req), System.Text.Encoding.UTF8, "application/json");
 
@@ -561,9 +561,7 @@ public abstract class Database
             {
                 throw new Exception(response.ReasonPhrase);
             }
-
-            var log = new Message("User data saved successfully via API.", DateTime.Now, "INFO");
-            _logger.LogNewMassage(log);
+            
             return true;
     }
 
@@ -575,7 +573,7 @@ public abstract class Database
     public static async Task<bool> SetUserLoggedInAsync()
     {
         using var client = new HttpClient();
-        client.DefaultRequestHeaders.Add("X-Admin-Key", AppData.Config.ApiKey);   
+        client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedApiKey));   
 
         var content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/loggedIn?identifier={AppData.CurrentUser.Identifier}",  content);  

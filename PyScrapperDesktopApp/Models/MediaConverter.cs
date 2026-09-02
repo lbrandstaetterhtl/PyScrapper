@@ -241,7 +241,8 @@ public class MediaConverter
                 RedirectStandardError = true,
                 StandardErrorEncoding = System.Text.Encoding.UTF8,
                 StandardOutputEncoding = System.Text.Encoding.UTF8,
-                Arguments = args
+                Arguments = args,
+                CreateNoWindow = true
             }
         };
         
@@ -253,12 +254,19 @@ public class MediaConverter
         var progress = await stdoutTask;
         var errors   = await stderrTask;
         
+        var logMessage = $"ffmpeg output: {progress}\nffmpeg errors: {errors}";
+        var log = new Message(logMessage, DateTime.Now, "INFO");
+        AppLogger.Instance.LogNewMassage(log);
+        
         await ffmpeg.WaitForExitAsync();
 
         if (ffmpeg.ExitCode != 0 || !string.IsNullOrEmpty(errors))
         {
             throw new Exception(errors);
         }
+        
+        log = new Message($"Converted {path} to {outputPath} with target container {targetContainer}", DateTime.Now, "INFO");
+        AppLogger.Instance.LogNewMassage(log);
         
         return outputPath;
     }

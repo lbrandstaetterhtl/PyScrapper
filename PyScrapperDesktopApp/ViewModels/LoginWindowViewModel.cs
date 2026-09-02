@@ -111,7 +111,8 @@ public partial class LoginWindowViewModel : ObservableObject
         var req = new RegisterRequest()
         {
             Username = Username,
-            Password = Password
+            Password = Password,
+            ApiKey = SecretProtector.GenerateApiKey()
         };
 
         var result = await client.Register(req);

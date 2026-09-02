@@ -452,6 +452,7 @@ public class User(string username, string identifier)
 {
     public string Username { get; set; } = username;
     public string Identifier { get; set; } = identifier;
+    public string ApiKey { get; set; } = string.Empty;
 }
 
 /// <summary>

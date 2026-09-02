@@ -33,17 +33,17 @@
                         <TextBlock Text="Server Port: " Classes="UILabel"/>
                         <TextBox Text="{Binding ServerPort}" Classes="UI" MaxWidth="200"/>
                     </StackPanel>
-
+                    
                     <StackPanel Orientation="Horizontal" Classes="UICell">
-                        <TextBlock Text="Api Key: " Classes="UILabel"/>
-                        <TextBox Text="{Binding ApiKey}" Classes="UI" MaxWidth="200"/>
+                        <TextBlock Text="API Key: " Classes="UILabel"/>
+                        <TextBox Text="{Binding MyApiKey}" Classes="UI" MaxWidth="200"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
             
             <Border Grid.Row="1" Classes="Cell" HorizontalAlignment="Stretch" VerticalAlignment="Bottom">
                 <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="10">
-                    <Button Classes="primary" IsDefault="True" Content="Save Config" Command="{Binding SaveConfigCommand}"/>
+                    <Button Classes="primary" IsDefault="True" Content="Save Config" Command="{Binding SaveCommand}"/>
                     <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                 </StackPanel>
             </Border>

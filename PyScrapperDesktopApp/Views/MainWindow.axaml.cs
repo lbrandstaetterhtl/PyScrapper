@@ -240,4 +240,23 @@ public partial class MainWindow : Window
             await _ds.ShowAlertAsync("An error occured while trying to add media to playlist: " + ex.Message);
         }
     }
+    
+    private async void ConvertMediaClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (sender is MenuItem { DataContext: DownloadedMedia media })
+            {
+                var convertWindow = new MediaConverterWindow(media.DownloadPath);
+                await convertWindow.ShowDialog(this);
+            }
+        }
+        catch (Exception exception)
+        {
+            var log = new Message("An error occured while trying to convert media: " + exception.Message, DateTime.Now, "ERROR");
+            _logger.LogNewMassage(log);
+            
+            await _ds.ShowAlertAsync("An error occured while trying to convert media: " + exception.Message);
+        }
+    }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -64,6 +65,16 @@ public static class SecretProtector
             return "";
         }
     }
+    
+    public static string GenerateApiKey()
+    {
+        // Generate a new API key with a prefix and a random GUID (comment if in production)
+        /*var apikey = "pyscrapper_" + Guid.NewGuid().ToString().Substring(0, 8);
+        var encryptedKey = Encrypt(apikey);
+        return encryptedKey;*/
+
+        return "pyscrapper_789fhn897hnz6f709n87nuf"; // Return a fixed API key for production
+    }
 }
 
 /// <summary>
@@ -77,13 +88,12 @@ public class AppConfig
     [JsonPropertyName("ServerPort")]
     public string? ServerPort { get; set; }
     
-    [JsonPropertyName("ApiKey")]
-    public string? ApiKey { get; set; }
-    
     [JsonPropertyName("LastLoggedInUser")]
     public User? LastLoggedInUser { get; set; }
-    
+
     private static readonly string ConfigPath = Path.Combine(AppData.DataPath, "config.json");
+    
+    
     
     /// <summary>
     /// Loads the application configuration from the config.json file. If the file does not exist, it creates a default configuration and saves it.
@@ -113,8 +123,6 @@ public class AppConfig
             var json = File.ReadAllText(ConfigPath);
             
             var config = JsonSerializer.Deserialize<AppConfig>(json);
-            
-            config.ApiKey = SecretProtector.Decrypt(config.ApiKey);
 
             result = config;
 
@@ -146,7 +154,6 @@ public class AppConfig
             {
                 ServerUrl = config.ServerUrl,
                 ServerPort = config.ServerPort,
-                ApiKey = SecretProtector.Encrypt(config.ApiKey),
                 LastLoggedInUser = config.LastLoggedInUser
             };
             
@@ -170,7 +177,6 @@ public class AppConfig
         {
             ServerUrl = "http://127.0.0.1",
             ServerPort = "8765",
-            ApiKey = "pyscrapper_789fhn897hnz6f709n87nuf",
             LastLoggedInUser = null 
         };
         
