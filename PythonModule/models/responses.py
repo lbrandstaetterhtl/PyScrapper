@@ -113,6 +113,7 @@ class UserResponse(BaseModel):
     Identifier: str
     Username: str
     CreatedAt: str
+    ApiKey: str
 
 class PlaylistResponse(BaseModel):
     Identifier: str

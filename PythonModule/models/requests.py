@@ -106,6 +106,7 @@ class SearchRequest(BaseModel):
 class CreateUserRequest(BaseModel):
     username: str
     password: str
+    apikey: str
 
 class CreatePlaylistRequest(BaseModel):
     user_identifier: str
@@ -142,6 +143,7 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     username: str
     password: str
+    apikey: str
 
 class PlaylistModel(BaseModel):
     Identifier: str

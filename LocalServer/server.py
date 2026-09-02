@@ -865,7 +865,7 @@ async def receive_search(data: requests.SearchRequest):
 
 start_time = time.time()
 
-@app.get("/health", dependencies=[Depends(require_admin)])
+@app.get("/health")
 def health():
     try:
         uptime_seconds = time.time() - start_time
@@ -963,6 +963,7 @@ def create_app_tables():
                         PasswordHash TEXT NOT NULL,
                         CreatedAt TEXT NOT NULL,
                         LoggedIn BOOLEAN NOT NULL,
+                        ApiKey TEXT NOT NULL,
                         LastLoggedIn TEXT NOT NULL)""")
 
     cursor.execute("""
@@ -1171,15 +1172,15 @@ async def handle_save_user_data(req: SaveUserDataRequest):
 # ============================================================
 
 # create_user() unverändert – reine DB-Funktion, kein Key.
-def create_user(username: str, password: str, identifier: str, created_at: str):
+def create_user(username: str, password: str, identifier: str, created_at: str, apikey: str):
     conn = connect_db()
     cursor = conn.cursor()
 
     date = datetime.now()
     formatted = date.isoformat()
 
-    cursor.execute("""INSERT INTO Users (Username, PasswordHash, Identifier, CreatedAt, LoggedIn, LastLoggedIn)
-                      VALUES (?, ?, ?, ?, ?, ?)""", (username, password, identifier, created_at, False, formatted))
+    cursor.execute("""INSERT INTO Users (Username, PasswordHash, Identifier, CreatedAt, LoggedIn, LastLoggedIn, ApiKey)
+                      VALUES (?, ?, ?, ?, ?, ?, ?)""", (username, password, identifier, created_at, False, formatted, apikey))
     conn.commit()
     conn.close()
 
@@ -1244,17 +1245,17 @@ async def handle_set_last_logged_in(identifier: str = Query(None)):
 
 
 # --- get_users: KEIN Admin-Key, unverändert ---
-@app.get("/get/user/{identifier}", dependencies=[Security(require_admin)], response_model=UserResponse)
-async def get_users(identifier: str):
+@app.get("/get/user/{identifier}", response_model=UserResponse, dependencies=[Security(require_admin)])
+async def get_user(identifier: str):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Identifier, Username, CreatedAt FROM Users WHERE Identifier = ?", (identifier,))
+        cursor.execute("SELECT Identifier, Username, CreatedAt, ApiKey FROM Users WHERE Identifier = ?", (identifier,))
         row = cursor.fetchone()
 
         if row is None:
-            cursor.execute("SELECT Identifier, Username, CreatedAt FROM Users WHERE Username = ?", (identifier,))
+            cursor.execute("SELECT Identifier, Username, CreatedAt, ApiKey FROM Users WHERE Username = ?", (identifier,))
             row = cursor.fetchone()
 
             if row is None:
@@ -1307,10 +1308,11 @@ async def handle_create_user_req(req: requests.CreateUserRequest):
         username = req.username
         password = req.password
         created_at = datetime.now().isoformat()
+        apikey = req.apikey
 
         password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-        create_user(username, password_hash, identifier, created_at)
+        create_user(username, password_hash, identifier, created_at, apikey)
 
         server_state.log_queue.put_nowait(f"[INFO] User '{username}' created successfully with id {identifier}")
         return {"message": "User created successfully", "identifier": identifier}
@@ -1739,7 +1741,7 @@ async def get_user_playlists(user_identifier: str):
 # ============================================================
 
 # --- login: unverändert ---
-@app.post("/login", response_model=LoginResponse, dependencies=[Security(require_admin)])
+@app.post("/login", response_model=LoginResponse)
 async def handle_login_req(req: requests.LoginRequest):
     try:
         conn = connect_db()
@@ -1772,11 +1774,11 @@ async def handle_login_req(req: requests.LoginRequest):
 # handle_create_user_req hat jetzt nur noch (req) als Parameter; der direkte
 # Funktionsaufruf umgeht die require_admin-Dependency (die läuft nur über HTTP),
 # also bleibt /register wie gehabt offen/public.
-@app.post("/register", dependencies=[Security(require_admin)])
+@app.post("/register")
 async def handle_register_req(req: requests.RegisterRequest):
     try:
 
-        create_user_req = requests.CreateUserRequest(username=req.username, password=req.password)
+        create_user_req = requests.CreateUserRequest(username=req.username, password=req.password, apikey=req.apikey)
         response = await handle_create_user_req(create_user_req)
 
         if response:
