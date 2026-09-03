@@ -390,6 +390,7 @@ public class ApiClient : Interfaces.IApiClient
     {
         using var  client = new HttpClient();
         client.DefaultRequestHeaders.Add("X-User-key", SecretProtector.Decrypt(_encryptedUserApiKey));
+        client.DefaultRequestHeaders.Add("Auth", AppData.CurrentUser.Identifier);
         
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/logout/{AppData.Config.LastLoggedInUser?.Identifier}", null);
 

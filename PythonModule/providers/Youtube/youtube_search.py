@@ -2,7 +2,7 @@
 
 from PythonModule.core.network import Session
 from PythonModule.models.requests import SearchFilters
-import PythonModule.core.general as core
+import PythonModule.core as core
 from PythonModule.core.network import html
 
 #Python default imports

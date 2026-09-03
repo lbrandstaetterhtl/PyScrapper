@@ -1,17 +1,14 @@
 ﻿# Python Default Imports
 import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime
 import platform, subprocess
 import time, re, json, uuid
 
 from dataclasses import dataclass, field
 
-import os
-
 print("DISPLAY:", os.environ.get("DISPLAY"))
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import asyncio
 import sqlite3
@@ -180,9 +177,6 @@ def require_user(request: Request, key: str | None = Security(user_key_header),
             f"[WARN] Invalid user authentication for identifier '{auth_identifier}'"
         )
         raise fastapi.HTTPException(status_code=401, detail="Invalid user key")
-
-    print(request_api_key_hash)
-    print(row["ApiKey"])
 
     if not secrets.compare_digest(request_api_key, row["ApiKey"]):
         server_state.log_queue.put_nowait(
