@@ -27,7 +27,9 @@ public class ApiClient : Interfaces.IApiClient
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     
-    private readonly string _encryptedApiKey = AppData.CurrentUser?.ApiKey ?? "";
+    private readonly string _encryptedUserApiKey = AppData.CurrentUser?.ApiKey ?? "";
+    
+    private readonly string _encryptedClientApiKey = AppData.Config.ClientApiKey ?? "";
 
     /// <summary>
     /// Sends a scrap request to the server and returns the download ID if successful, or "-1" if there was an error.
@@ -39,7 +41,8 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<DownloadResponse> SendScrapRequest(DownloadRequestData requestData)
     {
         using HttpClient client = new();
-        client.DefaultRequestHeaders.Add("X-Admin-key", SecretProtector.Decrypt(_encryptedApiKey));
+        client.DefaultRequestHeaders.Add("X-User-key", SecretProtector.Decrypt(_encryptedUserApiKey));
+        client.DefaultRequestHeaders.Add("Auth", AppData.CurrentUser.Identifier);
         
         client.Timeout = TimeSpan.FromMinutes(30);
 
@@ -159,7 +162,8 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<List<SearchResultItem>> SendSearchRequest(SearchRequestData requestData)
     {
         using HttpClient client = new();
-        client.DefaultRequestHeaders.Add("X-Admin-key", SecretProtector.Decrypt(_encryptedApiKey));
+        client.DefaultRequestHeaders.Add("X-User-key", SecretProtector.Decrypt(_encryptedUserApiKey));
+        client.DefaultRequestHeaders.Add("Auth", AppData.CurrentUser.Identifier);
 
         var jsonContent = JsonSerializer.Serialize(requestData, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
@@ -199,7 +203,8 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<ProgressSuccessResponse> GetDownloadProgress(DownloadResource resource)
     {
         using HttpClient client = new();
-        client.DefaultRequestHeaders.Add("X-Admin-key", SecretProtector.Decrypt(_encryptedApiKey));
+        client.DefaultRequestHeaders.Add("X-User-key", SecretProtector.Decrypt(_encryptedUserApiKey));
+        client.DefaultRequestHeaders.Add("Auth", AppData.CurrentUser.Identifier);
 
         var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}{resource.ProgressUrl}");
         var responseData = await response.Content.ReadAsStringAsync();
@@ -351,8 +356,10 @@ public class ApiClient : Interfaces.IApiClient
         
         if (response.IsSuccessStatusCode)
         {
-            AppData.CurrentUser = await Database.GetUserAsync(req.Username);
+            var user = await Database.GetUserAsync(deserializedResponse.Identifier);
             
+            AppData.CurrentUser = new User(user.Username, user.Identifier, SecretProtector.Encrypt(user.ApiKey));
+
             await Database.SetUserLoggedInAsync();
 
             var log = new Message($"Login successful for user: \"{req.Username}\"", DateTime.Now, "INFO");
@@ -382,7 +389,7 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<bool> Logout()
     {
         using var  client = new HttpClient();
-        client.DefaultRequestHeaders.Add("X-Admin-key", SecretProtector.Decrypt(_encryptedApiKey));
+        client.DefaultRequestHeaders.Add("X-User-key", SecretProtector.Decrypt(_encryptedUserApiKey));
         
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/logout/{AppData.Config.LastLoggedInUser?.Identifier}", null);
 
@@ -429,6 +436,8 @@ public class ApiClient : Interfaces.IApiClient
         var downloadPath = path + "." + resource.Context.MediaInfo.FileExtension;
         _logger.LogDebugMessage(new Message($"Starting download from {resource.DownloadUrl} to {downloadPath}", DateTime.Now, "DEBUG"));
         using var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-User-key", SecretProtector.Decrypt(_encryptedUserApiKey));
+        client.DefaultRequestHeaders.Add("Auth", AppData.CurrentUser.Identifier);
         using var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}{resource.DownloadUrl}", HttpCompletionOption.ResponseHeadersRead, ct);
         
         response.EnsureSuccessStatusCode();

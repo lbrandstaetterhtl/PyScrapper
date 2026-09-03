@@ -112,7 +112,7 @@ public partial class LoginWindowViewModel : ObservableObject
         {
             Username = Username,
             Password = Password,
-            ApiKey = SecretProtector.GenerateApiKey()
+            ApiKey = SecretProtector.Decrypt(SecretProtector.GenerateApiKey())
         };
 
         var result = await client.Register(req);

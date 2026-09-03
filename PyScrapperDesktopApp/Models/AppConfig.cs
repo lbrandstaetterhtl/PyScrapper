@@ -69,9 +69,9 @@ public static class SecretProtector
     public static string GenerateApiKey()
     {
         // Generate a new API key with a prefix and a random GUID (comment if in production)
-        /*var apikey = "pyscrapper_" + Guid.NewGuid().ToString().Substring(0, 8);
+        var apikey = "pyscrapper_" + Guid.NewGuid().ToString().Substring(0, 16);
         var encryptedKey = Encrypt(apikey);
-        return encryptedKey;*/
+        return encryptedKey;
 
         return "pyscrapper_789fhn897hnz6f709n87nuf"; // Return a fixed API key for production
     }
@@ -87,6 +87,9 @@ public class AppConfig
     
     [JsonPropertyName("ServerPort")]
     public string? ServerPort { get; set; }
+    
+    [JsonPropertyName("ClientApiKey")]
+    public string? ClientApiKey { get; set; }
     
     [JsonPropertyName("LastLoggedInUser")]
     public User? LastLoggedInUser { get; set; }
@@ -154,7 +157,8 @@ public class AppConfig
             {
                 ServerUrl = config.ServerUrl,
                 ServerPort = config.ServerPort,
-                LastLoggedInUser = config.LastLoggedInUser
+                LastLoggedInUser = config.LastLoggedInUser,
+                ClientApiKey = config.ClientApiKey
             };
             
             var json = JsonSerializer.Serialize(configToSave, new JsonSerializerOptions { WriteIndented = true });
@@ -177,9 +181,10 @@ public class AppConfig
         {
             ServerUrl = "http://127.0.0.1",
             ServerPort = "8765",
-            LastLoggedInUser = null 
+            LastLoggedInUser = null,
+            ClientApiKey = SecretProtector.Encrypt("pyscrapper_789fhn897hnz6f709n87nuf") //production
         };
         
         return result;
     }
-}
+} 

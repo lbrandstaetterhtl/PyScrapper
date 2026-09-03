@@ -448,11 +448,11 @@ public class MediaFilter
 /// </summary>
 /// <param name="username"></param>
 /// <param name="identifier"></param>
-public class User(string username, string identifier)
+public class User(string username, string identifier, string? apiKey = null)
 {
     public string Username { get; set; } = username;
     public string Identifier { get; set; } = identifier;
-    public string ApiKey { get; set; } = string.Empty;
+    public string ApiKey { get; set; } = apiKey ?? string.Empty;
 }
 
 /// <summary>
