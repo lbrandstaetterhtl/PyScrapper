@@ -133,7 +133,6 @@ auth_header = APIKeyHeader(name="Auth", auto_error=False)
 
 
 def require_admin(key: str | None = Security(admin_key_header)) -> bool:
-    """Client-Key aus der .env. Schuetzt den Server als Ganzes."""
     if not key or not secrets.compare_digest(key, ADMIN_KEY):
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
     return True
@@ -141,16 +140,6 @@ def require_admin(key: str | None = Security(admin_key_header)) -> bool:
 
 def require_user(request: Request, key: str | None = Security(user_key_header),
                  auth: str | None = Security(auth_header)):
-    """Authentifiziert einen User ueber Identifier + API-Key.
-
-    In der Datenbank liegt ausschliesslich SHA-256(ApiKey). Der vom Client
-    gesendete Klartext-Key wird fuer die aktuelle Anfrage gehasht und dieser
-    Hash wird constant-time mit dem gespeicherten Hash verglichen.
-
-    Der Klartext-Key wird NICHT gespeichert. Er wird nur im Rueckgabeobjekt
-    dieser Dependency fuer die Lebensdauer der aktuellen Anfrage mitgefuehrt,
-    damit /get/user ihn bei Bedarf an denselben Client zurueckgeben kann.
-    """
     if not key or not key.strip():
         raise fastapi.HTTPException(status_code=401, detail="Missing X-User-Key")
 
@@ -159,7 +148,6 @@ def require_user(request: Request, key: str | None = Security(user_key_header),
 
     request_api_key = key.strip()
     auth_identifier = auth.strip()
-    request_api_key_hash = hash_api_key(request_api_key)
 
     conn = connect_db()
     cursor = conn.cursor()
@@ -192,25 +180,18 @@ def require_user(request: Request, key: str | None = Security(user_key_header),
 
 
 def require_auth(auth: str | None = Security(auth_header)) -> str:
-    """User-Identifier aus dem Auth-Header.
-
-    Prueft nur, dass der Header da ist. Ob er zum angefragten Datensatz passt,
-    entscheidet check_user_identifier im jeweiligen Endpoint.
-    """
     if not auth or not auth.strip():
         raise fastapi.HTTPException(status_code=401, detail="Missing Auth header")
     return auth.strip()
 
 
 def check_user_identifier(user, auth_identifier: str) -> bool:
-    """Vergleicht den Identifier aus dem Auth-Header mit dem des Datensatzes."""
     if user is None or not auth_identifier:
         return False
     return user["Identifier"] == auth_identifier
 
 
 def check_owner(owner_identifier: str | None, auth_identifier: str) -> bool:
-    """Wie check_user_identifier, aber fuer Datensaetze mit UserIdentifier-Spalte."""
     if not owner_identifier or not auth_identifier:
         return False
     return owner_identifier == auth_identifier
@@ -222,11 +203,6 @@ OWNED_TABLES = ("DownloadedMedias", "Settings", "Playlists")
 
 
 def owns_record(table: str, identifier: str, auth_identifier: str) -> bool:
-    """Prueft, ob ein Datensatz dem Aufrufer gehoert.
-
-    Gibt False zurueck, wenn es den Datensatz nicht gibt - der Aufrufer
-    erfaehrt dadurch nicht, ob ein fremder Identifier existiert.
-    """
     if table not in OWNED_TABLES:
         raise ValueError(f"Unsupported table for ownership check: {table}")
 
@@ -246,7 +222,6 @@ def owns_record(table: str, identifier: str, auth_identifier: str) -> bool:
 
 
 def owns_playlist(playlist_identifier: str, auth_identifier: str) -> bool:
-    """Prueft, ob eine Playlist dem Aufrufer gehoert."""
     return owns_record("Playlists", playlist_identifier, auth_identifier)
 
 
