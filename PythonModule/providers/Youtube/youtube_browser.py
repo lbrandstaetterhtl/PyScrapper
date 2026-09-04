@@ -74,6 +74,10 @@ ITAG_RESOLVE_TYPE = {
     "160": "video-only",
 }
 
+
+        
+
+
 class YoutubeMusicMediaBrowser(browser.MediaBrowser):
     def __init__(
             self, 
@@ -81,14 +85,14 @@ class YoutubeMusicMediaBrowser(browser.MediaBrowser):
             cookie_file=COOKIE_FILE,
             ):
         
-        core.general.Validate.special.validateHostPro(
-            url=url,
-            allowed_hostnames_list=[
-                "music.youtube.com",
-                "www.music.youtube.com"
-            ],
-            caller="[Youtube] YoutubeMusicMediaBrowser.__init__"
-        )
+        #core.general.Validate.special.validateHostPro(
+        #    url=url,
+        #    allowed_hostnames_list=[
+        #        "music.youtube.com",
+        #        "www.music.youtube.com"
+        #    ],
+        #    caller="[Youtube] YoutubeMusicMediaBrowser.__init__"
+        #)
         
         super().__init__(
             url,
@@ -99,8 +103,7 @@ class YoutubeMusicMediaBrowser(browser.MediaBrowser):
             ]
             )
 
-        
-
+    
 
     def _handleResponse(
             self,

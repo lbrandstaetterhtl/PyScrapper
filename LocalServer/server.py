@@ -147,6 +147,7 @@ def require_user(request: Request, key: str | None = Security(user_key_header),
         raise fastapi.HTTPException(status_code=401, detail="Missing Auth header")
 
     request_api_key = key.strip()
+    request_api_key_hash = hash_api_key(request_api_key)
     auth_identifier = auth.strip()
 
     conn = connect_db()
@@ -166,7 +167,7 @@ def require_user(request: Request, key: str | None = Security(user_key_header),
         )
         raise fastapi.HTTPException(status_code=401, detail="Invalid user key")
 
-    if not secrets.compare_digest(request_api_key, row["ApiKey"]):
+    if not secrets.compare_digest(request_api_key_hash, row["ApiKey"]):
         server_state.log_queue.put_nowait(
             f"[WARN] Invalid user authentication for identifier '{auth_identifier}'"
         )
@@ -415,7 +416,8 @@ async def _resolveMediaAndCreateContexts(
             resolved_url=result.url,
             download_type=result.download_type,
             extra_headers=result.extra_headers,
-            post_body=result.post_body
+            post_body=result.post_body,
+            audio_url=result.audio_url
         )
 
         info = core.models.Download.MediaInfo(
@@ -435,6 +437,7 @@ async def _resolveMediaAndCreateContexts(
             media_info=info,
             output=outputTarget,
             info=result.info,
+
 
         )
 
@@ -603,8 +606,11 @@ async def receive_download(data: requests.DownloadRequest, user=Security(require
 
 
 def _getIndexSegmentsForStreaming(job: ServerJob, stream_id: str, context: core.models.Download.DownloadContext):
+
     from PythonModule.core.download.HLS import models as hlsmodels
+
     segmentList = []
+    audioSegmentList = []
 
     file = html.getHtml(
         session=job.download_information.session,
@@ -615,17 +621,25 @@ def _getIndexSegmentsForStreaming(job: ServerJob, stream_id: str, context: core.
     fileType: hlsmodels.FileType = core.download.HLSDispatcher(job.download_information).dertermineFileType(file)
 
     if fileType == hlsmodels.FileType.MASTER_FILE:
-        masterResults = core.download.MasterHLSDownload(context, job.download_information.session).getUrls()
-        indexUrl, audioUrl = masterResults
+        indexUrl, audioUrl = core.download.MasterHLSDownload(context, job.download_information.session).getUrls()
+        
 
         context.target.resolved_url = indexUrl
-        segmentList, audioSegmentList = core.download.IndexHLSDownload(context,
-                                                                       job.download_information.session).getIndexSegmentList()
+        context.target.audio_url = audioUrl
+
+        segmentList, audioSegmentList = core.download.IndexHLSDownload(
+            context,
+            job.download_information.session,
+            audio_url=audioUrl
+            ).getIndexSegmentList()
 
 
     elif fileType == hlsmodels.FileType.INDEX_FILE:
-        segmentList, audioSegmentList = core.download.IndexHLSDownload(context,
-                                                                       job.download_information.session).getIndexSegmentList()
+        segmentList, audioSegmentList = core.download.IndexHLSDownload(
+            context,
+            job.download_information.session,
+            audio_url=context.target.audio_url
+            ).getIndexSegmentList()
 
     if not segmentList:
         raise core.models.errors.TaskFailedError(
@@ -666,6 +680,8 @@ async def stream_hls_index(task_id: str, stream_id: str):
         lines.append(
             f"/stream/watch/{task_id}/{stream_id}/segment/{index}"
         )
+
+        
 
     lines.append("#EXT-X-ENDLIST")
 
@@ -807,7 +823,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
 
 
 @app.get("/stream/download/{task_id}/{stream_id}",
-         dependencies=[Security(require_user)])
+         )
 async def client_download_stream(task_id: str, stream_id: str):
     job = server_state.jobs.get(task_id)
 

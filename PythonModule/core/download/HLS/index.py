@@ -20,6 +20,7 @@ from . import models
 import shutil
 import time
 import asyncio
+import subprocess
 
 
 
@@ -34,7 +35,8 @@ class IndexHLSDownload(HLSDownload):
             self,
             download_context: Download.DownloadContext,
             session : Session | None = None,
-            audio_url: str | None = None
+            audio_url: str | None = None,
+  
             ):
         
         super().__init__(
@@ -50,6 +52,8 @@ class IndexHLSDownload(HLSDownload):
         self.audioUrl = audio_url
 
         self.ffmpegPath = shutil.which("ffmpeg")
+    
+        
 
         
     def downloadToFile(self):
@@ -75,23 +79,104 @@ class IndexHLSDownload(HLSDownload):
 
         self.downloadContext.download_progress.total_segments = len(segmentList)
 
-        for segment in segmentList:
-            async for chunk in file.asyncDownloadYieldSimple(
-                session=self.session,
-                url=segment.url,
-                extra_headers=self.downloadContext.target.extra_headers
-            ):
-                progress.updateDownloadProgress(
-                    self.downloadContext.download_progress,
-                    downloaded_bytes=len(chunk),
-                    
-                )
-                yield chunk
+        #if segmentAudioList:
+        stderrLines :list[str] = []
 
-            progress.updateDownloadProgress(
-                self.downloadContext.download_progress,
-                downloaded_segments=1
-            )
+        process = await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            "-i", self.downloadContext.target.resolved_url,
+            "-i", self.audioUrl,
+
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+
+            "-c", "copy",
+            "-f", "mpegts",
+            "pipe:1",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        async def readStderr():
+            
+
+            while True:
+                line = await process.stderr.readline()
+    
+                if not line:
+                    break
+    
+                text = line.decode(
+                    "utf-8",
+                    errors="replace",
+                ).rstrip()
+    
+                stderrLines.append(text)
+    
+                print(f"[yt-dlp] {text}")
+    
+        stderrTask = asyncio.create_task(
+            readStderr()
+        )
+    
+
+        try:
+            while True:
+                chunk = await process.stdout.read(
+                    64 * 1024
+                )
+    
+                if not chunk:
+                    break
+    
+                yield chunk
+    
+            returnCode = await process.wait()
+    
+            await stderrTask
+    
+            if returnCode != 0:
+                raise RuntimeError(
+                    "[CORE] downloadAndYieldYTDLP failed\n"
+                    f"yt-dlp exited with code {returnCode}\n"
+                    + "\n".join(stderrLines[-20:])
+                )
+    
+        finally:
+            if process.returncode is None:
+                process.terminate()
+    
+                try:
+                    await asyncio.wait_for(
+                        process.wait(),
+                        timeout=3
+                    )
+    
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+    
+            if not stderrTask.done():
+                stderrTask.cancel()
+
+
+
+        #for segment in segmentList:
+        #    async for chunk in file.asyncDownloadYieldSimple(
+        #        session=self.session,
+        #        url=segment.url,
+        #        extra_headers=self.downloadContext.target.extra_headers
+        #    ):
+        #        progress.updateDownloadProgress(
+        #            self.downloadContext.download_progress,
+        #            downloaded_bytes=len(chunk),
+        #            
+        #        )
+        #        yield chunk
+
+        #    progress.updateDownloadProgress(
+        #        self.downloadContext.download_progress,
+        #        downloaded_segments=1
+        #    )
 
         self.downloadContext.download_progress.status = Download.TaskStatus.FINISHED
 

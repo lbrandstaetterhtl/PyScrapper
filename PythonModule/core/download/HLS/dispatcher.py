@@ -70,6 +70,7 @@ class HLSDispatcher(Dispatcher):
             try:
                 fileType = self.dertermineFileType(file)
 
+
                 if fileType == models.FileType.MASTER_FILE:
 
                     master = MasterHLSDownload(
@@ -81,12 +82,16 @@ class HLSDispatcher(Dispatcher):
                         master.getUrls
                     )
 
+                   
                     context.target.resolved_url = indexUrl
+                    context.target.audio_url = audioUrl
+
 
                     index = IndexHLSDownload(
                         context,
                         self.downloadInformation.session,
-                        audio_url=audioUrl
+                        audio_url=context.target.audio_url,
+                   
                     )
 
                     async for chunk in index.downloadAndYield():
@@ -96,6 +101,7 @@ class HLSDispatcher(Dispatcher):
                     index = IndexHLSDownload(
                         context,
                         self.downloadInformation.session,
+                        context.target.audio_url
                     )
 
                     async for chunk in index.downloadAndYield():
@@ -149,13 +155,17 @@ class HLSDispatcher(Dispatcher):
                     indexUrl, audioUrl = await asyncio.to_thread(
                         master.getUrls
                     )
-
+                   
+                   
+                   
                     context.target.resolved_url = indexUrl
+                    context.target.audio_url = audioUrl
 
                     index = IndexHLSDownload(
                         context,
                         self.downloadInformation.session,
-                        audio_url=audioUrl
+                        audio_url=context.target.audio_url,
+        
                     )
 
                     await asyncio.to_thread(
@@ -167,7 +177,8 @@ class HLSDispatcher(Dispatcher):
 
                     index = IndexHLSDownload(
                         context,
-                        self.downloadInformation.session
+                        self.downloadInformation.session,
+                        context.target.audio_url
                     )
 
                     await asyncio.to_thread(

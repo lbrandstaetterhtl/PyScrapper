@@ -84,6 +84,8 @@ class DownloadTarget:
 
     extra_headers: dict[str, str] = field(default_factory=dict)
 
+    audio_url : str = ""
+
     post_body: str | None = None
 
 

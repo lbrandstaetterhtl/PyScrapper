@@ -125,10 +125,14 @@ def findAudioUrl(
 #First check is trying to find a preferred language
     if preferred_languages:
         for audio in media_block_list:
+            if "TYPE=AUDIO" not in audio:
+                continue
             searchResult = _searchAudioBlock(
                 audio
             )
             audioType, audioLanguage, audioName, audioUri = searchResult
+
+            
 
 
             if (
@@ -218,7 +222,7 @@ def findSegments(
             f"Segment position: {pos}"
             f"Segment duration: {duration} seconds"
         )
-        print(message)
+        #print(message)
 
         segmentList.append(segment)
         
@@ -257,7 +261,7 @@ def findSegments(
         length = None
 
 
-    print(segmentList)
+ 
     return segmentList
         
 

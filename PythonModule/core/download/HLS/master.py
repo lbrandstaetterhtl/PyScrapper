@@ -83,7 +83,8 @@ class MasterHLSDownload(HLSDownload):
             )
         print(message)
 
-
+        print(stream.stream_url)
+        print(stream.audio_information.audio_url)
         return (stream.stream_url, stream.audio_information.audio_url)
 
 

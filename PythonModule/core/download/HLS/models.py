@@ -27,7 +27,7 @@ class FileType(Enum):
 
 
 PATTERN_MAPPING = {
-    PatternTypes.MEDIA : r'(#EXT-X-MEDIA:TYPE=AUDIO[^\r\n]*)',
+    PatternTypes.MEDIA: r'(#EXT-X-MEDIA:[^\r\n]*)',
     PatternTypes.STREAM: r'(#EXT-X-STREAM-INF:.*?)\n([^\n]+)',
     PatternTypes.BANDWIDTH: r'BANDWIDTH=(\d+)',
     PatternTypes.AUDIO_STREAM_TYPE: r'AUDIO="(.*?)"',

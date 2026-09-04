@@ -506,6 +506,8 @@ class ProviderResult:
 
     info : core.models.Download.Info = field(default_factory=core.models.Download.Info)
 
+    audio_url :str = ""
+
 
 
 
@@ -639,6 +641,8 @@ class FoundMedia:
 
     extra_headers : dict[str, str] = field(default_factory=dict)
     post_body : bytes | None = None
+
+    audio_url: str = ""
 
 
 
@@ -862,6 +866,7 @@ def _buildProviderResultFromFoundMedia(
         mime_type=media.mime_type,
         total_size=size,
         post_body=media.post_body,
+        audio_url=media.audio_url,
         info = core.models.Download.Info(
             url=media.url,
             found_file=media.extension,
