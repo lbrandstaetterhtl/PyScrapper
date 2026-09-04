@@ -95,8 +95,8 @@ public class AppData : Interfaces.IAppDataService
         }
     ];
     
-    public static readonly List<string> ValidProviders = ["suno", "youtube", "bandcamp", "archive", "soundcloud", "wcoflix", "aniworld", "newgrounds", "youtubemusic"];
-    public static readonly List<string> ValidSearchProviders = ["youtube", "bandcamp", "archive", "soundcloud", "newgrounds", "youtubemusic"];
+    public static readonly List<string> ValidProviders = ["suno", "youtube", "bandcamp", "archive", "soundcloud", "wcoflix", "aniworld", "newgrounds", "youtubemusic", "default"];
+    public static readonly List<string> ValidSearchProviders = ["youtube", "bandcamp", "archive", "soundcloud", "newgrounds", "youtubemusic", "default"];
 
     public static AppConfig Config;
     

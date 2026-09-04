@@ -536,7 +536,6 @@ public class Database
         client.DefaultRequestHeaders.Add("Auth", identifier);
         var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/user/{identifier}");
 
-        _logger.LogDebugMessage(new Message($"GetUserAsync called for identifier: {identifier}. Response status code: {response.StatusCode}", DateTime.Now, "DEBUG"));
         if (!response.IsSuccessStatusCode)
         {
             throw new Exception(response.ReasonPhrase);
@@ -595,10 +594,6 @@ public class Database
         string EncryptedUserApiKey = AppData.CurrentUser.ApiKey;
         using var client = new HttpClient();
         var userKey = SecretProtector.Decrypt(EncryptedUserApiKey);
-
-        Console.WriteLine($"Encrypted length: {EncryptedUserApiKey?.Length}");
-        Console.WriteLine($"Decrypted length: {userKey?.Length}");
-        Console.WriteLine($"Decrypted empty: {string.IsNullOrWhiteSpace(userKey)}");
 
         client.DefaultRequestHeaders.TryAddWithoutValidation(
             "X-User-Key",
