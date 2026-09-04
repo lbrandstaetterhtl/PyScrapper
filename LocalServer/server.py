@@ -127,9 +127,9 @@ cookie_path = os.path.join(project_root, "LocalServer", "cookies")
 os.makedirs(cookie_path, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
 
-admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
-user_key_header = APIKeyHeader(name="X-User-Key", auto_error=False)
-auth_header = APIKeyHeader(name="Auth", auto_error=False)
+admin_key_header = APIKeyHeader(name="X-Admin-Key",scheme_name="AdminKey", auto_error=False)
+user_key_header = APIKeyHeader(name="X-User-Key",scheme_name="UserKey", auto_error=False)
+auth_header = APIKeyHeader(name="Auth",scheme_name="AuthIdentifier", auto_error=False)
 
 
 def require_admin(key: str | None = Security(admin_key_header)) -> bool:
