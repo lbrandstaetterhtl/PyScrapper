@@ -138,6 +138,18 @@ AUDIO_AND_VIDEO_MULTI_STREAM = [
     "wmv",
 ]
 
+
+FFMPEG_FORMAT_MAPPING = {
+    "ts": "mpegts",
+    "mp3": "mp3",
+    "m4a": "mp4",
+    "mp4": "mp4",
+    "webm": "webm",
+    "mkv": "matroska",
+    "aac": "adts",
+    "ogg": "ogg",
+}
+
 ALL_SUPPORTED_FILETYPES = list(dict.fromkeys(
     AUDIO_ONLY_FORMATS
     + VIDEO_ONLY_FORMATS

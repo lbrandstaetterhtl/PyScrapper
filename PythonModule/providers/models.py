@@ -853,6 +853,14 @@ def _buildProviderResultFromFoundMedia(
             url=media.url,
             extra_headers=media.extra_headers
         )
+        if media.audio_url:
+            size2, mime = getUrlInformation(
+                session=request.ses,
+                url=media.audio_url,
+                extra_headers=media.extra_headers,
+            )
+            size += size2
+
 #Server works with total size or total segments depending on file or hls
     if media.stream_type == core.models.Download.DownloadType.HLS:
         size = -1

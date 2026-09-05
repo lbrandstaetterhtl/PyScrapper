@@ -15,6 +15,7 @@ from . import progress
 
 import asyncio
 import urllib.request
+import os
 
 
 
@@ -434,3 +435,19 @@ async def asyncDownloadYield(
                 yield chunk
     
         
+async def writeFd(fd: int, data: bytes):
+    offset = 0
+
+    while offset < len(data):
+        written = await asyncio.to_thread(
+            os.write,
+            fd,
+            data[offset:],
+        )
+
+        if written <= 0:
+            raise BrokenPipeError(
+                "FFmpeg input pipe was closed"
+            )
+
+        offset += written
