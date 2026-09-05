@@ -13,9 +13,7 @@ import urllib.parse, urllib.request, urllib.error
 import json
 import time
 
-GET_METHODS = [
-    youtube_models.GetMediaMethod.VISION
-]
+
 
 def getMediaInformation(
         request: models.ProviderResultRequest,
@@ -135,7 +133,7 @@ def _tryGetUsableUrls(
 
     
 
-    for method in GET_METHODS:
+    for method in youtube_models.GET_METHODS:
         print(f"[Youtube] Trying method '{method}'...")
 
         
@@ -176,6 +174,12 @@ def _tryGetUsableUrls(
             + streamingData.get("adaptiveFormats", [])
         )
 
+
+        HLSManifest = streamingData.get("hlsManifestUrl", None)
+        if HLSManifest:
+            return [HLSManifest, core.models.Download.DownloadType.HLS, "ts"]
+
+
         bestAudioAndVideoCandidate = _extractVideoAudioFromFormats(formats)
 
         if bestAudioAndVideoCandidate:
@@ -184,24 +188,17 @@ def _tryGetUsableUrls(
                 core.models.Download.DownloadType.FILE,
                 bestAudioAndVideoCandidate.get('mimeType').split(";", 1)[0].strip()
                 ]
-       
 
-
-        HLSManifest = streamingData.get("hlsManifestUrl", None)
-        
-        if HLSManifest:
-            return [HLSManifest, core.models.Download.DownloadType.HLS, "ts"]
-
-
-        raise core.models.errors.TaskFailedError(
-            task="[Youtube] _tryGetUsableUrls",
-            reason="Neither direct media with audio+video was found nor a hls manifest given",
-            caller="[Youtube] getMediaInformation",
-            extraMessages=[
-                "Now listening given youtube response",
-                streamingData
-            ]
-        )
+    #Note for later: Add adaptive formats where video and audio is split. FileDispatcher can't handle split video and audio at the current time of writing
+    raise core.models.errors.TaskFailedError(
+        task="[Youtube] _tryGetUsableUrls",
+        reason="Neither direct media with audio+video was found nor a hls manifest given",
+        caller="[Youtube] getMediaInformation",
+        extraMessages=[
+            "Now listening given youtube response",
+            streamingData
+        ]
+    )
 
         
 
@@ -249,12 +246,6 @@ def _extractVideoAudioFromFormats(formats: list):
             f.get("bitrate", 0),
         )
     )
-
-
-
-
-
-
 
 
 
