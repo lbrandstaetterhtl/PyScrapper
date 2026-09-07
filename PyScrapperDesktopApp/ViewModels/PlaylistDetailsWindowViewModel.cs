@@ -44,6 +44,7 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     public PlaylistDetailsWindowViewModel(string identifier, DialogService dialogService)
     {
         var playlist = AppData.Playlists.FirstOrDefault(p => p.Identifier == identifier);
+        playlist.MediaIdentifiers = AppData.PlaylistMedias.Where(pm => pm.PlaylistIdentifier == playlist.Identifier).Select(pm => pm.MediaIdentifier).ToList();
         PlaylistName = playlist.Name;
 
         Description = playlist.Description ?? "";

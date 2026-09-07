@@ -169,6 +169,7 @@ public class Database
 
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(EncryptedClientApiKey));
+            client.DefaultRequestHeaders.Add("Auth", AppData.CurrentUser.Identifier);
 
             var response = await client.GetAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/get/playlistmedias/{playlistIdentifier}");
 

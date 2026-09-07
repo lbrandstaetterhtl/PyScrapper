@@ -147,7 +147,6 @@ def require_user(request: Request, key: str | None = Security(user_key_header),
         raise fastapi.HTTPException(status_code=401, detail="Missing Auth header")
 
     request_api_key = key.strip()
-    request_api_key_hash = hash_api_key(request_api_key)
     auth_identifier = auth.strip()
 
     conn = connect_db()
@@ -167,7 +166,7 @@ def require_user(request: Request, key: str | None = Security(user_key_header),
         )
         raise fastapi.HTTPException(status_code=401, detail="Invalid user key")
 
-    if not secrets.compare_digest(request_api_key_hash, row["ApiKey"]):
+    if not secrets.compare_digest(request_api_key, row["ApiKey"]):
         server_state.log_queue.put_nowait(
             f"[WARN] Invalid user authentication for identifier '{auth_identifier}'"
         )

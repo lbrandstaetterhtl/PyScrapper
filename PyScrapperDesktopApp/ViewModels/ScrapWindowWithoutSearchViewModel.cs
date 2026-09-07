@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Avalonia.Controls;
@@ -69,7 +70,7 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
                 Provider = SelectedProvider,
                 Urls = new List<string>([Url]),
                 Filenames = new List<string>([Filename]),
-                PreferredFile = SelectedMediaType,
+                PreferredFile = SelectedMediaType.Trim('.'),
                 PreferredType = AppData.ValidMediaTypes[SelectedMediaType],
                 DownloadStrategy = "stream"
             };
@@ -89,25 +90,28 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
                     bool errorWhileDownloading = false;
                     if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
                         errorWhileDownloading = await vm.StartProgress(resource);
+                    
+                    var ct =  new CancellationTokenSource();
+                    
+                    var path = Path.Combine(AppData.Settings.DownloadPath, $"{Filename}");
+                    
+                    var finalPath = await client.GetFileFromStream(resource, path, ct.Token);
 
                     if (!errorWhileDownloading)
                     {
                         Task.Delay(2000).Wait();
 
-                        var downloadedFilePath =
-                            Path.Combine(AppData.Settings.DownloadPath, $"{Filename}{SelectedMediaType}");
-
                         bool isPlayable = false;
 
                         while (!isPlayable)
                         {
-                            isPlayable = File.Exists(downloadedFilePath);
+                            isPlayable = File.Exists(finalPath);
                         }
 
                         var req = new CreateDownloadedMediaRequest
                         {
                             UserIdentifier = AppData.CurrentUser.Identifier,
-                            DownloadPath = downloadedFilePath,
+                            DownloadPath = finalPath,
                             DownloadedAt = DateTime.Now.ToString("o"),
                             MediaType = SelectedMediaType,
                             IsPlayable = isPlayable,

@@ -166,7 +166,7 @@ def _tryGetUsableUrls(
         if playabilityStatus.get('status') == "LOGIN_REQUIRED":
             continue
 
-        streamingData = jsonData.get("streamingData")
+        streamingData = jsonData.get("streamingData", {})
         
 
         formats = (
