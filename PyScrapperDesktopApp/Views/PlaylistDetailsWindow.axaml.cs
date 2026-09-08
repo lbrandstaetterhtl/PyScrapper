@@ -43,7 +43,12 @@ public partial class PlaylistDetailsWindow : Window
                     throw new Exception("Media not found");
                 }
 
-                //TODO: Need new Mediaplayer logic
+                if (_mainWindow is MainWindow mainWindow)
+                {
+                    var tmpPlaylist = new Playlist(media.Title, "", "12345", AppData.CurrentUser.Identifier);
+                    tmpPlaylist.MediaIdentifiers.Add(media.Identifier);
+                    mainWindow.MediaPlayer.LoadAndPlay(tmpPlaylist);
+                }
             }
         }
         catch (Exception ex)

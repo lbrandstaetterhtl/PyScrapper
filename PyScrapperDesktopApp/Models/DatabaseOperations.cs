@@ -351,7 +351,7 @@ public class Database
 
                 int position = deserialized?.Position ?? throw new Exception("Failed to deserialize position from API response.");
 
-                result = new PlaylistMedia(req.PlaylistIdentifier, req.MediaIdentifier, position);
+                result = new PlaylistMedia(req.MediaIdentifier, req.PlaylistIdentifier, position);
 
                 return result;
             }
