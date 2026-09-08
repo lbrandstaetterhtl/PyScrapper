@@ -2,13 +2,12 @@
 
 from ...general import Validate
 from ...models.errors import TaskFailedError, MergeError
-from ...models.Convert import FFMPEG_FORMAT_MAPPING
 from ...models import Download
 
 from ...network.Session import Session
 from ...network import file
 from ...network import progress
-from ...processes import ProcessDrainType, AsyncProcessManager
+from ...ffmpeg import FFmpegMuxer
 
 #Own imports
 
@@ -81,188 +80,86 @@ class IndexHLSDownload(HLSDownload):
 
         self.downloadContext.download_progress.total_segments = (
             len(segmentList)
-            + len(segmentAudioList)
+            + (len(segmentAudioList) if segmentAudioList else 0)
         )
 
-        audioReadFd = None
-        audioWriteFd = None
-
-        outputFormat = FFMPEG_FORMAT_MAPPING.get(self.downloadContext.media_info.file_extension, "")
-        if not outputFormat:
-            raise TaskFailedError(
-                task="[CORE] IndexHLSDownload.downloadAndYield",
-                reason="Couldn't get format for ffmpeg",
-                extraMessages=[
-                    f"Found extension: {self.downloadContext.media_info.file_extension}",
-                    "Available FFmpeg format mappings:",
-                    *[
-                        f"  {extension} -> {ffmpegFormat}"
-                        for extension, ffmpegFormat in sorted(FFMPEG_FORMAT_MAPPING.items())
-                    ],
-                ],
-                caller="[CORE] IndexHLSDownload.downloadAndYield"
+#Default case. Segments with audio + video, get downloaded and bytes yielded
+        if not segmentAudioList:
+            async for chunk in self._downloadSegmentsAndYield(segment_list=segmentList):
+                yield chunk
+            
+        else:
+            muxer = FFmpegMuxer(
+                file_ending=self.downloadContext.media_info.file_extension,
+                caller=f"{self.downloadContext.context_id}-Muxer"
             )
 
-        args = [
-            "ffmpeg",
-
-    #Video from first pipe 
-            "-i", "pipe:0",
-
-        ]
-
-        if segmentAudioList:
-            audioReadFd, audioWriteFd = os.pipe()
-            args += [
-                "-i", f"pipe:{audioReadFd}",
-
-                "-map", "0:v:0",
-                "-map", "1:a:0",
-            ]
-
-        else:
-            args += [
-                "-map", "0:v:0",
-                "-map", "0:a:0?",
-            ]
-        args += [
-            "-c", "copy",
-            "-f", outputFormat,
-            "pipe:1",
-        ]
-
-        
-        manager = AsyncProcessManager(
-            args,
-            stderr_drain_type=ProcessDrainType.PRINT,
-            stdout_drain_type=ProcessDrainType.MANUAL,
-            pass_fds=(
-                (audioReadFd,)
-                if audioReadFd is not None
-                else ()
-            ),
-            process_name=f"HLS Download <{self.downloadContext.context_id}>"
-        )
-
-        await manager.start()
-
-    #FFMPEG doesn't need the read part of the pipe
-        if audioReadFd is not None:
-            os.close(audioReadFd)
-
-        async def _feedVideo():
-            try:
-                for segment in segmentList:
-                    async for chunk in file.asyncDownloadYieldSimple(
-                        session=self.session,
-                        url=segment.url,
-                        extra_headers=self.downloadContext.target.extra_headers
-                    ):
-                        progress.updateDownloadProgress(
-                            self.downloadContext.download_progress,
-                            downloaded_bytes=len(chunk)
-                        )
-                        try:
-                            manager.process.stdin.write(chunk)
-                            await manager.process.stdin.drain()
-
-                        except (BrokenPipeError, ConnectionResetError, RuntimeError) as e:
-                            raise TaskFailedError(
-                                task="[CORE] IndexHLSDownload.downloadAndYield",
-                                reason="FFmpeg closed video input unexpectedly",
-                                extraMessages=[
-                                    f"FFmpeg return code: {manager.process.returncode}",
-                                    "FFmpeg stderr:",
-                                    *manager.stderrLines[-20:],
-                                ],
-                                caller="[CORE] IndexHLSDownload.downloadAndYield",
-                            ) from e
-                    
-
-                    progress.updateDownloadProgress(
-                        self.downloadContext.download_progress,
-                        downloaded_segments=1
-                    )
-
-            finally:
-                manager.process.stdin.close()
-
+            async def _feedVideo():
+                videoPipeIndex = 0
                 try:
-                    await manager.process.stdin.wait_closed()
-                except (BrokenPipeError, ConnectionResetError):
-                    pass
+                    async for chunk in self._downloadSegmentsAndYield(segment_list=segmentList):
+                        
+                        await muxer.writePipe(data=chunk, pipe_index=videoPipeIndex)
+                finally:
+                    await muxer.closePipe(videoPipeIndex)
 
-        async def _feedAudio():
-            if audioWriteFd is None:
-                return
+            async def _feedAudio():
+                audioPipeIndex = 1
+                try:
+                    async for chunk in self._downloadSegmentsAndYield(segment_list=segmentAudioList):
+                        await muxer.writePipe(data=chunk, pipe_index=audioPipeIndex)
+                finally:
+                    await muxer.closePipe(audioPipeIndex)
+
+
+            await muxer.start()
+
+            videoTask = asyncio.create_task(_feedVideo())
+            audioTask = asyncio.create_task(_feedAudio())
 
             try:
-                for segment in segmentAudioList:
-                    async for chunk in file.asyncDownloadYieldSimple(
-                        session=self.session,
-                        url=segment.url,
-                        extra_headers=self.downloadContext.target.extra_headers,
-                    ):
-                        progress.updateDownloadProgress(
-                            self.downloadContext.download_progress,
-                            downloaded_bytes=len(chunk),
-                        )
-
-                        await file.writeFd(
-                            audioWriteFd,
-                            chunk,
-                        )
-
-                    progress.updateDownloadProgress(
-                        self.downloadContext.download_progress,
-                        downloaded_segments=1,
-                    )
+                async for chunk in muxer.output():
+                    yield chunk
 
             finally:
-                os.close(audioWriteFd)
+                if not videoTask.done():
+                    videoTask.cancel()
 
-        videoTask = asyncio.create_task(
-            _feedVideo()
-        )
+                if not audioTask.done():
+                    audioTask.cancel()
 
-        audioTask = (
-            asyncio.create_task(_feedAudio())
-            if segmentAudioList
-            else None
-        )
-
-        try:
-            while True:
-                chunk, eof = await manager.readStdout()
-
-                if eof:
-                    break
-
-                yield chunk
-
-
-            await videoTask
-
-            if audioTask:
-                await audioTask
-
-            returnCode = await manager.wait()
-
-            if returnCode != 0:
-                raise RuntimeError(
-                    f"FFmpeg exited with code {returnCode}"
+                await asyncio.gather(
+                    videoTask,
+                    audioTask,
+                    return_exceptions=True,
                 )
 
-            self.downloadContext.download_progress.status = Download.TaskStatus.FINISHED
+          
 
-        finally:
-            if not videoTask.done():
-                videoTask.cancel()
 
-            if audioTask and not audioTask.done():
-                audioTask.cancel()
 
-            await manager.stop()
+
+    async def _downloadSegmentsAndYield(self, segment_list: list):
+
+        for segment in segment_list:
+
+            async for chunk in file.asyncDownloadYieldSimple(
+                session=self.session,
+                url=segment.url,
+                start_byte=segment.start_byte,
+                end_byte=segment.end_byte,
+                extra_headers=self.downloadContext.target.extra_headers
+            ):
+                progress.updateDownloadProgress(
+                    self.downloadContext.download_progress,
+                    downloaded_bytes=len(chunk)
+                )
+                yield chunk
+
+            progress.updateDownloadProgress(
+                self.downloadContext.download_progress,
+                downloaded_segments=1
+            )
 
 
 

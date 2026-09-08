@@ -45,6 +45,8 @@ class HLSSegment:
     url: str
     pos: int
     duration: float | None = None
+    start_byte: int = 0
+    end_byte: int | None = None
 
 
 

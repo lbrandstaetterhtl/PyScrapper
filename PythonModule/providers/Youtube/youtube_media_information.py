@@ -64,13 +64,13 @@ def getMediaInformation(
             return models.ProviderResult(
                     url=url,
                     download_type=downloadType,
-                    file_ending="ts",
+                    file_ending=fileEnding,
                     media_type="video",
-                    mime_type=f"application/vnd.apple.mpegurl",
+                    mime_type=f"video/mp4",
                     total_size=-1,
                     info=core.models.Download.Info(
                         url=resolvedUrl,
-                        found_file="ts",
+                        found_file=fileEnding,
                         preferred_file=request.preferred_file,
                         preferred_type=request.preferred_type,
                         found_type="video"
@@ -177,7 +177,7 @@ def _tryGetUsableUrls(
 
         HLSManifest = streamingData.get("hlsManifestUrl", None)
         if HLSManifest:
-            return [HLSManifest, core.models.Download.DownloadType.HLS, "ts"]
+            return [HLSManifest, core.models.Download.DownloadType.HLS, "mp4"]
 
 
         bestAudioAndVideoCandidate = _extractVideoAudioFromFormats(formats)

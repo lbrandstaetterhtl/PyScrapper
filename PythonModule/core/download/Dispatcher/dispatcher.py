@@ -15,10 +15,6 @@ from dataclasses import replace
 import asyncio
 from enum import Enum
 
-class DownloadType(Enum):
-    AUTO = "auto",
-    FFMPEG = "ffmpeg",
-    MANUAL = "manual"
 
 
 
@@ -48,64 +44,17 @@ class DownloadDispatcher():
     async def downloadContextAndYield(
             self,
             context: Download.DownloadContext,
-            download_type: DownloadType = DownloadType.AUTO
+
             ):
 
         Validate.download.validateDownloadContext(argument_name="context", download_context=context, caller="[CORE] DownloadDispatcher.downloadContextAndYield")
-        Validate.general.validateGeneralType(argument_name="download_type", obj=download_type, objType=DownloadType, caller="[CORE] DownloadDispatcher.downloadContextAndYield")
 
-        from ..File import FileDispatcher
-        from ..HLS import HLSDispatcher
-        from ..UMP import UMPDispatcher
-        from ...ffmpeg import FFmpegDownload
+        dispatcher = self._getManualDispatcher(context, caller="[CORE] DownloadDispatcher.downloadContextAndYield")
+        async for chunk in dispatcher.downloadAndYield():
+            yield chunk
+        context.download_progress.status = Download.TaskStatus.FINISHED
 
-
-        if download_type == DownloadType.FFMPEG:
-            try:
-                dispatcher = FFmpegDownload()
-
-                async for chunk in dispatcher.downloadAndYield(
-                    input1=context.target.resolved_url,
-                    file_ending=context.media_info.file_extension,
-                    input2=context.target.audio_url
-                ):
-                    yield chunk
-                context.download_progress.status = Download.TaskStatus.FINISHED
-
-            except FFmpegNotFoundError as e:
-                print(e)
-                print("Starting fallback to manual download")
-                download_type = DownloadType.MANUAL
-
-        if download_type == DownloadType.MANUAL:
-            dispatcher = self._getManualDispatcher(context, caller="[CORE] DownloadDispatcher.downloadContextAndYield")
-            async for chunk in dispatcher.downloadAndYield():
-                yield chunk
-            context.download_progress.status = Download.TaskStatus.FINISHED
-
-        elif download_type == DownloadType.AUTO:
-            hasYielded = False
-            try:
-                
-                dispatcher = FFmpegDownload()
-                async for chunk in dispatcher.downloadAndYield(
-                    input1=context.target.resolved_url,
-                    file_ending=context.media_info.file_extension,
-                    input2=context.target.audio_url
-                ):
-                    hasYielded = True
-                    yield chunk
-                context.download_progress.status = Download.TaskStatus.FINISHED
-
-            except (FFmpegNotFoundError, FFmpegHttpError) as e:
-                if hasYielded:
-                    print("[CORE] DownloadDispatcher.downloadContextAndYield: FFmpeg ran into an error but has already yielded bytes")
-                    raise 
-
-                dispatcher = self._getManualDispatcher(context, caller="[CORE] DownloadDispatcher.downloadContextAndYield")
-                async for chunk in dispatcher.downloadAndYield():
-                    yield chunk
-                context.download_progress.status = Download.TaskStatus.FINISHED
+       
 
         
         
