@@ -1,5 +1,13 @@
 ﻿# Python Default Imports
 import sys
+import asyncio
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(
+        asyncio.WindowsProactorEventLoopPolicy()
+    )
+
+
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime
@@ -59,6 +67,11 @@ from PythonModule.serverservices import commandProcessor, searchProcessor, utils
 from contextlib import asynccontextmanager
 
 import hashlib
+
+
+
+
+
 
 def hash_api_key(api_key: str) -> str:
     return hashlib.sha256(api_key.encode("utf-8")).hexdigest()

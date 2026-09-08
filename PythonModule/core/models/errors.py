@@ -155,3 +155,43 @@ class DRMProtectedMediaError(Exception):
             parts.append(f"Caller: {caller}")
 
         super().__init__(" | ".join(parts))
+
+
+class FFmpegNotFoundError(RuntimeError):
+    def __init__(
+        self,
+        ffmpeg_path: str = "ffmpeg",
+        caller: str | None = None,
+    ):
+        self.ffmpegPath = ffmpeg_path
+        self.caller = caller
+
+        message = (
+            f"FFmpeg executable was not found on the system. "
+            f"Expected executable: '{ffmpeg_path}'. "
+            f"Make sure FFmpeg is installed and available in PATH."
+        )
+
+        if caller:
+            message = f"{caller}: {message}"
+
+        super().__init__(message)
+
+
+class FFmpegHttpError(Exception):
+    def __init__(
+        self,
+        status_code: int,
+        url: str | None = None,
+        message: str | None = None,
+    ):
+        self.statusCode = status_code
+        self.url = url
+
+        if message is None:
+            message = f"FFmpeg HTTP request failed with status code {status_code}"
+
+        if url:
+            message += f" for URL: {url}"
+
+        super().__init__(message)
