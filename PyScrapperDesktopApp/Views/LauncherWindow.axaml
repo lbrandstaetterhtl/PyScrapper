@@ -16,11 +16,6 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1">
-
-    <Design.DataContext>
-        <vm:LauncherWindowViewModel/>
-    </Design.DataContext>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="35"/>

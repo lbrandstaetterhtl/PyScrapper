@@ -113,7 +113,9 @@ class YoutubeMusicMediaBrowser(browser.MediaBrowser):
         if _youtubeAdShowing(self.page):
             print("[Youtube] Ad detected, skipping response handling")
             return
-    
+
+        print(response)
+
         if not response.url:
             return
 

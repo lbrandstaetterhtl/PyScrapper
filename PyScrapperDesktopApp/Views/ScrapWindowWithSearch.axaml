@@ -8,7 +8,7 @@
         x:Class="PyScrapperDesktopApp.Views.ScrapWindowWithSearch"
         x:DataType="vm:ScrapWindowWithSearchViewModel"
         Icon="/Assets/PyScrapperLogo.ico"
-        WindowStartupLocation="CenterScreen"
+        WindowStartupLocation="CenterOwner"
         CanMaximize="False"
         CanMinimize="False"
         SizeToContent="WidthAndHeight"

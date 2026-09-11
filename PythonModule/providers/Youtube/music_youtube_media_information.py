@@ -52,6 +52,7 @@ def getMediaInformationMusic(
     while retry < retrys:
         if medialist:
             break
+        retry += 1
         print(f"[Youtube] _getMedia: Trying to get media. Try: {retry}/{retrys}")
         _getMedia(youtubeBrowser)
 

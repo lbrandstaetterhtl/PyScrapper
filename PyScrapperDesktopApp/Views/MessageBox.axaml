@@ -21,19 +21,19 @@
         
                 <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
         
-        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Classes="RootScrollViewer">
-        <Grid>
-                <Grid.RowDefinitions>
-                        <RowDefinition Height="*"></RowDefinition>
-                        <RowDefinition Height="Auto"></RowDefinition>
-                </Grid.RowDefinitions>
-                
-                <TextBlock x:Name="Massage" Grid.Row="0" Classes="UIValue" TextWrapping="Wrap"/>
-                
-                <StackPanel Grid.Row="1" Classes="UICell">
-                        <Button x:Name="OkButton" IsDefault="True" Classes="primary" Content="OK"/>
-                </StackPanel>
-        </Grid>
-        </ScrollViewer>
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Classes="RootScrollViewer">
+                        <Grid>
+                                <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"></RowDefinition>
+                                        <RowDefinition Height="Auto"></RowDefinition>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock x:Name="Massage" Grid.Row="0" Classes="UIValue" TextWrapping="Wrap"/>
+                                
+                                <StackPanel Grid.Row="1" Classes="UICell">
+                                        <Button x:Name="OkButton" IsDefault="True" Classes="primary" Content="OK"/>
+                                </StackPanel>
+                        </Grid>
+                </ScrollViewer>
         </Grid>
 </Window>
