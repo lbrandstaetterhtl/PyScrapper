@@ -21,6 +21,8 @@ function SearchResultPanel({results,updateResults, updateDownloadRequest,  onSea
             filenames: [""],
             download_path: "",
             download_strategie: "stream",
+            preferred_type: null,
+            preferred_file: null,
             extra_headers: {}
         }))
             

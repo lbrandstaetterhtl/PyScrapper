@@ -23,7 +23,11 @@ import "./components/download/download-panel.css"
 function App() {
     const [auth, updateAuth] = useState<Authorization>({
         key_name: "X-Admin-Key",
-        key_value: ""
+        key_value: "",
+        username: "",
+        password: "",
+        identifier: "",
+        user_key: ""
     })
 
     const [searchResults, updateSearchResults] = useState<SearchResult[]>([])
@@ -38,6 +42,8 @@ function App() {
         urls: [],
         filenames: [],
         download_path: "",
+        preferred_type: null,
+        preferred_file: null,
         extra_headers: {}
 
     })

@@ -1,10 +1,17 @@
 import type { Authorization } from "../general"
-import { DownloadStrategie, ProvidersDownload, type DownloadRequest, type ProviderDownload } from "./models"
-import type { DownloadResult, ServerResultDownload, StreamResult } from "./models"
+import {
+    DownloadStrategie,
+    PreferredFiles,
+    PreferredTypes,
+    ProvidersDownload,
+    type DownloadRequest,
+    type DownloadResult,
+    type ProviderDownload,
+    type ServerResultDownload,
+    type StreamResult
+} from "./models"
 import { useState } from "react"
-
-import { sendDownloadRequest } from "./api"
-
+import { apiUrl, sendDownloadRequest } from "./api"
 
 type DownloadProps = {
     auth: Authorization
@@ -14,66 +21,53 @@ type DownloadProps = {
     onFinishedDownload: () => void
 }
 
-function DownloadPanel(
-    {
+function DownloadPanel({
     auth,
     request,
     updateDownloadRequest,
     updateDownloadHistory,
     onFinishedDownload
-} : DownloadProps
-)
-{
+}: DownloadProps) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-
-    async function sendDownload()
-    {
+    async function sendDownload() {
         setLoading(true)
         setError(null)
-        try
-        {
-            const server_result: ServerResultDownload = await sendDownloadRequest(request, auth)
 
-            if (server_result.detail !== undefined) 
-                {
-                    console.log("An error occured: ", server_result.detail)
-                    return
+        try {
+            const serverResult: ServerResultDownload = await sendDownloadRequest(request, auth)
+            const requestTitle = request.filenames[0]?.trim() || request.urls[0] || "Untitled"
+
+            const streams: StreamResult[] = serverResult.resources.map((resource) => ({
+                context_id: resource.context.context_id,
+                title: resource.context.output.full_filename || requestTitle,
+                download_url: apiUrl(resource.download_url),
+                watch_url: apiUrl(resource.watch_url),
+                watch_audio_url: apiUrl(resource.watch_audio_url),
+                progress_url: apiUrl(resource.progress_url),
+                stream_type: resource.stream_type,
+                media_type: resource.context.media_info.mime_type || "application/octet-stream",
+                file_extension: resource.context.media_info.file_extension || "",
+                progress_active: false,
+                download_progress: {
+                    status: "queued",
+                    progress: 0,
+                    downloaded_bytes: 0,
+                    speed: 0,
+                    eta: null,
+                    error_message: null
                 }
+            }))
 
-            const streams : StreamResult[] = []
-
-            for (const stream of server_result.streams)
-            {
-                const stream_result: StreamResult = {
-                    task_id: stream.task_id,
-                    download_url: stream.download_url,
-                    watch_url: stream.watch_url,
-                    stream_type: stream.stream_type,
-                    media_type : stream.media_type,
-                    download_progress : {
-                        status: "queued",
-                        progress: 0,
-                        downloaded_bytes: 0,
-                        speed: 0,
-                        eta: null
-                    }
-                }
-                streams.push(stream_result)
-            }
             const result: DownloadResult = {
-                task_id : server_result.task_id,
-                download_progress :"/api" + server_result.download_progress,
-                streams : streams,
-                download_request : request,
-                info: server_result.info ?? ""
+                task_id: serverResult.task_id,
+                title: requestTitle,
+                streams,
+                download_request: { ...request }
             }
 
-            updateDownloadHistory((oldHistory) => [
-                ...oldHistory,
-                result
-            ])
+            updateDownloadHistory(oldHistory => [...oldHistory, result])
 
             updateDownloadRequest(prev => ({
                 ...prev,
@@ -81,29 +75,19 @@ function DownloadPanel(
                 download_path: "",
                 urls: [],
                 filenames: [],
+                preferred_type: null,
+                preferred_file: null,
                 extra_headers: {},
                 provider: ProvidersDownload.Youtube_Music
-
             }))
 
             onFinishedDownload()
-        }
-        
-        catch (error)
-        {
-        
-            setError(
-                error instanceof Error
-                    ? error.message
-                    : "Unknown download error"
-                )
-        }
-        finally
-        {
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Unknown download error")
+        } finally {
             setLoading(false)
         }
     }
-        
 
     return (
         <div className="panel-card download-panel">
@@ -121,17 +105,10 @@ function DownloadPanel(
                     <span className="field-label">Provider</span>
                     <select
                         value={request.provider}
-                        onChange={(e) =>
-                            updateDownloadRequest({
-                                ...request,
-                                provider: e.target.value as ProviderDownload
-                            })
-                        }
+                        onChange={(e) => updateDownloadRequest({ ...request, provider: e.target.value as ProviderDownload })}
                     >
                         {Object.entries(ProvidersDownload).map(([key, value]) => (
-                            <option key={value} value={value}>
-                                {key}
-                            </option>
+                            <option key={value} value={value}>{key}</option>
                         ))}
                     </select>
                 </label>
@@ -142,27 +119,17 @@ function DownloadPanel(
                         type="text"
                         placeholder="https://www.youtube.com/watch?v=a3H7-7g4dbo"
                         value={request.urls[0] ?? ""}
-                        onChange={(e) =>
-                            updateDownloadRequest({
-                                ...request,
-                                urls: [e.target.value]
-                            })
-                        }
+                        onChange={(e) => updateDownloadRequest({ ...request, urls: [e.target.value] })}
                     />
                 </label>
 
                 <label className="field-group">
-                    <span className="field-label">Filename</span>
+                    <span className="field-label">Filename / Title</span>
                     <input
                         type="text"
                         placeholder="myvideo"
                         value={request.filenames[0] ?? ""}
-                        onChange={(e) =>
-                            updateDownloadRequest({
-                                ...request,
-                                filenames: [e.target.value]
-                            })
-                        }
+                        onChange={(e) => updateDownloadRequest({ ...request, filenames: [e.target.value] })}
                     />
                 </label>
 
@@ -170,16 +137,36 @@ function DownloadPanel(
                     <span className="field-label">Download Strategy</span>
                     <select
                         value={request.download_strategie}
-                        onChange={(e) =>
-                            updateDownloadRequest({
-                                ...request,
-                                download_strategie: e.target.value as DownloadStrategie
-                            })
-                        }
+                        onChange={(e) => updateDownloadRequest({ ...request, download_strategie: e.target.value as DownloadStrategie })}
                     >
                         {Object.entries(DownloadStrategie).map(([key, value]) => (
-                            <option key={value} value={value}>
-                                {key}
+                            <option key={value} value={value}>{key}</option>
+                        ))}
+                    </select>
+                </label>
+
+                <label className="field-group">
+                    <span className="field-label">Preferred Type</span>
+                    <select
+                        value={request.preferred_type ?? ""}
+                        onChange={(e) => updateDownloadRequest({ ...request, preferred_type: e.target.value || null })}
+                    >
+                        <option value={PreferredTypes.Auto}>Auto</option>
+                        <option value={PreferredTypes.Video}>Video</option>
+                        <option value={PreferredTypes.Audio}>Audio</option>
+                    </select>
+                    <span className="field-hint">Video means normal video media, not video-only.</span>
+                </label>
+
+                <label className="field-group">
+                    <span className="field-label">Preferred File</span>
+                    <select
+                        value={request.preferred_file ?? ""}
+                        onChange={(e) => updateDownloadRequest({ ...request, preferred_file: e.target.value || null })}
+                    >
+                        {PreferredFiles.map((extension) => (
+                            <option key={extension || "auto"} value={extension}>
+                                {extension ? extension.toUpperCase() : "Auto"}
                             </option>
                         ))}
                     </select>
@@ -192,16 +179,10 @@ function DownloadPanel(
                     <label className="field-group field-wide">
                         <span className="field-label">Download Path</span>
                         <input
-                            value={request.download_path} 
+                            value={request.download_path}
                             placeholder="/home/user/Downloads"
-                            onChange={(e) =>
-                                updateDownloadRequest(
-                                    {
-                                        ...request,
-                                        download_path: e.target.value
-                                    }
-                                )
-                            }/>
+                            onChange={(e) => updateDownloadRequest({ ...request, download_path: e.target.value })}
+                        />
                         <span className="field-hint">The file will be written to this server-side directory.</span>
                     </label>
                 </div>
@@ -212,27 +193,12 @@ function DownloadPanel(
                     <strong>Resolve failed</strong>
                     <span>{error}</span>
                 </div>
-                )}
+            )}
 
             <div className="panel-actions">
-                <button
-                    className="button button-primary button-large"
-                    onClick={sendDownload}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <>
-                            <span className="spinner" />
-                            Resolving...
-                        </>
-                    ) : (
-                        <>
-                            <span className="button-prompt">$</span>
-                            Resolve
-                        </>
-                    )}
+                <button className="button button-primary button-large" onClick={sendDownload} disabled={loading}>
+                    {loading ? <><span className="spinner" />Resolving...</> : <><span className="button-prompt">$</span>Resolve</>}
                 </button>
-
             </div>
         </div>
     )

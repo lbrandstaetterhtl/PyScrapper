@@ -1,37 +1,35 @@
-import { ServerAdressDownload } from "./models";
-import type { DownloadRequest } from "./models";
-import type { Authorization } from "../general";
+import { ServerAdressDownload } from "./models"
+import type { DownloadProgress, DownloadRequest, ServerResultDownload } from "./models"
+import type { Authorization } from "../general"
+import { buildUserHeaders } from "../general"
 
-import type { DownloadProgressResponse } from "./models";
+function apiUrl(url: string): string {
+    if (!url) return ""
+    if (/^https?:\/\//i.test(url)) return url
+    if (url.startsWith("/api/")) return url
+    return `/api${url.startsWith("/") ? url : `/${url}`}`
+}
+
+export { apiUrl }
 
 export async function sendDownloadRequest(
     request: DownloadRequest,
     auth: Authorization
-)
-{
-    if (!auth.key_name) {
-    throw new Error("Authorization header name is empty")
-    }
-
-    if (!auth.key_value) {
-        throw new Error("Authorization key is empty")
-    }
-    
-    const response = await fetch(ServerAdressDownload, 
-        {
+): Promise<ServerResultDownload> {
+    const response = await fetch(ServerAdressDownload, {
         method: "POST",
-        headers: 
-            {
+        headers: {
             "Content-Type": "application/json",
-            [auth.key_name] : auth.key_value
-            
-            },
-        body: JSON.stringify(request)
-        });
+            ...buildUserHeaders(auth)
+        },
+        body: JSON.stringify({
+            ...request,
+            preferred_type: request.preferred_type || null,
+            preferred_file: request.preferred_file || null
+        })
+    })
 
-    
     let data
-
     try {
         data = await response.json()
     } catch {
@@ -45,46 +43,29 @@ export async function sendDownloadRequest(
             `HTTP Error ${response.status}: ${response.statusText}`
         )
     }
-    console.log("Server response:", data);
-    return data
-   
+
+    return data as ServerResultDownload
 }
-
-
 
 export async function getDownloadProgress(
     url: string,
     auth: Authorization
-): Promise<DownloadProgressResponse | null> 
-{
-    if (!auth.key_name) {
-        throw new Error("Authorization header name is empty")
-    }
-
-    if (!auth.key_value) {
-        throw new Error("Authorization key is empty")
-    }
-        
-    const response = await fetch(url, 
-        {
+): Promise<DownloadProgress> {
+    const response = await fetch(apiUrl(url), {
         method: "GET",
-        headers: 
-        {
-            [auth.key_name]: auth.key_value
-        }
+        headers: buildUserHeaders(auth)
     })
 
-    if (!response.ok) 
-        {
-        throw new Error(`HTTP ${response.status}`)
-        }
+    let data
+    try {
+        data = await response.json()
+    } catch {
+        data = null
+    }
 
-    return await response.json()
-    
+    if (!response.ok) {
+        throw new Error(data?.detail ?? `HTTP ${response.status}`)
+    }
 
+    return data as DownloadProgress
 }
-
-
-
-
-

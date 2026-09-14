@@ -13,11 +13,13 @@ class Resources:
     context: core.models.Download.DownloadContext
 
     progress_url : str
-    download_url: str | None= None
-    watch_url : str | None= None
+    download_url: str  = ""
+    watch_url : str = ""
     
 
-    stream_type :str | None= None
+    stream_type :str = ""
+
+    watch_audio_url: str = ""
 
 
 #Context-Felder, die nie mit einer Antwort nach aussen gehen

@@ -556,7 +556,7 @@ async def receive_download(data: requests.DownloadRequest, user=Security(require
                         streamJob.stream_id,
                         context
                     )
-                    watchUrlExtension = "/index.m3u8"
+                    watchUrlExtension = "/master.m3u8"
                     streamType = "hls"
 
                     streamJob.segments = segments
@@ -574,7 +574,8 @@ async def receive_download(data: requests.DownloadRequest, user=Security(require
                     progress_url=f"/download/progress/{taskId}/{context.context_id}",
                     download_url=f"/stream/download/{taskId}/{context.context_id}",
                     watch_url=f"/stream/watch/{taskId}/{context.context_id}{watchUrlExtension}",
-                    stream_type=streamType
+                    stream_type=streamType,
+                    watch_audio_url = context.target.audio_url if context.target.audio_url else ""
                 )
                 resources.append(resource)
 
@@ -662,42 +663,43 @@ def _getIndexSegmentsForStreaming(job: ServerJob, stream_id: str, context: core.
     return (segmentList, audioSegmentList)
 
 
-@app.get("/stream/watch/{task_id}/{stream_id}/index.m3u8",
-         dependencies=[Security(require_user)])
-async def stream_hls_index(task_id: str, stream_id: str):
-    job = server_state.jobs.get(task_id)
 
+
+@app.get(
+    "/stream/watch/{task_id}/{stream_id}/master.m3u8",
+    dependencies=[Security(require_user)]
+)
+async def stream_hls_master(task_id: str, stream_id: str):
+    job = server_state.jobs.get(task_id)
     if job is None:
         raise HTTPException(status_code=404)
 
     stream = job.stream_jobs.get(stream_id)
-
     if stream is None or not stream.segments:
         raise HTTPException(status_code=404)
 
-    max_duration = max(
-        segment.duration
-        for segment in stream.segments
-    )
-
-    lines = [
-        "#EXTM3U",
-        "#EXT-X-VERSION:3",
-        f"#EXT-X-TARGETDURATION:{int(max_duration + 0.999)}",
-        "#EXT-X-MEDIA-SEQUENCE:0",
-    ]
-
-    for index, segment in enumerate(stream.segments):
-        lines.append(f"#EXTINF:{segment.duration:.3f},")
-        lines.append(
-            f"/stream/watch/{task_id}/{stream_id}/segment/{index}"
+    if not stream.audio_segments:
+        return Response(
+            content="\n".join([
+                "#EXTM3U",
+                "#EXT-X-VERSION:3",
+                "#EXT-X-STREAM-INF:BANDWIDTH=5000000",
+                f"/stream/watch/{task_id}/{stream_id}/video/index.m3u8",
+            ]),
+            media_type="application/vnd.apple.mpegurl"
         )
 
-        
-
-    lines.append("#EXT-X-ENDLIST")
-
-    playlist = "\n".join(lines)
+    playlist = "\n".join([
+        "#EXTM3U",
+        "#EXT-X-VERSION:3",
+        (
+            '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",'
+            'NAME="Audio",DEFAULT=YES,AUTOSELECT=YES,'
+            f'URI="/stream/watch/{task_id}/{stream_id}/audio/index.m3u8"'
+        ),
+        '#EXT-X-STREAM-INF:BANDWIDTH=5000000,AUDIO="audio"',
+        f"/stream/watch/{task_id}/{stream_id}/video/index.m3u8",
+    ])
 
     return Response(
         content=playlist,
@@ -705,12 +707,110 @@ async def stream_hls_index(task_id: str, stream_id: str):
     )
 
 
-@app.get("/stream/watch/{task_id}/{stream_id}/segment/{segment_id}",
-         dependencies=[Security(require_user)])
+def create_hls_index(segments, segment_url_prefix):
+    media_segments = [
+        segment
+        for segment in segments
+        if segment.duration is not None and segment.duration > 0
+    ]
+
+    if not media_segments:
+        raise ValueError("No media segments")
+
+    max_duration = max(
+        segment.duration
+        for segment in media_segments
+    )
+
+    lines = [
+        "#EXTM3U",
+        "#EXT-X-VERSION:7",
+        f"#EXT-X-TARGETDURATION:{int(max_duration + 0.999)}",
+        "#EXT-X-MEDIA-SEQUENCE:0",
+    ]
+
+    for index, segment in enumerate(segments):
+
+        # Your HLS parser currently stores EXT-X-MAP
+        # as a segment with duration 0.
+        if segment.duration == 0:
+            lines.append(
+                f'#EXT-X-MAP:URI="{segment_url_prefix}/{index}"'
+            )
+            continue
+
+        lines.append(
+            f"#EXTINF:{segment.duration:.3f},"
+        )
+        lines.append(
+            f"{segment_url_prefix}/{index}"
+        )
+
+    lines.append("#EXT-X-ENDLIST")
+
+    return "\n".join(lines)
+
+
+@app.get(
+    "/stream/watch/{task_id}/{stream_id}/video/index.m3u8",
+    dependencies=[Security(require_user)]
+)
+async def stream_hls_video_index(task_id: str, stream_id: str):
+    job = server_state.jobs.get(task_id)
+    if job is None:
+        raise HTTPException(status_code=404)
+
+    stream = job.stream_jobs.get(stream_id)
+    if stream is None or not stream.segments:
+        raise HTTPException(status_code=404)
+
+    playlist = create_hls_index(
+        stream.segments,
+        f"/stream/watch/{task_id}/{stream_id}/video/segment"
+    )
+
+    return Response(
+        content=playlist,
+        media_type="application/vnd.apple.mpegurl"
+    )
+
+
+
+@app.get(
+    "/stream/watch/{task_id}/{stream_id}/audio/index.m3u8",
+    dependencies=[Security(require_user)]
+)
+async def stream_hls_audio_index(task_id: str, stream_id: str):
+    job = server_state.jobs.get(task_id)
+    if job is None:
+        raise HTTPException(status_code=404)
+
+    stream = job.stream_jobs.get(stream_id)
+    if stream is None or not stream.audio_segments:
+        raise HTTPException(status_code=404)
+
+    playlist = create_hls_index(
+        stream.audio_segments,
+        f"/stream/watch/{task_id}/{stream_id}/audio/segment"
+    )
+
+    return Response(
+        content=playlist,
+        media_type="application/vnd.apple.mpegurl"
+    )
+
+
+
+
+@app.get(
+    "/stream/watch/{task_id}/{stream_id}/{segment_type}/segment/{segment_id}",
+    dependencies=[Security(require_user)]
+)
 async def stream_hls_segment(
-        task_id: str,
-        stream_id: str,
-        segment_id: int
+    task_id: str,
+    stream_id: str,
+    segment_type: str,
+    segment_id: int
 ):
     job = server_state.jobs.get(task_id)
 
@@ -719,19 +819,33 @@ async def stream_hls_segment(
 
     stream = job.stream_jobs.get(stream_id)
 
-    if stream is None or not stream.segments:
+    if stream is None:
         raise HTTPException(status_code=404)
 
-    if segment_id < 0 or segment_id >= len(stream.segments):
+    if segment_type == "video":
+        segments = stream.segments
+
+    elif segment_type == "audio":
+        segments = stream.audio_segments
+
+    else:
         raise HTTPException(status_code=404)
 
-    segment = stream.segments[segment_id]
+    if not segments:
+        raise HTTPException(status_code=404)
+
+    if segment_id < 0 or segment_id >= len(segments):
+        raise HTTPException(status_code=404)
+
+    segment = segments[segment_id]
 
     return StreamingResponse(
         file.asyncDownloadYieldSimple(
             session=job.download_information.session,
             url=segment.url,
             extra_headers=stream.context.target.extra_headers,
+            start_byte=segment.start_byte,
+            end_byte=segment.end_byte
         ),
         media_type="video/mp2t"
     )

@@ -190,13 +190,21 @@ class YoutubeMusicMediaBrowser(browser.MediaBrowser):
         )
         else:
             resolvedUrl = response.url
+
+        requestHeaders = response.request.all_headers() or {}
+
+        requestHeaders = {
+            str(key): str(value)
+            for key, value in requestHeaders.items()
+            if value is not None and not str(key).startswith(":")
+        }
         
 
         media = models.FoundMedia(
             url=resolvedUrl,
             prio=prio,
             media_type=mediaType,
-            extra_headers=response.request.all_headers() or {},
+            extra_headers=requestHeaders,
             mime_type=headers.get('content-type', ""),
             total_size=int(totalSize),
             extension = "webm",

@@ -1,38 +1,19 @@
 import type { SearchRequest } from "./models"
 import type { Authorization } from "../general"
-import { ServerAdressSearch } from "./models";
+import { buildUserHeaders } from "../general"
+import { ServerAdressSearch } from "./models"
 
-
-
-async function sendSearchRequest(
-    request: SearchRequest,
-    auth: Authorization
-)
-{
-
-    if (!auth.key_name) {
-    throw new Error("Authorization header name is empty")
-    }
-
-    if (!auth.key_value) {
-        throw new Error("Authorization key is empty")
-    }
-    
-    const response = await fetch(ServerAdressSearch, 
-        {
+async function sendSearchRequest(request: SearchRequest, auth: Authorization) {
+    const response = await fetch(ServerAdressSearch, {
         method: "POST",
-        headers: 
-            {
+        headers: {
             "Content-Type": "application/json",
-            [auth.key_name] : auth.key_value
-            
-            },
+            ...buildUserHeaders(auth)
+        },
         body: JSON.stringify(request)
-        });
+    })
 
-    
     let data
-
     try {
         data = await response.json()
     } catch {
@@ -47,12 +28,7 @@ async function sendSearchRequest(
         )
     }
 
-    console.log("Server response:", data);
     return data
-    
-
-
-   
 }
 
 export default sendSearchRequest
