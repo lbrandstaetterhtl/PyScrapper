@@ -29,6 +29,7 @@ class FFmpegMuxer:
             file_ending: str,
             input_count: int = 2,
             maps: list[str] | None = None,
+            allow_re_encoding: bool = True,
             caller: str = "[CORE] FFmpegMuxer"
             ):
         """
@@ -63,7 +64,11 @@ class FFmpegMuxer:
             caller=f"{caller} FFmpegMuxer.__init__"
         )
 
-        
+        Validate.general.validateBool(
+            boolean=allow_re_encoding,
+            argument_name="allow_re_encoding",
+            caller=f"{caller} FFmpegMuxer.__init__"
+        )
 
         self.caller = caller
 
@@ -102,18 +107,9 @@ class FFmpegMuxer:
                 map
             ])
 
-        outputFormat = FFMPEG_FORMAT_MAPPING.get(file_ending.lower(), None)
-        if not outputFormat:
-            raise errors.TaskFailedError(
-                task="[CORE] FFmpegMuxer.__init__",
-                reason="Couldn't get outputFormat for given file ending",
-                extraMessages=[
-                    f"Given file ending: '{file_ending}'",
-                    f"Supported file endings: {', '.join(FFMPEG_FORMAT_MAPPING.keys())}"
-                ],
-                caller=f"{self.caller} FFmpegMuxer.__init__"
-            )
-        args.extend(self._getOutputArgs(file_ending))
+      
+        args.extend(self._getOutputArgs(file_ending, allow_re_encoding))
+        
 
         
         self.manager = AsyncProcessManager(
@@ -279,9 +275,14 @@ class FFmpegMuxer:
     
 
 
-    def _getOutputArgs(self, file_ending: str) -> list[str]:
+    def _getOutputArgs(
+            self, 
+            file_ending: str,
+            allow_re_encoding: bool = True
+            ) -> list[str]:
+
+
             ending = file_ending.lower()
-    
             format = self._getOutputFormatFromFileEnding(ending)
     
             args = []
@@ -290,15 +291,23 @@ class FFmpegMuxer:
                 args += [
                     "-movflags",
                     "+frag_keyframe+empty_moov+default_base_moof",
-                    "-bsf:a",
-                    "aac_adtstoasc",
+
                 ]
+            if not allow_re_encoding:
     
+                args += [
+                    "-c", "copy",
+                ]
+                if ending in ("mp4", "m4a"):
+                    args += [
+                        "-bsf:a",
+                        "aac_adtstoasc"
+                    ]
             args += [
-                "-c", "copy",
                 "-f", format,
                 "pipe:1",
             ]
+                
     
             return args
       
