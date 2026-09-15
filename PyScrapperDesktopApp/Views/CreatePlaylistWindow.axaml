@@ -8,8 +8,8 @@
         x:Class="PyScrapperDesktopApp.Views.CreatePlaylistWindow"
         x:DataType="vm:CreatePlaylistWindowViewModel"
         SizeToContent="WidthAndHeight"
-        MaxHeight="600"
-        MaxWidth="600"
+        MaxHeight="800"
+        MaxWidth="1000"
         WindowStartupLocation="CenterOwner"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
@@ -32,17 +32,22 @@
                         <TextBox Text="{Binding Description}" Classes="UI"/>
                 </StackPanel>
                 
-                <ScrollViewer MaxHeight="200" Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <ListBox ItemsSource="{Binding AvailableMedias}" SelectionMode="Multiple, Toggle" SelectedItems="{Binding SelectedMedias}" Classes="SelectableItem">
-                        <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Title}" Classes="UILabel"/>
-                                                <TextBlock Text="{Binding DownloadPath}" Classes="UILabel"/>
-                                        </StackPanel>
-                                </DataTemplate>
-                        </ListBox.ItemTemplate>
-                </ListBox>
+                <ScrollViewer MaxHeight="400" Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" MinWidth="600" Margin="0,5">
+                        <ItemsControl ItemsSource="{Binding AvailableMedias}">
+                                <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                                <Border Classes="CellInteractive" IsTabStop="true" HorizontalAlignment="Stretch" Margin="5" MinWidth="600" MaxWidth="600" Tapped="MediaTapped">
+                                                        <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                        <TextBlock Text="{Binding Title}" Classes="UIValue" VerticalAlignment="Center"/>
+                                                                        <TextBlock Text="{Binding DownloadPath}" Classes="UIValue" VerticalAlignment="Center"/>
+                                                                        <CheckBox IsEnabled="False" IsChecked="{Binding IsPlayable}" VerticalAlignment="Center"/>
+                                                                </StackPanel>
+                                                        </ScrollViewer>
+                                                </Border>
+                                        </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                 </ScrollViewer>
                 
                 <StackPanel Grid.Row="3" Classes="UICell">

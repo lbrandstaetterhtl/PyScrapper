@@ -70,7 +70,7 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
                 Provider = SelectedProvider,
                 Urls = new List<string>([Url]),
                 Filenames = new List<string>([Filename]),
-                PreferredFile = SelectedMediaType.Trim('.'),
+                PreferredFile = SelectedMediaType.Trim('.') == "auto" ? "" : SelectedMediaType.Trim('.'),
                 PreferredType = AppData.ValidMediaTypes[SelectedMediaType],
                 DownloadStrategy = "stream"
             };
@@ -99,13 +99,15 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
 
                     if (!errorWhileDownloading)
                     {
-                        Task.Delay(2000).Wait();
+                        Task.Delay(1000).Wait();
 
                         bool isPlayable = false;
 
-                        while (!isPlayable)
+                        int maxTries = 10;
+                        while (!isPlayable && maxTries > 0)
                         {
                             isPlayable = File.Exists(finalPath);
+                            maxTries--;
                         }
 
                         var req = new CreateDownloadedMediaRequest
@@ -113,7 +115,7 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
                             UserIdentifier = AppData.CurrentUser.Identifier,
                             DownloadPath = finalPath,
                             DownloadedAt = DateTime.Now.ToString("o"),
-                            MediaType = SelectedMediaType,
+                            MediaType = finalPath.Substring(finalPath.LastIndexOf('.')),
                             IsPlayable = isPlayable,
                             Url = Url,
                             Title = Filename

@@ -155,7 +155,7 @@ public partial class ProgressBarWindowViewModel : ObservableObject
 
                         try
                         {
-                            await Task.Delay(1000, token);
+                            await Task.Delay(500, token);
                         }
                         catch (OperationCanceledException)
                         {

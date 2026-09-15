@@ -179,12 +179,12 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 Paths.Add(downloadPath);
             }
 
-            DownloadRequestData requestData = new DownloadRequestData()
+            DownloadRequestData requestData = new DownloadRequestData
             {
                 Provider = _selectedProvider,
                 Urls = Urls,
                 Filenames = FileNames,
-                PreferredFile = SelectedMediaType.Trim('.'),
+                PreferredFile = SelectedMediaType.Trim('.') == "auto" ? "" : SelectedMediaType.Trim('.'),
                 PreferredType = AppData.ValidMediaTypes[SelectedMediaType],
                 DownloadStrategy = "stream"
             };
@@ -196,7 +196,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             {
                 if (result.TaskId != "-1")
                 {
-                    Task.Delay(2000).Wait();
+                    Task.Delay(1000).Wait();
 
                     if (resource.Context.MediaInfo.FileExtension != SelectedMediaType.Trim('.'))
                     {
@@ -224,14 +224,15 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     
                     if (!errorWhileDownloading)
                     {
-                        Task.Delay(2000).Wait();
-
+                        Task.Delay(1000).Wait();
 
                         bool isPlayable = false;
 
-                        while (!isPlayable)
+                        int maxTries = 10;
+                        while (!isPlayable &&  maxTries > 0)
                         {
                             isPlayable = File.Exists(finalPath);
+                            maxTries--;
                         }
 
                         var req = new CreateDownloadedMediaRequest

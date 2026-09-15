@@ -25,7 +25,6 @@
 
         <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto" Margin="14,10,14,14">
 
-            <!-- Header: Name + Description -->
             <Border Grid.Row="0" Classes="Cell" HorizontalAlignment="Stretch" Margin="0,0,0,0">
                 <Grid ColumnDefinitions="*,Auto,*">
                     <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="2" HorizontalAlignment="Center">
@@ -45,7 +44,6 @@
 
             <Border Grid.Row="1" Classes="SeparatorHorizontal" HorizontalAlignment="Stretch" Margin="4,6"/>
 
-            <!-- Track list -->
             <ScrollViewer Grid.Row="2"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
@@ -91,7 +89,6 @@
                 </ItemsControl>
             </ScrollViewer>
 
-            <!-- Buttons -->
             <Border Grid.Row="3" Classes="SeparatorHorizontal" HorizontalAlignment="Stretch" Margin="4,8,4,20"/>
             <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center"
                         Spacing="8" Margin="0,36,0,0">

@@ -56,6 +56,7 @@ public class AppData : Interfaces.IAppDataService
     
     public static readonly Dictionary<string, string> ValidMediaTypes = new()
     {
+        { "auto", ""},
         { ".mp3", "audio" },
         { ".mp4", "video" },
         { ".wav", "audio" },
@@ -96,7 +97,7 @@ public class AppData : Interfaces.IAppDataService
     ];
     
     public static readonly List<string> ValidProviders = ["suno", "youtube", "bandcamp", "archive", "soundcloud", "wcoflix", "aniworld", "newgrounds", "youtubemusic", "default"];
-    public static readonly List<string> ValidSearchProviders = ["youtube", "bandcamp", "archive", "soundcloud", "newgrounds", "youtubemusic", "default"];
+    public static readonly List<string> ValidSearchProviders = ["youtube", "bandcamp", "archive", "soundcloud", "newgrounds", "youtubemusic"];
 
     public static AppConfig Config;
     

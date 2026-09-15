@@ -190,7 +190,7 @@
                                 <ItemsControl.Template>
                                     <ControlTemplate>
                                         <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                                      VerticalScrollBarVisibility="Auto">
+                                                      VerticalScrollBarVisibility="Visible">
                                             <ItemsPresenter/>
                                         </ScrollViewer>
                                     </ControlTemplate>

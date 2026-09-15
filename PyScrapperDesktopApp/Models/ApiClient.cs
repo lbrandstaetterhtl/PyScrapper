@@ -28,8 +28,6 @@ public class ApiClient : Interfaces.IApiClient
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     
     private readonly string _encryptedUserApiKey = AppData.CurrentUser?.ApiKey ?? "";
-    
-    private readonly string _encryptedClientApiKey = AppData.Config.ClientApiKey ?? "";
 
     /// <summary>
     /// Sends a scrap request to the server and returns the download ID if successful, or "-1" if there was an error.
