@@ -9,6 +9,8 @@ from . import Youtube
 from . import Default
 from . import Newgrounds
 
+from . import Filmpalast
+
 
 
 from . import models

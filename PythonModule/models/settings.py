@@ -17,6 +17,7 @@ class ProviderTypes(enum.Enum):
     Newgrounds = enum.auto()
     Dailymotion = enum.auto()
     YoutubeMusic = enum.auto()
+    Filmpalast = enum.auto()
 
 
 
@@ -37,7 +38,8 @@ PROVIDER_GETRESULTS_MAPPING: dict = {
     ProviderTypes.Suno : p.Suno.getMediaInformation,
     ProviderTypes.Newgrounds : p.Newgrounds.getMediaInformation,
     ProviderTypes.Youtube : p.Youtube.getMediaInformation,
-    ProviderTypes.YoutubeMusic : p.Youtube.getMediaInformationMusic
+    ProviderTypes.YoutubeMusic : p.Youtube.getMediaInformationMusic,
+    ProviderTypes.Filmpalast : p.Filmpalast.getMediaInformation
 
 }
 
@@ -48,9 +50,16 @@ PROVIDER_SEARCH_MAPPING: dict = {
     ProviderTypes.Newgrounds : p.Newgrounds.search,
     ProviderTypes.Youtube : p.Youtube.search,
     ProviderTypes.Suno : p.Suno.search,
-    ProviderTypes.YoutubeMusic : p.Youtube.searchMusic
+    ProviderTypes.YoutubeMusic : p.Youtube.searchMusic,
+    ProviderTypes.Filmpalast : p.Filmpalast.search
 
 }
+
+VALIDFILMPALASTNAMES = [
+    "filmpalast",
+    "filmpalast.one",
+    "www.filmpalast.one"
+]
     
 VALIDYOUTUBEMUSICNAMES = [
     "music.youtube.com",
@@ -124,7 +133,8 @@ SUPPORTEDPROVIDERS = {
     ProviderTypes.Wcoflix : VALIDWCOFLIXNAMES,
     ProviderTypes.Newgrounds : VALIDNEWGROUNDSNAMES,
     ProviderTypes.Dailymotion : VALIDDAILYMOTIONNAMES,
-    ProviderTypes.YoutubeMusic : VALIDYOUTUBEMUSICNAMES
+    ProviderTypes.YoutubeMusic : VALIDYOUTUBEMUSICNAMES,
+    ProviderTypes.Filmpalast : VALIDFILMPALASTNAMES
 }
 
 
