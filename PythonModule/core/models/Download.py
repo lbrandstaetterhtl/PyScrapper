@@ -65,11 +65,14 @@ DOWNLOAD_TYPE_MAPPING = {
 @dataclass
 class OutputTarget:
 #Includes name + extension
-    full_filename: str | None = None
+    filename: str = ""
+    full_filename: str = ""
 
-    download_path: str | None = None
+    download_path: str = ""
 
-    out_file: str | None = None
+    out_file: str = ""
+
+    auto_convert: bool = False
 
     def __post_init__(self):
         self.out_file = os.path.join(self.download_path, self.full_filename)
