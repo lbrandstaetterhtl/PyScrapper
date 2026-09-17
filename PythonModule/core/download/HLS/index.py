@@ -1,13 +1,13 @@
 #Core Imports
 
 from ...general import Validate
-from ...models.errors import TaskFailedError, MergeError
-from ...models import Download
+from ...models.errors import TaskFailedError
+
 
 from ...network.Session import Session
 from ...network import file
 from ...network import progress
-from ...ffmpeg import FFmpegMuxer
+
 
 #Own imports
 
@@ -17,10 +17,8 @@ from . import models
 
 
 #Python Default Imports
-
-import shutil
 import asyncio
-import os
+
 
 
 
@@ -29,163 +27,123 @@ import os
 class IndexHLSDownload(HLSDownload):
     """
     Class for handling HLS download from an index m3u8 file.
-    Takes in url of the index file and optional audio url, downloads the segments, and optionally merges them using ffmpeg.
-    Use the run() method to start the download process.
+    Takes in url of the index file and downloads the segments.
+    Has methods for yielding and writing to a file
     """
     def __init__(
             self,
-            download_context: Download.DownloadContext,
-            session : Session | None = None,
-            audio_url: str | None = None,
+            index_url,
+            session : Session,
+            extra_headers: dict | None = None
   
             ):
         
         super().__init__(
-            download_context,
+            index_url,
             session,
+            extra_headers
         )
-            
-        
-        if audio_url:
-            Validate.special.validateHostDefault(
-                audio_url, caller="[CORE] IndexHLSDownload.init"
-            )
-        self.audioUrl = audio_url
 
-        self.ffmpegPath = shutil.which("ffmpeg")
+
+        
+    def downloadToFile(
+            self,
+            out_file: str,
+            download_progress,
+            ):
+
+        Validate.download.validateDownloadProgress(
+            argument_name="download_progress",download_progress=download_progress, caller="[CORE] IndexHLSDownload.downloadToFile"
+            )
+        Validate.download.validateOutFile(
+            out_file=out_file,
+            caller="[CORE] IndexHLSDownload.downloadToFile"
+        )
+
+        segmentList = self.getIndexSegmentList()
+
+        if download_progress.total_segments < 0:
+            download_progress.total_segments = len(segmentList)
+
+        
+        for segment in segmentList:
+
+            downloadedBytes: int = file.downloadToFileSimple(
+                out_file=out_file,
+                session=self.session,
+                url=segment.url,
+                extra_headers=self.extraHeaders,
+                open_file_method="ab"
+            )
+        
+        
+            progress.updateDownloadProgress(
+                download_progress,
+                downloadedBytes,
+                downloaded_segments=1,
+                caller="[CORE] IndexHLSDownload"
     
-        
-
-        
-    def downloadToFile(self):
-
-        segmentResults = self.getIndexSegmentList()
-
-        segmentList, segmentAudioList = segmentResults
-
-        self._downloadSegmentsToFile(
-                segmentList, segmentAudioList
-            )
-        
-        self.downloadContext.download_progress.status = Download.TaskStatus.FINISHED
-
-
-
-
-
-    async def downloadAndYield(self):
-        segmentResults = await asyncio.to_thread(self.getIndexSegmentList)
-
-        segmentList, segmentAudioList = segmentResults
-
-        self.downloadContext.download_progress.total_segments = (
-            len(segmentList)
-            + (len(segmentAudioList) if segmentAudioList else 0)
-        )
-
-#Default case. Segments with audio + video, get downloaded and bytes yielded
-        if not segmentAudioList:
-            async for chunk in self._downloadSegmentsAndYield(segment_list=segmentList):
-                yield chunk
-            
-        else:
-            muxer = FFmpegMuxer(
-                file_ending=self.downloadContext.media_info.file_extension,
-                caller=f"{self.downloadContext.context_id}-Muxer"
             )
 
-            async def _feedVideo():
-                videoPipeIndex = 0
-                try:
-                    async for chunk in self._downloadSegmentsAndYield(segment_list=segmentList):
-                        
-                        await muxer.writePipe(data=chunk, pipe_index=videoPipeIndex)
-                finally:
-                    await muxer.closePipe(videoPipeIndex)
-
-            async def _feedAudio():
-                audioPipeIndex = 1
-                try:
-                    async for chunk in self._downloadSegmentsAndYield(segment_list=segmentAudioList):
-                        await muxer.writePipe(data=chunk, pipe_index=audioPipeIndex)
-                finally:
-                    await muxer.closePipe(audioPipeIndex)
-
-
-            await muxer.start()
-
-            videoTask = asyncio.create_task(_feedVideo())
-            audioTask = asyncio.create_task(_feedAudio())
-
-            try:
-                async for chunk in muxer.output():
-                    yield chunk
-
-            finally:
-                if not videoTask.done():
-                    videoTask.cancel()
-
-                if not audioTask.done():
-                    audioTask.cancel()
-
-                await asyncio.gather(
-                    videoTask,
-                    audioTask,
-                    return_exceptions=True,
-                )
-
-          
 
 
 
 
-    async def _downloadSegmentsAndYield(self, segment_list: list):
 
-        for segment in segment_list:
+    async def downloadAndYield(
+            self,
+            download_progress
+            ):
+        segmentList = await asyncio.to_thread(self.getIndexSegmentList)
 
+        if download_progress.total_segments < 0:
+            download_progress.total_segments = len(segmentList)
+
+        for segment in segmentList:
+        
             async for chunk in file.asyncDownloadYieldSimple(
                 session=self.session,
                 url=segment.url,
                 start_byte=segment.start_byte,
                 end_byte=segment.end_byte,
-                extra_headers=self.downloadContext.target.extra_headers
+                extra_headers=self.extraHeaders
             ):
                 progress.updateDownloadProgress(
-                    self.downloadContext.download_progress,
+                    download_progress,
                     downloaded_bytes=len(chunk)
                 )
                 yield chunk
 
             progress.updateDownloadProgress(
-                self.downloadContext.download_progress,
+                download_progress,
                 downloaded_segments=1
             )
 
-
+        
+          
 
 
     def getIndexSegmentList(
             self
-            ) -> tuple[list[models.HLSSegment] | None, list[models.HLSSegment] | None]:
-        """
-        """
-        indexUrl = self.downloadContext.target.resolved_url if self.downloadContext.target.resolved_url else self.downloadContext.target.url
+            ) -> list[models.HLSSegment] | None:
+       
+        
 
         indexFile = self._get_html(
-            indexUrl,
+            self.url,
             variable_name="indexFile", 
             caller="[CORE] IndexHLSDownload.run",
-            extra_headers=self.downloadContext.target.extra_headers)
+            extra_headers=self.extraHeaders)
 
         
         
         segmentList: list[models.HLSSegment] = []
-        segmentAudioList: list[models.HLSSegment] = []
+      
         
         segmentList = finder.findSegments(
             indexFile,
-            indexUrl,
-            caller="[CORE] IndexHLSDownload.run"
+            self.url,
+            caller="[CORE] IndexHLSDownload.getIndexSegmentList"
         )
 
 
@@ -199,141 +157,7 @@ class IndexHLSDownload(HLSDownload):
                 ],
                 caller="[CORE] IndexHLSDownload.run"
             )
-        segmentAudioList:list[models.HLSSegment] = None
-
-
-        if self.audioUrl:
-            audioIndexFile = self._get_html(
-                self.audioUrl,
-                variable_name="audioIndexFile",
-                caller="[CORE] IndexHLSDownload.run",
-                extra_headers=self.downloadContext.target.extra_headers
-            )
-
-            segmentAudioList= finder.findSegments(
-                audioIndexFile,
-                self.audioUrl,
-                caller="[CORE] IndexHLSDownload.run"
-            )
-
-        return (segmentList, segmentAudioList)
+ 
+        return segmentList
 
         
-
-
-        
-    
-
-
-
-
-    def _downloadSegmentsToFile(
-            self,
-            segment_list: list[models.HLSSegment],
-            segment_audio_list: list[models.HLSSegment]
-            ):
-        
-
-
-        if self.audioUrl and segment_audio_list:
-            audioOutFile = self.downloadContext.output.out_file + ".audio_tmp"
-            videoOutFile = self.downloadContext.output.out_file + ".video_tmp"
-
-            Validate.download.validateOutFile(out_file=audioOutFile, caller="[CORE] IndexHLSDownload._downloadSegmentsManual")
-            Validate.download.validateOutFile(out_file=videoOutFile, caller="[CORE] IndexHLSDownload._downloadSegmentsManual")
-
-
-
-            self.downloadContext.download_progress.total_segments = len(segment_list) + len(segment_audio_list)
-
-
-            for segment in segment_list:
-                self._downloadWrapperToFile(
-                    segment,
-
-                    videoOutFile
-                    )
-
-
-            for segment in segment_audio_list:
-                self._downloadWrapperToFile(
-                    segment,
-
-                    audioOutFile
-                    )
-
-
-
-            if not self.ffmpegPath:
-                raise MergeError(
-                    videoFile=videoOutFile,
-                    audioFile=audioOutFile
-                )
-            print(
-                "Working on FFMPEG Command handler class. Not muxing files together  but also not deleting yet"
-                f"audio output = {audioOutFile}"
-                f"video output = {videoOutFile}"
-                )
-            #os.remove(videoOutFile)
-            #os.remove(audioOutFile)
-            
-
-        else:
-
-            self.downloadContext.download_progress.total_segments = len(segment_list)
-
-            for segment in segment_list:
-                self._downloadWrapperToFile(
-                    segment,
-
-                    self.downloadContext.output.out_file
-                    )
-
-
-        
-        
-                
-
-    def _downloadWrapperToFile(
-            self, 
-            segment: models.HLSSegment,
-            out_file: str
-            ):
-        
-        downloadedBytes: int = file.downloadToFileSimple(
-            out_file=out_file,
-            session=self.session,
-            url=segment.url,
-            extra_headers=self.downloadContext.target.extra_headers,
-            open_file_method="ab"
-        )
-
-
-        progress.updateDownloadProgress(
-            self.downloadContext.download_progress,
-            downloadedBytes,
-            downloaded_segments=1,
-            caller="[CORE] IndexHLSDownload"
-
-        )
-
-        
-        
-
-            
-
-
-
-                        
-
-
-                
-
-                
-
-
-
-            
-
-        
-

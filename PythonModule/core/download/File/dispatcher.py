@@ -10,6 +10,7 @@ from ..Dispatcher.base import Dispatcher
 
 # Python default imports
 import asyncio
+from functools import partial
 
 class FileDispatcher(Dispatcher):
     """
@@ -52,12 +53,28 @@ class FileDispatcher(Dispatcher):
     ):
         async with self.downloadInformation.download_limiter:
             try:
-                async for chunk in file.asyncDownloadYield(
+                videoSource = partial(
+                    file.asyncDownloadYield,
                     session=self.downloadInformation.session,
                     url=context.target.resolved_url,
+                    download_progress=context.download_progress,
                     extra_headers=context.target.extra_headers,
-                    download_progress=context.download_progress
-                ):
+                )
+                if context.target.audio_url:
+                    audioSource = partial(
+                        file.asyncDownloadYield,
+                        session=self.downloadInformation.session,
+                        url=context.target.audio_url,
+                        download_progress=context.download_progress,
+                        extra_headers=context.target.extra_headers,
+                    )
+                else: audioSource = None
+
+                async for chunk in self._asyncProcessSources(
+                    video_source=videoSource,
+                    context=context,
+                    audio_source=audioSource
+                    ):
                     yield chunk
 
                 context.download_progress.status = Download.TaskStatus.FINISHED

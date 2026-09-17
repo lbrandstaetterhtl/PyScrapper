@@ -54,18 +54,28 @@ class DownloadRequest(BaseModel):
 
             if self.download_strategie == core.models.Download.DownloadStrategie.LOCAL:
                 core.general.Validate.general.validateStr(argument_name="download_path", string=self.download_path, caller=caller)
-                core.general.Validate.general.validateBool(boolean=self.auto_convert, argument_name="auto_convert", caller=caller)
 
+                os.makedirs(self.download_path, exist_ok=True)
                 if not (
                     os.path.isdir(self.download_path)
                     and os.access(self.download_path, os.W_OK)
                 ):
-                    raise core.models.errors.ArgumentError(
-                        argument="download_path",
-                        wanted_type="path to valid folder that is accessible",
-                        caller=caller
-                    )
-                os.makedirs(self.download_path, exist_ok=True)
+                    if not os.access(self.download_path, os.W_OK):
+                        raise core.models.errors.ArgumentError(
+                            argument="download_path",
+                            wanted_type="path to valid folder that is accessible",
+                            caller=caller
+                        )
+                
+
+
+                
+            if self.auto_convert:
+                core.general.Validate.general.validateBool(boolean=self.auto_convert, argument_name="auto_convert", caller=caller)
+                if not self.preferred_file and self.auto_convert is True:
+                    raise ValueError("'preferred_file' is required for auto convert")
+
+                
 
 
             if len(self.urls) != len(self.filenames):

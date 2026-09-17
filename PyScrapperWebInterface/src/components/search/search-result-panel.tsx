@@ -23,6 +23,7 @@ function SearchResultPanel({results,updateResults, updateDownloadRequest,  onSea
             download_strategie: "stream",
             preferred_type: null,
             preferred_file: null,
+            auto_convert: false,
             extra_headers: {}
         }))
             

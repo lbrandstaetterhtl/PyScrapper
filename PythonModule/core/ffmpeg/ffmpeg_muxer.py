@@ -6,7 +6,7 @@ from ..processes import AsyncProcessManager, ProcessDrainType
 from ..network.file import writeFd
 
 #Own imports
-from .ffmpeg_models import FFMPEG_FORMAT_MAPPING
+from . import ffmpeg_models
 
 #Python default imports
 import os
@@ -58,11 +58,12 @@ class FFmpegMuxer:
             caller=f"{caller} FFmpegMuxer.__init__"
         )
 
-        Validate.general.validateListStr(
-            argument_name="maps",
-            liste=maps,
-            caller=f"{caller} FFmpegMuxer.__init__"
-        )
+        if maps:
+            Validate.general.validateListStr(
+                argument_name="maps",
+                liste=maps,
+                caller=f"{caller} FFmpegMuxer.__init__"
+            )
 
         Validate.general.validateBool(
             boolean=allow_re_encoding,
@@ -101,11 +102,12 @@ class FFmpegMuxer:
             )
             Fds += (readFd,)
 
-        for map in maps:
-            args.extend([
-                "-map",
-                map
-            ])
+        if maps:
+            for map in maps:
+                args.extend([
+                    "-map",
+                    map
+                ])
 
       
         args.extend(self._getOutputArgs(file_ending, allow_re_encoding))
@@ -267,7 +269,7 @@ class FFmpegMuxer:
 
     def _getOutputFormatFromFileEnding(self, file_ending:str):
             Validate.general.validateStr(argument_name="file_ending", string=file_ending, caller="[CORE] FFmpegDownload._getOutputFormatFromFileEnding")
-            format = FFMPEG_FORMAT_MAPPING.get(file_ending.lower())
+            format = ffmpeg_models.FFMPEG_FORMAT_MAPPING.get(file_ending.lower())
     
             if not format:
                 raise ValueError(f"[FFmpegDownload]._getOutputFormatFromFileEnding: Unsupported file ending: {file_ending}")
@@ -283,9 +285,10 @@ class FFmpegMuxer:
 
 
             ending = file_ending.lower()
-            format = self._getOutputFormatFromFileEnding(ending)
-    
+            fileFormat = self._getOutputFormatFromFileEnding(ending)
+
             args = []
+            args.extend(ffmpeg_models.FFMPEG_OUTPUT_ARGS_MAPPING.get(ending, []))
     
             if ending in ("mp4", "m4a"):
                 args += [
@@ -304,7 +307,7 @@ class FFmpegMuxer:
                         "aac_adtstoasc"
                     ]
             args += [
-                "-f", format,
+                "-f", fileFormat,
                 "pipe:1",
             ]
                 

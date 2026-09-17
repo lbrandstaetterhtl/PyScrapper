@@ -102,7 +102,10 @@ def validateListStr(
     if (
         not liste
         or not isinstance(liste, list)
-        or not all(isinstance(item, str) or item.strip() for item in liste)
+        or not all(
+            isinstance(item, str) and item.strip()
+            for item in liste
+        )
     ):
         raise ArgumentError(
             argument=argument_name,

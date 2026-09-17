@@ -14,6 +14,7 @@ from . import youtube_download_with_ytdlp
 # python default imports
 import asyncio
 from urllib.parse import urlparse, parse_qs
+from functools import partial
 
 
 
@@ -98,15 +99,34 @@ class UMPDispatcher(Dispatcher):
                             yield chunk
 
                     else:
-                        generator = download.downloadAndYieldUMP(
-                            session=self.downloadInformation.session,
-                            start_url=context.target.resolved_url,
-                            extra_headers=context.target.extra_headers,
-                            download_progress=context.download_progress,
-                            max_len=context.media_info.total_size,
-                            post_body=context.target.post_body
+
+                        videoSource = partial(
+                            download.downloadAndYieldUMP,
+                                session=self.downloadInformation.session,
+                                start_url=context.target.resolved_url,
+                                extra_headers=context.target.extra_headers,
+                                download_progress=context.download_progress,
+                                max_len=context.media_info.total_size,
+                                post_body=context.target.post_body
                         )
-                        async for chunk in generator:
+                        if context.target.audio_url:
+                            audioSource = partial(
+                                download.downloadAndYieldUMP,
+                                    session=self.downloadInformation.session,
+                                    start_url=context.target.audio_url,
+                                    extra_headers=context.target.extra_headers,
+                                    download_progress=context.download_progress,
+                                    max_len=context.media_info.total_size,
+                                    post_body=context.target.post_body
+                            )
+
+                        else: audioSource = None
+
+                        async for chunk in self._asyncProcessSources(
+                            video_source=videoSource,
+                            context=context,
+                            audio_source=audioSource
+                        ):
                             yield chunk
                     
     

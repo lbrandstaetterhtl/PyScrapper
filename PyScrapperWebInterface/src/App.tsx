@@ -44,6 +44,7 @@ function App() {
         download_path: "",
         preferred_type: null,
         preferred_file: null,
+        auto_convert: false,
         extra_headers: {}
 
     })

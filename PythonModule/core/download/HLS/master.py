@@ -21,18 +21,19 @@ class MasterHLSDownload(HLSDownload):
     Class for handling HLS download from a master m3u8 file.
     It selects the best quality stream and audio track based on the provided download context and preferred languages.
     Doesn't start the actual download, but prepares the necessary information (returns tuple[str, str | None]) for the IndexHLSDownload class to perform the download.
-    Use the run() method to start the process of selecting the best stream and audio track.
     """
     def __init__(
             self,
-            download_context : DownloadContext,
-            session : Session | None = None,
+            master_url: str,
+            session : Session,
+            extra_headers: dict | None = None,
             preferred_languages: list[str] | None = None
             ):
         
         super().__init__(
-            download_context,
+            master_url,
             session,
+            extra_headers
             )
         
         
@@ -68,7 +69,7 @@ class MasterHLSDownload(HLSDownload):
             )
 
         message =(
-            f"DownloadJob {self.downloadContext.context_id}: Successfully found stream valid stream"
+            f"Successfully found stream valid stream"
             f"Found stream data:"
             f"Stream URL: {stream.stream_url}"
             f"Stream Bandwidth: {stream.stream_bandwidth}"
@@ -94,10 +95,10 @@ class MasterHLSDownload(HLSDownload):
 
     def _get_Master_File(self):
         masterFile: str = self._get_html(
-            self.downloadContext.target.resolved_url,
+            self.url,
             variable_name="masterFile",
             caller="[CORE] MasterHLSDownload._get_Master_File",
-            extra_headers=self.downloadContext.target.extra_headers
+            extra_headers=self.extraHeaders
         )
         return masterFile
 
@@ -128,7 +129,7 @@ class MasterHLSDownload(HLSDownload):
 #Searching for stream
         stream: models.M3U8Stream = finder.findBestQualityStream(
             streamBlocks,
-            master_url=self.downloadContext.target.resolved_url,
+            master_url=self.url,
             caller="[CORE] MasterHLSDownload._select_Index"
         )
 
@@ -137,7 +138,7 @@ class MasterHLSDownload(HLSDownload):
             finder.findAudioUrl(
                 mediaBlocks, 
                 preferred_languages=self.preferredLanguages,
-                master_url=self.downloadContext.target.resolved_url,
+                master_url=self.url,
                 audio_information=stream.audio_information,
                 caller="[CORE] MasterHLSDownload._select_Index"
             )

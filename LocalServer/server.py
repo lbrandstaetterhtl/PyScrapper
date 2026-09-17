@@ -439,8 +439,10 @@ async def _resolveMediaAndCreateContexts(
         )
 
         outputTarget = core.models.Download.OutputTarget(
+            filename = filename,
             full_filename=f"{filename}.{result.file_ending}",
-            download_path=data.download_path
+            download_path=data.download_path,
+            auto_convert=data.auto_convert if data.auto_convert else False
         )
 
         context = core.models.Download.DownloadContext(
@@ -525,6 +527,7 @@ async def receive_download(data: requests.DownloadRequest, user=Security(require
 
         # Depending on the strategy something different will happen
         if data.download_strategie == core.models.Download.DownloadStrategie.LOCAL:
+            raise ValueError("Local Download was turned off by administrator because of pending rework")
             downloader = core.download.Dispatcher.DownloadDispatcher(downloadInformation)
             asyncio.create_task(
                 _run_local_download(
@@ -622,7 +625,8 @@ def _getIndexSegmentsForStreaming(job: ServerJob, stream_id: str, context: core.
 
     from PythonModule.core.download.HLS import models as hlsmodels
 
-    segmentList = []
+ 
+    videoSegmentList = []
     audioSegmentList = []
 
     file = html.getHtml(
@@ -634,33 +638,40 @@ def _getIndexSegmentsForStreaming(job: ServerJob, stream_id: str, context: core.
     fileType: hlsmodels.FileType = core.download.HLSDispatcher(job.download_information).dertermineFileType(file)
 
     if fileType == hlsmodels.FileType.MASTER_FILE:
-        indexUrl, audioUrl = core.download.MasterHLSDownload(context, job.download_information.session).getUrls()
+        indexUrl, audioUrl = core.download.MasterHLSDownload(
+            context.target.resolved_url,
+            job.download_information.session,
+            extra_headers=context.target.extra_headers
+            ).getUrls()
         
 
         context.target.resolved_url = indexUrl
         context.target.audio_url = audioUrl
 
-        segmentList, audioSegmentList = core.download.IndexHLSDownload(
-            context,
-            job.download_information.session,
-            audio_url=audioUrl
-            ).getIndexSegmentList()
 
+    
 
-    elif fileType == hlsmodels.FileType.INDEX_FILE:
-        segmentList, audioSegmentList = core.download.IndexHLSDownload(
-            context,
-            job.download_information.session,
-            audio_url=context.target.audio_url
-            ).getIndexSegmentList()
+    videoSegmentList = core.download.IndexHLSDownload(
+        index_url=context.target.resolved_url,
+        session=job.download_information.session,
+        extra_headers=context.target.extra_headers
+    ).getIndexSegmentList()
 
-    if not segmentList:
+    if context.target.audio_url:
+        audioSegmentList = core.download.IndexHLSDownload(
+            index_url=context.target.audio_url,
+            session=job.download_information.session,
+            extra_headers=context.target.extra_headers
+        ).getIndexSegmentList()
+    
+
+    if not videoSegmentList:
         raise core.models.errors.TaskFailedError(
             task="_getIndexSegmentsForStreaming",
             reason="Didn't get segmentList from index"
         )
 
-    return (segmentList, audioSegmentList)
+    return (videoSegmentList, audioSegmentList)
 
 
 
@@ -976,12 +987,14 @@ async def client_download_stream(task_id: str, stream_id: str):
         async for chunk in downloader.downloadContextAndYield(context):
             yield chunk
 
+    filename = context.output.full_filename if not context.output.auto_convert else (f"{context.output.filename}.{context.info.preferred_file}")
+
     return StreamingResponse(
         download_and_cleanup(),
         media_type="application/octet-stream",
         headers={
             "Content-Disposition":
-                f'attachment; filename="{context.output.full_filename if context.output.full_filename is not None else (context.context_id + context.media_info.file_extension)}"'
+                f'attachment; filename="{filename}"'
         }
     )
 

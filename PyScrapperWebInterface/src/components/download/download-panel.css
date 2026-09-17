@@ -23,6 +23,42 @@
     letter-spacing: 0.1em;
 }
 
+
+.auto-convert-panel {
+    padding: 16px 20px;
+}
+
+.toggle-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.toggle-field input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    margin: 2px 0 0;
+    accent-color: var(--green);
+    cursor: pointer;
+}
+
+.toggle-copy {
+    display: grid;
+    gap: 4px;
+}
+
+.toggle-copy strong {
+    color: var(--text);
+    font-size: 12px;
+}
+
+.toggle-copy span {
+    color: #748078;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
 .history-list,
 .stream-list {
     display: grid;

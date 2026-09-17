@@ -23,21 +23,22 @@ class HLSDownload():
     """
     def __init__(
             self,
-            download_context:DownloadContext,
-            session: Session = None,
+            hls_url,
+            session: Session,
+            extra_headers: dict | None = None
 
             ):
 
 #Validating every argument given
         self._validate_arguments(
-            download_context,
+            hls_url,
             session,
-
+            extra_headers
         )
         
 
-
-        self.downloadContext = download_context
+        self.extraHeaders: dict = extra_headers
+        self.url: str = hls_url
         self.session = session if session is not None else Session()
 
 
@@ -81,25 +82,28 @@ class HLSDownload():
 #HLS Download class is the public "api", this function checks every argument if it is correct and valid
     def _validate_arguments(
             self,
-            download_context: DownloadContext,
-            session: Session = None,
+            hls_url: str,
+            session: Session,
+            extra_headers: dict | None = None
             ):
 
         from ...general import Validate
 
-        Validate.download.validateDownloadContext(
-            argument_name="download_context",
-            download_context=download_context,
+        Validate.special.validateHostDefault(
+            url=hls_url,
             caller="[CORE] HLSDownload.init"
         )
+       
+        Validate.special.validateSession(
+                session, argument_name="session", caller="[CORE] HLSDownload.init"
+            )
 
-
-
-
-        if session:
-            Validate.special.validateSession(
-                    session, argument_name="session", caller="[CORE] HLSDownload.init"
-                )
+        if extra_headers:
+            Validate.general.validateDict(
+                argument_name="extra_headers",
+                dictionary=extra_headers,
+                caller="[CORE] HLSDownload.init"
+            )
 
 
     

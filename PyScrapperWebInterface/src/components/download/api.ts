@@ -12,6 +12,59 @@ function apiUrl(url: string): string {
 
 export { apiUrl }
 
+function formatApiError(value: unknown): string {
+    if (typeof value === "string") return value
+
+    if (Array.isArray(value)) {
+        const messages = value
+            .map((item) => {
+                if (item && typeof item === "object") {
+                    const error = item as {
+                        msg?: unknown
+                        message?: unknown
+                        loc?: unknown
+                    }
+
+                    const message =
+                        typeof error.msg === "string"
+                            ? error.msg
+                            : typeof error.message === "string"
+                                ? error.message
+                                : null
+
+                    if (message) {
+                        const location = Array.isArray(error.loc)
+                            ? error.loc.map(String).join(".")
+                            : ""
+
+                        return location ? `${location}: ${message}` : message
+                    }
+                }
+
+                return formatApiError(item)
+            })
+            .filter(Boolean)
+
+        return messages.join("; ")
+    }
+
+    if (value && typeof value === "object") {
+        const objectValue = value as Record<string, unknown>
+
+        if ("detail" in objectValue) return formatApiError(objectValue.detail)
+        if ("message" in objectValue) return formatApiError(objectValue.message)
+
+        try {
+            return JSON.stringify(value)
+        } catch {
+            return String(value)
+        }
+    }
+
+    if (value == null) return ""
+    return String(value)
+}
+
 export async function sendDownloadRequest(
     request: DownloadRequest,
     auth: Authorization
@@ -25,7 +78,8 @@ export async function sendDownloadRequest(
         body: JSON.stringify({
             ...request,
             preferred_type: request.preferred_type || null,
-            preferred_file: request.preferred_file || null
+            preferred_file: request.preferred_file || null,
+            auto_convert: request.preferred_file ? request.auto_convert : false
         })
     })
 
@@ -37,10 +91,10 @@ export async function sendDownloadRequest(
     }
 
     if (!response.ok) {
+        const message = formatApiError(data)
+
         throw new Error(
-            data?.detail ??
-            data?.message ??
-            `HTTP Error ${response.status}: ${response.statusText}`
+            message || `HTTP Error ${response.status}: ${response.statusText}`
         )
     }
 
@@ -64,7 +118,8 @@ export async function getDownloadProgress(
     }
 
     if (!response.ok) {
-        throw new Error(data?.detail ?? `HTTP ${response.status}`)
+        const message = formatApiError(data)
+        throw new Error(message || `HTTP ${response.status}`)
     }
 
     return data as DownloadProgress

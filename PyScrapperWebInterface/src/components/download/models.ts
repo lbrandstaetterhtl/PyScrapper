@@ -39,6 +39,7 @@ export type DownloadRequest = {
     download_strategie: DownloadStrategie;
     preferred_type: string | null;
     preferred_file: string | null;
+    auto_convert: boolean;
     extra_headers: Record<string, string>;
     download_path: string;
 }

@@ -77,6 +77,7 @@ function DownloadPanel({
                 filenames: [],
                 preferred_type: null,
                 preferred_file: null,
+                auto_convert: false,
                 extra_headers: {},
                 provider: ProvidersDownload.Youtube_Music
             }))
@@ -162,7 +163,14 @@ function DownloadPanel({
                     <span className="field-label">Preferred File</span>
                     <select
                         value={request.preferred_file ?? ""}
-                        onChange={(e) => updateDownloadRequest({ ...request, preferred_file: e.target.value || null })}
+                        onChange={(e) => {
+                            const preferredFile = e.target.value || null
+                            updateDownloadRequest({
+                                ...request,
+                                preferred_file: preferredFile,
+                                auto_convert: preferredFile ? request.auto_convert : false
+                            })
+                        }}
                     >
                         {PreferredFiles.map((extension) => (
                             <option key={extension || "auto"} value={extension}>
@@ -172,6 +180,26 @@ function DownloadPanel({
                     </select>
                 </label>
             </div>
+
+            {request.preferred_file && (
+                <div className="conditional-panel auto-convert-panel">
+                    <div className="conditional-marker">CONVERT</div>
+                    <label className="toggle-field">
+                        <input
+                            type="checkbox"
+                            checked={request.auto_convert}
+                            onChange={(e) => updateDownloadRequest({
+                                ...request,
+                                auto_convert: e.target.checked
+                            })}
+                        />
+                        <span className="toggle-copy">
+                            <strong>Auto Convert</strong>
+                            <span>Convert the resolved media to the selected preferred file format when needed.</span>
+                        </span>
+                    </label>
+                </div>
+            )}
 
             {request.download_strategie === "local" && (
                 <div className="conditional-panel">

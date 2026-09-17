@@ -7,6 +7,7 @@ from ...network import html
 
 from  ..Dispatcher import Dispatcher
 
+
 #Own Package imports
 from . import models
 
@@ -16,6 +17,7 @@ from .master import MasterHLSDownload
 
 #Default downloads
 import asyncio
+from functools import partial
 
 
 class HLSDispatcher(Dispatcher):
@@ -67,6 +69,7 @@ class HLSDispatcher(Dispatcher):
                     reason="Returned html is None",
                     caller="[CORE] HLSDispatcher.run"
                 )
+            
             try:
                 fileType = self.dertermineFileType(file)
 
@@ -74,43 +77,64 @@ class HLSDispatcher(Dispatcher):
                 if fileType == models.FileType.MASTER_FILE:
 
                     master = MasterHLSDownload(
-                        context,
-                        self.downloadInformation.session,
+                        master_url=context.target.resolved_url,
+                        session=self.downloadInformation.session,
+                        extra_headers=context.target.extra_headers,
                         preferred_languages=self.preferredLanguages
                     )
-                    indexUrl, audioUrl = await asyncio.to_thread(
+
+                    videoUrl, audioUrl = await asyncio.to_thread(
                         master.getUrls
                     )
-
-                   
-                    context.target.resolved_url = indexUrl
+                    context.target.resolved_url = videoUrl
                     context.target.audio_url = audioUrl
 
-
-                    index = IndexHLSDownload(
-                        context,
-                        self.downloadInformation.session,
-                        audio_url=context.target.audio_url,
-                   
-                    )
-
-                    async for chunk in index.downloadAndYield():
-                        yield chunk
-
-                elif fileType == models.FileType.INDEX_FILE:
-                    index = IndexHLSDownload(
-                        context,
-                        self.downloadInformation.session,
-                        context.target.audio_url
-                    )
-
-                    async for chunk in index.downloadAndYield():
-                        yield chunk
-                else:
+                        
+                elif fileType == models.FileType.UNKNOWN_FILE:
                     raise TaskFailedError(
                         task="[CORE] HLSDispatcher._runContext",
                         reason=f"Couldn't determine file type: {context.target.resolved_url}"
                     )
+                
+
+                videoIndex = IndexHLSDownload(
+                    context.target.resolved_url,
+                    self.downloadInformation.session,
+                    context.target.extra_headers
+                    )
+                
+                videoSource = partial(
+                    videoIndex.downloadAndYield,
+                    context.download_progress
+                )
+
+                context.download_progress.total_segments = len(videoIndex.getIndexSegmentList())
+
+                
+                if context.target.audio_url:
+                    audioIndex = IndexHLSDownload(
+                        context.target.audio_url,
+                        self.downloadInformation.session,
+                        context.target.extra_headers
+                    )
+                    audioSource = partial(
+                        audioIndex.downloadAndYield,
+                        context.download_progress
+                    )
+
+                    context.download_progress.total_segments += len(audioIndex.getIndexSegmentList())
+
+                else: audioSource = None
+
+
+                async for chunk in self._asyncProcessSources(
+                    video_source=videoSource,
+                    context=context,
+                    audio_source=audioSource
+                    ):
+                    yield chunk
+
+                context.download_progress.status = Download.TaskStatus.FINISHED
                 
             except Exception as e:
                 context.download_progress.status = Download.TaskStatus.FAILED
@@ -118,8 +142,6 @@ class HLSDispatcher(Dispatcher):
                 raise
 
 
-
-            
             
     async def _runContextLocal(
             self,
