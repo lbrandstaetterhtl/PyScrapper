@@ -4,7 +4,7 @@ from ...models import Download
 from ...models.errors import TaskFailedError
 
 from ...general import Validate
-from ...ffmpeg import FFmpegMuxer
+from ...ffmpeg import FFmpegMuxer, FFmpegProbeCodec, FFmpegCodec
 
 #Own imports
 
@@ -66,6 +66,49 @@ class Dispatcher(ABC):
                 yield chunk
 
 
+
+
+
+
+    async def _getCodec(
+            self,
+            generator,
+            index: int,
+            caller: str = "[CORE] Dispatcher._getCodec",
+            
+            ):
+
+        prober = FFmpegProbeCodec(use_pipe=True, caller=caller)
+        codecTask = asyncio.create_task(prober.getCodec())
+
+        buffer = bytearray()
+        
+        async for chunk in generator:
+
+            buffer.extend(chunk)
+
+
+            if codecTask.done():
+                
+                break
+
+            try:
+                await prober.writePipe(chunk)
+
+            except BrokenPipeError:
+                
+                break
+
+        codecs = await codecTask
+
+        for codec in codecs:
+            codec.input_index = index
+
+        return codecs, buffer
+
+    
+
+
     async def _asyncProcessSources(
             self,
             video_source,
@@ -80,30 +123,56 @@ class Dispatcher(ABC):
             audioIndex = 1
 
 
-            codecs:list[str] = []
-            videoBuffer = bytearray()
+            codecList:list[str] = []
+
+        
+            videoGenerator = video_source()
+            codecs, primaryBuffer =await self._getCodec(
+                generator=videoGenerator,
+                index=0,
+                caller=f"{self.__class__.__name__}-{context.context_id}",
+      
+            )
+            codecList.extend(codecs)
+
+            if audio_source:
+                audioGenerator = audio_source()
+                codecs, secondaryBuffer = await self._getCodec(
+                    generator=audioGenerator,
+                    index=1,
+                    caller=f"{self.__class__.__name__}-{context.context_id}",
+
+                )
+                codecList.extend(codecs)
 
             
             muxer = FFmpegMuxer(
                 file_ending=context.info.preferred_file if context.output.auto_convert else context.info.found_file,
                 input_count=2 if audio_source else 1,
-                maps=[f"{videoIndex}:v:0", f"{audioIndex}:a:0"] if audio_source else [],
-                allow_re_encoding=True,
+                codecs=codecList,
                 caller=f"{self.__class__.__name__}-{context.context_id}"
             )
     #Setup of downloader end
     
             async def _feedVideo():
+                await muxer.writePipe(
+                    bytes(primaryBuffer),
+                    videoIndex
+                )
                 try:
-                    async for chunk in video_source():
+                    async for chunk in videoGenerator:
                         await muxer.writePipe(data=chunk, pipe_index=videoIndex)
                 finally:
                     await muxer.closePipe(videoIndex)
     
     
             async def _feedAudio():
+                await muxer.writePipe(
+                    bytes(secondaryBuffer),
+                    audioIndex
+                )
                 try:
-                    async for chunk in audio_source():
+                    async for chunk in audioGenerator:
                         await muxer.writePipe(data=chunk, pipe_index=audioIndex)
                 finally:
                     await muxer.closePipe(audioIndex)

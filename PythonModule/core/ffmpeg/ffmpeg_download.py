@@ -4,7 +4,6 @@ from ..models import errors
 from ..processes import AsyncProcessManager, ProcessDrainType
 
 # Own imports
-from .ffmpeg_models import FFMPEG_FORMAT_MAPPING
 
 
 #Python default imports
@@ -206,7 +205,7 @@ class FFmpegDownload:
 
     def _getOutputFormatFromFileEnding(self, file_ending:str):
         Validate.general.validateStr(argument_name="file_ending", string=file_ending, caller="[CORE] FFmpegDownload._getOutputFormatFromFileEnding")
-        format = FFMPEG_FORMAT_MAPPING.get(file_ending.lower())
+        #format = FFMPEG_FORMAT_MAPPING.get(file_ending.lower())
 
         if not format:
             raise ValueError(f"[FFmpegDownload]._getOutputFormatFromFileEnding: Unsupported file ending: {file_ending}")
