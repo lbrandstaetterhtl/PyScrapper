@@ -130,7 +130,8 @@ def downloadToFile(
         chunk_size: int = 8192,
         open_file_method: str = "wb",
         start_byte: int = 0,
-        end_byte : int | None = None
+        end_byte : int | None = None,
+        update_total_size: bool = False
 
 ):
     _validateDownloadToFileArguments(
@@ -158,17 +159,18 @@ def downloadToFile(
 
 
     with session.open(request=req, headers=extra_headers) as response, open(out_file, open_file_method) as file:
-        content_length = response.headers.get("Content-Length")
-        content_range = response.headers.get("Content-Range")
+        if update_total_size:
+            content_length = response.headers.get("Content-Length")
+            content_range = response.headers.get("Content-Range")
 
-        if content_range:
-            total_size = content_range.split("/")[-1]
+            if content_range:
+                total_size = content_range.split("/")[-1]
 
-            if total_size != "*":
-                download_progress.total_bytes = int(total_size)
+                if total_size != "*":
+                    download_progress.total_bytes = int(total_size)
 
-        elif content_length:
-            download_progress.total_bytes = int(content_length)
+            elif content_length:
+                download_progress.total_bytes = int(content_length)
 
 
         while True:
@@ -272,7 +274,8 @@ def downloadYield(
         extra_headers: dict = None,
         chunk_size: int = 8192,
         start_byte: int = 0,
-        end_byte : int | None = None
+        end_byte : int | None = None,
+        update_total_size: bool = False,
 ):
     _validateDownloadYieldArguments(
         url,
@@ -298,20 +301,21 @@ def downloadYield(
 
 
     with session.open(request=req, headers=extra_headers) as response:
-        content_length = response.headers.get("Content-Length")
-        content_range = response.headers.get("Content-Range")
+        if update_total_size:
+            content_length = response.headers.get("Content-Length")
+            content_range = response.headers.get("Content-Range")
 
-        if content_range:
-            total_size = content_range.split("/")[-1]
+            if content_range:
+                total_size = content_range.split("/")[-1]
 
-            if total_size != "*":
-                download_progress.total_bytes = int(total_size)
+                if total_size != "*":
+                    download_progress.total_bytes = int(total_size)
 
-        elif content_length:
-            download_progress.total_bytes = int(content_length)
+            elif content_length:
+                download_progress.total_bytes = int(content_length)
 
-        if content_length:
-            download_progress.total_bytes = int(content_length)
+            if content_length:
+                download_progress.total_bytes = int(content_length)
         while True:
             chunk = response.read(chunk_size)
             if not chunk:
@@ -380,7 +384,8 @@ async def asyncDownloadYield(
     extra_headers: dict = None,
     chunk_size: int = 8192,
     start_byte: int = 0,
-    end_byte: int | None = None
+    end_byte: int | None = None,
+    update_total_size: bool = False
     ):
     _validateDownloadYieldArguments(
         url,
@@ -406,17 +411,18 @@ async def asyncDownloadYield(
 
 
     with session.open(request=req, headers=extra_headers) as response:
-            content_length = response.headers.get("Content-Length")
-            content_range = response.headers.get("Content-Range")
+            if update_total_size:
+                content_length = response.headers.get("Content-Length")
+                content_range = response.headers.get("Content-Range")
 
-            if content_range:
-                total_size = content_range.split("/")[-1]
+                if content_range:
+                    total_size = content_range.split("/")[-1]
 
-                if total_size != "*":
-                    download_progress.total_bytes = int(total_size)
+                    if total_size != "*":
+                        download_progress.total_bytes = int(total_size)
 
-            elif content_length:
-                download_progress.total_bytes = int(content_length)
+                elif content_length:
+                    download_progress.total_bytes = int(content_length)
 #actual download
             
             while True:
@@ -451,3 +457,36 @@ async def writeFd(fd: int, data: bytes):
             )
 
         offset += written
+
+
+
+async def asyncDownloadYieldRanges(
+    session: Session,
+    url: str,
+    total_size: int,
+    download_progress: Download.DownloadProgress,
+    extra_headers: dict = None,
+    range_size: int = 10 * 1024 * 1024,
+    chunk_size: int = 8192,
+):
+    start = 0
+
+    while start < total_size:
+        end = min(
+            start + range_size - 1,
+            total_size - 1
+        )
+
+        async for chunk in asyncDownloadYield(
+            session=session,
+            url=url,
+            download_progress=download_progress,
+            extra_headers=extra_headers,
+            chunk_size=chunk_size,
+            start_byte=start,
+            end_byte=end,
+            update_total_size=False,
+        ):
+            yield chunk
+
+        start = end + 1

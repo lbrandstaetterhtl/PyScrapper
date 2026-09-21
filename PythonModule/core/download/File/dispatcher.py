@@ -47,6 +47,8 @@ class FileDispatcher(Dispatcher):
                 context.download_progress.error_message = str(e)
                 raise
 
+    
+
     async def _runContextStream(
             self,
             context: Download.DownloadContext
@@ -54,17 +56,19 @@ class FileDispatcher(Dispatcher):
         async with self.downloadInformation.download_limiter:
             try:
                 videoSource = partial(
-                    file.asyncDownloadYield,
+                    file.asyncDownloadYieldRanges,
                     session=self.downloadInformation.session,
                     url=context.target.resolved_url,
+                    total_size=context.target.video_size,
                     download_progress=context.download_progress,
                     extra_headers=context.target.extra_headers,
                 )
                 if context.target.audio_url:
                     audioSource = partial(
-                        file.asyncDownloadYield,
+                        file.asyncDownloadYieldRanges,
                         session=self.downloadInformation.session,
                         url=context.target.audio_url,
+                        total_size=context.target.audio_size,
                         download_progress=context.download_progress,
                         extra_headers=context.target.extra_headers,
                     )

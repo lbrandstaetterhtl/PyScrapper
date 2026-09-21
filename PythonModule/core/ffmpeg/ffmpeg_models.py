@@ -53,6 +53,7 @@ CONTAINERS = {
                 "ac3",
                 "eac3",
                 "alac",
+                "opus"
             },
         },
 

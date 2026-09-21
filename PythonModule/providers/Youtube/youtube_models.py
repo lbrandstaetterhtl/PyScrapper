@@ -119,3 +119,20 @@ GET_METHODS = [
     GetMediaMethod.SAFARI_WEB
     
 ]
+
+
+VIDEO_CODEC_FACTOR = {
+    "av1": 1.50,
+    "vp9": 1.30,
+    "hevc": 1.35,
+    "h265": 1.35,
+    "h264": 1.00,
+    "avc1": 1.00,
+}
+
+AUDIO_CODEC_FACTOR = {
+    "opus": 1.25,
+    "aac": 1.10,
+    "vorbis": 1.05,
+    "mp3": 1.00,
+}

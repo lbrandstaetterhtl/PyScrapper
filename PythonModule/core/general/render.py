@@ -4,6 +4,8 @@ _print_lock = threading.Lock()
 
 
 def renderProgress(job_id: str, text: str):
+    text = text.replace("\n", " ").replace("\r", " ")
+
     with _print_lock:
         print(
             f"\r\033[2K{text}",

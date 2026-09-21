@@ -487,6 +487,8 @@ URL_EXTENSION_KEYWORDS = {
 class ProviderResult:
     url: str 
 
+    video_size : int 
+
     download_type: core.models.Download.DownloadType
 
     extra_headers: dict | None = None
@@ -507,6 +509,8 @@ class ProviderResult:
     info : core.models.Download.Info = field(default_factory=core.models.Download.Info)
 
     audio_url :str = ""
+
+    audio_size : int = 0
 
 
 
@@ -647,13 +651,6 @@ class FoundMedia:
 
 
 
-def makeProviderResultFromBrowserMediaList(
-    medialist: list[core.models.media.Media2],
-    download_type: core.models.Download.DownloadType
-) -> ProviderResult:
-
-    pass
-
 def _getUrlPriority(url: str) -> int:
     urlLower = url.lower()
     prio = 0
@@ -667,6 +664,10 @@ def _getUrlPriority(url: str) -> int:
             prio += points
 
     return prio
+
+
+
+
 
 
 def _getExtensionFromUrl(url: str) -> str:
@@ -845,21 +846,30 @@ def _buildProviderResultFromFoundMedia(
         request: ProviderResultRequest,
 ) -> ProviderResult:
 
+    video_size = 0
+    audio_size = 0
 
-    size = media.total_size
-    if size< 0:
-        size, mime = getUrlInformation(
+    video_size, _ = getUrlInformation(
+        session=request.ses,
+        url=media.url,
+        extra_headers=media.extra_headers
+    )
+
+    if media.audio_url:
+        audio_size, _ = getUrlInformation(
             session=request.ses,
-            url=media.url,
+            url=media.audio_url,
             extra_headers=media.extra_headers
         )
-        if media.audio_url:
-            size2, mime = getUrlInformation(
-                session=request.ses,
-                url=media.audio_url,
-                extra_headers=media.extra_headers,
-            )
-            size += size2
+
+        if video_size >= 0 and audio_size >= 0:
+            size = video_size + audio_size
+        else:
+            size = -1
+
+    else:
+        size = video_size
+    
 
 #Server works with total size or total segments depending on file or hls
     if media.stream_type == core.models.Download.DownloadType.HLS:
@@ -875,6 +885,10 @@ def _buildProviderResultFromFoundMedia(
         total_size=size,
         post_body=media.post_body,
         audio_url=media.audio_url,
+
+        audio_size=audio_size,
+        video_size=video_size,
+
         info = core.models.Download.Info(
             url=media.url,
             found_file=media.extension,

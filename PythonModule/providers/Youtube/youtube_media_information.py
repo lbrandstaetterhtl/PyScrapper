@@ -11,8 +11,33 @@ from .. import models
 # Python default imports
 import urllib.parse, urllib.request, urllib.error
 import json
-import time
+from dataclasses import dataclass, field
 
+@dataclass
+class YoutubeResult:
+    container: str
+
+    download_type : core.models.Download.DownloadType
+
+    video_url: str
+    mime_type: str 
+
+    audio_url: str = ""
+
+    extra_headers : dict = field(default_factory=dict)
+
+
+@dataclass
+class BestCandidate:
+    url: str = ""
+
+    container: str = ""
+    codec: str = ""
+
+    prio: int = -1
+
+
+    
 
 
 def getMediaInformation(
@@ -50,53 +75,36 @@ def getMediaInformation(
         )
 
 
-    mediaType = request.preferred_type if request.preferred_type else "video"
-
-    url, downloadType, fileEnding = _tryGetUsableUrls(
+    result: YoutubeResult = _tryGetUsableUrls(
         watch_url=resolvedUrl,
-        session=request.ses,
-        preferred_type=request.preferred_type
+        request=request
         )
 
-    if url:
-        if downloadType == core.models.Download.DownloadType.HLS:
-
-            return models.ProviderResult(
-                    url=url,
-                    download_type=downloadType,
-                    file_ending=fileEnding,
-                    media_type="video",
-                    mime_type=f"video/mp4",
-                    total_size=-1,
-                    info=core.models.Download.Info(
-                        url=resolvedUrl,
-                        found_file=fileEnding,
-                        preferred_file=request.preferred_file,
-                        preferred_type=request.preferred_type,
-                        found_type="video"
-                    )
-            )
-
+    print(result)
 
     
 
-    return models.ProviderResult(
-        url=resolvedUrl,
-        download_type=core.models.Download.DownloadType.UMP,
-        file_ending="webm",
-        media_type=mediaType,
-        mime_type=f"{mediaType}/webm",
-        total_size=1,
-        info=core.models.Download.Info(
-            url=resolvedUrl,
-            found_file="webm",
-            preferred_file=request.preferred_file,
-            preferred_type=request.preferred_type,
-            found_type=mediaType
-        )
+    return models.makeProviderResult(
+        found_media_list=[
+            models.FoundMedia(
+                extension=result.container,
+                url=result.video_url,
+                stream_type=result.download_type,
+                media_type=result.mime_type.split("/")[0],
+                mime_type=result.mime_type,
+                extra_headers=result.extra_headers,
+                audio_url=result.audio_url,
+    
 
-
+            )
+        ],
+        request=request
     )
+
+    
+    
+
+
 def _getVideoIdFromYoutubeUrl(url: str):
     parsedUrl = urllib.parse.urlparse(url)
     if not "youtube.com" in parsedUrl.hostname:
@@ -126,8 +134,7 @@ def _getVideoIdFromYoutubeUrl(url: str):
 
 def _tryGetUsableUrls(
         watch_url: str,
-        session: Session.Session,
-        preferred_type: str = ""
+        request: models.ProviderResultRequest
         ):
     videoId: str = _getVideoIdFromYoutubeUrl(watch_url)
 
@@ -137,7 +144,7 @@ def _tryGetUsableUrls(
         print(f"[Youtube] Trying method '{method}'...")
 
         
-        jsonData = _sendRequest(videoId, method, session)
+        jsonData = _sendRequest(videoId, method, request.ses)
 
         if jsonData is None:
             print(f"[Youtube] Couldn't get jsonData from player API with method {method}")
@@ -154,7 +161,7 @@ def _tryGetUsableUrls(
             print(visitorData)
 
 
-            jsonData = _sendRequest(videoId, method, session, visitorData)
+            jsonData = _sendRequest(videoId, method, request.ses, visitorData)
             
             if jsonData is None:
                 print(f"[Youtube] Couldn't get jsonData from player API with method {method}")
@@ -174,20 +181,41 @@ def _tryGetUsableUrls(
             + streamingData.get("adaptiveFormats", [])
         )
 
+        with open("youtube_formats.txt", "w", encoding="utf-8") as f:
+            for format in formats:
+                f.write(f"{format}\n\n")
 
-        HLSManifest = streamingData.get("hlsManifestUrl", None)
-        if HLSManifest:
-            return [HLSManifest, core.models.Download.DownloadType.HLS, "mp4"]
+        
+        result = _extractSeperatedVideoAudioFromFormats(formats=formats, preferred_type=request.preferred_type, preferred_file=request.preferred_file)
+        if result:
+            result.extra_headers = youtube_models.HEADER_MAPPING.get(method)
+            return result
+        
+        HLSManifestUrl = streamingData.get("hlsManifestUrl", None)
+        if HLSManifestUrl:
+            return YoutubeResult(
+                container="mp4",
+                download_type=core.models.Download.DownloadType.HLS,
+                video_url=HLSManifestUrl,
+                mime_type="video/mp4",
+                extra_headers=youtube_models.HEADER_MAPPING.get(method)
+            )
+
+        
 
 
         bestAudioAndVideoCandidate = _extractVideoAudioFromFormats(formats)
 
         if bestAudioAndVideoCandidate:
-            return [
-                bestAudioAndVideoCandidate.get('url'),
-                core.models.Download.DownloadType.FILE,
-                bestAudioAndVideoCandidate.get('mimeType').split(";", 1)[0].strip()
-                ]
+            return YoutubeResult(
+                container="mp4",
+                video_url=bestAudioAndVideoCandidate.get("url"),
+                download_type=core.models.Download.DownloadType.FILE,
+                mime_type=bestAudioAndVideoCandidate.get('mimeType').split(";", 1)[0].strip(),
+                extra_headers=youtube_models.HEADER_MAPPING.get(method)
+
+            )
+            
 
     #Note for later: Add adaptive formats where video and audio is split. FileDispatcher can't handle split video and audio at the current time of writing
     raise core.models.errors.TaskFailedError(
@@ -201,6 +229,95 @@ def _tryGetUsableUrls(
     )
 
         
+def _extractSeperatedVideoAudioFromFormats(
+        formats: list,
+        preferred_type: str,
+        preferred_file : str
+        ):
+
+    bestVideoCandidate = BestCandidate()
+    bestAudioCandidate = BestCandidate()
+    
+    for formatData in formats:
+        mime = formatData.get("mimeType")
+        if not mime:
+            continue
+
+        url = formatData.get("url")
+        if not url:
+            continue
+
+        codec = _getCodec(mime_type=mime)
+        mime = mime.split(";")[0]
+
+        urlType = mime.split("/")[0]
+        container = mime.split("/")[1]
+
+        
+        if not codec:
+            continue
+
+
+        if urlType == "video" and preferred_type != "audio":
+            videoPrio = _getVideoScore(
+                width=int(formatData.get("width", -1)),
+                height=int(formatData.get("height", -1)),
+                fps=int(formatData.get("fps", -1)),
+                bitrate=int(formatData.get("bitrate", -1)),
+                codec=codec
+            )
+            if container == preferred_file:
+                videoPrio += 1000
+
+            if videoPrio > bestVideoCandidate.prio:
+                bestVideoCandidate = BestCandidate(
+                    url=url,
+                    prio=videoPrio,
+                    container=container,
+                    codec=codec
+                    )
+
+            
+        elif urlType == "audio":
+            audioPrio = _getAudioScore(
+                bitrate=int(formatData.get("bitrate", -1)),
+                samplerate=int(formatData.get("audioSampleRate", -1)),
+                channels=int(formatData.get("audioChannels", 1)),
+                codec=codec
+            )
+        
+            if container == preferred_file:
+                audioPrio += 1000
+
+            if audioPrio > bestAudioCandidate.prio:
+                bestAudioCandidate = BestCandidate(
+                    url=url,
+                    prio=audioPrio,
+                    container=container,
+                    codec=codec
+                )
+                
+            
+        else: continue
+
+        if preferred_type == "video":
+            if not bestVideoCandidate:
+                return None
+            if not bestAudioCandidate:
+                print("[providers] Youtube._extractseperatedVideoAudioFromFormats: Found Video but didn't find audio")
+
+        if preferred_type == "audio":
+            if not bestAudioCandidate:
+                return None
+
+    return YoutubeResult(
+        video_url=bestVideoCandidate.url if preferred_type != "audio" else bestAudioCandidate.url,
+        container=bestVideoCandidate.container if preferred_type != "audio" else bestAudioCandidate.container,
+        download_type=core.models.Download.DownloadType.FILE,
+        audio_url=bestAudioCandidate.url if preferred_type != "audio" else "",
+        mime_type=f"video/{bestVideoCandidate.container}" if preferred_type != "audio" else f"audio/{bestAudioCandidate.container}"
+    )
+
 
         
             
@@ -290,3 +407,84 @@ def _sendRequest(
         print("HTTP:", e.code)
         print(e.read().decode("utf-8", errors="replace"))
     return None
+
+
+
+
+
+
+def _getVideoScore(
+        width: int,
+        height: int,
+        bitrate: int,
+        fps: int,
+        codec: str,
+        ) -> float:
+
+    pixels = width * height
+
+    resolution_score = pixels / (1920 * 1080) * 100
+    bitrate_score = bitrate / 1_000_000 * 10
+    fps_score = fps / 60 * 20
+
+    codec_factor = youtube_models.VIDEO_CODEC_FACTOR.get(codec, 1.0)
+
+    return (
+        resolution_score
+        + bitrate_score * codec_factor
+        + fps_score
+    )
+
+
+
+
+
+def _getCodec(mime_type: str) -> str | None:
+    if 'codecs="' not in mime_type:
+        return None
+
+    codec = mime_type.split('codecs="', 1)[1].split('"', 1)[0]
+
+    if codec.startswith("av01"):
+        return "av1"
+
+    if codec.startswith("avc1"):
+        return "h264"
+
+    if codec.startswith("vp9"):
+        return "vp9"
+
+    if codec.startswith("mp4a"):
+        return "aac"
+
+    if codec.startswith("opus"):
+        return "opus"
+
+    if codec.startswith("vorbis"):
+        return "vorbis"
+
+    return codec
+
+
+
+
+
+
+def _getAudioScore(
+        bitrate: int,
+        samplerate: int,
+        channels: int,
+        codec: str,
+        ) -> float:
+
+    bitrate_score = bitrate / 1000
+    samplerate_score = samplerate / 1000 * 0.1
+    channel_score = channels * 2
+
+    codec_factor = youtube_models.AUDIO_CODEC_FACTOR.get(codec, 1.0)
+
+    return (
+        bitrate_score * codec_factor
+        + samplerate_score
+        + channel_score
+    )

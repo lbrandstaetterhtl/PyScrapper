@@ -81,6 +81,8 @@ class OutputTarget:
 class DownloadTarget:
     url: str
 
+    video_size : int
+
     resolved_url: str
 
     download_type : DownloadType
@@ -90,6 +92,8 @@ class DownloadTarget:
     audio_url : str = ""
 
     post_body: str | None = None
+
+    audio_size : int = 0
 
 
     def __str__(self) -> str:

@@ -442,7 +442,9 @@ async def _resolveMediaAndCreateContexts(
             download_type=result.download_type,
             extra_headers=result.extra_headers,
             post_body=result.post_body,
-            audio_url=result.audio_url
+            audio_url=result.audio_url,
+            audio_size = result.audio_size,
+            video_size = result.video_size
         )
 
         info = core.models.Download.MediaInfo(
@@ -467,6 +469,8 @@ async def _resolveMediaAndCreateContexts(
 
 
         )
+
+        context.download_progress.total_bytes = result.total_size
 
         contexts.append(context)
 
