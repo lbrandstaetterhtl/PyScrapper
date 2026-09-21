@@ -1,28 +1,49 @@
 #Core imports
 from ..general import Validate
-from ..models.errors import TaskFailedError
+from ..models.errors import TaskFailedError, ArgumentError
 #Own imports
 from . import processes_models
 
 #Python default imports
 import asyncio
+import os
+import uuid
+
+#Pip imports
+if os.name == "nt":
+    import win32pipe, win32file
+
+
+
+async def writeFd(fd: int, data: bytes):
+    offset = 0
+
+    while offset < len(data):
+        written = await asyncio.to_thread(
+            os.write,
+            fd,
+            data[offset:],
+        )
+
+        if written <= 0:
+            raise BrokenPipeError(
+                "FFmpeg input pipe was closed"
+            )
+
+        offset += written
+
+
 
 
 class AsyncProcessManager():
     def __init__(
             self,
-            process_args: list[str],
             stdout_drain_type: processes_models.ProcessDrainType = processes_models.ProcessDrainType.PRINT,
             stderr_drain_type: processes_models.ProcessDrainType = processes_models.ProcessDrainType.PRINT,
-            pass_fds: tuple[int, ...] = (),
-            process_name: str = ""
+            process_name: str = "",
+            input_count: int = 0
             ):
 
-        Validate.general.validateListStr(
-            argument_name="process_args",
-            liste=process_args,
-            caller="[CORE] AsyncProcessManager.__init__"
-        )
 
         Validate.general.validateGeneralType(
             argument_name="stdout_drain_type",
@@ -37,19 +58,40 @@ class AsyncProcessManager():
             objType=processes_models.ProcessDrainType,
             caller="[CORE] AsyncProcessManager.__init__"
         )
-        if process_name:
-            Validate.general.validateStr(   
-                argument_name="process_name",
-                string=process_name,
-                caller="[CORE] AsyncProcessManager.__init__"
-            )
-            self.name = process_name
-        else:
-            self.name = "AsyncProcessManager-Unknown-Process"
 
+        Validate.general.validateInt(
+            argument_name="input_count",
+            integer=input_count,
+            caller="[CORE] AsyncProcessManager.__init__"
+        )
+
+        Validate.general.validateStr(   
+            argument_name="process_name",
+            string=process_name,
+            caller="[CORE] AsyncProcessManager.__init__"
+        )
+
+        uid = uuid.uuid4()
+        self.passFds = ()
+        self.inputPipes: list[processes_models.InputPipe] = []
+
+        for p in range(input_count):
+            pipe = self._generateInputPipe(
+                index=p,
+                uid = uid,
+                operating_system=os.name
+                )
+            if pipe.os_type == "posix":
+                self.passFds += (pipe.read_fd,)
+            self.inputPipes.append(pipe)
+
+        
+        
+        self.name = process_name
+        
 
         self.process = None
-        self.args = process_args
+
 
         self.stdoutDrain = stdout_drain_type
         self.stderrDrain = stderr_drain_type
@@ -61,8 +103,51 @@ class AsyncProcessManager():
         self.stderrLines = []
         self.stdoutLines = []
 
-        self.passFds = pass_fds
 
+        
+
+
+
+
+
+    def _generateInputPipe(
+            self,
+            index: int,
+            uid: int, 
+            operating_system: str
+            ):
+        if operating_system == "posix":
+
+            readFd, writeFd = os.pipe()
+            return processes_models.InputPipe(
+                pipe_index=index,
+                read_fd=readFd,
+                write_fd=writeFd,
+                pipe_name=f"pipe:{readFd}",
+                os_type=operating_system,
+                
+            )
+        
+        elif operating_system == "nt":
+            pipeName: str = rf"\\.\pipe\pyscrapper_input_{uid}_{index}"
+            handle = win32pipe.CreateNamedPipe(
+                pipeName,
+                win32pipe.PIPE_ACCESS_OUTBOUND,
+                win32pipe.PIPE_TYPE_BYTE | win32pipe.PIPE_WAIT,
+                1,
+                65536,
+                65536,
+                0,
+                None,
+            )
+
+            return processes_models.InputPipe(
+                pipe_index=index,
+                os_type=operating_system,
+                handle=handle,
+                pipe_name=pipeName
+            )
+    
 
 
 
@@ -84,6 +169,10 @@ class AsyncProcessManager():
             
             elif output == processes_models.ProcessOutputType.STDOUT:
                 return self.readStdout
+
+
+
+
 
 
 
@@ -119,6 +208,10 @@ class AsyncProcessManager():
             )
         
 
+
+
+
+
     async def _readStream(
             self,
             stream: asyncio.StreamReader,
@@ -134,6 +227,10 @@ class AsyncProcessManager():
         
         return data, False
         
+
+
+
+
 
     async def readStdout(
             self,
@@ -167,6 +264,8 @@ class AsyncProcessManager():
 
     
 
+
+
     async def readStderr(
             self,
             chunk_size: int = 8192
@@ -198,10 +297,27 @@ class AsyncProcessManager():
 
 
 
-    async def start(self):
 
+
+
+
+    async def start(
+            self,
+            process_args: list[str],
+            ):
+
+        print("LOOP:", type(asyncio.get_running_loop()))
+        print("ARGS:", process_args)
+        print("OS:", os.name)
+
+        Validate.general.validateListStr(
+            argument_name="process_args",
+            liste=process_args,
+            caller="[CORE] AsyncProcessManager.__init__"
+        )
+        
         self.process = await asyncio.create_subprocess_exec(
-            *self.args,
+            *process_args,
 
             stdin=asyncio.subprocess.PIPE,
 
@@ -216,7 +332,7 @@ class AsyncProcessManager():
                 if self.stderrDrain != processes_models.ProcessDrainType.NONE
                 else None
             ),
-            pass_fds=self.passFds
+            pass_fds=self.passFds if os.name == "posix" else ()
         )
 
 
@@ -245,12 +361,26 @@ class AsyncProcessManager():
 
 
 
+    def getInputName(self, input_index: int) -> str:
+        self._checkPipeIndex(
+            input_index,
+            "getInputName",
+        )
+
+        return self.inputPipes[input_index].pipe_name
+
+
+
 
     async def stop(self):
         if self.process is None:
             return
         
-        print(f"[{self.name}] Process will be stopped now and every task cancelled")
+        print(f"[{self.name}] Process will be stopped, every task cancelled and all pipes closed")
+
+        for i in range(len(self.inputPipes)):
+            await self.closePipe(i)
+
 
         if self.process.returncode is None:
             self.process.terminate()
@@ -284,5 +414,108 @@ class AsyncProcessManager():
                 return_exceptions=True,
             )
 
+
+
+
+
     async def wait(self) -> int:
         return await self.process.wait()
+
+
+
+    def _checkPipeIndex(self, pipe_index: int, call_function: str):
+            if not isinstance(pipe_index, int):
+                raise ArgumentError(
+                    argument="pipe_index",
+                    wanted_type="int",
+                    obj=pipe_index,
+                    caller=f"{self.name} {call_function}"
+                )
+    
+            if pipe_index not in range(len(self.inputPipes)):
+                raise ArgumentError(
+                    argument="pipe_index",
+                    wanted_type=f"valid pipe index from 0 to {len(self.inputPipes) - 1}",
+                    obj=pipe_index,
+                    caller=f"{self.name} {call_function}",
+                )
+    
+    
+    
+    
+    async def closePipe(
+            self,
+            pipe_index: int = 0
+    ):
+        self._checkPipeIndex(pipe_index, "closePipe")
+
+        pipe: processes_models.InputPipe = self.inputPipes[pipe_index]
+        if pipe.closed:
+            print(f"{self.name} Pipe '{pipe_index}' is already closed")
+            return
+
+
+        if pipe.os_type == "posix":
+            if pipe.write_fd is not None:
+                
+                os.close(pipe.write_fd)
+                pipe.write_fd = None
+
+            if pipe.read_fd is not None:
+                os.close(pipe.read_fd)
+                pipe.read_fd = None
+                
+            print(f"{self.name} Successfully closed pipe with the index {pipe_index}")
+            pipe.closed = True
+
+        elif pipe.os_type == "nt":
+            await asyncio.to_thread(
+                win32file.CloseHandle,
+                pipe.handle
+            )
+            pipe.connected = False
+            pipe.closed = True
+        
+        
+                
+
+    async def writePipe(
+            self,
+            data: bytes,
+            pipe_index: int = 0
+    ):
+        
+        Validate.general.validateGeneralType(
+            argument_name="data",
+            obj=data,
+            objType=bytes,
+            caller=f"{self.name} writePipe"
+        )
+
+
+        self._checkPipeIndex(pipe_index, "writePipe")
+
+
+        pipe: processes_models.InputPipe = self.inputPipes[pipe_index]
+        if pipe.closed:
+            print(f"{self.name} writePipe: Pipe with the index {pipe_index} is already closed")
+            return
+
+        if pipe.os_type == "posix":
+            await writeFd(pipe.write_fd, data)
+
+        elif pipe.os_type == "nt":
+            if not pipe.connected:
+                print(f"{self.name} writePipe: Connected Pipe with the index {pipe_index}")
+                await asyncio.to_thread(
+                    win32pipe.ConnectNamedPipe,
+                    pipe.handle,
+                    None
+                )
+                pipe.connected = True
+
+            await asyncio.to_thread(
+                win32file.WriteFile,
+                pipe.handle,
+                data
+            )

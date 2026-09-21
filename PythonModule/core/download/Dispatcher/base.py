@@ -4,13 +4,16 @@ from ...models import Download
 from ...models.errors import TaskFailedError
 
 from ...general import Validate
-from ...ffmpeg import FFmpegMuxer, FFmpegProbeCodec, FFmpegCodec
+from ...ffmpeg import AsyncFFmpegMuxer, AsyncFFmpegProbeCodec, FFmpegCodec
 
 #Own imports
 
 #Python default imports
 import asyncio
 from abc import ABC, abstractmethod
+
+#Pip install imports
+import pywintypes
 
 
 
@@ -78,7 +81,7 @@ class Dispatcher(ABC):
             
             ):
 
-        prober = FFmpegProbeCodec(use_pipe=True, caller=caller)
+        prober = AsyncFFmpegProbeCodec(use_pipe=True, caller=caller)
         codecTask = asyncio.create_task(prober.getCodec())
 
         buffer = bytearray()
@@ -95,7 +98,7 @@ class Dispatcher(ABC):
             try:
                 await prober.writePipe(chunk)
 
-            except BrokenPipeError:
+            except (BrokenPipeError, pywintypes.error):
                 
                 break
 
@@ -146,7 +149,7 @@ class Dispatcher(ABC):
                 codecList.extend(codecs)
 
             
-            muxer = FFmpegMuxer(
+            muxer = AsyncFFmpegMuxer(
                 file_ending=context.info.preferred_file if context.output.auto_convert else context.info.found_file,
                 input_count=2 if audio_source else 1,
                 codecs=codecList,

@@ -2,7 +2,7 @@
 from ..general import Validate
 from ..models import errors
 from ..processes import AsyncProcessManager, ProcessDrainType
-from ..network.file import writeFd
+
 
 #Own imports
 from . import ffmpeg_models
@@ -13,7 +13,7 @@ import shutil
 import asyncio
 
 
-class FFmpegProbeCodec():
+class AsyncFFmpegProbeCodec():
     def __init__(
             self,
             file_input: str | None = None,
@@ -21,9 +21,11 @@ class FFmpegProbeCodec():
             caller:str = "[CORE] FFmpegProbeCodec"
             ):
 
-        self.pipe: ffmpeg_models.FFmpegPipe | None = None
+        self.usePipe:bool = use_pipe
 
         self.caller = caller
+
+        
 
         if not file_input and not use_pipe:
             raise errors.ArgumentError(
@@ -38,6 +40,14 @@ class FFmpegProbeCodec():
                 wanted_type="Please only provide one",
                 caller=f"{self.caller} FFmpegMuxer.__init__"
             )
+
+        self.processManager = AsyncProcessManager(
+                    
+            stdout_drain_type=ProcessDrainType.PRINT,
+            stderr_drain_type=ProcessDrainType.PRINT,
+            input_count=1 if use_pipe else 0,
+            process_name=f"{self.caller} FFmpegProbeCodec-getCodec"
+        )
 
         if file_input:
             Validate.general.validateStr(
@@ -56,20 +66,16 @@ class FFmpegProbeCodec():
                     caller=f"{self.caller} FFmpegMuxer.__init__"
                 )
             self.inputArg = file_input
+
+        elif use_pipe:
+            self.inputArg = self.processManager.getInputName(0)
+            
             
 
 
-        if use_pipe:
+        
             
-            readFd, writeFd = os.pipe()
-            self.inputArg = f"pipe:{readFd}"
             
-            self.pipe = ffmpeg_models.FFmpegPipe(
-                pipe_index=0,
-                read_pipe=readFd,
-                write_pipe=writeFd,
-                closed=False
-            )
 
         
         self.ffprobePath = shutil.which("ffprobe")
@@ -77,6 +83,9 @@ class FFmpegProbeCodec():
             raise errors.FFmpegNotFoundError(
                 caller=f"{self.caller} FFmpegMuxer.__init__"
             )
+
+
+
 
 
     def _buildCommand(self, codec_type: ffmpeg_models.GetCodecTypes):
@@ -117,55 +126,39 @@ class FFmpegProbeCodec():
             caller=self.caller
         )
 
-        Fds = ()
+        
 
-        if self.pipe:
-            Fds = (
-                self.pipe.read_pipe,
-            )
+       
 
-        command = self._buildCommand(
+        self.command = self._buildCommand(
             codec_type
         )
 
-        processManager = AsyncProcessManager(
-            process_args=command,
-            stdout_drain_type=ProcessDrainType.PRINT,
-            stderr_drain_type=ProcessDrainType.PRINT,
-            pass_fds=Fds,
-            process_name=f"{self.caller} FFmpegProbeCodec-getCodec"
-        )
+        
 
         try:
-            await processManager.start()
-
-            if self.pipe and self.pipe.read_pipe is not None:
-                os.close(
-                    self.pipe.read_pipe
-                )
-                self.pipe.read_pipe = None
-
+            await self.processManager.start(self.command)
 
             while True:
 
                 codecList = await self._readStdout(
-                    processManager
+                    self.processManager
                 )
 
                 if codecList:
                     return codecList
 
 
-                if processManager.process.returncode is not None:
+                if self.processManager.process.returncode is not None:
 
-                    if processManager.stdoutDrainTask:
+                    if self.processManager.stdoutDrainTask:
                         await asyncio.gather(
-                            processManager.stdoutDrainTask,
+                            self.processManager.stdoutDrainTask,
                             return_exceptions=True
                         )
 
                     return await self._readStdout(
-                        processManager
+                        self.processManager
                     )
 
 
@@ -173,7 +166,7 @@ class FFmpegProbeCodec():
 
         finally:
             await self.closePipe()
-            await processManager.stop()
+            await self.processManager.stop()
 
             
 
@@ -223,44 +216,21 @@ class FFmpegProbeCodec():
 
 
     async def writePipe(self, data:bytes):
-
-        if not self.pipe:
+        if not self.usePipe:
             print(f"{self.caller} writePipe: choosen input type is file. Returning... ")
             return
+        await self.processManager.writePipe(pipe_index=0, data=data)
 
-        if self.pipe.closed:
-            print(f"{self.caller} writePipe: Pipe is already closed")
-            return
-
-        Validate.general.validateGeneralType(
-            argument_name="data",
-            obj=data,
-            objType=bytes,
-            caller=self.caller
-        )
-
-        await writeFd(self.pipe.write_pipe, data)
+        
 
 
 
     async def closePipe(self):
-        if not self.pipe:
+        if not self.usePipe:
             print(f"{self.caller} writePipe: choosen input type is file. Returning... ")
             return
 
-        if self.pipe.closed:
-            print(f"{self.caller} writePipe: Pipe is already closed")
-            return
-
-        if self.pipe.read_pipe:
-            os.close(self.pipe.read_pipe)
-            self.pipe.read_pipe = None
-
-        if self.pipe.write_pipe:
-            os.close(self.pipe.write_pipe)
-            self.pipe.write_pipe = None
-        
-        self.pipe.closed = True
+        await self.processManager.closePipe(pipe_index=0)
 
 
 

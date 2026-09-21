@@ -2,10 +2,13 @@
 import sys
 import asyncio
 
+
+
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(
         asyncio.WindowsProactorEventLoopPolicy()
     )
+
 
 
 import os
@@ -145,6 +148,8 @@ user_key_header = APIKeyHeader(name="X-User-Key",scheme_name="UserKey", auto_err
 auth_header = APIKeyHeader(name="Auth",scheme_name="AuthIdentifier", auto_error=False)
 
 
+
+
 def require_admin(key: str | None = Security(admin_key_header)) -> bool:
     if not key or not secrets.compare_digest(key, ADMIN_KEY):
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
@@ -240,6 +245,12 @@ def owns_playlist(playlist_identifier: str, auth_identifier: str) -> bool:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
+    print(
+        "EVENT LOOP:",
+        type(asyncio.get_running_loop())
+    )
+    
     logger_task = asyncio.create_task(
         logger(server_state.quit_event, server_state.log_queue)
     )
@@ -254,6 +265,8 @@ async def lifespan(app: FastAPI):
     yield
     cleanup_task.cancel()
     logger_task.cancel()
+
+    
 
 
 app = FastAPI(lifespan=lifespan)

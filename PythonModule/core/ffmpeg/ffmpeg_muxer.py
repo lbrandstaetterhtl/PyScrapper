@@ -3,13 +3,11 @@
 from ..general import Validate
 from ..models import errors
 from ..processes import AsyncProcessManager, ProcessDrainType
-from ..network.file import writeFd
 
 #Own imports
 from . import ffmpeg_models
 
 #Python default imports
-import os
 import shutil
 
 
@@ -18,7 +16,8 @@ import shutil
 
 
 
-class FFmpegMuxer:
+
+class AsyncFFmpegMuxer:
     def __init__(
             self,
             file_ending: str,
@@ -46,7 +45,6 @@ class FFmpegMuxer:
             caller=f"{caller} FFmpegMuxer.__init__"
         )
 
-        
 
         if codecs:
             Validate.general.validateGeneralType(
@@ -73,41 +71,27 @@ class FFmpegMuxer:
             raise errors.FFmpegNotFoundError(
                 caller=f"{self.caller} FFmpegMuxer.__init__"
             )
-        
-        args = [ffmpegPath]
 
-        self.pipes: list[ffmpeg_models.FFmpegPipe] = []
-
-        Fds = ()
-        for p in range(input_count):
-            readFd, writeFd = os.pipe()
-            args.extend([
-                "-i",
-                f"pipe:{readFd}"
-            ])
-
-
-            self.pipes.append(
-                ffmpeg_models.FFmpegPipe(
-                    pipe_index=p,
-                    read_pipe=readFd,
-                    write_pipe=writeFd
-                )
-            )
-            Fds += (readFd,)
-
-
-      
-        args.extend(self._getOutputArgs(file_ending, codecs))
-        
-
-        
         self.manager = AsyncProcessManager(
-            args,
             stdout_drain_type=ProcessDrainType.MANUAL,
             process_name=caller,
-            pass_fds=Fds
+            input_count=input_count
+            
         )
+        
+        self.args = [ffmpegPath]
+
+        for i in range(input_count):
+            pipeName = self.manager.getInputName(i)
+            self.args.extend([
+                "-i", pipeName
+            ])
+      
+        self.args.extend(self._getOutputArgs(file_ending, codecs))
+        
+
+        
+        
 
         self.started: bool = False
 
@@ -118,17 +102,8 @@ class FFmpegMuxer:
             print(f"{self.caller} start: Process has already started. Not starting again!")
             return
 
-        await self.manager.start()
+        await self.manager.start(self.args)
         self.started = True
-
-        # FFmpeg inherited these FDs.
-        # Parent doesn't need its read sides anymore.
-        for pipe in self.pipes:
-            if pipe.read_pipe is not None:
-                os.close(pipe.read_pipe)
-                pipe.read_pipe = None
-
-
 
 
 
@@ -163,95 +138,24 @@ class FFmpegMuxer:
                 )
 
         finally:
-            for pipe in self.pipes:
-                if pipe.write_pipe is not None:
-                    os.close(pipe.write_pipe)
-                    pipe.write_pipe = None
-
-                if pipe.read_pipe is not None:
-                    os.close(pipe.read_pipe)
-                    pipe.read_pipe = None
-
-                pipe.closed = True
-
             await self.manager.stop()
 
 
-
-    def _checkPipeIndex(self, pipe_index: int, call_function: str):
-        if not isinstance(pipe_index, int):
-            raise errors.ArgumentError(
-                argument="pipe_index",
-                wanted_type="int",
-                obj=pipe_index,
-                caller=f"{self.caller} {call_function}"
-            )
-
-        if pipe_index not in range(len(self.pipes)):
-            raise errors.ArgumentError(
-                argument="pipe_index",
-                wanted_type=f"valid pipe index from 0 to {len(self.pipes) - 1}",
-                obj=pipe_index,
-                caller=f"{self.caller} {call_function}",
-            )
-
+    async def writePipe(
+            self, 
+            data: bytes,
+            pipe_index: int
+            ):
+        await self.manager.writePipe(data, pipe_index)
 
 
 
     async def closePipe(
             self,
-            pipe_index: int = 0
+            pipe_index: int
     ):
-        self._checkPipeIndex(pipe_index, "closePipe")
-
-
-        
-        pipe = self.pipes[pipe_index]
-
-           
-        if pipe.closed:
-            print(f"{self.caller} Pipe '{pipe_index}' is already closed")
-            return
-
-        if pipe.write_pipe is not None:
-            
-            os.close(pipe.write_pipe)
-            pipe.write_pipe = None
-            
-        print(f"{self.caller} Successfully closed pipe with the index {pipe_index}")
-        pipe.closed = True
-        
-        
-                
-
-    async def writePipe(
-            self,
-            data: bytes,
-            pipe_index: int = 0
-    ):
-        if not self.started:
-            print(f"{self.caller} writePipe: Process hasn't started yet. Please call 'start' first")
-            return
-        
-        Validate.general.validateGeneralType(
-            argument_name="data",
-            obj=data,
-            objType=bytes,
-            caller=f"{self.caller} writePipe"
-        )
-
-
-        self._checkPipeIndex(pipe_index, "writePipe")
-
-        pipe = self.pipes[pipe_index]
-
-       
-
-        if pipe.closed:
-            print(f"{self.caller} writePipe: Pipe with the index {pipe_index} is already closed")
-            return
-
-        await writeFd(pipe.write_pipe, data)
+        await self.manager.closePipe(pipe_index)
+    
 
 
 
