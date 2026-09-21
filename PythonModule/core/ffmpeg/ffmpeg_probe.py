@@ -13,6 +13,24 @@ import shutil
 import asyncio
 
 
+def canMuxCodecsIntoContainer(codecs: list[ffmpeg_models.FFmpegCodec], file_ending: str, caller: str = "canMuxCodecsIntoContainer"):
+    container = ffmpeg_models.CONTAINERS.get(file_ending, None)
+    if not container:
+        print(f"[{caller}] Couldn't find container for '{file_ending}'. Returning False")
+        return False
+
+    canMux = True
+    for codec in codecs:
+        if codec.codec_name not in container.get("allowed_codecs", {}).get(codec.codec_type, []):
+            print(f"[{caller}] Codec '{codec.codec_name}' doesn't fit into container '{file_ending}'")
+            canMux = False
+
+    return canMux
+            
+
+    
+
+
 class AsyncFFmpegProbeCodec():
     def __init__(
             self,

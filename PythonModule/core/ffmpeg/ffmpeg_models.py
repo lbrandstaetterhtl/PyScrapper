@@ -44,6 +44,8 @@ CONTAINERS = {
                 "h264",
                 "hevc",
                 "av1",
+                "mpeg4",
+                "vp9"
             },
             "audio": {
                 "aac",

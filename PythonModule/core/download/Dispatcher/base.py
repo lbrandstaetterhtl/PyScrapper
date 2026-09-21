@@ -4,7 +4,7 @@ from ...models import Download
 from ...models.errors import TaskFailedError
 
 from ...general import Validate
-from ...ffmpeg import AsyncFFmpegMuxer, AsyncFFmpegProbeCodec, FFmpegCodec
+from ...ffmpeg import AsyncFFmpegMuxer, AsyncFFmpegProbeCodec, FFmpegCodec, canMuxCodecsIntoContainer
 
 #Own imports
 
@@ -148,6 +148,23 @@ class Dispatcher(ABC):
                 )
                 codecList.extend(codecs)
 
+            finalFile: str = context.info.preferred_file if context.output.auto_convert else context.info.found_file
+            if (
+                canMuxCodecsIntoContainer(
+                codecs=codecList,
+                file_ending=finalFile,
+                caller=f"{self.__class__.__name__}-{context.context_id}")
+                and finalFile == context.info.found_file
+                and not audio_source
+            ):
+                
+                yield bytes(primaryBuffer)
+
+                async for chunk in videoGenerator:
+                    yield chunk
+                return
+
+        
             
             muxer = AsyncFFmpegMuxer(
                 file_ending=context.info.preferred_file if context.output.auto_convert else context.info.found_file,
