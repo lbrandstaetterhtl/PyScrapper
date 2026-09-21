@@ -13,10 +13,15 @@ import asyncio
 from abc import ABC, abstractmethod
 
 #Pip install imports
-import pywintypes
+import os
+if os.name == "nt": 
+    import pywintypes
 
 
-
+BROKEN_PIPE_ERROS = (
+    BrokenPipeError,
+    pywintypes.error
+) if os.name == "nt" else (BrokenPipeError)
 
 class Dispatcher(ABC):
     def __init__(
@@ -98,7 +103,7 @@ class Dispatcher(ABC):
             try:
                 await prober.writePipe(chunk)
 
-            except (BrokenPipeError, pywintypes.error):
+            except BROKEN_PIPE_ERROS:
                 
                 break
 
