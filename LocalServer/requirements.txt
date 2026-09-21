@@ -6,3 +6,4 @@ yt-dlp
 playwright
 bcrypt
 dotenv
+pywin32
