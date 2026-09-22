@@ -30,6 +30,9 @@ public class DownloadRequestData
     
     [JsonPropertyName("preferred_file")]
     public string PreferredFile { get; set; }
+    
+    [JsonPropertyName("auto_convert")]
+    public bool AutoConvert { get; set; }
 }
 
 /// <summary>

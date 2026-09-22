@@ -49,6 +49,10 @@
                                                 <TextBlock Text="Select Mediatype: " Classes="UILabel"/>
                                                 <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding SelectedMediaType}"/>
                                         </StackPanel>
+                                        
+                                        <StackPanel Classes="UICell">
+                                                <CheckBox Content="Auto Convert?" IsChecked="{Binding AutoConvert}"></CheckBox>
+                                        </StackPanel>
                 
                                         <StackPanel Margin="5" Grid.Row="3" Classes="UICell">
                                                 <Button Classes="primary" IsDefault="True" x:Name="EnterButton" Content="Search"/>

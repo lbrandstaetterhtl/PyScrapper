@@ -42,6 +42,9 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     
     [ObservableProperty]
     private string _selectedMediaType = ".mp3";
+
+    [ObservableProperty] 
+    private bool _autoConvert = false;
     
     private readonly Window _scrapWindow;
     
@@ -186,7 +189,8 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 Filenames = FileNames,
                 PreferredFile = SelectedMediaType.Trim('.') == "auto" ? "" : SelectedMediaType.Trim('.'),
                 PreferredType = AppData.ValidMediaTypes[SelectedMediaType],
-                DownloadStrategy = "stream"
+                DownloadStrategy = "stream",
+                AutoConvert = AutoConvert
             };
 
             var result = await client.SendScrapRequest(requestData);
@@ -197,17 +201,6 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 if (result.TaskId != "-1")
                 {
                     Task.Delay(1000).Wait();
-
-                    if (resource.Context.MediaInfo.FileExtension != SelectedMediaType.Trim('.'))
-                    {
-                        var userResponse = await _dialogService.ConfirmAsync($"Found only {resource.Context.MediaInfo.FileExtension} for item \"{Urls[counter]}\". Do you want to continue downloading it?");
-                        
-                        var log = new Message($"Downloaded media type \"{resource.Context.MediaInfo.FileExtension}\" does not match the selected media type \"{SelectedMediaType.Trim('.')}\" for item \"{Urls[counter]}\"", DateTime.Now, "ERROR");
-                        _logger.LogNewMassage(log);
-                        
-                        if (!userResponse)
-                            continue;
-                    }
                     
                     var progressWindow = new ProgressBarWindow();
                     progressWindow.Show();
@@ -218,9 +211,20 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     
                     var ct =  new CancellationTokenSource();
                     
-                    var path = Paths[counter].Substring(0, Paths[counter].LastIndexOf('.'));
+                    var path = Paths[counter].Substring(0, Paths[counter].LastIndexOf(@"\"));
                     
                     var finalPath = await client.GetFileFromStream(resource, path, ct.Token);
+                    
+                    if (finalPath.Substring(finalPath.LastIndexOf('.')) != SelectedMediaType.Trim('.'))
+                    {
+                        var userResponse = await _dialogService.ConfirmAsync($"Found only {resource.Context.MediaInfo.FileExtension} for item \"{Urls[counter]}\". Do you want to continue downloading it?");
+                        
+                        var log = new Message($"Downloaded media type \"{resource.Context.MediaInfo.FileExtension}\" does not match the selected media type \"{SelectedMediaType.Trim('.')}\" for item \"{Urls[counter]}\"", DateTime.Now, "ERROR");
+                        _logger.LogNewMassage(log);
+                        
+                        if (!userResponse)
+                            continue;
+                    }
                     
                     if (!errorWhileDownloading)
                     {

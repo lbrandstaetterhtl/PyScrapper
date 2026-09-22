@@ -432,8 +432,6 @@ public class ApiClient : Interfaces.IApiClient
 
     public async Task<string> GetFileFromStream(DownloadResource resource, string path, CancellationToken ct)
     {
-        var downloadPath = path + "." + resource.Context.MediaInfo.FileExtension;
-        _logger.LogDebugMessage(new Message($"Starting download from {resource.DownloadUrl} to {downloadPath}", DateTime.Now, "DEBUG"));
         using var client = new HttpClient();
         client.DefaultRequestHeaders.Add("X-User-key", SecretProtector.Decrypt(_encryptedUserApiKey));
         client.DefaultRequestHeaders.Add("Auth", AppData.CurrentUser.Identifier);
@@ -443,6 +441,10 @@ public class ApiClient : Interfaces.IApiClient
         
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
 
+        var contentDisposition =  response.Content.Headers.ContentDisposition;
+        var fileName = contentDisposition?.FileName.Trim('"');
+        var downloadPath = path + fileName;
+        
         if (!File.Exists(downloadPath))
         {
             File.Create(downloadPath).Dispose();
