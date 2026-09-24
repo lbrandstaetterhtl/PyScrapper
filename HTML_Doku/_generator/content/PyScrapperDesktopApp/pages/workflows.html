@@ -1,0 +1,186 @@
+<div class="wrap">
+<div class="crumb">PyScrapperDesktopApp / workflows</div>
+<h1>What happens when</h1>
+<p class="lede">The workflows that make up the day-to-day of the app, each in the order the code
+runs them.</p>
+
+<h2 id="start">Startup sequence</h2>
+<p><span class="mono">Program.Main</span> first installs a handler for unhandled exceptions that
+writes <span class="mono">CRASH.txt</span> next to the exe. Then LibVLC is initialised &mdash;
+preferably from the bundled <span class="mono">libvlc/win-x64</span> folder, otherwise from the
+system installation. Only then does Avalonia start.</p>
+<p><span class="mono">App.OnFrameworkInitializationCompleted</span> sets the shutdown mode to
+<span class="mono">OnExplicitShutdown</span> and queues the actual startup flow through
+<span class="mono">Dispatcher.UIThread.Post</span>. The comment in the code gives the reason: the
+flow must not run until the message loop is alive.</p>
+<div class="tbl-wrap"><table><thead><tr><th>Step</th><th>Code</th><th>Result</th></tr></thead><tbody>
+<tr><td>1</td><td class="mono">AppConfig.Load()</td><td>Server address and decrypted client key in <span class="mono">AppData.Config</span></td></tr>
+<tr><td>2</td><td class="mono">LoginWindow</td><td>Waits on a TaskCompletionSource for <span class="mono">LoginResult</span></td></tr>
+<tr><td>3</td><td class="mono">Database.LoadSettingsFromApiAsync()</td><td>Settings; on null a default set is created through <span class="mono">CreateSettingsAsync</span></td></tr>
+<tr><td>4</td><td class="mono">RequestedThemeVariant</td><td>Light or dark according to <span class="mono">DarkModeEnabled</span></td></tr>
+<tr><td>5</td><td class="mono">LauncherWindow</td><td>Checks the environment, returns a <span class="mono">LauncherResult</span></td></tr>
+<tr><td>6</td><td class="mono">LoadApplicationData()</td><td>Load media and playlists, then MainWindow</td></tr>
+</tbody></table></div>
+<p>On <span class="mono">LauncherResult.Cancelled</span> the app exits with code 0, on
+<span class="mono">Error</span> with code 1. Once the main window is open the shutdown mode switches
+to <span class="mono">OnMainWindowClose</span>.</p>
+<p>Note the ordering: login happens <em>before</em> the launcher, so the user key is already in
+<span class="mono">AppData.CurrentUser</span> by the time any per-user route is called.</p>
+
+<h2 id="login">Signing in</h2>
+<p><a class="x" href="#/m/ViewModels%2FLoginWindowViewModel.cs#LoginWindowViewModel">LoginWindowViewModel</a>
+first checks with <span class="mono">GetHealth()</span> whether the server answers at all, then
+sends <span class="mono">POST /login</span>. On success the user lands in
+<span class="mono">AppData.CurrentUser</span> &mdash; with the API key immediately re-encrypted
+through <span class="mono">SecretProtector.Encrypt(user.ApiKey)</span> &mdash; the window sets
+<span class="mono">LoginResult.Success</span> and closes.</p>
+<p><span class="mono">Register</span> works the same way but calls <span class="mono">Login</span>
+directly after a successful registration, so the user does not have to sign in again.</p>
+
+<h2 id="launcher">Environment check in the launcher</h2>
+<p><a class="x" href="#/m/ViewModels%2FLauncherWindowViewModel.cs#LauncherWindowViewModel.OnWindowReady">OnWindowReady()</a>
+runs these in order:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Step</th><th>Method</th><th>Checks</th></tr></thead><tbody>
+<tr><td>1</td><td class="mono">IsServerRunning()</td><td>GET against port 8765; if that fails the flow ends with an error message</td></tr>
+<tr><td>2</td><td class="mono">EnsureVcRedist()</td><td>Looks for <span class="mono">VCRUNTIME140.dll</span> in System32, otherwise downloads the installer and runs it with <span class="mono">/install /quiet /norestart</span></td></tr>
+<tr><td>3</td><td class="mono">RestoreDotnetPackages()</td><td>Finds every <span class="mono">.csproj</span> below the repository root and restores the packages</td></tr>
+<tr><td>4</td><td class="mono">EnsureFfmpeg()</td><td>Makes ffmpeg available &mdash; needed for codec checks and conversion</td></tr>
+<tr><td>5</td><td class="mono">FinishSuccess()</td><td>Status line to &bdquo;Ready!&ldquo;, result Success, window closes</td></tr>
+</tbody></table></div>
+<p>Progress runs through the <span class="mono">Messages</span> collection of
+<span class="mono">LauncherMessage</span> entries (title, text, icon) that the window shows as a
+list. On an error <span class="mono">ShowError()</span> reveals an error panel with a close
+button.</p>
+<div class="note"><b>Note on the XML documentation</b>
+<p>The <code>&lt;summary&gt;</code> block above <code>OnWindowReady</code> also describes a Python
+installation, venv, pip, requirements, Playwright browsers and starting the server. What is
+implemented are the five steps in the table above; the remaining tasks belong to the server
+itself.</p></div>
+
+<h2 id="loading">Loading data</h2>
+<p><span class="mono">LoadApplicationData()</span> does more than load &mdash; it reconciles the
+stored data with the file system:</p>
+<ol>
+<li>Fetch media through <span class="mono">GET /getuser/downloadedmedias/{id}</span>.</li>
+<li>Check <span class="mono">File.Exists(DownloadPath)</span> for each entry. If the file is gone
+the entry goes on the removal list. Entries with the path
+<span class="mono">"Does not exist"</span> are on it from the start.</li>
+<li>For <span class="mono">.mp4</span> additionally
+<span class="mono">AudioPlayer.IsSupportedCodec()</span>. Unsupported does not mean deleted but
+<span class="mono">IsPlayable = false</span> plus a WARN in the log.</li>
+<li>Register the remaining media through <span class="mono">AppData.AddDownloadedMedia()</span>.</li>
+<li>Load playlists, call <span class="mono">FindMedias()</span> for each and register them.</li>
+<li>If <span class="mono">ScanFolderOnStartup</span> is set, scan the download folder.</li>
+</ol>
+<p>At the end the method writes two summaries to the log: the number of listed and playable media
+including removed entries, and the number of playlists.</p>
+
+<h2 id="download">Search and download</h2>
+<p>Two windows share the job.
+<a class="x" href="#/m/ViewModels%2FScrapWindowWithSearchViewModel.cs#ScrapWindowWithSearchViewModel">ScrapWindowWithSearch</a>
+for providers with a search, <span class="mono">ScrapWindowWithoutSearch</span> for the rest, where
+the URL is entered directly. Which provider goes where is decided by
+<span class="mono">AppData.ValidSearchProviders</span>.</p>
+<div class="tbl-wrap"><table><thead><tr><th>Phase</th><th>Call</th></tr></thead><tbody>
+<tr><td>Search</td><td class="mono">POST /search &rarr; List&lt;SearchResultItem&gt;</td></tr>
+<tr><td>Start the download</td><td class="mono">POST /download/video-audio &rarr; DownloadResponse</td></tr>
+<tr><td>Progress</td><td class="mono">GET {resource.ProgressUrl} every 500 ms</td></tr>
+<tr><td>Fetch the file</td><td class="mono">GET {resource.DownloadUrl} as a stream</td></tr>
+<tr><td>Register it</td><td class="mono">POST /create/downloadedmedia</td></tr>
+</tbody></table></div>
+<p>Both windows always send <span class="mono">download_strategy = "stream"</span>; the server has the
+local strategy switched off. The search window also has an <b>auto convert</b> switch that is sent as
+<span class="mono">auto_convert</span>: the server then delivers the file already in the selected
+container, re-encoding through ffmpeg where needed. The direct-URL window does not send the flag.</p>
+<p>The progress URL comes out of the response; it is not assembled by the client.
+<span class="mono">ApiClient.GetFileFromStream()</span> downloads with
+<span class="mono">HttpCompletionOption.ResponseHeadersRead</span> so large files do not go fully
+into memory, and takes a <span class="mono">CancellationToken</span> for cancelling. The file name
+now comes from the server's <span class="mono">Content-Disposition</span> header rather than from
+the extension the client guessed, and the method returns the final path.</p>
+<p>Only after the file is on disk does the search window compare its extension with the selected
+type and ask whether to keep a mismatch. It then waits for the file with at most ten
+<span class="mono">File.Exists</span> checks (the loop used to be unbounded) and registers it through
+<span class="mono">/create/downloadedmedia</span> with the path and extension of the file that
+actually arrived.</p>
+<div class="note risk"><b>Three rough edges in the new download path</b>
+<p><b>The path is glued, not combined.</b> <code>GetFileFromStream()</code> builds
+<code>path + fileName</code>. The search window passes the directory without a trailing separator
+(<code>Paths[i]</code> cut at the last <code>\</code>), the direct-URL window passes
+<code>DownloadPath\Filename</code>. The result is <code>C:\DownloadsSong.mp3</code> or
+<code>C:\Downloads\SongSong.mp3</code>. <code>Path.Combine(directory, fileName)</code> with the
+directory in both callers fixes it.</p>
+<p><b>The type check always fires.</b> The search window compares
+<code>finalPath.Substring(finalPath.LastIndexOf('.'))</code> &mdash; which includes the dot &mdash;
+with <code>SelectedMediaType.Trim('.')</code>, which does not. The two never match, so the
+&bdquo;Found only &hellip;&ldquo; question appears for every download.</p>
+<p><b>&bdquo;auto&ldquo; is rejected by the server.</b> Choosing <span class="mono">auto</span>
+sends <code>preferred_file = ""</code> and <code>preferred_type = ""</code>. The server's
+<code>DownloadRequest</code> validates any value that is not <code>null</code> with
+<code>validateStr</code>, which refuses empty strings, so the request fails with 422. Sending
+<code>null</code> instead of an empty string would let the server choose.</p></div>
+
+<h2 id="progress">Progress display</h2>
+<p><a class="x" href="#/m/ViewModels%2FProgressBarWindowViewModel.cs#ProgressBarWindowViewModel">ProgressBarWindowViewModel</a>
+starts a background task that polls <span class="mono">GetDownloadProgress()</span> and reports
+percentage, status and speed to the surface. It ends through a
+<span class="mono">CancellationTokenSource</span> &mdash; either because the download finished or
+because the window was closed.</p>
+
+<h2 id="filter">Filtering</h2>
+<p><a class="x" href="#/m/Models%2FAppData.cs#MediaFilter">MediaFilter</a> holds the search text,
+media types, start and end date and a playability flag. On apply the app backs up the unfiltered
+state in <span class="mono">OriginalDownloadedMedias</span> and sets
+<span class="mono">FilterEnabled</span>. Reset restores from that backup &mdash; the filtered view
+is a replacement of the collection, not a separate view over it.</p>
+
+<h2 id="playback">Playback</h2>
+<p><a class="x" href="#/m/Models%2FAudioPlayer.cs#AudioPlayer">AudioPlayer</a> wraps LibVLC and is
+<span class="mono">IDisposable</span>. It manages its own queue and offers
+<span class="mono">PlayNext</span> and <span class="mono">PlayPrevious</span>;
+<span class="mono">IsSupportedCodec()</span> checks a file with ffprobe before it counts as
+playable.</p>
+<p><a class="x" href="#/m/ViewModels%2FMediaPlayerControlViewModel.cs#MediaPlayerControlViewModel">MediaPlayerControlViewModel</a>
+binds that to the surface: stop, next, previous, volume, and
+<span class="mono">MoveForward</span> / <span class="mono">MoveBackward</span>, which shift the
+playback position by ten seconds each. <span class="mono">ToggleCompact()</span> switches between
+the compact bar and the full view. The control is <span class="mono">IDisposable</span> as well, so
+the LibVLC resources are released cleanly.</p>
+
+<h2 id="convert">Converting</h2>
+<p><a class="x" href="#/m/Models%2FMediaConverter.cs#MediaConverter">MediaConverter</a> is the model
+behind the converter window and it is more than an ffmpeg call. Three tables drive it:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Table</th><th>Meaning</th></tr></thead><tbody>
+<tr><td class="mono">ContainerCodecs</td><td>Which audio codecs a target container accepts, e.g.
+<span class="mono">.mp4</span> takes aac, alac, mp3, ac3, eac3, flac, opus, vorbis, dts</td></tr>
+<tr><td class="mono">ContainerVideoCodecs</td><td>The same for video: only
+<span class="mono">.mp4</span>, <span class="mono">.mkv</span> and <span class="mono">.ts</span>
+carry video at all</td></tr>
+<tr><td class="mono">ContainerEncoders</td><td>The encoder plus quality settings per container, e.g.
+<span class="mono">.mp3 &rarr; libmp3lame -q:a 2</span></td></tr>
+</tbody></table></div>
+<p>For each stream the converter decides between three outcomes: the codec already fits the target
+container and is copied (<span class="mono">copy</span>, no re-encode), it does not fit and gets the
+container's encoder, or the target container is unknown and the conversion is refused. Video that
+has to be re-encoded goes through the fixed
+<span class="mono">libx264 -crf 23 -preset fast -pix_fmt yuv420p</span>.</p>
+<p><span class="mono">MediaConverter.Convert(path, targetContainer)</span> is static and returns the
+path of the result.
+<a class="x" href="#/m/ViewModels%2FMediaConverterWindowViewModel.cs#MediaConverterWindowViewModel">MediaConverterWindowViewModel</a>
+drives it: <span class="mono">OpenFilePicker</span> selects the input through
+<span class="mono">StorageService</span> and <span class="mono">AppData.FileTypes</span>,
+<span class="mono">Convert</span> runs the conversion, <span class="mono">Cancel</span> aborts it.
+The target container is picked from <span class="mono">AppData.ValidMediaTypes</span> and defaults
+to <span class="mono">.mp4</span>.</p>
+<p>This converter works on files that are already on disk. Conversion during the download is a
+separate mechanism on the server side (<span class="mono">auto_convert</span>, see above).</p>
+
+<h2 id="exit">Saving on exit</h2>
+<p>While loading, the app hooks <span class="mono">desktop.Exit += OnExit</span>.
+<span class="mono">OnExit</span> runs <span class="mono">PerformExit()</span> synchronously and sets
+the exit code to 0 or 1. <span class="mono">PerformExit()</span> builds a single
+<a class="x" href="#/m/Models%2FServerRequestData.cs#SaveDataRequest">SaveDataRequest</a> out of the
+user identifier, playlists, media, assignments and settings, and sends it to
+<span class="mono">POST /save</span>. So the whole state goes back in one request rather than
+piecemeal during the session.</p>
+</div>

@@ -1,0 +1,92 @@
+<div class="wrap">
+<div class="crumb">PyScrapperDesktopApp / development</div>
+<h1>Building and extending</h1>
+
+<h2 id="setup">Prerequisites</h2>
+<div class="tbl-wrap"><table><thead><tr><th>What</th><th>Note</th></tr></thead><tbody>
+<tr><td class="mono">.NET SDK 9.0</td><td>Target framework <span class="mono">net9.0</span>, output type WinExe</td></tr>
+<tr><td>Windows</td><td>DPAPI, the VC++ redistributable and the VLC cache are Windows-specific</td></tr>
+<tr><td>A running LocalServer</td><td>Without one the launcher aborts &mdash; and login happens before it</td></tr>
+<tr><td class="mono">data/config.json</td><td>Created on first start, then maintained through EditConfigWindow</td></tr>
+<tr><td>A user account</td><td>Most routes now need <span class="mono">X-User-Key</span> plus
+<span class="mono">Auth</span>, so a registered user has to exist on the server</td></tr>
+</tbody></table></div>
+<p>Start with <span class="mono">dotnet run</span> in the project folder. Because
+<span class="mono">PyScrapperPath</span> sits four levels above the working directory, the app
+expects to run from <span class="mono">bin/Debug/net9.0</span> inside the repository structure.</p>
+
+<h2 id="conventions">Conventions in the code</h2>
+<ul>
+<li><b>One window, one view model, one AXAML file.</b> The code-behind only sets the DataContext and
+passes the window through where needed.</li>
+<li><b>All view models are <span class="mono">partial</span></b>, because the source generator adds
+properties and commands.</li>
+<li><b>Private fields with an underscore</b>, generated properties in PascalCase.</li>
+<li><b>Errors are logged, not thrown.</b> The model classes catch broadly and return neutral
+values.</li>
+<li><b>The logger is held as a field</b>:
+<span class="mono">private readonly AppLogger _logger = AppLogger.Instance;</span></li>
+<li><b>No dependency injection container.</b> Dependencies arrive through constructor parameters or
+straight from <span class="mono">AppData</span>.</li>
+<li><b>Never hold a decrypted key.</b> Call
+<span class="mono">SecretProtector.Decrypt(...)</span> where the header is set and let the value go
+out of scope with the request.</li>
+</ul>
+
+<h2 id="feature">Adding a window</h2>
+<ol>
+<li>Create <span class="mono">Views/MyWindow.axaml</span>, use the styles from
+<span class="mono">Design.axaml</span> and embed <span class="mono">TitleBarControl</span> if
+appropriate.</li>
+<li><span class="mono">Views/MyWindow.axaml.cs</span> with
+<span class="mono">InitializeComponent()</span> and setting the DataContext.</li>
+<li><span class="mono">ViewModels/MyWindowViewModel.cs</span> as
+<span class="mono">public partial class ... : ObservableObject</span>, state through
+<span class="mono">[ObservableProperty]</span>, actions through
+<span class="mono">[RelayCommand]</span>.</li>
+<li>If the constructor touches the network or state:
+<span class="mono">if (Design.IsDesignMode) return;</span> as the first line.</li>
+<li>To close, either a <span class="mono">CloseRequested</span> action the view subscribes to, or
+the window reference passed in &mdash; both variants exist in the code base.</li>
+<li>Add the entry point in <span class="mono">MainWindowViewModel</span> as another
+<span class="mono">[RelayCommand]</span> and bind it in the main window's XAML.</li>
+</ol>
+
+<h2 id="dataflow">Data flow by example</h2>
+<p>From clicking &bdquo;create playlist&ldquo; to the entry appearing in the list:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Layer</th><th>What happens</th></tr></thead><tbody>
+<tr><td>View</td><td>The button binds to <span class="mono">CreatePlaylistCommand</span></td></tr>
+<tr><td>View model</td><td><span class="mono">CreatePlaylist()</span> checks the name and collects the selected media IDs</td></tr>
+<tr><td>Model</td><td><span class="mono">Database.CreatePlaylistAsync()</span> sends <span class="mono">POST /create/playlist/</span></td></tr>
+<tr><td>Model</td><td>One <span class="mono">POST /create/playlistmedia</span> follows per assignment</td></tr>
+<tr><td>State</td><td><span class="mono">AppData.AddPlaylist()</span> appends the playlist to the ObservableCollection</td></tr>
+<tr><td>View</td><td>The list updates because it is bound to that same collection</td></tr>
+</tbody></table></div>
+<p>The last step is why no refresh logic is needed: views bind straight to the collections in
+<span class="mono">AppData</span>, not to copies.</p>
+
+<h2 id="ffmpeg">ffmpeg and codecs</h2>
+<p>Two places use the tools. <span class="mono">AudioPlayer.IsSupportedCodec()</span> calls ffprobe
+to check, before playback, whether LibVLC can handle the file.
+<a class="x" href="#/m/Models%2FMediaConverter.cs#MediaConverter">MediaConverter</a> calls ffprobe
+for the streams and the total duration, then ffmpeg for the conversion; the percentage comes from
+that duration and the progress lines on stderr. Which streams are copied and which are re-encoded
+is decided by the container tables described under
+<a class="x" href="#/workflows#convert">Converting</a>. Cancelling sets the CancellationToken and
+terminates the ffmpeg process.</p>
+
+<h2 id="glossary">Glossary</h2>
+<div class="tbl-wrap"><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody>
+<tr><td class="mono">AXAML</td><td>Avalonia's XAML dialect; markup for windows and controls</td></tr>
+<tr><td class="mono">Code-behind</td><td>The <span class="mono">.axaml.cs</span> next to the markup</td></tr>
+<tr><td class="mono">ObservableProperty</td><td>Attribute the generator turns into a bindable property</td></tr>
+<tr><td class="mono">RelayCommand</td><td>Attribute the generator turns into a bindable command</td></tr>
+<tr><td class="mono">Compiled bindings</td><td>Bindings are type-checked at compile time instead of resolved at runtime</td></tr>
+<tr><td class="mono">DPAPI</td><td>Windows encryption, bound to the user and the machine</td></tr>
+<tr><td class="mono">Identifier</td><td>Client-assigned string used as the key of every record</td></tr>
+<tr><td class="mono">IsPlayable</td><td>The file exists and the codec is supported</td></tr>
+<tr><td class="mono">Client key / user key</td><td><span class="mono">X-Admin-Key</span> guards the
+server as a whole, <span class="mono">X-User-Key</span> plus <span class="mono">Auth</span>
+identifies one user</td></tr>
+</tbody></table></div>
+</div>

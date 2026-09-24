@@ -1,0 +1,79 @@
+<div class="wrap">
+<div class="crumb">LocalServer / operations</div>
+<h1>Running, testing, shipping</h1>
+
+<h2 id="start">Starting</h2>
+<p>The PowerShell script prefers the venv in the server folder and otherwise falls back to the
+Python on PATH. It changes into the server directory first &mdash; that matters, because
+<span class="mono">Session</span> derives its cookie path from the working directory.</p>
+<div class="tbl-wrap"><table><thead><tr><th>What</th><th>Value</th></tr></thead><tbody>
+<tr><td>Command</td><td class="mono">python -m uvicorn server:app --host 127.0.0.1 --port 8765</td></tr>
+<tr><td>Script</td><td class="mono">scripts/startServer.ps1</td></tr>
+<tr><td>Dependencies</td><td class="mono">fastapi, uvicorn[standard], pydantic, certifi, yt-dlp, playwright, bcrypt, dotenv, pywin32</td></tr>
+<tr><td>Secret</td><td class="mono">ADMIN_KEY in .env next to server.py</td></tr>
+<tr><td>Log file</td><td class="mono">logs/server_runtime.log</td></tr>
+</tbody></table></div>
+<p>After installation Playwright also needs its browser binaries
+(<span class="mono">playwright install chromium</span>). Without them every provider that relies on
+sniffing will fail. <span class="mono">ffmpeg</span> and <span class="mono">ffprobe</span> must be on
+<span class="mono">PATH</span> as well: every STREAM download now runs through the engine's codec
+probe and, where needed, the ffmpeg muxer. A missing binary surfaces as
+<span class="mono">FFmpegNotFoundError</span>.</p>
+<p><span class="mono">pywin32</span> is only imported on Windows (named pipes for the ffmpeg
+inputs), but it is listed unconditionally, so <span class="mono">pip install -r requirements.txt</span>
+fails on Linux and macOS. Install the other packages by hand there.</p>
+
+<h2 id="tests">Tests</h2>
+<p>The suite in <span class="mono">tests/</span> needs no test runner. The scripts read the admin
+key from the <span class="mono">.env</span>, send real requests to a running server and write their
+results to their own log file.</p>
+<div class="tbl-wrap"><table><thead><tr><th>Script</th><th>Covers</th></tr></thead><tbody>
+<tr><td class="mono"><a class="x" href="#/m/tests%2Frun_tests.py">run_tests.py</a></td>
+<td>Entry point that runs the other suites in turn and reports a combined result</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/tests%2Ftest_common.py">test_common.py</a></td>
+<td>Shared harness: request helpers, headers, evaluation and logging used by all suites</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/tests%2Fdownload_tests.py">download_tests.py</a></td>
+<td>Input validation of <span class="mono">/download/video-audio</span></td></tr>
+<tr><td class="mono"><a class="x" href="#/m/tests%2Fsearch_tests.py">search_tests.py</a></td>
+<td>The same for <span class="mono">/search</span></td></tr>
+<tr><td class="mono"><a class="x" href="#/m/tests%2Fcreate_delete_tests.py">create_delete_tests.py</a></td>
+<td>All create and delete routes, valid and invalid alike</td></tr>
+</tbody></table></div>
+<p>The shape is the same everywhere: a list of cases with an expected status code, an
+<span class="mono">evaluate()</span> function and a <span class="mono">main()</span> that counts
+through them. New cases go into the constant list at the top of the file, not into the code below
+it.</p>
+<div class="note"><b>Tests authenticate as a user now</b>
+<p>Because most routes moved from <code>X-Admin-Key</code> to <code>X-User-Key</code> plus
+<code>Auth</code>, the suites need a user that exists in the database and the matching key. The
+shared setup lives in <code>test_common.py</code>; a suite run against a fresh database will fail
+on authentication before it ever reaches the case it meant to check.</p></div>
+
+<h2 id="local">LOCAL downloads are switched off</h2>
+<p><a class="x" href="#/m/server.py#receive_download">receive_download()</a> raises
+<span class="mono">ValueError("Local Download was turned off by administrator because of pending
+rework")</span> as the first statement of the LOCAL branch, so a request with
+<span class="mono">download_strategie = LOCAL</span> is answered with a 400. The code below the
+<span class="mono">raise</span> is unreachable but kept. Only STREAM is usable at the moment; the
+desktop app and the web interface both send <span class="mono">stream</span>.</p>
+<p>The reason is on the engine side: the HLS dispatcher's local path still calls
+<span class="mono">MasterHLSDownload</span> and <span class="mono">IndexHLSDownload</span> with their
+old constructor signatures and would fail anyway.</p>
+
+<h2 id="errors">Error handling in the routes</h2>
+<p>The handlers catch broadly and translate to HTTP codes. The pattern repeats:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Caught</th><th>Becomes</th></tr></thead><tbody>
+<tr><td class="mono">ValueError, TypeError, ArgumentError</td><td>400, prefixed &bdquo;Invalid type for&ldquo;</td></tr>
+<tr><td class="mono">TaskFailedError</td><td>500 with the text of the exception</td></tr>
+<tr><td class="mono">DRMProtectedMediaError</td><td>422 in the download route</td></tr>
+<tr><td class="mono">sqlite3.IntegrityError</td><td>409 in the CRUD routes</td></tr>
+</tbody></table></div>
+<div class="note risk"><b>UnicodeDecodeError ends up in the wrong branch</b>
+<p><code>UnicodeDecodeError</code> inherits from <code>ValueError</code> through
+<code>UnicodeError</code> and is therefore caught by the first branch. The client gets
+&bdquo;Invalid type for 'utf-8' codec can't decode byte ...&ldquo; and a 400, although the fault is
+neither the type nor the client. On top of that only <code>data</code> is logged, not the
+exception &mdash; so there is no traceback to look at.</p>
+<p>A dedicated <code>except UnicodeDecodeError</code> ahead of the ValueError branch and a
+<code>traceback.format_exc()</code> in every handler fixes both.</p></div>
+</div>

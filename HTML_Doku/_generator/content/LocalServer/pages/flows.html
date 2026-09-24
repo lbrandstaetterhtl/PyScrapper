@@ -1,0 +1,16 @@
+<div class="wrap">
+<div class="crumb">LocalServer / flows</div>
+<h1>Program flows</h1>
+<p class="lede">Every path through the server, step by step. Click a step &mdash; or use
+prev/next &mdash; to see what happens there, which errors it can raise and where it can go from
+here. The tabs switch between flows.</p>
+<div class="flowmount" data-flow="download,auth,stream,lifespan,save"></div>
+
+<h2 id="reading">How to read these</h2>
+<p>The spine on the left is the happy path in execution order. Dashed boxes are decision points;
+red ones are error exits. The buttons under &bdquo;Where it can go from here&ldquo; jump to the
+step they name, which is how the branches and the error paths are reachable &mdash; they are not
+part of the linear sequence.</p>
+<p>Each step links into the source where there is a function to point at, so the flow answers
+&bdquo;what happens&ldquo; and the module page answers &bdquo;how&ldquo;.</p>
+</div>

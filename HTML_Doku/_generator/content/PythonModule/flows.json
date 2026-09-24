@@ -1,0 +1,619 @@
+{
+  "pipeline": {
+    "title": "Link to byte stream",
+    "steps": [
+      {
+        "id": "req",
+        "kind": "io",
+        "title": "A request enters the engine",
+        "sub": "url + provider + preferred_file / preferred_type",
+        "next": "resolve the provider",
+        "detail": "<p>The server has already unpacked the HTTP body. What the engine sees is a URL, a provider string and the client's wishes about the target format.</p>"
+      },
+      {
+        "id": "prov",
+        "kind": "decision",
+        "title": "Resolve the provider string",
+        "sub": "validateProviders() → ProviderTypes",
+        "link": "#/m/models%2Fsettings.py#SUPPORTEDPROVIDERS",
+        "next": "enum value",
+        "detail": "<p>Every provider has several accepted spellings &mdash; <code>youtube</code>, <code>youtube.com</code>, <code>www.youtube.com</code> &mdash; collected in <code>VALID&lt;NAME&gt;NAMES</code> and registered in <code>SUPPORTEDPROVIDERS</code>.</p>",
+        "branches": [
+          {
+            "label": "no alias matches → TaskFailedError",
+            "to": "fail",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "map",
+        "kind": "decision",
+        "title": "Look up the function",
+        "sub": "PROVIDER_GETRESULTS_MAPPING / PROVIDER_SEARCH_MAPPING",
+        "next": "getMediaInformation for this provider",
+        "detail": "<p>Two separate mappings. Not every provider is in both: <code>Default</code> and <code>wcoflix</code> can be resolved but not searched. <code>ProviderTypes</code> also declares <code>Aniworld</code>, <code>Dailymotion</code> and <code>ERROR</code>, which are in neither mapping &mdash; the enum value exists but resolving one fails here. <code>Filmpalast</code> is in both, but its resolver is not finished and returns nothing.</p>",
+        "branches": [
+          {
+            "label": "enum has no mapping entry → TaskFailedError",
+            "to": "fail",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "host",
+        "kind": "decision",
+        "title": "validateHostPro",
+        "sub": "hostname and protocol allowlist",
+        "next": "host allowed",
+        "detail": "<p>The first thing every provider does. It pins the request to a fixed list of hostnames and usually to <code>https</code>. This is the SSRF guard: without it a crafted URL could make the server fetch anything on the local network.</p><p>Any new provider must do the same &mdash; it is a convention, not something the framework enforces.</p>",
+        "branches": [
+          {
+            "label": "wrong host → ArgumentError",
+            "to": "fail",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "find",
+        "kind": "decision",
+        "title": "Find the real media URLs",
+        "sub": "three patterns, one per provider family",
+        "next": "candidate list",
+        "detail": "<p>How the provider gets there is entirely up to it, and this is where the time goes.</p><p><b>HTML regex</b> (Bandcamp, Newgrounds, Suno, wcoflix): load the page, pull embedded stream URLs out of it. <b>Browser sniffing</b> (Soundcloud, YoutubeMusic, Default, Filmpalast): drive Chromium and record media responses &mdash; see the <b>Browser sniffing</b> flow. <b>API</b> (Youtube, Archive): the YouTube player API, tried with several client identities, or the Archive API hands back a format list.</p><p>The result is a list of <code>FoundMedia</code>. A candidate can carry a separate <code>audio_url</code>, which YouTube now does for its best video/audio pair.</p>",
+        "branches": [
+          {
+            "label": "nothing found → TaskFailedError",
+            "to": "fail",
+            "warn": true
+          },
+          {
+            "label": "encrypted stream → DRMProtectedMediaError",
+            "to": "fail",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "score",
+        "kind": "step",
+        "title": "Score the candidates",
+        "sub": "makeProviderResult()",
+        "link": "#/m/providers%2Fmodels.py#makeProviderResult",
+        "next": "one winner",
+        "detail": "<p>Extension priority, good and bad URL keywords and the client's wishes are added up, highest total wins. See the <b>Picking a URL</b> flow for the individual terms.</p><p>Afterwards the winner is measured: one small <code>Range: bytes=0-0</code> request per URL tells the engine the size of the video and, if separate, the audio.</p>"
+      },
+      {
+        "id": "ctx",
+        "kind": "step",
+        "title": "Build the DownloadContext",
+        "sub": "target + media_info + output + download_progress",
+        "link": "#/m/core%2Fmodels%2FDownload.py#DownloadContext",
+        "next": "hand to the dispatcher",
+        "detail": "<p>One context per file. From here on this single object travels through every layer, and the downloaders write their progress straight into <code>download_progress</code> on it. The target holds the resolved URL, the optional <code>audio_url</code> and both sizes; the output holds the file name and whether <code>auto_convert</code> was requested.</p>"
+      },
+      {
+        "id": "split",
+        "kind": "decision",
+        "title": "_splitContext",
+        "sub": "sort by target.download_type",
+        "link": "#/m/core%2Fdownload%2FDispatcher%2Fdispatcher.py#DownloadDispatcher",
+        "next": "three buckets",
+        "detail": "<p>The dispatcher makes three copies of the <code>DownloadInformation</code>, each with only the contexts of one type. Which mechanism runs depends solely on <code>target.download_type</code> &mdash; not on the file extension and not on the provider.</p>",
+        "branches": [
+          {
+            "label": "FILE",
+            "to": "file"
+          },
+          {
+            "label": "HLS",
+            "to": "hls"
+          },
+          {
+            "label": "UMP",
+            "to": "ump"
+          },
+          {
+            "label": "unknown type → silently FAILED",
+            "to": "drop",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "file",
+        "kind": "step",
+        "title": "FILE: one URL, one range",
+        "sub": "FileDispatcher → ranged fetches",
+        "link": "#/m/core%2Fdownload%2FFile%2Fdispatcher.py#FileDispatcher",
+        "next": "",
+        "detail": "<p>One or two URLs, fetched in 10&nbsp;MiB ranges up to the measured size by <code>asyncDownloadYieldRanges()</code>. With a separate audio URL there are two sources.</p>",
+        "branches": [
+          {
+            "label": "continue to the codec check",
+            "to": "mux"
+          }
+        ]
+      },
+      {
+        "id": "hls",
+        "kind": "step",
+        "title": "HLS: playlist then segments",
+        "sub": "master → index → segments",
+        "link": "#/m/core%2Fdownload%2FHLS%2Fdispatcher.py#HLSDispatcher",
+        "next": "",
+        "detail": "<p>Two stages, detailed in the <b>HLS download</b> flow.</p>",
+        "branches": [
+          {
+            "label": "continue to the codec check",
+            "to": "mux"
+          }
+        ]
+      },
+      {
+        "id": "ump",
+        "kind": "step",
+        "title": "UMP: stateful byte protocol",
+        "sub": "SABR request patching",
+        "link": "#/m/core%2Fdownload%2FUMP%2Fdownload.py",
+        "next": "bytes",
+        "detail": "<p>Google's container format behind <code>googlevideo.com</code>, detailed in the <b>UMP / SABR</b> flow. The <code>youtube</code> mode skips the codec check: yt-dlp merges on its own.</p>"
+      },
+      {
+        "id": "mux",
+        "kind": "decision",
+        "title": "Codec check: copy or mux?",
+        "sub": "Dispatcher._asyncProcessSources",
+        "link": "#/m/core%2Fdownload%2FDispatcher%2Fbase.py#Dispatcher._asyncProcessSources",
+        "next": "bytes for the client",
+        "detail": "<p>The first chunks of each source are piped into ffprobe until the codecs are known. If there is a single source, the target container is the one that was found and every codec is allowed in it, the bytes are passed through untouched.</p><p>Otherwise <code>AsyncFFmpegMuxer</code> starts ffmpeg with one input pipe per source, copies what the container accepts and re-encodes the rest. With <code>auto_convert</code> the target container is <code>preferred_file</code> instead of the found one, which is how a download arrives already converted.</p>",
+        "branches": [
+          {
+            "label": "ffmpeg / ffprobe missing → FFmpegNotFoundError",
+            "to": "fail",
+            "warn": true
+          },
+          {
+            "label": "ffmpeg exits non-zero → TaskFailedError",
+            "to": "fail",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "out",
+        "kind": "end",
+        "title": "File on disk, or an async byte stream",
+        "sub": "downloadToFile() / downloadAndYield()",
+        "link": "#/m/core%2Fdownload%2FDispatcher%2Fbase.py#Dispatcher",
+        "next": "",
+        "detail": "<p>The base class builds both from the two methods every dispatcher implements. <code>downloadToFile()</code> runs all contexts in parallel through <code>asyncio.gather</code>; <code>downloadAndYield()</code> runs them one after another into a single stream; <code>DownloadDispatcher.downloadContextAndYield()</code> streams exactly one context, which is what the server uses.</p><p>Progress is written to the same <code>DownloadProgress</code> object in all three mechanisms, which is why the server's polling endpoint needs no state of its own.</p>"
+      },
+      {
+        "id": "drop",
+        "kind": "error",
+        "title": "Dropped without an exception",
+        "sub": "status FAILED, error_message set",
+        "next": "",
+        "detail": "<p>A context whose type is not one of the three is marked <code>FAILED</code> in <code>_splitContext()</code> and quietly left out. Nothing is raised, so the caller sees a job that simply produced fewer files than it asked for. The reason is only in <code>download_progress.error_message</code>.</p>"
+      },
+      {
+        "id": "fail",
+        "kind": "error",
+        "title": "TaskFailedError",
+        "sub": "task + reason + extraMessages",
+        "link": "#/m/core%2Fmodels%2Ferrors.py#TaskFailedError",
+        "next": "",
+        "detail": "<p>The project's carrier for &bdquo;this could not be done and here is what to try&ldquo;. <code>extraMessages</code> is a list of hints that ends up in the message the user sees. The server turns it into a 500, and <code>DRMProtectedMediaError</code> into a 422. The ffmpeg layer adds <code>FFmpegNotFoundError</code> and <code>FFmpegHttpError</code>.</p>"
+      }
+    ]
+  },
+  "scoring": {
+    "title": "Picking a URL",
+    "steps": [
+      {
+        "id": "in",
+        "kind": "io",
+        "title": "A list of FoundMedia arrives",
+        "sub": "makeProviderResult(found_media_list, request)",
+        "link": "#/m/providers%2Fmodels.py#makeProviderResult",
+        "next": "validate the wishes",
+        "detail": "<p>What the provider found. Browser providers pass content type and size from the response headers along; the YouTube provider passes extension, MIME type, stream type and an optional <code>audio_url</code>.</p>"
+      },
+      {
+        "id": "wishcheck",
+        "kind": "decision",
+        "title": "Validate the wishes",
+        "sub": "preferred_file in SUPPORTED_EXTENSIONS, preferred_type audio/video",
+        "next": "per candidate",
+        "detail": "<p><code>preferred_file</code> is normalised (lower case, leading dot removed) and must be a supported extension; <code>preferred_type</code> must be <code>audio</code> or <code>video</code>.</p>",
+        "branches": [
+          {
+            "label": "unsupported value → ArgumentError",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "fill",
+        "kind": "step",
+        "title": "Complete bare candidates",
+        "sub": "_makeFoundMediaFromUrl",
+        "link": "#/m/providers%2Fmodels.py#_makeFoundMediaFromUrl",
+        "next": "base score",
+        "detail": "<p>Only for candidates without an extension: extension from the URL, media kind from the extension, MIME type from <code>EXTENSION_CONTENT_TYPES</code>, download type from the extension (<code>m3u8</code> → HLS, <code>mpd</code> → DASH, anything supported → FILE).</p>"
+      },
+      {
+        "id": "ext",
+        "kind": "step",
+        "title": "Base score: extension and keywords",
+        "sub": "MEDIA_EXTENSION_PRIORITY + _getUrlPriority",
+        "link": "#/m/providers%2Fmodels.py#MEDIA_EXTENSION_PRIORITY",
+        "next": "client wishes",
+        "detail": "<p>Part of <code>_makeFoundMediaFromUrl</code>, so it only runs for candidates that arrived without an extension and with <code>prio</code> still negative. mp4 100, mkv 95, webm 90, then the audio formats from flac 45 down to mp3 25, and m3u8 and mpd at 20.</p><p>Good keywords: <code>master</code> +100, <code>playlist</code> +80, <code>index</code> +70. Bad ones: <code>preview</code> &minus;100, <code>thumbnail</code> &minus;500, <code>ads</code> &minus;1000 &mdash; large enough to put those candidates out of reach.</p><p>A candidate that arrives complete keeps its <code>prio</code> of &minus;1 and only gains points from the wishes below. Because the winner must beat the initial &minus;1, such a candidate is not picked at all when neither wish matches.</p>"
+      },
+      {
+        "id": "wish",
+        "kind": "decision",
+        "title": "Apply the client's wishes",
+        "sub": "preferred_type +200, preferred_file +1000",
+        "next": "highest total wins",
+        "detail": "<p><code>preferred_file</code> is worth more than every other term put together, which is the intent &mdash; if the caller asked for mp3, it should get mp3.</p>",
+        "branches": [
+          {
+            "label": "why this can pick the wrong transport",
+            "to": "mix",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "size",
+        "kind": "step",
+        "title": "Measure the winner",
+        "sub": "getUrlInformation for video and audio",
+        "link": "#/m/providers%2Fmodels.py#getUrlInformation",
+        "next": "result built",
+        "detail": "<p>A <code>Range: bytes=0-0</code> request per URL; the size comes from <code>Content-Range</code> or <code>Content-Length</code>. With a separate audio URL the total is the sum, or &minus;1 if either is unknown. For HLS the total is always &minus;1, because progress is counted in segments.</p>"
+      },
+      {
+        "id": "res",
+        "kind": "end",
+        "title": "ProviderResult",
+        "sub": "url, audio_url, download_type, sizes, mime, extension",
+        "link": "#/m/providers%2Fmodels.py#ProviderResult",
+        "detail": "<p>The winner, plus an <code>Info</code> block recording what was asked for and what was found. The server turns this into a <code>DownloadContext</code>.</p>",
+        "next": ""
+      },
+      {
+        "id": "mix",
+        "kind": "decision",
+        "title": "The table mixes two levels",
+        "sub": "container vs transport",
+        "detail": "<p><code>m3u8</code> and <code>mpd</code> describe <em>how</em> the media is transferred; <code>mp3</code> and <code>mp4</code> describe <em>what</em> the target file is. Both sit in one priority table.</p><p>So with <code>preferred_file=\"mp3\"</code> a progressive MP3 URL wins on +1000 against an HLS playlist. Worth knowing before adding entries to the table.</p>",
+        "branches": [
+          {
+            "label": "back to the result",
+            "to": "res"
+          }
+        ],
+        "next": ""
+      },
+      {
+        "id": "err",
+        "kind": "error",
+        "title": "Nothing usable",
+        "sub": "ArgumentError or TaskFailedError",
+        "detail": "<p>An invalid wish raises <code>ArgumentError</code>; a list in which no candidate scored above zero or had a URL raises <code>TaskFailedError</code> with the list of supported extensions.</p>",
+        "next": ""
+      }
+    ]
+  },
+  "browser": {
+    "title": "Browser sniffing",
+    "steps": [
+      {
+        "id": "start",
+        "kind": "start",
+        "title": "Provider constructs its browser",
+        "sub": "a MediaBrowser subclass",
+        "link": "#/m/core%2Fnetwork%2Fbrowser%2Fbrowsers%2Fmedia_browser.py#MediaBrowser",
+        "next": "run()",
+        "detail": "<p><code>SoundcloudMediaBrowser</code>, <code>YoutubeMusicMediaBrowser</code> and the new <code>FilmpalastMediaBrowser</code> subclass <code>MediaBrowser</code>. The constructor validates the host before anything launches.</p>"
+      },
+      {
+        "id": "setup",
+        "kind": "step",
+        "title": "Launch Chromium",
+        "sub": "Browser.setup() through Playwright",
+        "link": "#/m/core%2Fnetwork%2Fbrowser%2Fbase.py#Browser",
+        "next": "cookies loaded",
+        "detail": "<p>Synchronous Playwright. <code>headless=False</code> is the common case here because a headful browser gets past more checks &mdash; which also means a window really appears on the server machine.</p>"
+      },
+      {
+        "id": "cookies",
+        "kind": "step",
+        "title": "Load cookies.txt",
+        "sub": "Mozilla format, written back on stop",
+        "next": "navigate",
+        "detail": "<p>Logins survive across runs this way. The path comes from <code>ROOT_DIR = os.getcwd()</code> evaluated at import time, so starting the server from a different directory silently points at a different file and the login looks lost.</p>"
+      },
+      {
+        "id": "nav",
+        "kind": "step",
+        "title": "Navigate and wait for a player",
+        "sub": "video, audio, iframe or a div named *player*",
+        "next": "actions",
+        "detail": "<p>A 10 second <code>wait_for_selector</code> that is wrapped in a bare <code>except: pass</code> &mdash; if no player appears the run simply continues and relies on the timeout below.</p>"
+      },
+      {
+        "id": "actions",
+        "kind": "step",
+        "title": "Run the configured actions",
+        "sub": "a list of dicts, in order",
+        "next": "press play",
+        "detail": "<p><code>actions</code> is a <em>list</em>, so a sequence works as written: Soundcloud rejects the consent banner and then closes the modal. Supported keys are <code>try_click</code>, <code>click</code> and <code>wait</code>; anything else raises with the list of valid actions.</p><p>This used to be a single dict, where duplicate keys collapsed and only the last click survived.</p>"
+      },
+      {
+        "id": "play",
+        "kind": "step",
+        "title": "Press play",
+        "sub": "helpers.button.tryPressPlay",
+        "next": "record responses",
+        "detail": "<p>Tries the provider's own selectors first, then the shared <code>PLAY_BUTTON_SELECTORS</code>. Playback is what makes the site request the actual media, which is the entire point of this exercise.</p>"
+      },
+      {
+        "id": "resp",
+        "kind": "decision",
+        "title": "Every response is classified",
+        "sub": "_handleResponse → mediaList or unknownList",
+        "next": "wait_ms elapses",
+        "detail": "<p><code>isMediaResponse()</code> decides from the URL, the content type and Playwright's resource type, filtered through <code>GOOD_MEDIA_KEYWORDS</code> and <code>BAD_MEDIA_KEYWORDS</code>.</p><p>Providers override this hook: Soundcloud watches for <code>widevine</code> and the encrypted-HLS markers, YouTube Music reads the itag out of the URL and ranks it with <code>ITAG_PRIORITY</code>.</p>",
+        "branches": [
+          {
+            "label": "DRM markers seen → fatalError",
+            "to": "drm",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "stop",
+        "kind": "decision",
+        "title": "stop() returns what was collected",
+        "sub": "(mediaList, unknownList)",
+        "next": "list non-empty?",
+        "detail": "<p>Cookies are written back and the browser is torn down. <code>_raiseFatalError()</code> is checked at three points during the run, so a DRM detection surfaces as an exception rather than an empty list.</p>"
+      },
+      {
+        "id": "retry",
+        "kind": "decision",
+        "title": "Empty? retry",
+        "sub": "while retry < retrys",
+        "next": "candidates → makeProviderResult",
+        "detail": "<p>Both browser providers wrap the run in a retry loop.</p><p>YouTube Music now increments its counter, so it gives up after <code>retrys</code> attempts and raises. <b>Soundcloud still does not:</b> in <code>soundcloud_media_information.py</code>, <code>retry</code> stays 0, so the loop can only end through the <code>break</code> that needs a non-empty <code>medialist</code>. If the browser finds nothing this spins forever, launching a visible Chromium every pass, and the <code>TaskFailedError</code> below the loop is unreachable.</p>",
+        "branches": [
+          {
+            "label": "found something → scoring",
+            "to": "done"
+          },
+          {
+            "label": "Soundcloud found nothing → loops forever",
+            "to": "hang",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "done",
+        "kind": "end",
+        "title": "Candidates handed to the scorer",
+        "sub": "makeProviderResult",
+        "next": "",
+        "detail": "<p>Because these came from real responses, MIME type and size are often already known and do not have to be guessed from the URL.</p>"
+      },
+      {
+        "id": "hang",
+        "kind": "error",
+        "title": "Non-terminating retry loop",
+        "sub": "retry never increments",
+        "next": "",
+        "detail": "<p>A one-line fix, the same one YouTube Music already has: increment <code>retry</code> in the loop body. Until then, a Soundcloud page whose media the browser cannot see will hang the request instead of failing it.</p>"
+      },
+      {
+        "id": "drm",
+        "kind": "error",
+        "title": "DRMProtectedMediaError",
+        "sub": "Widevine or encrypted HLS detected",
+        "link": "#/m/core%2Fmodels%2Ferrors.py#DRMProtectedMediaError",
+        "next": "",
+        "detail": "<p>Raised as soon as a response URL contains the encryption markers, rather than letting the run finish and produce nothing. The server maps it to <b>422</b>, which is how the client can tell &bdquo;protected&ldquo; from &bdquo;not found&ldquo;.</p>"
+      }
+    ]
+  },
+  "hls": {
+    "title": "HLS download",
+    "steps": [
+      {
+        "id": "fetch",
+        "kind": "io",
+        "title": "Fetch the m3u8 as text",
+        "sub": "html.getHtml in a worker thread",
+        "link": "#/m/core%2Fdownload%2FHLS%2Fdispatcher.py#HLSDispatcher",
+        "next": "determine the type",
+        "detail": "<p>Through <code>asyncio.to_thread</code> because the fetch is synchronous.</p><p>This is the fragile step: if <code>resolved_url</code> actually points at a media file rather than a playlist, there is no clean error &mdash; you get a decode error from deep inside.</p>"
+      },
+      {
+        "id": "type",
+        "kind": "decision",
+        "title": "dertermineFileType",
+        "sub": "master, index or unknown?",
+        "link": "#/m/core%2Fdownload%2FHLS%2Fdispatcher.py#HLSDispatcher.dertermineFileType",
+        "next": "",
+        "detail": "<p>Decided from the tags present in the text: <code>#EXT-X-STREAM-INF</code>, <code>#EXT-X-I-FRAME-STREAM-INF</code> or <code>#EXT-X-MEDIA</code> mean master; <code>#EXTINF</code>, <code>#EXT-X-TARGETDURATION</code>, <code>#EXT-X-MAP</code> and friends mean index. Text that does not start with <code>#EXTM3U</code> is unknown.</p>",
+        "branches": [
+          {
+            "label": "master playlist",
+            "to": "master"
+          },
+          {
+            "label": "index playlist",
+            "to": "index"
+          },
+          {
+            "label": "unknown → TaskFailedError",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "master",
+        "kind": "step",
+        "title": "Master: choose the variants",
+        "sub": "MasterHLSDownload.getUrls()",
+        "link": "#/m/core%2Fdownload%2FHLS%2Fmaster.py#MasterHLSDownload",
+        "next": "video and audio index URLs",
+        "detail": "<p>Picks the best video variant by bandwidth and looks for a matching audio rendition by language, using <code>preferred_languages</code> when the dispatcher was given one. Both URLs are written back onto <code>context.target</code> (<code>resolved_url</code> and <code>audio_url</code>).</p>"
+      },
+      {
+        "id": "index",
+        "kind": "step",
+        "title": "Index: build the segment lists",
+        "sub": "IndexHLSDownload.getIndexSegmentList()",
+        "link": "#/m/core%2Fdownload%2FHLS%2Findex.py#IndexHLSDownload",
+        "next": "two sources",
+        "detail": "<p>One <code>IndexHLSDownload</code> for video and, if there is an audio URL, one for audio. Each entry is resolved against its playlist's URL; an <code>#EXT-X-MAP</code> init section becomes a segment with duration 0. <code>total_segments</code> is the sum of both lists.</p><p>When the server streams HLS to a player instead, it computes the same two lists up front and caches them on the <code>ServerStream</code>, so its playlist routes are memory lookups.</p>"
+      },
+      {
+        "id": "seg",
+        "kind": "step",
+        "title": "Stream the segments",
+        "sub": "downloadAndYield, bounded by the download semaphore",
+        "next": "into the codec check",
+        "detail": "<p>Each segment is fetched with <code>asyncDownloadYieldSimple()</code>, honouring its byte range. Progress is updated per chunk (bytes) and per segment.</p>"
+      },
+      {
+        "id": "mux",
+        "kind": "decision",
+        "title": "Copy or mux",
+        "sub": "_asyncProcessSources",
+        "link": "#/m/core%2Fdownload%2FDispatcher%2Fbase.py#Dispatcher._asyncProcessSources",
+        "next": "output",
+        "detail": "<p>A master playlist usually separates the streams, so video and audio arrive as two generators and ffmpeg joins them through two input pipes. A single source whose codecs fit the found container is passed through untouched.</p>",
+        "branches": [
+          {
+            "label": "ffmpeg fails → TaskFailedError",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "out",
+        "kind": "end",
+        "title": "Byte stream",
+        "sub": "_runContextStream",
+        "next": "",
+        "detail": "<p>The stream path is the one in use. <code>_runContextLocal()</code> still calls the pre-rework constructors of <code>MasterHLSDownload</code> and <code>IndexHLSDownload</code> and would fail; the server has LOCAL downloads switched off.</p>"
+      },
+      {
+        "id": "err",
+        "kind": "error",
+        "title": "TaskFailedError",
+        "sub": "unknown playlist, no segments, ffmpeg error",
+        "link": "#/m/core%2Fmodels%2Ferrors.py#TaskFailedError",
+        "detail": "<p>The dispatcher marks the context <code>FAILED</code>, stores the message in <code>error_message</code> and re-raises. A missing ffmpeg surfaces as <code>FFmpegNotFoundError</code> instead.</p>",
+        "next": ""
+      }
+    ]
+  },
+  "ump": {
+    "title": "UMP / SABR",
+    "steps": [
+      {
+        "id": "why",
+        "kind": "start",
+        "title": "Why UMP exists",
+        "sub": "googlevideo.com does not serve plain ranges",
+        "link": "#/m/core%2Fdownload%2FUMP%2Fdownload.py",
+        "next": "first request",
+        "detail": "<p>YouTube delivers through its own container format. Unlike FILE and HLS this protocol is <b>stateful</b>: the server only answers a POST body that says how far the client has already got.</p><p>That is why <code>DownloadTarget</code> carries a <code>post_body</code> field at all &mdash; it exists solely for this path. Since the YouTube provider resolves direct format URLs and HLS manifests itself, this path is only reached by URLs that still point at googlevideo or a watch page.</p>"
+      },
+      {
+        "id": "mode",
+        "kind": "decision",
+        "title": "getUMPMode",
+        "sub": "sabr=1, ump=1 or youtube.com/watch",
+        "link": "#/m/core%2Fdownload%2FUMP%2Fdispatcher.py#UMPDispatcher.getUMPMode",
+        "next": "sabr / ump",
+        "detail": "<p>Read from the query string of <code>resolved_url</code>. Anything else raises <code>ValueError(\"Unknown UMP transport\")</code>.</p><p>In the stream path the <code>sabr</code> branch creates its generator but never iterates it, so it currently sends zero bytes and still reports <code>FINISHED</code>. The <code>ump</code> branch goes through the codec check like FILE and HLS.</p>",
+        "branches": [
+          {
+            "label": "youtube.com/watch → yt-dlp",
+            "to": "fallback"
+          }
+        ]
+      },
+      {
+        "id": "post",
+        "kind": "step",
+        "title": "POST with the current offset",
+        "sub": "patch_sabr_request writes the position in",
+        "link": "#/m/core%2Fdownload%2FUMP%2Fsabr_patcher.py",
+        "next": "response is a UMP stream",
+        "detail": "<p>The body is a protobuf message. Rather than build it from scratch, the code patches the offsets into the body captured earlier, which is what <code>sabr_patcher.py</code> isolates.</p>"
+      },
+      {
+        "id": "parse",
+        "kind": "step",
+        "title": "Parse parts out of the byte stream",
+        "sub": "_read_varint → UMPPart",
+        "next": "assemble chunks",
+        "detail": "<p>The only place in the project that parses at byte level. Each part is a varint type, a varint length and a payload; <code>_read_varint</code> / <code>_write_varint</code> are the base unit.</p>"
+      },
+      {
+        "id": "chunk",
+        "kind": "step",
+        "title": "Assemble media chunks",
+        "sub": "UMPPart → UMPChunk",
+        "next": "more to fetch?",
+        "detail": "<p>Only some part types carry media; the rest are control messages that update the position for the next request.</p>"
+      },
+      {
+        "id": "loop",
+        "kind": "decision",
+        "title": "Continue from the new offset",
+        "sub": "the loop the whole mechanism is built around",
+        "next": "done",
+        "detail": "<p>The response tells the client where it got to; that offset is patched into the next POST. This repeats until the media is complete &mdash; which is why a UMP download cannot simply be resumed with an HTTP range header.</p>",
+        "branches": [
+          {
+            "label": "more data → next POST",
+            "to": "post"
+          }
+        ]
+      },
+      {
+        "id": "range",
+        "kind": "step",
+        "title": "Range requests from a player",
+        "sub": "downloadAndYieldUMPRange",
+        "next": "",
+        "detail": "<p><code>downloadAndYieldUMPRange()</code> translates a byte range into the offsets this protocol understands. The server's file watch route uses it when a player seeks inside a UMP target.</p>"
+      },
+      {
+        "id": "fallback",
+        "kind": "end",
+        "title": "youtube mode: yt-dlp",
+        "sub": "youtube_download_with_ytdlp.py",
+        "link": "#/m/core%2Fdownload%2FUMP%2Fyoutube_download_with_ytdlp.py",
+        "next": "",
+        "detail": "<p>For a plain watch URL the whole job is handed to yt-dlp as a subprocess: <code>bestaudio</code> or <code>bestvideo+bestaudio</code>, merged by yt-dlp's own ffmpeg call into the found container and written to stdout. This branch skips the engine's codec check. yt-dlp must be on <code>PATH</code> as a command, not only installed as a Python package.</p>"
+      }
+    ]
+  }
+}

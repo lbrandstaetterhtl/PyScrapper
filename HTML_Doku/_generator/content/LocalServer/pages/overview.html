@@ -1,0 +1,89 @@
+<div class="wrap">
+<div class="crumb">LocalServer</div>
+<h1>LocalServer</h1>
+<p class="lede">The HTTP layer of PyScrapper. It runs locally on
+<span class="mono">127.0.0.1:8765</span>, keeps download jobs in memory, drives the engine and
+stores users, playlists and settings in a single SQLite file.</p>
+<div class="stats"><div class="stat"><b>{{stat:endpoints}}</b><span>endpoints</span></div><div class="stat"><b>{{stat:server_loc}}</b><span>lines in server.py</span></div><div class="stat"><b>{{stat:tables}}</b><span>tables</span></div><div class="stat"><b>{{stat:tests}}</b><span>test scripts</span></div></div><div class="hero"><svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LocalServer structure"><rect class="svg-box" x="8" y="116" width="118" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="19" y="135">Client</text><text class="svg-s" x="19" y="149">Avalonia / web</text><line class="svg-l" x1="126" y1="139" x2="162" y2="139" stroke-width="1.2"/><polygon class="svg-ar" points="168,139 162,135.5 162,142.5"/><rect class="svg-box" x="168" y="108" width="150" height="62" rx="6" stroke-width="1"/><text class="svg-t" x="179" y="127">FastAPI</text><text class="svg-s" x="179" y="141">3 key headers</text><text class="svg-s" x="179" y="155">admin / user / auth</text><path class="svg-l" d="M318,139 H352.0 V44 H380" stroke-width="1.2"/><polygon class="svg-ar" points="386,44 380,40.5 380,47.5"/><rect class="svg-box" x="386" y="22" width="210" height="44" rx="6" stroke-width="1"/><text class="svg-t" x="397" y="41">Download &amp; streaming</text><text class="svg-s" x="397" y="55">/download, /stream</text><text class="svg-s" x="604" y="49">{{stat:ep:Download & streaming}} endpoints</text><path class="svg-l" d="M318,139 H352.0 V106 H380" stroke-width="1.2"/><polygon class="svg-ar" points="386,106 380,102.5 380,109.5"/><rect class="svg-box" x="386" y="84" width="210" height="44" rx="6" stroke-width="1"/><text class="svg-t" x="397" y="103">Search</text><text class="svg-s" x="397" y="117">/search</text><text class="svg-s" x="604" y="111">{{stat:ep:Search}} endpoint</text><path class="svg-l" d="M318,139 H352.0 V168 H380" stroke-width="1.2"/><polygon class="svg-ar" points="386,168 380,164.5 380,171.5"/><rect class="svg-box" x="386" y="146" width="210" height="44" rx="6" stroke-width="1"/><text class="svg-t" x="397" y="165">CRUD</text><text class="svg-s" x="397" y="179">/create, /get, /delete</text><text class="svg-s" x="604" y="173">{{stat:ep:CRUD}} endpoints</text><path class="svg-l" d="M318,139 H352.0 V230 H380" stroke-width="1.2"/><polygon class="svg-ar" points="386,230 380,226.5 380,233.5"/><rect class="svg-box" x="386" y="208" width="210" height="44" rx="6" stroke-width="1"/><text class="svg-t" x="397" y="227">Auth</text><text class="svg-s" x="397" y="241">/login, /register, /logout</text><text class="svg-s" x="604" y="235">{{stat:ep:Auth}} endpoints</text><rect class="svg-box" x="700" y="40" width="168" height="48" rx="6" stroke-width="1"/><text class="svg-t" x="711" y="59">ServerState</text><text class="svg-s" x="711" y="73">jobs, limiter, log_queue</text><rect class="svg-box" x="700" y="200" width="168" height="48" rx="6" stroke-width="1"/><text class="svg-t" x="711" y="219">SQLite (WAL)</text><text class="svg-s" x="711" y="233">Data/data.db, {{stat:tables}} tables</text><path class="svg-l" d="M596,44 H698" stroke-width="1.2"/><path class="svg-l" d="M596,168 H660 V224 H698" stroke-width="1.2"/><path class="svg-l" d="M596,230 H698" stroke-width="1.2"/></svg></div>
+<h2 id="layout">What lives where</h2>
+<div class="tbl-wrap"><table><thead><tr><th>File</th><th>Role</th></tr></thead><tbody>
+<tr><td class="mono"><a class="x" href="#/m/server.py">server.py</a></td>
+<td>The whole application: state, auth, all {{stat:endpoints}} routes, SQLite access</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/serverBak.py">serverBak.py</a></td>
+<td>Older revision without streaming and without <span class="mono">ServerState</span>. Nothing imports it.</td></tr>
+<tr><td class="mono">tests/</td><td>Standalone scripts that run against a live server, plus a shared harness</td></tr>
+<tr><td class="mono">scripts/startServer.ps1</td><td>Starts uvicorn, prefers the venv inside the server folder</td></tr>
+<tr><td class="mono">installer/server-installer.iss</td><td>Inno Setup script for the Windows installer</td></tr>
+<tr><td class="mono">.env</td><td>Holds <span class="mono">ADMIN_KEY</span>. Not part of this documentation.</td></tr>
+</tbody></table></div>
+
+<h2 id="state">The state</h2>
+<p>One global <a class="x" href="#/m/server.py#ServerState">ServerState</a> object holds
+everything transient. It does not survive a restart &mdash; download jobs are deliberately not
+persisted.</p>
+<div class="tbl-wrap"><table><thead><tr><th>Field</th><th>Meaning</th></tr></thead><tbody>
+<tr><td class="mono">jobs</td><td>task_id &rarr; ServerJob, holding the contexts and the stream jobs</td></tr>
+<tr><td class="mono">log_queue</td><td>Queue capped at 5000 lines; one task drains it into the log file</td></tr>
+<tr><td class="mono">download_limiter</td><td>Semaphore, at most 10 downloads in parallel</td></tr>
+<tr><td class="mono">search_limiter</td><td>Semaphore, at most 10 searches in parallel</td></tr>
+<tr><td class="mono">quit_event</td><td>Set by the <span class="mono">/command</span> endpoint</td></tr>
+<tr><td class="mono">download_path</td><td>Base directory downloads are written to</td></tr>
+</tbody></table></div>
+<p><span class="mono">cleanup_loop()</span> runs in the background, checks every ten minutes and
+discards jobs older than 24 hours. That is the only cleanup that runs:
+<span class="mono">cleanup_download()</span>, meant to drop a single stream shortly after it was
+fetched, is defined but never called.</p>
+
+<h2 id="auth">Authentication</h2>
+<p>There are three header-based schemes now, and most routes combine two of them.</p>
+<div class="tbl-wrap"><table><thead><tr><th>Header</th><th>Dependency</th><th>Checks</th></tr></thead><tbody>
+<tr><td class="mono">X-Admin-Key</td><td class="mono"><a class="x" href="#/m/server.py#require_admin">require_admin</a></td>
+<td>Constant-time compare against <span class="mono">ADMIN_KEY</span> from the .env. Guards the server as a whole.</td></tr>
+<tr><td class="mono">X-User-Key + Auth</td><td class="mono"><a class="x" href="#/m/server.py#require_user">require_user</a></td>
+<td>Looks the user up by the identifier in <span class="mono">Auth</span>, compares the key with
+<span class="mono">secrets.compare_digest</span>, returns the user row</td></tr>
+<tr><td class="mono">Auth</td><td class="mono"><a class="x" href="#/m/server.py#require_auth">require_auth</a></td>
+<td>Only asserts the header exists; the endpoint decides whether it matches the record</td></tr>
+</tbody></table></div>
+<p>On top of the dependencies there is a second, per-record layer.
+<a class="x" href="#/m/server.py#check_user_identifier">check_user_identifier()</a> compares the
+identifier in the <span class="mono">Auth</span> header with the one on the record.
+<a class="x" href="#/m/server.py#owns_record">owns_record()</a> does the same for tables that carry
+a <span class="mono">UserIdentifier</span> column, and refuses any table not in the
+<span class="mono">OWNED_TABLES</span> allowlist &mdash; that allowlist is what keeps the table name
+out of the SQL string unchecked. <span class="mono">owns_playlist()</span> is a thin wrapper for
+the Playlists case.</p>
+<p>Unknown identifier and wrong key deliberately produce the same 401, so valid identifiers cannot
+be enumerated through the error message. Both cases write a WARN line to the log queue.</p>
+<div class="note risk"><b>The stored key is hashed, the comparison is not</b>
+<p><a class="x" href="#/m/server.py#handle_create_user_req">/create/user/</a> (and
+<a class="x" href="#/m/server.py#handle_register_req">/register</a>, which calls it) stores
+<code>hash_api_key(req.apikey)</code>, i.e. the SHA-256 hex digest.
+<a class="x" href="#/m/server.py#require_user">require_user</a> then compares the incoming
+<code>X-User-Key</code> with <code>compare_digest(request_api_key, row["ApiKey"])</code> &mdash;
+plaintext against digest. The earlier, unused <code>request_api_key_hash</code> line is gone
+entirely, so nothing in the dependency hashes the incoming key any more. As written, user
+authentication only succeeds if the client sends the hex digest itself. Hashing the incoming key
+with <code>hash_api_key()</code> before the comparison closes it.</p></div>
+<div class="note risk"><b>One stream route has no key at all</b>
+<p>The HLS routes (<code>master.m3u8</code>, the video and audio <code>index.m3u8</code>, the
+segments), the file watch route and <code>/download/progress/...</code> now declare
+<code>Security(require_user)</code>. <code>/stream/download/{task_id}/{stream_id}</code> does not:
+its dependency was removed, so anyone who knows a valid <code>task_id</code> and
+<code>stream_id</code> can pull the finished file without a key. Both are UUID-based, and that is
+the only protection on that route.</p>
+<p>The flip side of protecting the HLS routes: a plain <code>&lt;video&gt;</code> tag cannot set
+<code>X-User-Key</code> and <code>Auth</code>, so only players that add headers to every request
+(LibVLC, or hls.js with a custom loader) can play those streams.</p>
+<p>The CORS configuration adds to this: <code>allow_origins=["*"]</code> together with
+<code>allow_credentials=True</code>. Browsers reject that combination anyway, and for a service on
+localhost a fixed origin list is the appropriate setting.</p></div>
+<h2 id="platform">Platform specifics</h2>
+<p>On Windows the module sets <span class="mono">asyncio.WindowsProactorEventLoopPolicy()</span>
+before anything else is imported. The engine now drives ffmpeg and ffprobe as subprocesses fed
+through pipes (see <span class="mono">core.processes.AsyncProcessManager</span> in the engine
+documentation), and asyncio subprocesses only work on the Proactor loop there. The lifespan prints
+the active loop type on start, which is the quickest way to confirm it. <span class="mono">pywin32</span>
+is in <span class="mono">requirements.txt</span> for the named pipes the process manager creates on
+Windows.</p>
+</div>

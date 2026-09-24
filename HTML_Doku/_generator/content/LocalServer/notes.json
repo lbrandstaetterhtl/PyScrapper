@@ -1,0 +1,5 @@
+{
+  "server.py": "<div class=\"note\"><b>One file, five responsibilities</b>\n<p><code>server.py</code> holds state management, the three auth schemes, the download and stream\nlogic and the complete SQLite layer. To navigate it: the data classes are at the top, then auth and\nlifespan, from <code>receive_download</code> onwards the download path, and from\n<code>create_app_tables</code> onwards the CRUD routes.</p></div>",
+  "serverBak.py": "<div class=\"note warn\"><b>Old revision, not active</b>\n<p>Nothing imports this file. It has no <code>ServerState</code>, no stream routes, no\n<code>/logout</code> and none of the user-key authentication; state lives in individual globals\ninstead. Read it for comparison, not as a template.</p></div>",
+  "tests/test_common.py": "<div class=\"note\"><b>Shared harness</b>\n<p>Request helpers, headers and result evaluation for the other suites. Change a header or the\nbase URL here rather than in each suite.</p></div>"
+}

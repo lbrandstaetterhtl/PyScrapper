@@ -1,0 +1,32 @@
+<div class="wrap">
+<div class="crumb">LocalServer / database</div>
+<h1>SQLite schema</h1>
+<p class="lede">{{stat:tables}} tables in <span class="mono">Data/data.db</span>, created at startup by
+<a class="x" href="#/m/server.py#create_app_tables">create_app_tables()</a>. The tables below are
+read straight out of its <span class="mono">CREATE TABLE</span> statements. Every identifier is TEXT:
+the create routes generate one with <span class="mono">uuid4()</span>, and
+<span class="mono">/save</span> writes back whatever identifiers the client sends.</p>
+{{gen:db_tables}}<h2 id="access">Access patterns</h2>
+<p><a class="x" href="#/m/server.py#connect_db">connect_db()</a> opens the file with a 20 second
+timeout and sets three pragmas on every connection:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Pragma</th><th>Effect</th></tr></thead><tbody>
+<tr><td class="mono">journal_mode=WAL</td><td>Readers no longer block the writer, which is what a
+polling client plus a running download needs</td></tr>
+<tr><td class="mono">foreign_keys=ON</td><td>The declared constraints and every
+<span class="mono">ON DELETE CASCADE</span> are actually enforced</td></tr>
+<tr><td class="mono">busy_timeout=5000</td><td>A blocked write waits five seconds instead of
+failing immediately with <span class="mono">database is locked</span></td></tr>
+</tbody></table></div>
+<p>Each handler opens and closes its own connection; there is no pool and no ORM layer, every
+query is hand-written SQL with placeholders. <span class="mono">row_factory</span> is
+<span class="mono">sqlite3.Row</span>, so handlers index rows by column name.</p>
+<div class="note"><b>Writes still run on the event loop</b>
+<p>The handlers are <code>async</code> but call sqlite3 directly. WAL and the busy timeout take the
+edge off, but a slow write still blocks the loop for its duration. Wrapping the database calls in
+<code>asyncio.to_thread</code> would move them off it entirely.</p></div>
+<div class="note"><b>Ownership lives in the code, not in the schema</b>
+<p>Nothing in the schema restricts a row to its owner &mdash; <code>UserIdentifier</code> is just a
+foreign key. The actual check is <code>owns_record()</code> in the handler, against the
+<code>OWNED_TABLES</code> allowlist. A new table with a <code>UserIdentifier</code> column is
+<em>not</em> protected until it is added to that tuple.</p></div>
+</div>

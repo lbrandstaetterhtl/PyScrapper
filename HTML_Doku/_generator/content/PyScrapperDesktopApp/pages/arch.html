@@ -1,0 +1,139 @@
+<div class="wrap">
+<div class="crumb">PyScrapperDesktopApp / architecture</div>
+<h1>Layers and state</h1>
+<p class="lede">MVVM, but with a static state object in the middle. Once that is clear, every view
+model reads the same way.</p>
+
+<h2 id="mvvm">The three layers</h2>
+<div class="tbl-wrap"><table><thead><tr><th>Layer</th><th>Knows</th><th>Does not know</th></tr></thead><tbody>
+<tr><td>View (<span class="mono">.axaml</span>)</td><td>Its view model through <span class="mono">DataContext</span></td>
+<td>Models, server, file system</td></tr>
+<tr><td>View model</td><td><span class="mono">AppData</span>, <span class="mono">Database</span>,
+<span class="mono">ApiClient</span>, the services</td><td>Concrete controls</td></tr>
+<tr><td>Model</td><td>HTTP, file system, LibVLC</td><td>Anything about the UI</td></tr>
+</tbody></table></div>
+<p>The separation is broken deliberately in one place: several view models take the
+<span class="mono">Window</span> in their constructor, so they can open dialogs as child windows and
+close themselves. <span class="mono">MainWindowViewModel</span>,
+<span class="mono">LauncherWindowViewModel</span> and
+<span class="mono">MediaConverterWindowViewModel</span> hold such a reference.</p>
+
+<h2 id="toolkit">CommunityToolkit patterns</h2>
+<p>All view models are <span class="mono">partial</span>, because the source generator contributes
+the other half. Two attributes cover almost everything:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Written</th><th>Generated</th><th>In XAML</th></tr></thead><tbody>
+<tr><td class="mono">[ObservableProperty] private string _title;</td>
+<td class="mono">public string Title { get; set; } + PropertyChanged</td>
+<td class="mono">{Binding Title}</td></tr>
+<tr><td class="mono">[RelayCommand] private void Save()</td>
+<td class="mono">public IRelayCommand SaveCommand</td>
+<td class="mono">{Binding SaveCommand}</td></tr>
+<tr><td class="mono">[RelayCommand] private async Task Load()</td>
+<td class="mono">public IAsyncRelayCommand LoadCommand</td>
+<td class="mono">{Binding LoadCommand}</td></tr>
+</tbody></table></div>
+<p>In the field tables of this documentation, a generated property is shown with its public name
+after an arrow, e.g. <span class="mono">_mediaHideIcon &rarr; MediaHideIcon</span>. That is the name
+the XAML binds to.</p>
+
+<h2 id="appdata">AppData &mdash; the shared state</h2>
+<p><a class="x" href="#/m/Models%2FAppData.cs#AppData">AppData</a> is a class of almost entirely
+static fields. It does implement <span class="mono">Interfaces.IAppDataService</span> through
+explicit interface implementations, but the code addresses it statically.</p>
+<div class="tbl-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+<tr><td class="mono">DownloadedMedias</td><td class="mono">ObservableCollection</td><td>Every known media entry, bound straight to the lists</td></tr>
+<tr><td class="mono">PlayableMedias</td><td class="mono">ObservableCollection</td><td>The subset whose file exists and whose codec is supported</td></tr>
+<tr><td class="mono">OriginalDownloadedMedias</td><td class="mono">List</td><td>Backup taken before filtering, used to reset</td></tr>
+<tr><td class="mono">Playlists / PlaylistMedias</td><td class="mono">ObservableCollection</td><td>Playlists and their assignments including position</td></tr>
+<tr><td class="mono">CurrentUser / Settings / Config</td><td class="mono">User / Settings / AppConfig</td><td>Signed-in user, settings, connection data</td></tr>
+<tr><td class="mono">CurrentMediaFilter / FilterEnabled</td><td class="mono">MediaFilter / bool</td><td>The active filter criteria</td></tr>
+<tr><td class="mono">ValidMediaTypes</td><td class="mono">Dictionary</td><td>Extension &rarr; audio or video; ten entries:
+the pseudo-type <span class="mono">auto</span> (mapped to an empty string) plus .mp3, .mp4, .wav, .mkv, .flac, .ogg, .ts,
+.m4a, .opus</td></tr>
+<tr><td class="mono">FileTypes</td><td class="mono">List&lt;FilePickerFileType&gt;</td><td>Picker filters derived from ValidMediaTypes</td></tr>
+<tr><td class="mono">ValidProviders</td><td class="mono">List</td><td>suno, youtube, bandcamp, archive, soundcloud, wcoflix, aniworld, newgrounds, youtubemusic, default</td></tr>
+<tr><td class="mono">ValidSearchProviders</td><td class="mono">List</td><td>youtube, bandcamp, archive, soundcloud, newgrounds, youtubemusic</td></tr>
+</tbody></table></div>
+<p><span class="mono">AddDownloadedMedia()</span> is the only intended way into the collections: it
+appends to <span class="mono">DownloadedMedias</span> and, when
+<span class="mono">IsPlayable</span> is set, to <span class="mono">PlayableMedias</span> as well.
+<span class="mono">MediaAlreadyExists(filePath)</span> prevents duplicates during a folder scan.</p>
+
+<h2 id="paths">Path resolution</h2>
+<p>Every path hangs off <span class="mono">AppData.PyScrapperPath</span>, derived at runtime from
+the working directory:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Path</th><th>Derivation</th></tr></thead><tbody>
+<tr><td class="mono">PyScrapperPath</td><td>four levels above the working directory &mdash; matching <span class="mono">bin/Debug/net9.0</span> in the IDE</td></tr>
+<tr><td class="mono">AppLogsPath</td><td class="mono">PyScrapperPath/PyScrapperDesktopApp/logs</td></tr>
+<tr><td class="mono">ServerLogsPath</td><td class="mono">PyScrapperPath/LocalServer/logs</td></tr>
+<tr><td class="mono">DataPath</td><td class="mono">PyScrapperDesktopApp/data</td></tr>
+<tr><td class="mono">AssetPath</td><td class="mono">PyScrapperDesktopApp/Assets</td></tr>
+</tbody></table></div>
+<p>Above them in the source sit commented-out release variants that use
+<span class="mono">LocalApplicationData</span> and <span class="mono">AppContext.BaseDirectory</span>
+instead. For a release build those lines are swapped.</p>
+
+<h2 id="config">Configuration and keys</h2>
+<p><a class="x" href="#/m/Models%2FAppConfig.cs#AppConfig">AppConfig</a> lives as
+<span class="mono">data/config.json</span> and carries four fields: ServerUrl, ServerPort,
+ClientApiKey and LastLoggedInUser. If the file is missing,
+<span class="mono">Load()</span> writes a default.</p>
+<p>Neither key is ever stored in plaintext.
+<a class="x" href="#/m/Models%2FAppConfig.cs#SecretProtector">SecretProtector</a> encrypts through
+the Windows DPAPI with <span class="mono">DataProtectionScope.CurrentUser</span> and the fixed
+entropy <span class="mono">PyScrapper.v1</span>, and the result is stored Base64-encoded. Only the
+same Windows user on the same machine can decrypt it.</p>
+<div class="tbl-wrap"><table><thead><tr><th>Key</th><th>Where it lives</th><th>Sent as</th></tr></thead><tbody>
+<tr><td class="mono">ClientApiKey</td><td class="mono">AppData.Config.ClientApiKey</td>
+<td class="mono">X-Admin-Key</td></tr>
+<tr><td class="mono">User API key</td><td class="mono">AppData.CurrentUser.ApiKey</td>
+<td class="mono">X-User-Key</td></tr>
+<tr><td class="mono">User identifier</td><td class="mono">AppData.CurrentUser.Identifier</td>
+<td class="mono">Auth</td></tr>
+</tbody></table></div>
+<p>Unlike the earlier revision, the plaintext is not kept in
+<span class="mono">AppData</span>. Every call decrypts on the spot with
+<span class="mono">SecretProtector.Decrypt(...)</span> and hands the result straight to the header.
+<a class="x" href="#/m/ViewModels%2FEditConfigWindowViewModel.cs#EditConfigWindowViewModel">EditConfigWindowViewModel</a>
+does the inverse when the user edits their key: it decrypts for display and re-encrypts on save.</p>
+
+<h2 id="logging">Logging</h2>
+<p><a class="x" href="#/m/Models%2FAppLogger.cs#AppLogger">AppLogger</a> is a singleton over
+<span class="mono">Lazy&lt;T&gt;</span> and works producer/consumer:
+<span class="mono">LogNewMassage()</span> puts the entry on a
+<span class="mono">ConcurrentQueue</span> and returns immediately, while one background task writes
+to <span class="mono">logs/app.log</span>. So there are never competing writes and never a wait on
+disk in the UI thread. <span class="mono">LogDebugMessage()</span> does the same and additionally
+prints to the console.</p>
+<p>An entry is a <a class="x" href="#/m/Models%2FAppLogger.cs#Message">Message</a> of text,
+timestamp and type, written as <span class="mono">yyyy-MM-dd HH:mm:ss [TYPE] text</span>. The types
+used in the code are INFO, WARN and ERROR.</p>
+
+<h2 id="services">Services and interfaces</h2>
+<p><a class="x" href="#/m/Models%2FInterfaces.cs#Interfaces">Interfaces</a> bundles five contracts
+in one static class. They exist mainly for decoupling and testability.</p>
+<div class="tbl-wrap"><table><thead><tr><th>Interface</th><th>Implementation</th><th>Job</th></tr></thead><tbody>
+<tr><td class="mono">IStorageService</td><td class="mono">StorageService</td><td>File and folder pickers through the Avalonia StorageProvider API</td></tr>
+<tr><td class="mono">IApiClient</td><td class="mono">ApiClient</td><td>Download, search, health, progress</td></tr>
+<tr><td class="mono">IAppLogger</td><td class="mono">AppLogger</td><td>Logging</td></tr>
+<tr><td class="mono">IAppDataService</td><td class="mono">AppData</td><td>Access to the collections and settings</td></tr>
+<tr><td class="mono">IDialogService</td><td class="mono">DialogService</td><td>Alert, confirmation, text input</td></tr>
+</tbody></table></div>
+<p><a class="x" href="#/m/Models%2FDialogService.cs#DialogService">DialogService</a> is constructed
+with the owner window and opens <span class="mono">MessageBox</span>,
+<span class="mono">ConfirmationWindow</span> and <span class="mono">InputWindow</span> modally. View
+models receive it through the constructor.</p>
+
+<h2 id="dtos">DTOs</h2>
+<p>Requests and responses are kept apart:
+<a class="x" href="#/m/Models%2FServerRequestData.cs">ServerRequestData.cs</a> holds the request
+types, <a class="x" href="#/m/Models%2FServerResponses.cs">ServerResponses.cs</a> the response
+types. Both use <span class="mono">System.Text.Json</span> with
+<span class="mono">[JsonPropertyName]</span>, because the server speaks snake_case throughout while
+the C# side is PascalCase.</p>
+<p>The download response is nested: <span class="mono">DownloadResponse</span> contains a list of
+<span class="mono">DownloadResource</span>, each with a <span class="mono">Context</span> holding
+<span class="mono">OutputField</span> and <span class="mono">MediaInfoField</span>. From that
+structure the app pulls the file name, destination path, MIME type, size and the three URLs for
+progress, download and playback.</p>
+</div>

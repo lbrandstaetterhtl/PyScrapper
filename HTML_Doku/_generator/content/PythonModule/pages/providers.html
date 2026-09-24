@@ -1,0 +1,116 @@
+<div class="wrap">
+<div class="crumb">PythonModule / providers</div>
+<h1>Providers</h1>
+<p class="lede">One module per platform &mdash; and, for the three most involved ones, a package.
+From the outside they all look the same; on the inside they differ a lot, from a hundred lines of
+regex to a browser that hunts for a playback token or a client that impersonates a VR headset to get
+at YouTube's formats.</p>
+
+<h2 id="matrix">What each provider can do</h2>
+{{gen:provider_matrix}}
+<p>The table is generated from <span class="mono">ProviderTypes</span> and the two mappings in
+<span class="mono">models/settings.py</span>. Lines are counted over the provider's module or
+package, without the dead pre-split files; Youtube and YoutubeMusic share one package and therefore
+one count.</p>
+
+<h2 id="packages">The three packages</h2>
+<p>Soundcloud, Youtube and Filmpalast are packages rather than single files. The
+<span class="mono">__init__.py</span> is the contract: it re-exports exactly the names the mappings
+in <span class="mono">models/settings.py</span> refer to, so callers see no difference.</p>
+<div class="tbl-wrap"><table><thead><tr><th>File</th><th>Contains</th></tr></thead><tbody>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FSoundcloud%2Fsoundcloud_search.py">Soundcloud/soundcloud_search.py</a></td>
+<td><span class="mono">search()</span> plus its filter and result helpers</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FSoundcloud%2Fsoundcloud_media_information.py">Soundcloud/soundcloud_media_information.py</a></td>
+<td><span class="mono">getMediaInformation()</span>, drives the browser and scores the result</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FSoundcloud%2Fsoundcloud_browser.py">Soundcloud/soundcloud_browser.py</a></td>
+<td><span class="mono">SoundcloudMediaBrowser</span>, including DRM detection</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FYoutube%2Fyoutube_search.py">Youtube/youtube_search.py</a></td>
+<td><span class="mono">search()</span>: loads the results page and reads
+<span class="mono">ytInitialData</span> out of it</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FYoutube%2Fyoutube_media_information.py">Youtube/youtube_media_information.py</a></td>
+<td><span class="mono">getMediaInformation()</span>: strips a <span class="mono">list</span> query
+parameter, asks the player API and picks separate video/audio formats, the HLS manifest or a
+progressive format</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FYoutube%2Fyoutube_models.py">Youtube/youtube_models.py</a></td>
+<td>The player-API client identities (context and headers per client), the order they are tried
+in, and the codec factors used for scoring</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FYoutube%2Fmusic_youtube_search.py">Youtube/music_youtube_search.py</a></td>
+<td><span class="mono">searchMusic()</span> for music.youtube.com</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FYoutube%2Fmusic_youtube_media_information.py">Youtube/music_youtube_media_information.py</a></td>
+<td><span class="mono">getMediaInformationMusic()</span>, browser-driven</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FYoutube%2Fyoutube_browser.py">Youtube/youtube_browser.py</a></td>
+<td><span class="mono">YoutubeMusicMediaBrowser</span>,
+<span class="mono">YoutubeMusicTokenBrowser</span>, the ITAG tables and the ad detection</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FFilmpalast%2Ffilmpalast_search.py">Filmpalast/filmpalast_search.py</a></td>
+<td><span class="mono">search()</span> over the HTML search page</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FFilmpalast%2Ffilmpalast_media_information.py">Filmpalast/filmpalast_media_information.py</a></td>
+<td><span class="mono">getMediaInformation()</span>: finds the player iframe, decodes the
+Base64 host links and opens each in a browser &mdash; unfinished, returns nothing yet</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FFilmpalast%2Ffilmpalast_browser.py">Filmpalast/filmpalast_browser.py</a></td>
+<td><span class="mono">FilmpalastMediaBrowser</span>, whose response hook only prints URLs so
+far</td></tr>
+</tbody></table></div>
+<div class="note warn"><b>Two files in the packages are dead</b>
+<p><code>Youtube/Youtube.py</code> ({{stat:loc:providers/Youtube/Youtube.py}} lines) and
+<code>Soundcloud/Soundcloud.py</code> are the pre-split originals. Neither <code>__init__.py</code>
+imports them and nothing else references them, so the functions that are actually called are the
+ones in the small modules. <code>Youtube.py</code> in particular still uses yt-dlp, which the live
+code no longer does &mdash; reading it to understand current behaviour will mislead you.</p></div>
+
+<h2 id="itag">ITAG handling for YouTube Music</h2>
+<p>YouTube identifies each stream variant with a numeric itag.
+<a class="x" href="#/m/providers%2FYoutube%2Fyoutube_browser.py#ITAG_PRIORITY">ITAG_PRIORITY</a>
+ranks them, <span class="mono">ITAG_RESOLVE_TYPE</span> maps an itag to audio or video. That is how
+the browser path picks a variant without any format list &mdash; it reads the itag out of
+the URL of the responses it observed.</p>
+
+<h2 id="contract">The contract</h2>
+<p>A new provider module needs two functions with exactly this shape, otherwise the mappings in
+<span class="mono">models/settings.py</span> will not bind:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Function</th><th>Parameters</th><th>Returns</th></tr></thead><tbody>
+<tr><td class="mono">search</td>
+<td class="mono">search_term, filters, session, top</td>
+<td class="mono">list[dict] with url, title, thumbnail, type, identifier</td></tr>
+<tr><td class="mono">getMediaInformation</td>
+<td class="mono">request: ProviderResultRequest</td>
+<td class="mono">ProviderResult</td></tr>
+</tbody></table></div>
+<p>Search is invoked through <span class="mono">asyncio.to_thread</span>, so it is deliberately
+written synchronously. Blocking calls inside it are fine; starting your own event loop is not.</p>
+
+<h2 id="adding">Adding a provider</h2>
+<ol>
+<li>Create the module under <span class="mono">providers/</span> (or a package with an
+<span class="mono">__init__.py</span> that re-exports the two functions) and import it in
+<span class="mono">providers/__init__.py</span>.</li>
+<li>Add a value to <span class="mono">ProviderTypes</span>.</li>
+<li>Create the alias list <span class="mono">VALID&lt;NAME&gt;NAMES</span> and register it in
+<span class="mono">SUPPORTEDPROVIDERS</span> &mdash; otherwise
+<span class="mono">validateProviders()</span> rejects it.</li>
+<li>Register it in <span class="mono">PROVIDER_GETRESULTS_MAPPING</span> and, if there is a search,
+in <span class="mono">PROVIDER_SEARCH_MAPPING</span>.</li>
+<li>Restrict the allowed hostnames through
+<span class="mono">Validate.special.validateHostPro()</span>. That is the SSRF guard and every
+existing module does it this way.</li>
+</ol>
+
+<h2 id="browser">Browser sniffing</h2>
+<p>Where a regex will not do, <a class="x"
+href="#/m/core%2Fnetwork%2Fbrowser%2Fbrowsers%2Fmedia_browser.py#MediaBrowser">MediaBrowser</a>
+takes over. It starts Chromium through Playwright, hooks every response and sorts them into
+<span class="mono">mediaList</span> or <span class="mono">unknownList</span>. The decision is made
+by <span class="mono">helpers.utils.isMediaResponse()</span> from the URL, the content type and
+Playwright's resource type. A provider subclasses it and overrides
+<span class="mono">_handleResponse</span> &mdash; that is where Soundcloud detects Widevine and
+raises <span class="mono">DRMProtectedMediaError</span>, and where the YouTube Music browser picks
+its itag.</p>
+<p><span class="mono">actions</span> is a list of dictionaries, so a sequence of clicks and waits
+works as written: Soundcloud dismisses the consent banner and then the modal close button. The
+selectors that are shared across providers live in
+<a class="x" href="#/m/core%2Fnetwork%2Fbrowser%2Fmodels.py">browser/models.py</a>
+(<span class="mono">PLAY_BUTTON_SELECTORS</span>,
+<span class="mono">COOKIE_ACCEPT_SELECTORS</span>,
+<span class="mono">AD_SKIP_BUTTON_NAMES</span>).</p>
+<p>Cookies are loaded from the Mozilla-format <span class="mono">cookies.txt</span> on start and
+written back on stop, so logins survive across runs.</p>
+</div>

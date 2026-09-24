@@ -16,13 +16,25 @@ Jede Datei ist eigenständig, ohne Abhängigkeiten — einfach im Browser öffne
 
 | Datei | Inhalt |
 |---|---|
-| `HTML_Doku/PythonModule-Doku.html` | Engine: Provider, Downloadverfahren (FILE/HLS/UMP), Datenmodelle, Validierung |
-| `HTML_Doku/LocalServer-Doku.html` | Backend: alle HTTP-Endpunkte, SQLite-Schema, Betrieb und Tests |
-| `HTML_Doku/PyScrapperDesktopApp-Doku.html` | Desktop-Client: Schichten, Abläufe, Fenster, Serveraufrufe |
+| `HTML_Doku/PythonModule.html` | Engine: Provider, Downloadverfahren (FILE/HLS/UMP), ffmpeg-Muxing, Datenmodelle, Validierung |
+| `HTML_Doku/LocalServer.html` | Backend: alle HTTP-Endpunkte, SQLite-Schema, Betrieb und Tests |
+| `HTML_Doku/PyScrapperDesktopApp.html` | Desktop-Client: Schichten, Abläufe, Fenster, Serveraufrufe |
 
 Jede Doku enthält Volltextsuche (`/` oder `Strg+K`), einen Dateibaum, Signaturen mit Parametern
 und Defaults sowie den kompletten Quelltext mit verlinkbaren Zeilennummern. Sie wird direkt aus
 dem Code erzeugt und ist damit immer auf dem Stand der Dateien, aus denen sie gebaut wurde.
+
+Neu bauen nach Codeänderungen (nur Python-Standardbibliothek nötig):
+
+```powershell
+python HTML_Doku/_generator/build_docs.py            # alle drei
+python HTML_Doku/_generator/build_docs.py LocalServer # nur eine
+```
+
+Signaturen, Quelltext, Endpunktliste, DB-Schema und Kennzahlen kommen bei jedem Lauf frisch aus
+dem Code. Die erklärenden Texte liegen in `HTML_Doku/_generator/content/<Paket>/` (Seiten als HTML,
+Abläufe und Hinweise als JSON) und müssen bei inhaltlichen Änderungen von Hand nachgezogen werden.
+Das Skript warnt, wenn ein Text auf ein Modul oder Symbol verlinkt, das es nicht mehr gibt.
 
 **In dieser README nachschlagen:** Setup, Ports, Start. **Alles andere:** in der HTML-Doku.
 
@@ -143,7 +155,7 @@ Installiert wird **erst der Server, dann die Desktop-App**.
 | `LocalServer/logs/server_runtime.log` | Server-Log |
 | `PyScrapperDesktopApp/data/config.json` | Serveradresse, Port, verschlüsselter Schlüssel |
 | `PyScrapperDesktopApp/logs/app.log` | App-Log |
-| `HTML_Doku/` | Technische Dokumentation |
+| `HTML_Doku/` | Technische Dokumentation, Generator in `HTML_Doku/_generator/` |
 
 ---
 

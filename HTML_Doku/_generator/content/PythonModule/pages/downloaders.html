@@ -1,0 +1,130 @@
+<div class="wrap">
+<div class="crumb">PythonModule / downloaders</div>
+<h1>The three download mechanisms</h1>
+<p class="lede">FILE, HLS and UMP. Which one is used depends solely on
+<span class="mono">context.target.download_type</span> &mdash; not on the file extension and not on
+the provider. Whatever the mechanism, a streamed download ends in the same codec check and, where
+needed, in ffmpeg.</p>
+
+<h2 id="file">FILE</h2>
+<p>One URL &mdash; or, since the YouTube rewrite, a video URL plus a separate audio URL.
+<a class="x" href="#/m/core%2Fdownload%2FFile%2Fdispatcher.py#FileDispatcher">FileDispatcher</a>
+builds one byte source per URL with
+<a class="x" href="#/m/core%2Fnetwork%2Ffile.py#asyncDownloadYieldRanges">asyncDownloadYieldRanges()</a>,
+which walks the file in 10&nbsp;MiB <span class="mono">Range</span> requests up to the size the
+provider measured (<span class="mono">video_size</span> / <span class="mono">audio_size</span>).
+Both sources go into <span class="mono">_asyncProcessSources()</span>; with a separate audio track
+that always means ffmpeg joins them.</p>
+<p><a class="x" href="#/m/core%2Fnetwork%2Ffile.py">core.network.file</a> still holds the older
+variants of the same idea &mdash; with and without progress, sync and async, file and generator.
+The local path uses <span class="mono">downloadToFile()</span>, the HLS segment proxy in the server
+<span class="mono">asyncDownloadYieldSimple()</span> with a byte range.</p>
+<div class="note warn"><b>No size, no bytes</b>
+<p><code>asyncDownloadYieldRanges()</code> loops <code>while start &lt; total_size</code>. When
+<code>getUrlInformation()</code> could not read a size from <code>Content-Range</code> or
+<code>Content-Length</code>, the size is &minus;1 and the stream ends immediately without an error:
+the client receives an empty file.</p></div>
+
+<h2 id="hls">HLS</h2>
+<p>Two stages. The dispatcher first fetches the m3u8 as text and lets
+<span class="mono">dertermineFileType()</span> decide from the tags whether it is a master or an
+index playlist (anything that does not start with <span class="mono">#EXTM3U</span> is
+<span class="mono">UNKNOWN_FILE</span>).</p>
+<div class="tbl-wrap"><table><thead><tr><th>Stage</th><th>Class</th><th>Job</th></tr></thead><tbody>
+<tr><td>Master</td><td class="mono"><a class="x" href="#/m/core%2Fdownload%2FHLS%2Fmaster.py#MasterHLSDownload">MasterHLSDownload(master_url, session, extra_headers, preferred_languages)</a></td>
+<td>Pick the best video variant by bandwidth, find the matching audio rendition by language;
+<span class="mono">getUrls()</span> returns both URLs</td></tr>
+<tr><td>Index</td><td class="mono"><a class="x" href="#/m/core%2Fdownload%2FHLS%2Findex.py#IndexHLSDownload">IndexHLSDownload(index_url, session, extra_headers)</a></td>
+<td>Build the segment list, stream the segments</td></tr>
+</tbody></table></div>
+<p>Both classes now take plain URLs instead of a whole context. In the stream path the dispatcher
+creates one <span class="mono">IndexHLSDownload</span> for video and, if the master named one, a
+second for audio; <span class="mono">total_segments</span> is the sum of both lists. The two
+generators go into <span class="mono">_asyncProcessSources()</span>, so separate audio is joined by
+ffmpeg rather than by concatenating files as before.</p>
+<p>The parsing lives in <a class="x" href="#/m/core%2Fdownload%2FHLS%2Ffinder.py">finder.py</a>
+as free functions, with the regexes in
+<a class="x" href="#/m/core%2Fdownload%2FHLS%2Fmodels.py#PATTERN_MAPPING">PATTERN_MAPPING</a>. An
+<span class="mono">#EXT-X-MAP</span> init section is stored as a segment with duration 0, and
+<span class="mono">HLSSegment</span> carries <span class="mono">start_byte</span> /
+<span class="mono">end_byte</span> for playlists that address ranges inside one file. Both matter
+for YouTube's fMP4 manifests and for the server's HLS proxy.</p>
+<div class="note risk"><b>The local HLS path is out of date</b>
+<p><code>HLSDispatcher._runContextLocal()</code> still constructs
+<code>MasterHLSDownload(context, ...)</code> and <code>IndexHLSDownload(context, ..., audio_url=...)</code>
+and calls <code>downloadToFile()</code> without arguments &mdash; the signatures before the rework.
+Any LOCAL HLS download would fail with a <code>TypeError</code> or a validation error. The server
+currently refuses LOCAL downloads altogether, which is why this does not show.</p></div>
+<div class="note warn"><b>The text fetch is the fragile step</b>
+<p>Both entry points fetch the playlist with <code>html.getHtml()</code> and decode it as text. If
+<code>resolved_url</code> in fact points at a media file rather than a playlist, there is no clean
+error &mdash; you get a decode error from deep inside.</p></div>
+
+<h2 id="ump">UMP</h2>
+<p>Google's own container format behind <span class="mono">googlevideo.com</span>.
+<a class="x" href="#/m/core%2Fdownload%2FUMP%2Fdownload.py">download.py</a> is the only place where
+parsing happens at the byte level.
+<a class="x" href="#/m/core%2Fdownload%2FUMP%2Fdispatcher.py#UMPDispatcher.getUMPMode">getUMPMode()</a>
+picks one of three transports from the resolved URL:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Mode</th><th>Recognised by</th><th>Stream path</th></tr></thead><tbody>
+<tr><td class="mono">sabr</td><td class="mono">sabr=1</td><td><span class="mono">downloadAndYieldSABRSimple()</span></td></tr>
+<tr><td class="mono">ump</td><td class="mono">ump=1</td><td><span class="mono">downloadAndYieldUMP()</span>, video and optional audio through <span class="mono">_asyncProcessSources()</span></td></tr>
+<tr><td class="mono">youtube</td><td class="mono">youtube.com/watch</td><td><span class="mono">downloadAndYieldYTDLPSimple()</span>: yt-dlp as a subprocess, merged output on stdout</td></tr>
+</tbody></table></div>
+<div class="tbl-wrap"><table><thead><tr><th>Building block</th><th>Meaning</th></tr></thead><tbody>
+<tr><td class="mono">_readUMPVarInt / _read_varint / _write_varint</td><td>Varints, the base unit of the format</td></tr>
+<tr><td class="mono">UMPPart</td><td>One section of type, length and payload</td></tr>
+<tr><td class="mono">UMPChunk</td><td>The assembled media data of a part</td></tr>
+<tr><td class="mono">patch_sabr_request</td><td>Writes offsets into the POST body in order to page forward</td></tr>
+<tr><td class="mono">downloadAndYieldUMPRange</td><td>Range-based variant; the server's file watch route uses it when a player seeks</td></tr>
+</tbody></table></div>
+<p><a class="x" href="#/m/core%2Fdownload%2FUMP%2Fsabr_patcher.py">sabr_patcher.py</a> isolates the
+request patching. Unlike FILE and HLS, UMP is stateful: the server only answers a POST body that
+contains the last received position. That is why <span class="mono">DownloadTarget</span> carries the
+<span class="mono">post_body</span> field &mdash; it exists solely for this path.</p>
+<div class="note risk"><b>The SABR stream path yields nothing</b>
+<p>In <code>UMPDispatcher._runContextStream()</code> the <code>sabr</code> branch assigns
+<code>generator = download.downloadAndYieldSABRSimple(...)</code> but never iterates it. The context
+is then marked <code>FINISHED</code> with zero bytes sent. Only the <code>youtube</code> and
+<code>ump</code> branches actually stream. The local path has a related slip:
+<code>context.download_progress.speed = TaskStatus.FINISHED</code> instead of
+<code>status</code>.</p></div>
+<p>With the YouTube provider now resolving direct format URLs and HLS manifests itself, UMP is only
+reached by providers that still hand over googlevideo or watch URLs.</p>
+
+<h2 id="ffmpeg">Probing and muxing</h2>
+<p>The <span class="mono">core.ffmpeg</span> package is what turns raw sources into a file the client
+can use.</p>
+<div class="tbl-wrap"><table><thead><tr><th>Piece</th><th>Job</th></tr></thead><tbody>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fffmpeg%2Fffmpeg_probe.py#AsyncFFmpegProbeCodec">AsyncFFmpegProbeCodec</a></td>
+<td>Runs ffprobe on a file or on a pipe and returns <span class="mono">FFmpegCodec</span> entries (name, type, input index)</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fffmpeg%2Fffmpeg_probe.py#canMuxCodecsIntoContainer">canMuxCodecsIntoContainer</a></td>
+<td>Checks every codec against the container's <span class="mono">allowed_codecs</span></td></tr>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fffmpeg%2Fffmpeg_models.py#CONTAINERS">CONTAINERS</a></td>
+<td>Per extension: ffmpeg format, allowed codec types, codecs that may be copied, default encoders and extra copy arguments</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fffmpeg%2Fffmpeg_muxer.py#AsyncFFmpegMuxer">AsyncFFmpegMuxer</a></td>
+<td>ffmpeg with N input pipes and the output on stdout. <span class="mono">writePipe()</span> /
+<span class="mono">closePipe()</span> per input, <span class="mono">output()</span> yields the result
+and raises <span class="mono">TaskFailedError</span> with the last 30 stderr lines on a non-zero exit</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fffmpeg%2Fffmpeg_download.py#FFmpegDownload">FFmpegDownload</a></td>
+<td>Lets ffmpeg fetch URLs itself; exported but not used by any dispatcher</td></tr>
+</tbody></table></div>
+<p>Underneath sits <a class="x" href="#/m/core%2Fprocesses%2Fasync_process_manager.py#AsyncProcessManager">AsyncProcessManager</a>.
+It creates the input pipes before the process starts &mdash; <span class="mono">os.pipe()</span>
+passed as <span class="mono">pipe:&lt;fd&gt;</span> on POSIX, a named pipe
+<span class="mono">\\.\pipe\pyscrapper_input_&lt;uuid&gt;_&lt;n&gt;</span> through pywin32 on Windows
+&mdash; and drains stdout and stderr according to a <span class="mono">ProcessDrainType</span>
+(manual, print, callback, none). A broken pipe while feeding the prober simply ends probing: ffprobe
+has seen enough.</p>
+<p>ffmpeg and ffprobe are looked up with <span class="mono">shutil.which()</span>; if either is
+missing the constructors raise <span class="mono">FFmpegNotFoundError</span>.</p>
+
+<h2 id="progress">Progress</h2>
+<p>All three mechanisms write into the same
+<a class="x" href="#/m/core%2Fmodels%2FDownload.py#DownloadProgress">DownloadProgress</a> on the
+context.
+<a class="x" href="#/m/core%2Fnetwork%2Fprogress.py#updateDownloadProgress">updateDownloadProgress()</a>
+derives speed and remaining time. The server simply reads that object when the client polls; there
+is no second state next to it. Note that the bytes counted are the bytes fetched from the source,
+not the bytes ffmpeg writes out &mdash; after a re-encode the two differ.</p>
+</div>

@@ -1,0 +1,45 @@
+<div class="wrap">
+<div class="crumb">PyScrapperDesktopApp</div>
+<h1>PyScrapperDesktopApp</h1>
+<p class="lede">The Windows client of PyScrapper. Avalonia 11.3 on .NET 9, MVVM with the
+CommunityToolkit, LibVLC for playback. The app keeps no data of its own &mdash; everything goes over
+HTTP to the LocalServer.</p>
+<div class="stats"><div class="stat"><b>{{stat:files}}</b><span>files</span></div><div class="stat"><b>{{stat:loc}}</b><span>lines</span></div><div class="stat"><b>{{stat:types}}</b><span>types</span></div><div class="stat"><b>{{stat:windows}}</b><span>windows</span></div></div><div class="hero"><svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Startup sequence of the desktop app"><rect class="svg-box" x="12" y="18" width="236" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="23" y="37">Program.Main</text><text class="svg-s" x="23" y="51">LibVLC init</text><line class="svg-l" x1="248" y1="41" x2="292" y2="41" stroke-width="1.2"/><polygon class="svg-ar" points="298,41 292,37.5 292,44.5"/><rect class="svg-box" x="304" y="18" width="236" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="315" y="37">LoginWindow</text><text class="svg-s" x="315" y="51">login / register</text><line class="svg-l" x1="540" y1="41" x2="584" y2="41" stroke-width="1.2"/><polygon class="svg-ar" points="590,41 584,37.5 584,44.5"/><rect class="svg-box" x="596" y="18" width="236" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="607" y="37">load settings</text><text class="svg-s" x="607" y="51">Database API</text><path class="svg-l" d="M130,64 V90 H12 V116" stroke-width="1.2"/><polygon class="svg-ar" points="12,122 8.5,116 15.5,116"/><rect class="svg-box" x="12" y="122" width="236" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="23" y="141">LauncherWindow</text><text class="svg-s" x="23" y="155">check the environment</text><line class="svg-l" x1="248" y1="145" x2="292" y2="145" stroke-width="1.2"/><polygon class="svg-ar" points="298,145 292,141.5 292,148.5"/><rect class="svg-box" x="304" y="122" width="236" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="315" y="141">LoadApplicationData</text><text class="svg-s" x="315" y="155">media + playlists</text><line class="svg-l" x1="540" y1="145" x2="584" y2="145" stroke-width="1.2"/><polygon class="svg-ar" points="590,145 584,141.5 584,148.5"/><rect class="svg-box" x="596" y="122" width="236" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="607" y="141">MainWindow</text><text class="svg-s" x="607" y="155">main window</text><rect class="svg-box" x="12" y="226" width="236" height="42" rx="6" stroke-width="1"/><text class="svg-t" x="23" y="245">AppConfig</text><text class="svg-s" x="23" y="259">config.json, DPAPI</text><rect class="svg-box" x="304" y="226" width="236" height="42" rx="6" stroke-width="1"/><text class="svg-t" x="315" y="245">AppData</text><text class="svg-s" x="315" y="259">static runtime state</text><rect class="svg-box" x="596" y="226" width="236" height="42" rx="6" stroke-width="1"/><text class="svg-t" x="607" y="245">ApiClient / Database</text><text class="svg-s" x="607" y="259">HTTP to the LocalServer</text><path class="svg-l" d="M130,168 V226" stroke-width="1.2" stroke-dasharray="4 3"/><path class="svg-l" d="M422,168 V226" stroke-width="1.2" stroke-dasharray="4 3"/><path class="svg-l" d="M714,168 V226" stroke-width="1.2" stroke-dasharray="4 3"/></svg></div>
+<h2 id="folders">Folder layout</h2>
+<div class="tbl-wrap"><table><thead><tr><th>Folder</th><th>Contents</th></tr></thead><tbody>
+<tr><td class="mono">Models/</td><td>Data classes, state, HTTP clients, logger, audio, media conversion, services</td></tr>
+<tr><td class="mono">ViewModels/</td><td>One view model per window, all on <span class="mono">ObservableObject</span></td></tr>
+<tr><td class="mono">Views/</td><td>AXAML markup plus code-behind, and <span class="mono">Controls/</span></td></tr>
+<tr><td class="mono">Design/</td><td><span class="mono">Design.axaml</span> &mdash; central styles and colour resources</td></tr>
+<tr><td class="mono">Assets/</td><td>Icons, split into DarkMode and LightMode</td></tr>
+<tr><td class="mono">data/</td><td><span class="mono">config.json</span> with the server address and the encrypted key</td></tr>
+<tr><td class="mono">logs/</td><td><span class="mono">app.log</span>, written by the <span class="mono">AppLogger</span></td></tr>
+</tbody></table></div>
+
+<h2 id="entry">The four places that explain everything</h2>
+<ol>
+<li><a class="x" href="#/m/App.axaml.cs#App.StartupFlow">App.StartupFlow()</a> &mdash; the startup
+sequence from config through login and launcher to the main window.</li>
+<li><a class="x" href="#/m/Models%2FAppData.cs#AppData">AppData</a> &mdash; the static state every
+view model reaches into directly.</li>
+<li><a class="x" href="#/m/Models%2FDatabaseOperations.cs#Database">Database</a> &mdash; every data
+operation as an HTTP call.</li>
+<li><a class="x" href="#/m/ViewModels%2FMainWindowViewModel.cs#MainWindowViewModel">MainWindowViewModel</a> &mdash;
+the dispatcher for practically every user action.</li>
+</ol>
+
+<h2 id="stack">Technology stack</h2>
+<div class="tbl-wrap"><table><thead><tr><th>Package</th><th>Version</th><th>For</th></tr></thead><tbody>
+<tr><td class="mono">Avalonia</td><td class="mono">11.3.8</td><td>UI framework, plus Desktop, the Fluent theme and the Inter fonts</td></tr>
+<tr><td class="mono">CommunityToolkit.Mvvm</td><td class="mono">8.4.0</td><td>Source generators for properties and commands</td></tr>
+<tr><td class="mono">FluentAvaloniaUI</td><td class="mono">2.0.5</td><td>Additional controls</td></tr>
+<tr><td class="mono">LibVLCSharp</td><td class="mono">3.9.6</td><td>Playback, with VideoLAN.LibVLC.Windows 3.0.23</td></tr>
+<tr><td class="mono">Microsoft.Data.Sqlite</td><td class="mono">10.0.5</td><td>Referenced, together with SQLitePCLRaw</td></tr>
+<tr><td class="mono">System.Security.Cryptography.ProtectedData</td><td class="mono">10.0.10</td><td>DPAPI for the API keys</td></tr>
+<tr><td class="mono">DotNetEnv</td><td class="mono">3.2.0</td><td>Reading .env files</td></tr>
+</tbody></table></div>
+<p>After the build the <span class="mono">GenerateVlcCache</span> target produces the VLC plugin
+cache so LibVLC finds its plugins without a delay. Compiled bindings are on project-wide
+(<span class="mono">AvaloniaUseCompiledBindingsByDefault</span>), so bindings are checked against the
+type at compile time.</p>
+</div>

@@ -1,0 +1,74 @@
+{
+  "title": "pyscrapper/desktop :: doc",
+  "brand": "pyscrapper/desktop",
+  "package": "PyScrapperDesktopApp",
+  "prompt": "desktop",
+  "lang": "cs",
+  "nav": [
+    {
+      "href": "#/overview",
+      "label": "overview"
+    },
+    {
+      "href": "#/arch",
+      "label": "layers and state"
+    },
+    {
+      "href": "#/workflows",
+      "label": "what happens when"
+    },
+    {
+      "href": "#/flows",
+      "label": "program flows"
+    },
+    {
+      "href": "#/ui",
+      "label": "windows"
+    },
+    {
+      "href": "#/api",
+      "label": "server calls"
+    },
+    {
+      "href": "#/guide",
+      "label": "build and extend"
+    }
+  ],
+  "pages_index": [
+    {
+      "title": "Overview",
+      "hash": "#/overview",
+      "sub": "start here"
+    },
+    {
+      "title": "Layers and state",
+      "hash": "#/arch",
+      "sub": "architecture"
+    },
+    {
+      "title": "What happens when",
+      "hash": "#/workflows",
+      "sub": "workflows"
+    },
+    {
+      "title": "Program flows",
+      "hash": "#/flows",
+      "sub": "interactive step-through"
+    },
+    {
+      "title": "Windows",
+      "hash": "#/ui",
+      "sub": "interface"
+    },
+    {
+      "title": "Server calls",
+      "hash": "#/api",
+      "sub": "HTTP"
+    },
+    {
+      "title": "Building and extending",
+      "hash": "#/guide",
+      "sub": "development"
+    }
+  ]
+}

@@ -1,0 +1,578 @@
+{
+  "download": {
+    "title": "Download request",
+    "steps": [
+      {
+        "id": "in",
+        "kind": "io",
+        "title": "POST /download/video-audio",
+        "sub": "DownloadRequest: urls, filenames, provider, strategy",
+        "link": "#/m/server.py#receive_download",
+        "next": "authenticated",
+        "detail": "<p>The client sends a list of URLs with matching file names, a provider string and a <code>download_strategie</code>. One request can carry several URLs &mdash; they become one job with one context per file.</p>"
+      },
+      {
+        "id": "auth",
+        "kind": "decision",
+        "title": "require_user",
+        "sub": "X-User-Key + Auth",
+        "link": "#/m/server.py#require_user",
+        "next": "user row returned",
+        "detail": "<p>Runs as a FastAPI dependency before the handler body. See the <b>Authentication</b> flow for what happens inside.</p>",
+        "branches": [
+          {
+            "label": "missing or wrong key &rarr; 401",
+            "to": "err401",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "task",
+        "kind": "step",
+        "title": "Create task_id and Session",
+        "sub": "uuid4() + a fresh cookie-aware Session",
+        "next": "per URL",
+        "detail": "<p>The <code>task_id</code> is the handle the client uses for every follow-up call. The <code>Session</code> carries the cookie jar into the engine, which is why a login harvested by the browser layer survives across the request.</p>"
+      },
+      {
+        "id": "provider",
+        "kind": "decision",
+        "title": "_resolveProviderSearchFunction",
+        "sub": "provider string &rarr; resolve function",
+        "link": "#/m/server.py#_resolveProviderSearchFunction",
+        "next": "function found",
+        "detail": "<p><code>utils.validateProviders()</code> turns the string into a <code>ProviderTypes</code> value, then <code>PROVIDER_GETRESULTS_MAPPING</code> looks up the function. Two separate failure points: the alias does not resolve, or it resolves but has no entry in the mapping.</p>",
+        "branches": [
+          {
+            "label": "unknown provider &rarr; TaskFailedError &rarr; 500",
+            "to": "err500",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "resolve",
+        "kind": "step",
+        "title": "Resolve every URL in parallel",
+        "sub": "asyncio.gather over _resolve_provider",
+        "link": "#/m/server.py#_resolveMediaAndCreateContexts",
+        "next": "one ProviderResult per URL",
+        "detail": "<p>One <code>ProviderResultRequest</code> per URL, all dispatched at once through <code>asyncio.gather</code>, each one under the <code>search_limiter</code> semaphore and in a worker thread. This is where the engine takes over: the provider loads the page, sniffs with the browser or asks the YouTube player API, and scores the candidates. A browser-based provider will really open Chromium here, so this step dominates the response time.</p><p>The engine also measures the candidate: <code>getUrlInformation()</code> asks for the size of the video URL and, if the provider found a separate audio track, of the audio URL too.</p>"
+      },
+      {
+        "id": "ctx",
+        "kind": "step",
+        "title": "Build one DownloadContext per file",
+        "sub": "target + info + output, total size preset",
+        "next": "contexts ready",
+        "detail": "<p>Each <code>ProviderResult</code> becomes a <code>DownloadContext</code> with <code>context_id = \"{task_id}-{filename}\"</code>. That composite id is what the progress and stream routes take as their second path parameter.</p><p>The <code>DownloadTarget</code> now carries <code>audio_url</code>, <code>audio_size</code> and <code>video_size</code> next to the resolved URL, the <code>OutputTarget</code> carries the bare <code>filename</code> and <code>auto_convert</code>, and <code>download_progress.total_bytes</code> is preset from the provider's total size so the first progress poll already has a denominator.</p>"
+      },
+      {
+        "id": "job",
+        "kind": "step",
+        "title": "Register the ServerJob",
+        "sub": "server_state.jobs[task_id]",
+        "next": "branch on strategy",
+        "detail": "<p>Contexts plus session plus the shared download semaphore become a <code>DownloadInformation</code>, wrapped in a <code>ServerJob</code> with a creation timestamp. It lives in memory only &mdash; a restart loses every running job, deliberately.</p>"
+      },
+      {
+        "id": "strategy",
+        "kind": "decision",
+        "title": "download_strategie?",
+        "sub": "LOCAL, STREAM, or neither",
+        "next": "",
+        "detail": "<p>The single branch point of the handler. STREAM keeps nothing on disk and hands back URLs the client pulls from. LOCAL is switched off: the branch raises <code>ValueError</code> before doing anything, which the handler turns into a 400.</p>",
+        "branches": [
+          {
+            "label": "LOCAL &rarr; 400 (disabled)",
+            "to": "local",
+            "warn": true
+          },
+          {
+            "label": "STREAM",
+            "to": "stream"
+          },
+          {
+            "label": "anything else &rarr; 500",
+            "to": "err500",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "local",
+        "kind": "error",
+        "title": "LOCAL: switched off",
+        "sub": "raise ValueError(...) &rarr; 400",
+        "link": "#/m/server.py#_run_local_download",
+        "next": "resources built",
+        "detail": "<p>The first line of the LOCAL branch is <code>raise ValueError(\"Local Download was turned off by administrator because of pending rework\")</code>. The code after it &mdash; a fire-and-forget <code>_run_local_download</code> task and one <code>progress_url</code> per context &mdash; is unreachable but still in place.</p><p>The ValueError lands in the first <code>except</code> branch, so the client sees a 400 with the prefix &bdquo;Invalid type for&ldquo;.</p>",
+        "branches": [
+          {
+            "label": "see the error responses",
+            "to": "err500",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "stream",
+        "kind": "decision",
+        "title": "STREAM: per context, HLS or not?",
+        "sub": "ServerStream registered either way",
+        "next": "",
+        "detail": "<p>Each context gets a <code>ServerStream</code> stored under <code>job.stream_jobs</code>. What the watch URL looks like depends on the download type.</p>",
+        "branches": [
+          {
+            "label": "HLS",
+            "to": "hls"
+          },
+          {
+            "label": "FILE or UMP",
+            "to": "file"
+          }
+        ]
+      },
+      {
+        "id": "hls",
+        "kind": "step",
+        "title": "HLS: pre-compute the segment list",
+        "sub": "_getIndexSegmentsForStreaming, off the loop",
+        "link": "#/m/server.py#_getIndexSegmentsForStreaming",
+        "next": "watch_url ends in /master.m3u8",
+        "detail": "<p>Runs through <code>asyncio.to_thread</code> because it fetches and parses the playlists synchronously. A master playlist is resolved first: <code>MasterHLSDownload.getUrls()</code> picks the video variant and the audio rendition, and both URLs are written back onto <code>context.target</code>. Then <code>IndexHLSDownload</code> builds the video segment list and, if there is an audio URL, a second list for audio.</p><p>Both lists are stored on the <code>ServerStream</code> (<code>segments</code> and <code>audio_segments</code>), so every later playlist and segment request is a pure in-memory lookup rather than a second fetch.</p>",
+        "branches": [
+          {
+            "label": "continue to the response",
+            "to": "resp"
+          }
+        ]
+      },
+      {
+        "id": "file",
+        "kind": "step",
+        "title": "FILE / UMP: point at the file name",
+        "sub": "watch_url ends in /{full_filename}",
+        "next": "resources built",
+        "detail": "<p>No pre-computation. The stream type is reported as <code>file</code>. When the provider found separate video and audio URLs, the audio URL is passed on as <code>watch_audio_url</code> in the resource.</p>"
+      },
+      {
+        "id": "resp",
+        "kind": "end",
+        "title": "Return DownloadResponse",
+        "sub": "task_id + one Resource per context",
+        "next": "",
+        "detail": "<p>Every resource carries <code>progress_url</code>, <code>download_url</code>, <code>watch_url</code>, <code>stream_type</code> and <code>watch_audio_url</code> (empty when audio is not separate). The client is expected to use these URLs verbatim rather than assembling them itself.</p>"
+      },
+      {
+        "id": "err401",
+        "kind": "error",
+        "title": "401 Unauthorized",
+        "sub": "raised by the dependency, handler never runs",
+        "next": "",
+        "detail": "<p>Missing header or a key that does not match. The same message is used for an unknown identifier and a wrong key.</p>"
+      },
+      {
+        "id": "err500",
+        "kind": "error",
+        "title": "Error responses",
+        "sub": "400 / 422 / 500 depending on the exception",
+        "next": "",
+        "detail": "<p>The handler catches four families and maps them:</p><p><code>ValueError, TypeError, ArgumentError, ArgumentErrorCompare</code> &rarr; <b>400</b> with the prefix &bdquo;Invalid type for&ldquo; &mdash; this includes the disabled LOCAL strategy. <code>TaskFailedError</code> &rarr; <b>500</b>. <code>DRMProtectedMediaError</code> &rarr; <b>422</b>, which is how an encrypted Soundcloud stream reports itself. Anything else &rarr; <b>500</b>.</p><p>Only <code>data</code> is logged in the 400 branch, not the traceback &mdash; and <code>UnicodeDecodeError</code> lands there too because it inherits from <code>ValueError</code>.</p><p>Validation errors never get this far: <code>DownloadRequest.model_post_init</code> re-raises everything as <code>ValueError</code>, so FastAPI answers a malformed body (unequal <code>urls</code>/<code>filenames</code>, <code>auto_convert</code> without <code>preferred_file</code>) with a <b>422</b> before the handler runs.</p>"
+      }
+    ]
+  },
+  "auth": {
+    "title": "Authenticating a request",
+    "steps": [
+      {
+        "id": "in",
+        "kind": "io",
+        "title": "Request arrives with headers",
+        "sub": "X-Admin-Key, X-User-Key, Auth",
+        "next": "which dependency does the route declare?",
+        "detail": "<p>Three schemes exist and most routes combine two. Which apply is visible on the route in the <a class=\"x\" href=\"#/endpoints\">Endpoints</a> list.</p>"
+      },
+      {
+        "id": "admin",
+        "kind": "decision",
+        "title": "require_admin",
+        "sub": "only on routes that declare it",
+        "link": "#/m/server.py#require_admin",
+        "next": "admin key accepted",
+        "detail": "<p><code>secrets.compare_digest(key, ADMIN_KEY)</code> against the value from the <code>.env</code>. Constant time, so the key cannot be recovered by timing the response. This guards the server as a whole, not a particular user's data.</p>",
+        "branches": [
+          {
+            "label": "missing or wrong &rarr; 401",
+            "to": "reject",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "hdr",
+        "kind": "decision",
+        "title": "require_user: headers present?",
+        "sub": "X-User-Key and Auth must both be non-empty",
+        "link": "#/m/server.py#require_user",
+        "next": "both present",
+        "detail": "<p>Two distinct 401 messages here: <code>Missing X-User-Key</code> and <code>Missing Auth header</code>. These are the only auth errors that tell the caller what was wrong.</p>",
+        "branches": [
+          {
+            "label": "either missing &rarr; 401",
+            "to": "reject",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "lookup",
+        "kind": "decision",
+        "title": "Look the user up by Auth identifier",
+        "sub": "SELECT ... FROM Users WHERE Identifier = ?",
+        "next": "row found",
+        "detail": "<p>The <code>Auth</code> header carries the user identifier, the <code>X-User-Key</code> the secret. If no row comes back the response is the generic <code>Invalid user key</code> &mdash; deliberately identical to the wrong-key case, so valid identifiers cannot be enumerated through the error message. A WARN line goes to the log queue.</p>",
+        "branches": [
+          {
+            "label": "no such identifier &rarr; 401",
+            "to": "reject",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "compare",
+        "kind": "decision",
+        "title": "Compare the key",
+        "sub": "compare_digest(request_api_key, row.ApiKey)",
+        "next": "match",
+        "detail": "<p>The stored column holds <code>hash_api_key(apikey)</code>, the SHA-256 hex digest written at registration.</p><p><b>This is where the two sides disagree.</b> The comparison is <code>compare_digest(request_api_key, row[\"ApiKey\"])</code>: the raw key from the header against the stored digest. Nothing in <code>require_user</code> hashes the incoming key &mdash; the unused <code>request_api_key_hash</code> line that used to sit here has been removed rather than wired in. Plaintext against digest never matches, so authentication only succeeds if the client sends the digest itself. Passing <code>hash_api_key(request_api_key)</code> into the call closes it.</p>",
+        "branches": [
+          {
+            "label": "mismatch &rarr; 401 + WARN",
+            "to": "reject",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "user",
+        "kind": "step",
+        "title": "Return the authenticated user",
+        "sub": "row as dict, plus _PlainApiKey",
+        "next": "handler body starts",
+        "detail": "<p>The plaintext key is attached as <code>_PlainApiKey</code> for the lifetime of this one request, so <code>/get/user</code> can hand it back to the same client. It is never written anywhere.</p>"
+      },
+      {
+        "id": "own",
+        "kind": "decision",
+        "title": "Ownership check inside the handler",
+        "sub": "check_user_identifier / check_owner / owns_record",
+        "link": "#/m/server.py#owns_record",
+        "next": "caller owns the record",
+        "detail": "<p>Authentication proves <em>who</em> is calling; this proves the record is theirs. <code>check_user_identifier()</code> compares against a user row, <code>check_owner()</code> against a <code>UserIdentifier</code> column, and <code>owns_record(table, ...)</code> looks the row up first.</p><p><code>owns_record</code> raises <code>ValueError</code> for any table outside <code>OWNED_TABLES</code> &mdash; that allowlist is what keeps an unchecked table name out of the SQL string. A new table with a <code>UserIdentifier</code> column is <b>not</b> protected until it is added there.</p>",
+        "branches": [
+          {
+            "label": "not the owner &rarr; 403",
+            "to": "reject",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "run",
+        "kind": "end",
+        "title": "Handler runs",
+        "sub": "the actual endpoint body",
+        "next": "",
+        "detail": "<p>From here the route does its own work. A missing record returns <code>False</code> from the ownership helpers rather than a 404, so the caller cannot tell &bdquo;does not exist&ldquo; from &bdquo;not yours&ldquo;.</p>"
+      },
+      {
+        "id": "reject",
+        "kind": "error",
+        "title": "Rejected",
+        "sub": "401 Unauthorized or 403 Forbidden",
+        "next": "",
+        "detail": "<p>401 means the caller was not identified, 403 that they were identified but the record is not theirs. Both write a WARN line into the log queue with the identifier that was attempted.</p>"
+      }
+    ]
+  },
+  "stream": {
+    "title": "HLS playback",
+    "steps": [
+      {
+        "id": "have",
+        "kind": "io",
+        "title": "Client holds a watch_url",
+        "sub": "from the STREAM download response",
+        "next": "player opens it",
+        "detail": "<p><code>/stream/watch/{task_id}/{stream_id}/master.m3u8</code>, handed over in the <code>DownloadResponse</code>. The video and audio segment lists were already computed when the download request was answered.</p>"
+      },
+      {
+        "id": "auth",
+        "kind": "decision",
+        "title": "require_user on every HLS route",
+        "sub": "X-User-Key + Auth",
+        "link": "#/m/server.py#require_user",
+        "next": "key accepted",
+        "detail": "<p>All HLS routes &mdash; master, both index playlists and the segments &mdash; declare <code>dependencies=[Security(require_user)]</code>. The player therefore has to send the two headers on <em>every</em> request, including each segment. A plain <code>&lt;video&gt;</code> tag cannot do that; LibVLC and hls.js with a custom loader can.</p>",
+        "branches": [
+          {
+            "label": "missing or wrong key &rarr; 401",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "master",
+        "kind": "decision",
+        "title": "GET .../master.m3u8",
+        "sub": "stream_hls_master",
+        "link": "#/m/server.py#stream_hls_master",
+        "next": "master playlist returned",
+        "detail": "<p>Renders a small master playlist that points back at this server. Without audio segments it contains a single <code>#EXT-X-STREAM-INF</code> entry for <code>/video/index.m3u8</code>. With audio segments it adds an <code>#EXT-X-MEDIA:TYPE=AUDIO</code> rendition for <code>/audio/index.m3u8</code> and ties the video variant to it through <code>AUDIO=\"audio\"</code>.</p><p>The bandwidth is a fixed 5000000; the original variant attributes are not carried over.</p>",
+        "branches": [
+          {
+            "label": "unknown task or stream &rarr; 404",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "index",
+        "kind": "step",
+        "title": "GET .../video/index.m3u8 and .../audio/index.m3u8",
+        "sub": "stream_hls_video_index / stream_hls_audio_index",
+        "link": "#/m/server.py#create_hls_index",
+        "next": "index playlists returned",
+        "detail": "<p>Both go through <code>create_hls_index()</code>. It writes <code>#EXT-X-VERSION:7</code>, a target duration from the longest segment and one <code>#EXTINF</code> plus URL per segment, pointing at <code>/{video|audio}/segment/{n}</code>. The original CDN URLs never reach the player.</p><p>A segment with duration 0 is how the engine's parser stores an <code>#EXT-X-MAP</code> init section; it is written back as <code>#EXT-X-MAP:URI=...</code> instead of a media entry. That is what makes fMP4 streams (YouTube's HLS manifests) playable through the proxy.</p>"
+      },
+      {
+        "id": "seg",
+        "kind": "step",
+        "title": "Player pulls each segment",
+        "sub": "stream_hls_segment(segment_type, segment_id)",
+        "link": "#/m/server.py#stream_hls_segment",
+        "next": "bytes streamed back",
+        "detail": "<p><code>segment_type</code> selects the list (<code>video</code> or <code>audio</code>; anything else is a 404), <code>segment_id</code> the index in it. The server fetches the segment through <code>file.asyncDownloadYieldSimple()</code> with the stored session and headers and streams it straight through. <code>start_byte</code> and <code>end_byte</code> are passed along, so playlists that address byte ranges inside one file work too.</p><p>Nothing is written to disk. The media type is always reported as <code>video/mp2t</code>, whatever the segments actually contain.</p>",
+        "branches": [
+          {
+            "label": "index out of range &rarr; 404",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "dl",
+        "kind": "decision",
+        "title": "Not HLS: /stream/download",
+        "sub": "the one stream route without a key",
+        "link": "#/m/server.py#client_download_stream",
+        "next": "playback continues",
+        "detail": "<p><code>/stream/download/{task_id}/{stream_id}</code> runs <code>DownloadDispatcher.downloadContextAndYield()</code> and sends the result as an attachment. Its security dependency was removed, so anyone who knows the two ids can fetch the file. The file name in <code>Content-Disposition</code> is <code>{filename}.{preferred_file}</code> when <code>auto_convert</code> is set, otherwise the provider's <code>full_filename</code>.</p>",
+        "branches": [
+          {
+            "label": "see the CORS note on the overview",
+            "to": "clean"
+          }
+        ]
+      },
+      {
+        "id": "clean",
+        "kind": "end",
+        "title": "Cleanup: only by age",
+        "sub": "cleanup_loop drops jobs after 24 hours",
+        "link": "#/m/server.py#cleanup_loop",
+        "detail": "<p>A job and all its streams stay in memory until <code>cleanup_loop()</code> finds it older than 24 hours &mdash; see the <b>Server lifecycle</b> flow.</p><p><code>cleanup_download()</code>, which would drop a single stream a while after it was fetched, exists but is not called anywhere. The inner generator in <code>client_download_stream</code> is still named <code>download_and_cleanup</code>, but it only forwards the chunks.</p>",
+        "next": ""
+      },
+      {
+        "id": "err",
+        "kind": "error",
+        "title": "401 or 404",
+        "sub": "no key, or nothing under these ids",
+        "detail": "<p>401 comes from the dependency before the handler runs. 404 means the job or the stream is gone &mdash; after a restart, or once the job is older than 24 hours &mdash; or the segment index is out of range.</p>",
+        "next": ""
+      }
+    ]
+  },
+  "lifespan": {
+    "title": "Server lifecycle",
+    "steps": [
+      {
+        "id": "boot",
+        "kind": "start",
+        "title": "uvicorn starts the app",
+        "sub": "lifespan context entered",
+        "link": "#/m/server.py#lifespan",
+        "next": "background tasks",
+        "detail": "<p>Everything below runs before the first request is served, and the teardown half runs after the last one.</p><p>Before that, at import time, <code>server.py</code> switches Windows to the Proactor event loop so the engine can start ffmpeg subprocesses. The lifespan prints the loop type as its first action.</p>"
+      },
+      {
+        "id": "logger",
+        "kind": "step",
+        "title": "Start the logger task",
+        "sub": "drains log_queue into server_runtime.log",
+        "link": "#/m/server.py#logger",
+        "next": "",
+        "detail": "<p>Producer/consumer: handlers call <code>log_queue.put_nowait()</code> and return immediately, one task does the file I/O. The queue is capped at 5000 entries.</p>"
+      },
+      {
+        "id": "cleanup",
+        "kind": "step",
+        "title": "Start cleanup_loop",
+        "sub": "wakes every ten minutes",
+        "link": "#/m/server.py#cleanup_loop",
+        "next": "",
+        "detail": "<p>Compares each job's <code>creation_timestamp</code> against <code>time.monotonic()</code> and drops anything older than 24 hours, together with its stream jobs.</p>"
+      },
+      {
+        "id": "tables",
+        "kind": "step",
+        "title": "create_app_tables()",
+        "sub": "{{stat:tables}} &times; CREATE TABLE IF NOT EXISTS",
+        "link": "#/m/server.py#create_app_tables",
+        "next": "ready",
+        "detail": "<p>Idempotent, so a fresh database is created on first start and an existing one is left alone. Note that it only creates &mdash; a column added to the schema later will not appear in an existing file. There is no migration step.</p>"
+      },
+      {
+        "id": "serve",
+        "kind": "step",
+        "title": "yield &mdash; serving requests",
+        "sub": "the app is live on 127.0.0.1:8765",
+        "next": "shutdown signal",
+        "detail": "<p>Everything in <code>ServerState</code> lives for exactly this window: jobs, stream jobs, both semaphores, the log queue.</p>"
+      },
+      {
+        "id": "quit",
+        "kind": "decision",
+        "title": "Shutdown requested",
+        "sub": "Ctrl+C, or POST /command sets quit_event",
+        "link": "#/m/server.py#receive_command",
+        "next": "cancel the tasks",
+        "detail": "<p><code>/command</code> is the client-facing way to stop the server; the desktop app uses it when it exits.</p>"
+      },
+      {
+        "id": "stop",
+        "kind": "end",
+        "title": "Cancel both background tasks",
+        "sub": "cleanup_task and logger_task",
+        "next": "",
+        "detail": "<p>Cancellation is immediate. Anything still sitting in <code>log_queue</code> at that moment is not flushed to disk, so the tail of a crash is often missing from the log file.</p>"
+      }
+    ]
+  },
+  "save": {
+    "title": "Saving user data",
+    "steps": [
+      {
+        "id": "in",
+        "kind": "io",
+        "title": "POST /save",
+        "sub": "one SaveDataRequest with the whole state",
+        "link": "#/m/server.py#handle_save_user_data",
+        "next": "checks first",
+        "detail": "<p>The desktop app sends this once, when it exits. Playlists, media, assignments and settings all travel in a single request &mdash; nothing is written incrementally during the session.</p>"
+      },
+      {
+        "id": "owner",
+        "kind": "decision",
+        "title": "check_owner",
+        "sub": "req.user_identifier vs the authenticated user",
+        "next": "same user",
+        "detail": "<p>Authentication already happened in <code>require_user</code>. This additionally refuses a request that tries to write <em>someone else's</em> data with a valid key.</p>",
+        "branches": [
+          {
+            "label": "different user &rarr; 403",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "limits",
+        "kind": "decision",
+        "title": "Size limits",
+        "sub": "1000 playlists, 10000 medias, id ≤ 100 chars",
+        "next": "within limits",
+        "detail": "<p>Straightforward DoS guards. Exceeding any of them is a 400 before a single row is touched.</p>",
+        "branches": [
+          {
+            "label": "too large &rarr; 400",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "upmedia",
+        "kind": "step",
+        "title": "1. Upsert media",
+        "sub": "INSERT ... ON CONFLICT(Identifier) DO UPDATE",
+        "link": "#/m/server.py#save_user_data",
+        "next": "",
+        "detail": "<p>Every entry in the request is inserted or updated, keyed on the <code>Identifier</code> the client sends. Those identifiers originally came from the create routes, which generate them server-side; <code>/save</code> just writes back what the client holds.</p>"
+      },
+      {
+        "id": "uppl",
+        "kind": "step",
+        "title": "2. Upsert playlists",
+        "sub": "same pattern",
+        "next": "now the deletes",
+        "detail": "<p>Name and description are overwritten from the request.</p>"
+      },
+      {
+        "id": "delmedia",
+        "kind": "step",
+        "title": "3. Delete orphaned media",
+        "sub": "DELETE ... WHERE Identifier NOT IN (request)",
+        "next": "",
+        "detail": "<p>This is what makes <code>/save</code> a full replacement rather than a merge: anything the client did not send is removed. <code>ON DELETE CASCADE</code> takes the matching <code>PlaylistMedias</code> rows with it &mdash; and it really fires now that <code>connect_db()</code> sets <code>foreign_keys=ON</code>.</p><p>An empty media list therefore deletes <em>all</em> of the user's media. A client that fails to load its data and then exits normally will wipe the account.</p>"
+      },
+      {
+        "id": "delpl",
+        "kind": "step",
+        "title": "4. Delete orphaned playlists",
+        "sub": "same rule, same caveat",
+        "next": "",
+        "detail": "<p>Identical shape to step 3, including the empty-list case.</p>"
+      },
+      {
+        "id": "pm",
+        "kind": "step",
+        "title": "5. Rebuild the assignments",
+        "sub": "delete all, re-insert what has both parents",
+        "next": "",
+        "detail": "<p><code>PlaylistMedias</code> is not upserted but rebuilt from scratch. Each row is checked against both parent tables first; a missing parent is skipped with a WARN line instead of failing the request. That is why a stale assignment silently disappears rather than causing an error.</p>"
+      },
+      {
+        "id": "settings",
+        "kind": "step",
+        "title": "6. Upsert the settings row",
+        "sub": "download path, dark mode, scan on startup",
+        "next": "commit",
+        "detail": "<p>One row per user, guarded by the <code>UNIQUE</code> on <code>UserIdentifier</code>.</p>"
+      },
+      {
+        "id": "commit",
+        "kind": "end",
+        "title": "commit, or rollback on any error",
+        "sub": "all six steps in one transaction",
+        "next": "",
+        "detail": "<p>Every step runs on one connection inside one transaction, so a failure half way leaves the previous state intact. The <code>except</code> rolls back and answers <b>400</b>; the outer handler turns anything that escapes into <b>500</b>.</p>"
+      },
+      {
+        "id": "err",
+        "kind": "error",
+        "title": "Rejected before any write",
+        "sub": "403 or 400",
+        "next": "",
+        "detail": "<p>Both guards run before the connection is opened, so a rejected save cannot leave partial data behind.</p>"
+      }
+    ]
+  }
+}

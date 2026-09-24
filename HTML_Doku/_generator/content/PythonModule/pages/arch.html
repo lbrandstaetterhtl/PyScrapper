@@ -1,0 +1,189 @@
+<div class="wrap">
+<div class="crumb">PythonModule / architecture</div>
+<h1>From link to byte stream</h1>
+<p class="lede">The path of a request in five stages. Each stage has exactly one job and hands a
+clearly defined object to the next.</p>
+
+<h2 id="e1">1 &mdash; Resolve the provider</h2>
+<p>The <span class="mono">provider</span> string from the request is turned into a
+<span class="mono">ProviderTypes</span> enum value through
+<a class="x" href="#/m/models%2Fsettings.py#SUPPORTEDPROVIDERS">SUPPORTEDPROVIDERS</a>. Every
+provider has several accepted spellings (<span class="mono">youtube</span>,
+<span class="mono">youtube.com</span>, <span class="mono">www.youtube.com</span>). Two mappings
+connect the enum to the functions: <span class="mono">PROVIDER_SEARCH_MAPPING</span> for search and
+<span class="mono">PROVIDER_GETRESULTS_MAPPING</span> for resolution.</p>
+<p>Not every provider can do both. <span class="mono">Default</span> and
+<span class="mono">wcoflix</span> appear only in the getresults mapping, so they can be resolved but
+not searched. <span class="mono">ProviderTypes</span> also declares <span class="mono">Aniworld</span>,
+<span class="mono">Dailymotion</span> and <span class="mono">ERROR</span>, which have no entry in
+either mapping &mdash; the enum value exists, but resolving it fails.</p>
+<div class="note"><b>YoutubeMusic is its own provider</b>
+<p><code>ProviderTypes.YoutubeMusic</code> maps to <code>Youtube.searchMusic</code> and
+<code>Youtube.getMediaInformationMusic</code>, and its aliases are
+<code>music.youtube.com</code>, <code>youtubemusic</code> and <code>musicyoutube</code>. It shares
+the <code>Youtube</code> package but takes a completely different route through it: a browser that
+harvests the streaming URL, rather than the player API calls the plain <code>Youtube</code> provider
+makes.</p></div>
+<div class="note warn"><b>Filmpalast is registered but not finished</b>
+<p><code>ProviderTypes.Filmpalast</code> is in both mappings and has aliases
+(<code>filmpalast</code>, <code>filmpalast.one</code>, <code>www.filmpalast.one</code>). Its
+<a class="x" href="#/m/providers%2FFilmpalast%2Ffilmpalast_search.py#search">search()</a> works on
+the HTML of the search page, but
+<a class="x" href="#/m/providers%2FFilmpalast%2Ffilmpalast_media_information.py#getMediaInformation">getMediaInformation()</a>
+stops after opening a visible browser on every decoded host and returns <code>None</code> instead
+of a <code>ProviderResult</code>. A download request for it fails in the server when the context is
+built.</p></div>
+
+<h2 id="e2">2 &mdash; Find the media</h2>
+<p>Every provider module implements <span class="mono">getMediaInformation(request, ...)</span>. How
+it gets to the real URLs is up to the module. There are three patterns in the project:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Pattern</th><th>Who</th><th>How</th></tr></thead><tbody>
+<tr><td>HTML regex</td><td class="mono">Bandcamp, Newgrounds, Suno, wcoflix</td>
+<td>Load the page, search for embedded stream URLs with a regex</td></tr>
+<tr><td>Browser sniffing</td><td class="mono">Soundcloud, YoutubeMusic, Default, Filmpalast</td>
+<td>Playwright starts Chromium, plays the media and records every media response</td></tr>
+<tr><td>API</td><td class="mono">Youtube, Archive</td>
+<td>The YouTube player API (<span class="mono">youtubei/v1/player</span>) or the Archive API
+returns the format list</td></tr>
+</tbody></table></div>
+<p>All of them end at the same point: a list of <span class="mono">FoundMedia</span> candidates that
+goes into <span class="mono">makeProviderResult()</span>. A candidate can now carry an
+<span class="mono">audio_url</span> next to its <span class="mono">url</span> when video and audio
+are separate streams.</p>
+
+<h3 id="youtube">YouTube without yt-dlp</h3>
+<p><a class="x" href="#/m/providers%2FYoutube%2Fyoutube_media_information.py#getMediaInformation">Youtube.getMediaInformation()</a>
+no longer asks yt-dlp. It posts the video id to the player API, trying the client identities in
+<a class="x" href="#/m/providers%2FYoutube%2Fyoutube_models.py#GET_METHODS">GET_METHODS</a> in turn
+(visionOS, Android VR, Safari web). A <span class="mono">LOGIN_REQUIRED</span> answer is retried
+once with the <span class="mono">visitorData</span> from the response, then the next client is
+tried. From the first usable answer it takes, in this order:</p>
+<ol>
+<li>separate video and audio formats, scored by resolution, fps, bitrate and codec
+(<span class="mono">VIDEO_CODEC_FACTOR</span> / <span class="mono">AUDIO_CODEC_FACTOR</span>), with
++1000 for the requested container &mdash; delivered as FILE with an
+<span class="mono">audio_url</span>;</li>
+<li>the <span class="mono">hlsManifestUrl</span> &mdash; delivered as HLS;</li>
+<li>a progressive format that already contains audio &mdash; delivered as FILE.</li>
+</ol>
+<p>The request headers of the client that succeeded travel on as
+<span class="mono">extra_headers</span>, because googlevideo checks the user agent when the
+segments are fetched later.</p>
+<div class="note risk"><b>The fallbacks are unreachable</b>
+<p><code>_extractSeperatedVideoAudioFromFormats()</code> guards with
+<code>if not bestVideoCandidate</code>, but <code>BestCandidate</code> is a dataclass instance and
+always truthy. The function therefore always returns a result, even when no format had a URL, and
+the HLS and progressive branches after it never run. An empty <code>video_url</code> then fails
+later in the scorer. Checking <code>bestVideoCandidate.url</code> instead fixes it.</p></div>
+<div class="note warn"><b>Side effects on every call</b>
+<p><code>_tryGetUsableUrls()</code> writes the full format list to <code>youtube_formats.txt</code>
+in the working directory on each request, and <code>_sendRequest()</code> adds
+<code>X-Goog-Visitor-Id</code> to the module-level header dictionary itself, so the visitor id of
+one request sticks to every later request made with that client identity.</p></div>
+
+<h2 id="e3">3 &mdash; Pick the best URL</h2>
+<p><a class="x" href="#/m/providers%2Fmodels.py#makeProviderResult">makeProviderResult(found_media_list, request)</a>
+is the single entry point. Candidates that arrive without an extension are completed by
+<span class="mono">_makeFoundMediaFromUrl()</span>, which derives extension, media kind, MIME type
+and download type from the URL and computes a base score. Then the client's wishes are added and
+the highest total wins.</p>
+<div class="tbl-wrap"><table><thead><tr><th>Source</th><th>Example</th><th>Points</th></tr></thead><tbody>
+<tr><td class="mono">MEDIA_EXTENSION_PRIORITY</td><td>mp4 / mkv / webm / m3u8</td><td>100 / 95 / 90 / 20</td></tr>
+<tr><td class="mono">GOOD_URL_KEYWORDS</td><td>master / playlist / index</td><td>+100 / +80 / +70</td></tr>
+<tr><td class="mono">BAD_URL_KEYWORDS</td><td>preview / thumbnail / ads</td><td>&minus;100 / &minus;500 / &minus;1000</td></tr>
+<tr><td>Wish from the request</td><td class="mono">preferred_type / preferred_file</td><td>+200 / +1000</td></tr>
+</tbody></table></div>
+<p>The base score is only computed for candidates that arrive without an extension. A candidate
+that arrives complete &mdash; the YouTube provider sends exactly one &mdash; keeps its
+<span class="mono">prio</span> of &minus;1 and only gains points from the wishes. Since the winner has
+to beat the initial &minus;1, such a candidate is rejected when neither
+<span class="mono">preferred_file</span> nor <span class="mono">preferred_type</span> matches it. The winner then goes through
+<span class="mono">_buildProviderResultFromFoundMedia()</span>, where
+<a class="x" href="#/m/providers%2Fmodels.py#getUrlInformation">getUrlInformation()</a> asks the
+server for the size of the video URL and, if present, of the audio URL. The sum becomes the total
+size; for HLS it is set to &minus;1, because progress is counted in segments there.</p>
+<p><span class="mono">MEDIA_PRIORITY_FOR_QUALITY_AUDIO</span> is still defined but no longer read
+anywhere, and <span class="mono">makeProviderResultFromCandidate()</span> is kept but unused.</p>
+<div class="note warn"><b>The table mixes two levels</b>
+<p>Extensions like <code>m3u8</code> and <code>mpd</code> describe the transfer mechanism, while
+<code>mp3</code> and <code>mp4</code> describe the target format. Both sit in the same priority
+table. If the client sets <code>preferred_file="mp3"</code>, a progressive MP3 URL wins with +1000
+points against any HLS playlist.</p></div>
+
+<h2 id="e4">4 &mdash; Build the context</h2>
+<p>The <span class="mono">ProviderResult</span> becomes one
+<a class="x" href="#/m/core%2Fmodels%2FDownload.py#DownloadContext">DownloadContext</a> per file (the
+server does this in <span class="mono">_resolveMediaAndCreateContexts</span>). It bundles sub-objects
+that are read and written separately further down:</p>
+<ul>
+<li><span class="mono">target</span> &mdash; original URL, resolved URL, type, extra headers, POST
+body, and now <span class="mono">audio_url</span>, <span class="mono">video_size</span> and
+<span class="mono">audio_size</span> for separate streams</li>
+<li><span class="mono">info</span> &mdash; what was asked for (<span class="mono">preferred_file</span>,
+<span class="mono">preferred_type</span>) and what was found (<span class="mono">found_file</span>)</li>
+<li><span class="mono">output</span> &mdash; bare file name, file name with extension, destination
+path and <span class="mono">auto_convert</span></li>
+<li><span class="mono">download_progress</span> &mdash; the progress the downloaders keep updating</li>
+</ul>
+<p>Several contexts plus a session and a semaphore make up a
+<span class="mono">DownloadInformation</span>. That is the unit a dispatcher receives.</p>
+
+<h2 id="e5">5 &mdash; Download</h2>
+<p>The <span class="mono">DownloadDispatcher</span> sorts the contexts by
+<span class="mono">target.download_type</span> into three buckets and starts one specialised
+dispatcher per bucket. For a single context there is now
+<a class="x" href="#/m/core%2Fdownload%2FDispatcher%2Fdispatcher.py#DownloadDispatcher.downloadContextAndYield">downloadContextAndYield()</a>,
+which picks the matching dispatcher through <span class="mono">_getManualDispatcher()</span> &mdash;
+that is what the server's download route uses. All three inherit from the abstract
+<a class="x" href="#/m/core%2Fdownload%2FDispatcher%2Fbase.py#Dispatcher">Dispatcher</a> and must
+supply exactly two methods:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Method</th><th>Contract</th></tr></thead><tbody>
+<tr><td class="mono">_runContextLocal(context)</td><td>Coroutine, writes the file to disk</td></tr>
+<tr><td class="mono">_runContextStream(context)</td><td>Async generator, yields byte chunks</td></tr>
+</tbody></table></div>
+<p>From those the base class builds <span class="mono">downloadToFile()</span> (all contexts in
+parallel through <span class="mono">asyncio.gather</span>) and
+<span class="mono">downloadAndYield()</span> (all contexts one after another into a single stream).
+A context with no known type is silently set to <span class="mono">FAILED</span> in
+<span class="mono">_splitContext()</span> and dropped &mdash; it appears in no exception, only in
+<span class="mono">download_progress.error_message</span>.</p>
+
+<h3 id="mux">Every stream goes through the codec check</h3>
+<p>All three <span class="mono">_runContextStream()</span> implementations hand their byte sources
+to <a class="x" href="#/m/core%2Fdownload%2FDispatcher%2Fbase.py#Dispatcher._asyncProcessSources">_asyncProcessSources(video_source, context, audio_source)</a>:</p>
+<ol>
+<li>The first chunks of the video source are fed into
+<a class="x" href="#/m/core%2Fffmpeg%2Fffmpeg_probe.py#AsyncFFmpegProbeCodec">AsyncFFmpegProbeCodec</a>
+(ffprobe on a pipe) until it reports the codecs. The bytes read so far are buffered. The same
+happens for the audio source if there is one.</li>
+<li>The target container is <span class="mono">info.preferred_file</span> when
+<span class="mono">auto_convert</span> is set, otherwise the found extension.</li>
+<li>If there is no separate audio, the target is the found container and
+<a class="x" href="#/m/core%2Fffmpeg%2Fffmpeg_probe.py#canMuxCodecsIntoContainer">canMuxCodecsIntoContainer()</a>
+agrees, the buffer and the rest of the source are yielded untouched.</li>
+<li>Otherwise an <a class="x" href="#/m/core%2Fffmpeg%2Fffmpeg_muxer.py#AsyncFFmpegMuxer">AsyncFFmpegMuxer</a>
+is started with one input pipe per source. Codecs the container accepts are copied, the rest are
+re-encoded with the container's default encoder (see
+<a class="x" href="#/m/core%2Fffmpeg%2Fffmpeg_models.py#CONTAINERS">CONTAINERS</a>). Two tasks feed
+the pipes while ffmpeg's stdout is yielded as the result.</li>
+</ol>
+<p>So ffmpeg and ffprobe are no longer optional: every streamed download starts both.</p>
+
+<h2 id="conventions">Conventions in the code</h2>
+<p>Anyone extending this should know the house rules, because they are applied everywhere:</p>
+<ul>
+<li><b>Check, do not trust.</b> Almost every public function starts with
+<span class="mono">Validate.*</span> calls. Each gets a
+<span class="mono">caller="[CORE] Class.method"</span> that ends up in the error text.</li>
+<li><b>Errors carry context.</b>
+<a class="x" href="#/m/core%2Fmodels%2Ferrors.py#TaskFailedError">TaskFailedError</a> takes
+<span class="mono">task</span>, <span class="mono">reason</span> and a list of
+<span class="mono">extraMessages</span>, used to pass on what to do about it.
+<a class="x" href="#/m/core%2Fmodels%2Ferrors.py#DRMProtectedMediaError">DRMProtectedMediaError</a>
+is the newer, more specific case for encrypted streams.</li>
+<li><b>Cycles are broken locally.</b> The dispatcher imports its sub-dispatchers inside the methods,
+not at module level.</li>
+<li><b>Naming is mixed.</b> Functions are camelCase, parameters snake_case, attributes vary. Check
+the signature before calling.</li>
+</ul>
+</div>
