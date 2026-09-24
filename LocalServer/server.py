@@ -879,8 +879,7 @@ async def stream_hls_segment(
     )
 
 
-@app.get("/stream/watch/{task_id}/{stream_id}/{file_name}.{file_type}",
-         dependencies=[Security(require_user)])
+@app.get("/stream/watch/{task_id}/{stream_id}/{file_name}.{file_type}")
 async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file_type: str, request: Request):
     job = server_state.jobs.get(task_id)
 
@@ -902,7 +901,9 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
     headers = {
         "Accept-Ranges": "bytes"
     }
-    total_size = context.media_info.total_size
+    
+    total_size = context.target.video_size if context.target.video_size else context.media_info.total_size
+    
 
     range_headers = request.headers.get("range")
     start_byte = 0

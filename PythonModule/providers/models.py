@@ -652,15 +652,18 @@ class FoundMedia:
 
 
 def _getUrlPriority(url: str) -> int:
-    urlLower = url.lower()
+    parsed = urllib.parse.urlsplit(url)
+
+    path = urllib.parse.unquote(parsed.path).lower()
+
     prio = 0
 
     for keyword, points in GOOD_URL_KEYWORDS.items():
-        if keyword in urlLower:
+        if keyword in path:
             prio += points
 
     for keyword, points in BAD_URL_KEYWORDS.items():
-        if keyword in urlLower:
+        if keyword in path:
             prio += points
 
     return prio
@@ -794,11 +797,8 @@ def makeProviderResult(
 
     for i, media in enumerate(found_media_list):
 
-        if (
-            not media.extension
-            
-        ):
-            media = _makeFoundMediaFromUrl(media)
+        
+        media = _makeFoundMediaFromUrl(media)
             
 
         #Add check that checks if stuff like media type is unknown just in case and then update media object to continue normally
@@ -813,7 +813,7 @@ def makeProviderResult(
             if media.media_type == request.preferred_type.lower():
                 media.prio += 200
 
-        if media.prio > bestMedia.prio:
+        if bestMedia is None or media.prio > bestMedia.prio:
             bestMedia = media
 
         
