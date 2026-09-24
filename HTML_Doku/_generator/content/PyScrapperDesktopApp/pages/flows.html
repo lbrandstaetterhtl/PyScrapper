@@ -1,0 +1,17 @@
+<div class="wrap">
+<div class="crumb">PyScrapperDesktopApp / flows</div>
+<h1>Program flows</h1>
+<p class="lede">Every path the app takes, step by step. Click a step &mdash; or use prev/next
+&mdash; to see what happens there, what it can fail on and where it can go from here. The tabs
+switch between flows.</p>
+<div class="flowmount" data-flow="startup,login,launcher,loaddata,download,convert,exit"></div>
+
+<h2 id="reading">How to read these</h2>
+<p>The spine on the left is the happy path in execution order. Dashed boxes are decision points,
+red ones are error exits. The buttons under &bdquo;Where it can go from here&ldquo; jump to the
+step they name &mdash; that is how the branches and failure paths are reachable, since they are not
+part of the linear sequence.</p>
+<p><b>Startup</b> is the spine of the whole app and the other flows hang off it: <b>Login</b> and
+<b>Launcher</b> are two of its steps expanded, <b>Loading data</b> is what runs just before the main
+window, and <b>Exit and save</b> is what happens when it closes.</p>
+</div>

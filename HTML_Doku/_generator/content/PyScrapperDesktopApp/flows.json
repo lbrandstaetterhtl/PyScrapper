@@ -1,0 +1,577 @@
+{
+  "startup": {
+    "title": "Startup",
+    "steps": [
+      {
+        "id": "main",
+        "kind": "start",
+        "title": "Program.Main",
+        "sub": "crash handler, then LibVLC",
+        "link": "#/m/Program.cs",
+        "next": "Avalonia starts",
+        "detail": "<p>First a handler for unhandled exceptions that writes <code>CRASH.txt</code> next to the exe &mdash; so a failure before the UI exists still leaves a trace. Then LibVLC is initialised, preferring the bundled <code>libvlc/win-x64</code> over a system installation.</p>"
+      },
+      {
+        "id": "post",
+        "kind": "step",
+        "title": "OnFrameworkInitializationCompleted",
+        "sub": "ShutdownMode = OnExplicitShutdown",
+        "link": "#/m/App.axaml.cs#App.StartupFlow",
+        "next": "StartupFlow queued",
+        "detail": "<p>The real startup is queued with <code>Dispatcher.UIThread.Post</code> rather than run inline. The comment in the code gives the reason: it must not run before the message loop is alive.</p><p><code>OnExplicitShutdown</code> matters because there is no main window yet &mdash; closing the login window must not end the process.</p>"
+      },
+      {
+        "id": "config",
+        "kind": "step",
+        "title": "AppConfig.Load()",
+        "sub": "data/config.json, keys decrypted",
+        "link": "#/m/Models%2FAppConfig.cs#AppConfig",
+        "next": "login",
+        "detail": "<p>Server address, port and the encrypted client key. If the file is missing, <code>BuildDefault()</code> writes one &mdash; including an encrypted literal client key that ships in the source.</p>"
+      },
+      {
+        "id": "login",
+        "kind": "decision",
+        "title": "LoginWindow",
+        "sub": "awaited through a TaskCompletionSource",
+        "next": "LoginResult.Success",
+        "detail": "<p>The window is shown and its <code>Closed</code> event completes the task, which is how an async flow waits on a window. See the <b>Login</b> flow.</p><p>Login happens <em>before</em> the launcher, so the user key is in <code>AppData.CurrentUser</code> by the time any per-user route is called.</p>",
+        "branches": [
+          {
+            "label": "cancelled or failed → Shutdown(0)",
+            "to": "quit",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "settings",
+        "kind": "decision",
+        "title": "Load the settings",
+        "sub": "Database.LoadSettingsFromApiAsync()",
+        "next": "settings available",
+        "detail": "<p>A <code>null</code> result is not treated as an error: the app builds a <code>CreateSettingRequest</code> with defaults &mdash; download path, dark mode off, scan on startup on &mdash; and creates the row through <code>CreateSettingsAsync</code>.</p>",
+        "branches": [
+          {
+            "label": "null → create defaults",
+            "to": "theme"
+          }
+        ]
+      },
+      {
+        "id": "theme",
+        "kind": "step",
+        "title": "Apply the theme",
+        "sub": "RequestedThemeVariant",
+        "next": "launcher",
+        "detail": "<p>Set from <code>DarkModeEnabled</code> before the first real window appears, so there is no visible flash of the wrong theme.</p>"
+      },
+      {
+        "id": "launcher",
+        "kind": "decision",
+        "title": "LauncherWindow",
+        "sub": "environment check, LauncherResult",
+        "next": "Success",
+        "detail": "<p>See the <b>Launcher</b> flow. The result decides between continuing and two different exit codes.</p>",
+        "branches": [
+          {
+            "label": "Cancelled → Shutdown(0)",
+            "to": "quit"
+          },
+          {
+            "label": "Error → Shutdown(1)",
+            "to": "quit",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "load",
+        "kind": "step",
+        "title": "LoadApplicationData",
+        "sub": "media and playlists, reconciled with disk",
+        "next": "main window",
+        "detail": "<p>More than a load &mdash; see the <b>Loading data</b> flow. The exit handler <code>desktop.Exit += OnExit</code> is hooked here too.</p>"
+      },
+      {
+        "id": "main2",
+        "kind": "end",
+        "title": "MainWindow opens",
+        "sub": "ShutdownMode → OnMainWindowClose",
+        "next": "",
+        "detail": "<p>Now that a main window exists, closing it should end the app, so the shutdown mode is switched over. From here every action goes through <code>MainWindowViewModel</code>.</p>"
+      },
+      {
+        "id": "quit",
+        "kind": "error",
+        "title": "Shutdown before the main window",
+        "sub": "exit code 0 or 1",
+        "next": "",
+        "detail": "<p>0 when the user chose to stop &mdash; cancelled login or cancelled launcher. 1 when the launcher hit a real error, e.g. no server answering.</p>"
+      }
+    ]
+  },
+  "login": {
+    "title": "Login",
+    "steps": [
+      {
+        "id": "form",
+        "kind": "io",
+        "title": "Username and password entered",
+        "sub": "LoginWindowViewModel",
+        "link": "#/m/ViewModels%2FLoginWindowViewModel.cs#LoginWindowViewModel",
+        "next": "check the server first",
+        "detail": "<p>The window offers both login and register; register calls login itself afterwards so the user never types the credentials twice.</p>"
+      },
+      {
+        "id": "health",
+        "kind": "decision",
+        "title": "GetHealth()",
+        "sub": "is the server answering at all?",
+        "next": "server reachable",
+        "detail": "<p>Checked before the credentials are sent, so &bdquo;server not running&ldquo; produces a clear message instead of a failed login.</p>",
+        "branches": [
+          {
+            "label": "no answer → error message, stay open",
+            "to": "fail",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "post",
+        "kind": "decision",
+        "title": "POST /login",
+        "sub": "ApiClient.Login",
+        "link": "#/m/Models%2FApiClient.cs#ApiClient.Login",
+        "next": "credentials accepted",
+        "detail": "<p>No key header on this route &mdash; it is one of the three the server leaves open, alongside <code>/register</code> and <code>/health</code>. Server-side the password is verified with bcrypt.</p>",
+        "branches": [
+          {
+            "label": "rejected → error message",
+            "to": "fail",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "store",
+        "kind": "step",
+        "title": "Store the user, encrypt the key",
+        "sub": "SecretProtector.Encrypt(user.ApiKey)",
+        "next": "close the window",
+        "detail": "<p><code>AppData.CurrentUser = new User(username, identifier, SecretProtector.Encrypt(user.ApiKey))</code>. The key is encrypted the moment it arrives and only ever decrypted at the point a header is set, so plaintext is never held in a field.</p><p>From here every per-user call sends <code>X-User-Key</code> plus <code>Auth</code> with the identifier.</p>"
+      },
+      {
+        "id": "ok",
+        "kind": "end",
+        "title": "LoginResult.Success",
+        "sub": "window closes, startup continues",
+        "next": "",
+        "detail": "<p>The <code>Closed</code> event completes the <code>TaskCompletionSource</code> the startup flow is awaiting.</p>"
+      },
+      {
+        "id": "fail",
+        "kind": "error",
+        "title": "Login failed",
+        "sub": "message shown, window stays open",
+        "next": "",
+        "detail": "<p>The user can retry. Closing the window instead yields a result other than <code>Success</code>, and the startup flow shuts the app down with code 0.</p>"
+      }
+    ]
+  },
+  "launcher": {
+    "title": "Launcher",
+    "steps": [
+      {
+        "id": "ready",
+        "kind": "start",
+        "title": "OnWindowReady",
+        "sub": "five checks, in order",
+        "link": "#/m/ViewModels%2FLauncherWindowViewModel.cs#LauncherWindowViewModel.OnWindowReady",
+        "next": "",
+        "detail": "<p>Progress is reported through the <code>Messages</code> collection of <code>LauncherMessage</code> entries (title, text, icon) that the window renders as a list with status icons.</p><p>Note: the <code>&lt;summary&gt;</code> above this method also describes a Python install, venv, pip, requirements and Playwright browsers. Those are <em>not</em> implemented here &mdash; the five below are what runs.</p>"
+      },
+      {
+        "id": "server",
+        "kind": "decision",
+        "title": "1. IsServerRunning()",
+        "sub": "GET against port 8765",
+        "next": "server is up",
+        "detail": "<p>The one hard requirement. Everything the app does is an HTTP call, so without a server there is nothing to continue to.</p>",
+        "branches": [
+          {
+            "label": "no answer → ShowError → Error",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "vc",
+        "kind": "step",
+        "title": "2. EnsureVcRedist()",
+        "sub": "VCRUNTIME140.dll in System32",
+        "next": "runtime present",
+        "detail": "<p>If missing, the installer is downloaded and run with <code>/install /quiet /norestart</code>. LibVLC needs it; without it playback fails in a way that is hard to diagnose.</p>"
+      },
+      {
+        "id": "restore",
+        "kind": "step",
+        "title": "3. RestoreDotnetPackages()",
+        "sub": "every .csproj below the repo root",
+        "next": "packages restored",
+        "detail": "<p>Finds the project files by walking up from the working directory. This assumes the app is running from inside the repository, which is the same assumption <code>PyScrapperPath</code> makes.</p>"
+      },
+      {
+        "id": "ffmpeg",
+        "kind": "step",
+        "title": "4. EnsureFfmpeg()",
+        "sub": "downloaded if absent",
+        "next": "ffmpeg available",
+        "detail": "<p>Needed twice later: <code>IsSupportedCodec()</code> calls ffprobe before playback, and <code>MediaConverter</code> calls both for conversion.</p>"
+      },
+      {
+        "id": "fin",
+        "kind": "end",
+        "title": "5. FinishSuccess()",
+        "sub": "status &bdquo;Ready!&ldquo;, window closes",
+        "next": "",
+        "detail": "<p>Sets <code>LauncherResult.Success</code>, which lets the startup flow proceed to <code>LoadApplicationData</code>.</p>"
+      },
+      {
+        "id": "err",
+        "kind": "error",
+        "title": "ShowError",
+        "sub": "error panel with a close button",
+        "next": "",
+        "detail": "<p>Reveals an error field in the window rather than throwing. The result becomes <code>LauncherResult.Error</code> and the app exits with code 1.</p>"
+      }
+    ]
+  },
+  "loaddata": {
+    "title": "Loading data",
+    "steps": [
+      {
+        "id": "get",
+        "kind": "io",
+        "title": "Fetch the user's media",
+        "sub": "GET /getuser/downloadedmedias/{id}",
+        "link": "#/m/App.axaml.cs#App.LoadApplicationData",
+        "next": "per entry",
+        "detail": "<p>The server knows what the user had; the file system knows what is actually still there. The rest of this flow reconciles the two.</p>"
+      },
+      {
+        "id": "exists",
+        "kind": "decision",
+        "title": "Does the file still exist?",
+        "sub": "File.Exists(DownloadPath)",
+        "next": "file present",
+        "detail": "<p>Entries whose path is literally <code>\"Does not exist\"</code> are on the removal list from the start &mdash; that is the marker the server uses for a record with no file behind it.</p>",
+        "branches": [
+          {
+            "label": "missing → removal list",
+            "to": "remove",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "codec",
+        "kind": "decision",
+        "title": ".mp4? check the codec",
+        "sub": "AudioPlayer.IsSupportedCodec() via ffprobe",
+        "next": "supported",
+        "detail": "<p>Only for <code>.mp4</code>, because that container can hold codecs LibVLC will not play.</p><p>Unsupported does <b>not</b> mean deleted: the entry stays with <code>IsPlayable = false</code> and a WARN in the log. It shows in the list but not in the playable set &mdash; and it is exactly what the converter exists for.</p>",
+        "branches": [
+          {
+            "label": "unsupported → IsPlayable = false",
+            "to": "add"
+          }
+        ]
+      },
+      {
+        "id": "add",
+        "kind": "step",
+        "title": "AppData.AddDownloadedMedia()",
+        "sub": "the only intended way into the collections",
+        "link": "#/m/Models%2FAppData.cs#AppData",
+        "next": "playlists next",
+        "detail": "<p>Appends to <code>DownloadedMedias</code> and, when <code>IsPlayable</code> is set, to <code>PlayableMedias</code> as well. Views are bound to these collections directly, so the UI updates without any refresh logic.</p>"
+      },
+      {
+        "id": "pl",
+        "kind": "step",
+        "title": "Load the playlists",
+        "sub": "GET /getuser/playlists/{id}, then FindMedias()",
+        "next": "optional folder scan",
+        "detail": "<p>For each playlist the assignments are resolved into the media objects already loaded above, which is why media has to come first.</p>"
+      },
+      {
+        "id": "scan",
+        "kind": "decision",
+        "title": "ScanFolderOnStartup?",
+        "sub": "a setting, off by default in a fresh config",
+        "next": "summaries",
+        "detail": "<p>When set, the download folder is scanned for files the database does not know about. <code>MediaAlreadyExists(filePath)</code> keeps a rescan from producing duplicates.</p>",
+        "branches": [
+          {
+            "label": "off → straight to the summary",
+            "to": "sum"
+          }
+        ]
+      },
+      {
+        "id": "sum",
+        "kind": "end",
+        "title": "Log two summaries",
+        "sub": "listed / playable / removed, and playlist count",
+        "next": "",
+        "detail": "<p>Worth knowing when something looks missing in the UI: the counts in <code>app.log</code> tell you whether an entry was dropped for a missing file or merely marked unplayable.</p>"
+      },
+      {
+        "id": "remove",
+        "kind": "error",
+        "title": "Removed from the local set",
+        "sub": "not deleted on the server &mdash; yet",
+        "next": "",
+        "detail": "<p>The entry is dropped from the in-memory collections only. But because <code>/save</code> on exit is a full replacement, whatever was removed here is deleted server-side when the app closes normally.</p>"
+      }
+    ]
+  },
+  "download": {
+    "title": "Search and download",
+    "steps": [
+      {
+        "id": "pick",
+        "kind": "decision",
+        "title": "Which window opens?",
+        "sub": "AppData.ValidSearchProviders decides",
+        "next": "",
+        "detail": "<p><code>ScrapWindowWithSearch</code> for providers that support search &mdash; youtube, bandcamp, archive, soundcloud, newgrounds, youtubemusic. <code>ScrapWindowWithoutSearch</code> for the rest, where a URL is typed in.</p>",
+        "branches": [
+          {
+            "label": "provider supports search",
+            "to": "search"
+          },
+          {
+            "label": "URL entered directly",
+            "to": "start"
+          }
+        ]
+      },
+      {
+        "id": "search",
+        "kind": "step",
+        "title": "POST /search",
+        "sub": "→ List&lt;SearchResultItem&gt;",
+        "link": "#/m/ViewModels%2FScrapWindowWithSearchViewModel.cs#ScrapWindowWithSearchViewModel",
+        "next": "user picks a hit",
+        "detail": "<p>Results carry url, title, thumbnail and type. The user selects one, which supplies the URL the download step needs.</p>"
+      },
+      {
+        "id": "start",
+        "kind": "step",
+        "title": "POST /download/video-audio",
+        "sub": "→ DownloadResponse",
+        "link": "#/m/Models%2FApiClient.cs#ApiClient.SendScrapRequest",
+        "next": "resources returned",
+        "detail": "<p>The timeout on this client is set to 30 minutes, because the server resolves the media synchronously within the request &mdash; a browser-based provider really opens Chromium before answering.</p><p>The request always asks for <code>stream</code>. From the search window it also carries <code>auto_convert</code>; with it set the server delivers the file already in the selected container.</p><p>The response nests: <code>DownloadResponse</code> &rarr; <code>DownloadResource</code> &rarr; <code>Context</code> &rarr; <code>OutputField</code> / <code>MediaInfoField</code>.</p>",
+        "branches": [
+          {
+            "label": "media type auto → 422 from the server",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "prog",
+        "kind": "step",
+        "title": "Poll the progress URL",
+        "sub": "GET {resource.ProgressUrl} every 500 ms, in the background",
+        "link": "#/m/ViewModels%2FProgressBarWindowViewModel.cs#ProgressBarWindowViewModel",
+        "next": "download finished",
+        "detail": "<p>The URL comes out of the response and is used verbatim &mdash; the client does not assemble it. <code>StartProgress()</code> starts a background task and returns at once, so the polling runs while the file is being fetched. It reports percentage, status and speed; a <code>CancellationTokenSource</code> ends the loop when the download completes or the window closes.</p>"
+      },
+      {
+        "id": "fetch",
+        "kind": "step",
+        "title": "Fetch the file",
+        "sub": "GET {resource.DownloadUrl} as a stream",
+        "link": "#/m/Models%2FApiClient.cs#ApiClient.GetFileFromStream",
+        "next": "file on disk",
+        "detail": "<p><code>HttpCompletionOption.ResponseHeadersRead</code> so a large file is not buffered fully into memory, plus a <code>CancellationToken</code> so the user can abort.</p><p>The file name is taken from the <code>Content-Disposition</code> header and appended to the path the caller passed &mdash; appended, not combined, which is why the path currently comes out without a separator. See <b>Search and download</b> on the workflows page.</p>"
+      },
+      {
+        "id": "check",
+        "kind": "decision",
+        "title": "Extension as selected?",
+        "sub": "search window only, after the file is on disk",
+        "next": "keep it",
+        "detail": "<p>The window compares the extension of the file that arrived with the selected media type and asks whether to keep a mismatch. The comparison includes the dot on one side and not on the other, so the question currently appears every time.</p><p>Then it waits for the file with at most ten <code>File.Exists</code> checks.</p>",
+        "branches": [
+          {
+            "label": "user declines → next item",
+            "to": "done"
+          }
+        ]
+      },
+      {
+        "id": "reg",
+        "kind": "step",
+        "title": "POST /create/downloadedmedia",
+        "sub": "register it on the server",
+        "next": "add locally",
+        "detail": "<p>The record gets the path and the extension of the file that actually arrived. Note the ordering: the file exists locally before the record is created, so a failure here leaves an orphan file that the next folder scan will pick up.</p>"
+      },
+      {
+        "id": "done",
+        "kind": "end",
+        "title": "AddDownloadedMedia → list updates",
+        "sub": "no refresh call needed",
+        "next": "",
+        "detail": "<p>The view is bound to the same <code>ObservableCollection</code>, so appending is all that is required for the entry to appear.</p>"
+      },
+      {
+        "id": "err",
+        "kind": "error",
+        "title": "422 Unprocessable",
+        "sub": "the server refused the request body",
+        "detail": "<p>Selecting <code>auto</code> sends empty strings for <code>preferred_file</code> and <code>preferred_type</code>. The server validates every non-null value and refuses empty strings, so the whole request fails before anything is resolved. <code>SendScrapRequest</code> shows the error detail in a message box.</p>",
+        "next": ""
+      }
+    ]
+  },
+  "convert": {
+    "title": "Converting",
+    "steps": [
+      {
+        "id": "pickfile",
+        "kind": "io",
+        "title": "Choose a file and a target container",
+        "sub": "StorageService + AppData.FileTypes",
+        "link": "#/m/ViewModels%2FMediaConverterWindowViewModel.cs#MediaConverterWindowViewModel",
+        "next": "probe it",
+        "detail": "<p>The picker filters come from <code>AppData.ValidMediaTypes</code>, split into media / audio / video / all. The target defaults to <code>.mp4</code>.</p>"
+      },
+      {
+        "id": "probe",
+        "kind": "step",
+        "title": "ffprobe the streams and duration",
+        "sub": "codecs per stream, total length",
+        "link": "#/m/Models%2FMediaConverter.cs#MediaConverter",
+        "next": "decide per stream",
+        "detail": "<p>The duration is needed for the percentage later; the codecs decide whether anything has to be re-encoded at all.</p>"
+      },
+      {
+        "id": "decide",
+        "kind": "decision",
+        "title": "Per stream: copy or re-encode?",
+        "sub": "ContainerCodecs / ContainerVideoCodecs",
+        "next": "build the ffmpeg command",
+        "detail": "<p>Three outcomes. The codec is already accepted by the target container &rarr; <code>copy</code>, no re-encode. It is not &rarr; the container's encoder from <code>ContainerEncoders</code>, e.g. <code>.mp3 → libmp3lame -q:a 2</code>. The target container is unknown &rarr; <code>null</code>, and the conversion is refused.</p><p>This is why an <code>.mkv</code> holding AAC converts to <code>.mp4</code> almost instantly while the same file with Vorbis takes real time.</p>",
+        "branches": [
+          {
+            "label": "unknown container → refused",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "video",
+        "kind": "decision",
+        "title": "Video needs re-encoding?",
+        "sub": "only .mp4, .mkv and .ts carry video",
+        "next": "run ffmpeg",
+        "detail": "<p>Video that cannot be copied goes through the fixed <code>libx264 -crf 23 -preset fast -pix_fmt yuv420p</code>. Converting into an audio-only container drops the video stream entirely.</p>"
+      },
+      {
+        "id": "run",
+        "kind": "step",
+        "title": "Run ffmpeg, parse stderr",
+        "sub": "progress lines vs the known duration",
+        "next": "finished",
+        "detail": "<p>ffmpeg reports its position on stderr; against the duration from ffprobe that becomes a percentage. Cancelling sets the <code>CancellationToken</code> and terminates the process.</p>",
+        "branches": [
+          {
+            "label": "cancelled → process killed",
+            "to": "err"
+          }
+        ]
+      },
+      {
+        "id": "out",
+        "kind": "end",
+        "title": "Converted file returned",
+        "sub": "MediaConverter.Convert returns the path",
+        "next": "",
+        "detail": "<p>A file that failed <code>IsSupportedCodec()</code> at load time will usually be playable after this &mdash; that is the reason the converter exists.</p>"
+      },
+      {
+        "id": "err",
+        "kind": "error",
+        "title": "Refused or cancelled",
+        "sub": "logged, no exception to the UI",
+        "next": "",
+        "detail": "<p>Consistent with the rest of the app: the model logs an ERROR line and returns a neutral value rather than throwing at the view model.</p>"
+      }
+    ]
+  },
+  "exit": {
+    "title": "Exit and save",
+    "steps": [
+      {
+        "id": "exit",
+        "kind": "start",
+        "title": "desktop.Exit fires",
+        "sub": "OnExit, hooked during LoadApplicationData",
+        "link": "#/m/App.axaml.cs#App.OnExit",
+        "next": "PerformExit()",
+        "detail": "<p>Run synchronously, because the process must not terminate while the request is still in flight.</p>"
+      },
+      {
+        "id": "build",
+        "kind": "step",
+        "title": "Build one SaveDataRequest",
+        "sub": "user, playlists, media, assignments, settings",
+        "link": "#/m/Models%2FServerRequestData.cs#SaveDataRequest",
+        "next": "POST /save",
+        "detail": "<p>The entire state in a single object. Nothing was written incrementally during the session, so this request <em>is</em> the persistence.</p>"
+      },
+      {
+        "id": "post",
+        "kind": "decision",
+        "title": "POST /save",
+        "sub": "Database.SaveUserDataAsync",
+        "link": "#/m/Models%2FDatabaseOperations.cs#Database.SaveUserDataAsync",
+        "next": "saved",
+        "detail": "<p>Server-side this is a full replacement, not a merge: anything not in the request is deleted. See the <b>Saving user data</b> flow in the LocalServer documentation.</p><p>The consequence is worth stating plainly: if the app started with a failed data load and is then closed normally, it sends empty lists and the account is wiped.</p>",
+        "branches": [
+          {
+            "label": "request fails → exit code 1",
+            "to": "fail",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "code",
+        "kind": "end",
+        "title": "Exit code 0",
+        "sub": "state persisted",
+        "next": "",
+        "detail": "<p>The app also stops the server through <code>/command</code> where that is configured, which is why the server's <code>quit_event</code> exists.</p>"
+      },
+      {
+        "id": "fail",
+        "kind": "error",
+        "title": "Exit code 1",
+        "sub": "save failed, session lost",
+        "next": "",
+        "detail": "<p>An ERROR line goes to <code>app.log</code>. Since the session was never written incrementally, everything since the last clean exit is gone &mdash; the log is the only place that says so.</p>"
+      }
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+<div class="wrap">
+<div class="crumb">PythonModule</div>
+<h1>PythonModule</h1>
+<p class="lede">The engine behind PyScrapper. It takes a URL, works out where the real media data
+lives, decides which transfer mechanism sits behind it and delivers the bytes either into a file or
+as a stream. The LocalServer is only the HTTP shell around it.</p>
+<div class="stats"><div class="stat"><b>{{stat:modules}}</b><span>modules</span></div><div class="stat"><b>{{stat:loc}}</b><span>lines of code</span></div><div class="stat"><b>{{stat:classes}}</b><span>classes</span></div><div class="stat"><b>{{stat:functions}}</b><span>functions</span></div></div><div class="hero"><svg viewBox="0 0 880 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pipeline from request to byte stream"><rect class="svg-box" x="8" y="20" width="132" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="19" y="39">SearchRequest</text><text class="svg-s" x="19" y="53">DownloadRequest</text><line class="svg-l" x1="140" y1="43" x2="170" y2="43" stroke-width="1.2"/><polygon class="svg-ar" points="176,43 170,39.5 170,46.5"/><rect class="svg-box" x="176" y="20" width="168" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="187" y="39">providers.&lt;name&gt;</text><text class="svg-s" x="187" y="53">getMediaInformation()</text><line class="svg-l" x1="344" y1="43" x2="374" y2="43" stroke-width="1.2"/><polygon class="svg-ar" points="380,43 374,39.5 374,46.5"/><rect class="svg-box" x="380" y="20" width="168" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="391" y="39">makeProviderResult()</text><text class="svg-s" x="391" y="53">scores the candidates</text><line class="svg-l" x1="548" y1="43" x2="578" y2="43" stroke-width="1.2"/><polygon class="svg-ar" points="584,43 578,39.5 578,46.5"/><rect class="svg-box" x="584" y="20" width="140" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="595" y="39">ProviderResult</text><text class="svg-s" x="595" y="53">url + type + size</text><path class="svg-l" d="M724,43 H742.0 V120 H754" stroke-width="1.2"/><polygon class="svg-ar" points="760,120 754,116.5 754,123.5"/><rect class="svg-box" x="760" y="97" width="112" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="771" y="116">DownloadContext</text><text class="svg-s" x="771" y="130">one per file</text><path class="svg-l" d="M816,143 V172 H300" stroke-width="1.2"/><polygon class="svg-ar" points="292,172 298,168.5 298,175.5"/><rect class="svg-box" x="160" y="149" width="132" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="171" y="168">DownloadDispatcher</text><text class="svg-s" x="171" y="182">_splitContext()</text><path class="svg-l" d="M226,195 V237 H292" stroke-width="1.2"/><polygon class="svg-ar" points="300,237 294,233 294,240"/><rect class="svg-box" x="300" y="225" width="168" height="26" rx="4" stroke-width="1"/><text class="svg-t" x="311" y="242.0">FileDispatcher</text><text class="svg-s" x="478" y="242">range requests</text><path class="svg-l" d="M226,195 V271 H292" stroke-width="1.2"/><polygon class="svg-ar" points="300,271 294,267 294,274"/><rect class="svg-box" x="300" y="259" width="168" height="26" rx="4" stroke-width="1"/><text class="svg-t" x="311" y="276.0">HLSDispatcher</text><text class="svg-s" x="478" y="276">m3u8 &rarr; segments</text><path class="svg-l" d="M226,195 V305 H292" stroke-width="1.2"/><polygon class="svg-ar" points="300,305 294,301 294,308"/><rect class="svg-box" x="300" y="293" width="168" height="26" rx="4" stroke-width="1"/><text class="svg-t" x="311" y="310.0">UMPDispatcher</text><text class="svg-s" x="478" y="310">YouTube SABR/UMP</text><rect class="svg-box" x="636" y="225" width="132" height="40" rx="6" stroke-width="1"/><text class="svg-t" x="647" y="244">downloadToFile()</text><text class="svg-s" x="647" y="258">file on disk</text><rect class="svg-box" x="636" y="271" width="132" height="40" rx="6" stroke-width="1"/><text class="svg-t" x="647" y="290">downloadAndYield()</text><text class="svg-s" x="647" y="304">async byte stream</text><path class="svg-l" d="M600,238 H630" stroke-width="1.2"/><path class="svg-l" d="M600,284 H630" stroke-width="1.2"/><path class="svg-l" d="M600,238 V284" stroke-width="1.2"/><path class="svg-l" d="M572,261 H600" stroke-width="1.2"/></svg></div>
+<h2 id="packages">The packages</h2>
+<p>The code is cut along responsibility, not technology. The fastest way to find something is
+through this split:</p>
+<div class="tbl-wrap"><table><thead><tr><th>Package</th><th>Responsibility</th><th>Look here when</th></tr></thead><tbody>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fnetwork%2FSession.py">core.network</a></td>
+<td>HTTP with a cookie jar, the Playwright browser layer, byte streaming (including ranged and
+multi-range fetches), fetching HTML and JSON</td>
+<td>a page never loads at all, or cookies go missing</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fdownload%2FDispatcher%2Fdispatcher.py">core.download</a></td>
+<td>The three download mechanisms FILE, HLS and UMP plus the dispatcher in front of them</td>
+<td>the download starts but arrives wrong, or not at all</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fffmpeg%2Fffmpeg_muxer.py">core.ffmpeg</a></td>
+<td>Codec probing with ffprobe, the container table, and the muxer that joins separate video and
+audio streams or re-wraps them into the requested container</td>
+<td>the bytes arrive but the file will not play, or ffmpeg exits with an error</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fprocesses%2Fasync_process_manager.py">core.processes</a></td>
+<td>An asyncio wrapper around subprocesses with any number of input pipes (POSIX pipes or Windows
+named pipes)</td>
+<td>ffmpeg hangs, a pipe breaks, or something works on Linux but not on Windows</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fmodels%2FDownload.py">core.models</a></td>
+<td>Every data class and enum that travels between the layers, plus the error types</td>
+<td>you want to know which fields a context really has</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/core%2Fgeneral%2FValidate%2Fgeneral.py">core.general</a></td>
+<td>Argument checking, regex helpers, file conversion, progress reporting</td>
+<td>an <span class="mono">ArgumentError</span> is thrown and you are looking for its source</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2Fmodels.py">providers</a></td>
+<td>One module or package per platform, each with <span class="mono">search()</span> and
+<span class="mono">getMediaInformation()</span></td>
+<td>one particular site misbehaves</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/models%2Fsettings.py">models</a></td>
+<td>Pydantic requests and responses, the provider registry</td>
+<td>you want to change the HTTP schema or a provider alias</td></tr>
+</tbody></table></div>
+
+<h2 id="entry">Where to start reading</h2>
+<p>Four places explain almost the whole system between them. Once you have read those, any further
+provider takes a few minutes to understand.</p>
+<ol>
+<li><a class="x" href="#/m/providers%2Fmodels.py#makeProviderResult">makeProviderResult()</a> &mdash;
+decides which of the discovered URLs actually gets downloaded.</li>
+<li><a class="x" href="#/m/core%2Fmodels%2FDownload.py#DownloadContext">DownloadContext</a> &mdash;
+the object handed through every layer from that point on.</li>
+<li><a class="x" href="#/m/core%2Fdownload%2FDispatcher%2Fdispatcher.py#DownloadDispatcher">DownloadDispatcher</a> &mdash;
+distributes the contexts across the three mechanisms.</li>
+<li><a class="x" href="#/m/core%2Fdownload%2FDispatcher%2Fbase.py#Dispatcher._asyncProcessSources">Dispatcher._asyncProcessSources()</a> &mdash;
+where every stream ends: probe the codecs, pass the bytes through untouched or hand them to
+ffmpeg.</li>
+</ol>
+<div class="note"><b>How this documentation is produced</b>
+<p>Everything except the explanatory prose is generated from the code by
+<code>HTML_Doku/_generator/build_docs.py</code>: signatures, fields, defaults, line numbers, source,
+the call graph and the numbers on this page. The prose lives next to it in
+<code>_generator/content/</code>. Run the script after a change and the module pages are current
+again; the prose only moves when someone edits it. Docstrings are rare in this project, so in many
+places only the signature is shown.</p></div>
+</div>

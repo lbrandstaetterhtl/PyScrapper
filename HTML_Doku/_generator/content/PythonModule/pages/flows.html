@@ -1,0 +1,16 @@
+<div class="wrap">
+<div class="crumb">PythonModule / flows</div>
+<h1>Program flows</h1>
+<p class="lede">The engine as a sequence of steps rather than a call graph. Click a step &mdash; or
+use prev/next &mdash; to see what happens there and where it can go from here. The tabs switch
+between flows.</p>
+<div class="flowmount" data-flow="pipeline,scoring,browser,hls,ump"></div>
+
+<h2 id="reading">How to read these</h2>
+<p>The spine on the left is the happy path in execution order. Dashed boxes are decision points,
+red ones are failure exits. The buttons under &bdquo;Where it can go from here&ldquo; jump to the
+step they name &mdash; that is how branches, retries and error paths are reachable, since they are
+not part of the linear sequence.</p>
+<p>Start with <b>Link to byte stream</b>: it is the whole engine end to end, and the other four
+zoom into one of its steps.</p>
+</div>

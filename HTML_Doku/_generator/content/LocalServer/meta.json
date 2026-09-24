@@ -1,0 +1,56 @@
+{
+  "title": "pyscrapper/server :: doc",
+  "brand": "pyscrapper/server",
+  "package": "LocalServer",
+  "prompt": "server",
+  "lang": "py",
+  "nav": [
+    {
+      "href": "#/overview",
+      "label": "overview"
+    },
+    {
+      "href": "#/endpoints",
+      "label": "endpoints"
+    },
+    {
+      "href": "#/flows",
+      "label": "program flows"
+    },
+    {
+      "href": "#/db",
+      "label": "database"
+    },
+    {
+      "href": "#/ops",
+      "label": "operations"
+    }
+  ],
+  "pages_index": [
+    {
+      "title": "Overview",
+      "hash": "#/overview",
+      "sub": "start here"
+    },
+    {
+      "title": "Endpoints",
+      "hash": "#/endpoints",
+      "sub": "HTTP API"
+    },
+    {
+      "title": "Program flows",
+      "hash": "#/flows",
+      "sub": "interactive step-through"
+    },
+    {
+      "title": "Database",
+      "hash": "#/db",
+      "sub": "SQLite schema"
+    },
+    {
+      "title": "Operations",
+      "hash": "#/ops",
+      "sub": "start, test, errors"
+    }
+  ]
+}

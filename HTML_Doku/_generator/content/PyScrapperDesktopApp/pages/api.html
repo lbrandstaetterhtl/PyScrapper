@@ -1,0 +1,29 @@
+<div class="wrap">
+<div class="crumb">PyScrapperDesktopApp / server access</div>
+<h1>Calls into the LocalServer</h1>
+<p class="lede">{{stat:calls}} endpoints are called by the app, spread across two classes. Click a row for parameters and a jump into the source.</p>
+
+<h2 id="who">Who calls what</h2>
+<div class="tbl-wrap"><table><thead><tr><th>Class</th><th>Responsible for</th><th>Headers it sends</th></tr></thead><tbody>
+<tr><td class="mono"><a class="x" href="#/m/Models%2FApiClient.cs#ApiClient">ApiClient</a></td>
+<td>Download, search, health, progress, login, logout, register</td>
+<td class="mono">X-User-Key + Auth on the authenticated calls; /health, /login and /register go out
+without one</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/Models%2FDatabaseOperations.cs#Database">Database</a></td>
+<td>Everything around media, playlists, settings and users</td>
+<td class="mono">X-User-Key + Auth for the per-user routes, X-Admin-Key + Auth for the ones the
+server guards with the admin key</td></tr>
+</tbody></table></div>
+<p>Both keys are held encrypted and decrypted per call:
+<span class="mono">SecretProtector.Decrypt(AppData.Config.ClientApiKey)</span> for the admin key and
+<span class="mono">SecretProtector.Decrypt(AppData.CurrentUser.ApiKey)</span> for the user key. The
+plaintext never sits in a field.</p>
+<p>The base URL is rebuilt on every call as
+<span class="mono">{ServerUrl}:{ServerPort}{path}</span>. Each method creates its own
+<span class="mono">HttpClient</span> inside a <span class="mono">using</span>.</p>
+<p>Error behaviour is the same in both classes: on a status code outside the success range an
+<span class="mono">Exception</span> is thrown, the <span class="mono">catch</span> logs an ERROR
+line and a neutral value is returned. The calling UI therefore sees empty lists or
+<span class="mono">null</span> rather than an exception.</p>
+
+{{gen:api_calls}}</div>

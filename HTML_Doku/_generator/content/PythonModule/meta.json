@@ -1,0 +1,56 @@
+{
+  "title": "pyscrapper/engine :: doc",
+  "brand": "pyscrapper/engine",
+  "package": "PythonModule",
+  "prompt": "engine",
+  "lang": "py",
+  "nav": [
+    {
+      "href": "#/overview",
+      "label": "overview"
+    },
+    {
+      "href": "#/arch",
+      "label": "link to byte stream"
+    },
+    {
+      "href": "#/flows",
+      "label": "program flows"
+    },
+    {
+      "href": "#/providers",
+      "label": "providers"
+    },
+    {
+      "href": "#/downloaders",
+      "label": "download mechanisms"
+    }
+  ],
+  "pages_index": [
+    {
+      "title": "Overview",
+      "hash": "#/overview",
+      "sub": "start here"
+    },
+    {
+      "title": "From link to byte stream",
+      "hash": "#/arch",
+      "sub": "architecture"
+    },
+    {
+      "title": "Program flows",
+      "hash": "#/flows",
+      "sub": "interactive step-through"
+    },
+    {
+      "title": "Providers",
+      "hash": "#/providers",
+      "sub": "one per platform"
+    },
+    {
+      "title": "Download mechanisms",
+      "hash": "#/downloaders",
+      "sub": "FILE, HLS, UMP"
+    }
+  ]
+}
