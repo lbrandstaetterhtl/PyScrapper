@@ -69,19 +69,6 @@ function DownloadPanel({
 
             updateDownloadHistory(oldHistory => [...oldHistory, result])
 
-            updateDownloadRequest(prev => ({
-                ...prev,
-                download_strategie: DownloadStrategie.Stream,
-                download_path: "",
-                urls: [],
-                filenames: [],
-                preferred_type: null,
-                preferred_file: null,
-                auto_convert: false,
-                extra_headers: {},
-                provider: ProvidersDownload.Youtube_Music
-            }))
-
             onFinishedDownload()
         } catch (err) {
             setError(err instanceof Error ? err.message : "Unknown download error")
@@ -108,9 +95,12 @@ function DownloadPanel({
                         value={request.provider}
                         onChange={(e) => updateDownloadRequest({ ...request, provider: e.target.value as ProviderDownload })}
                     >
-                        {Object.entries(ProvidersDownload).map(([key, value]) => (
-                            <option key={value} value={value}>{key}</option>
-                        ))}
+                        {Object.entries(ProvidersDownload)
+                            .map(([key, value]) => ({ key, value, label: key.replaceAll("_", " ") }))
+                            .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))
+                            .map(({ value, label }) => (
+                                <option key={value} value={value}>{label}</option>
+                            ))}
                     </select>
                 </label>
 

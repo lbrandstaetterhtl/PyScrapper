@@ -3,6 +3,12 @@ import type { Authorization } from "../general"
 export type AuthServerResponse = {
     message: string
     identifier: string
+    user_key: string
+}
+
+type LoginResponse = {
+    message: string
+    identifier: string
 }
 
 type UserResponse = {
@@ -20,50 +26,17 @@ async function readJson(response: Response) {
     }
 }
 
-function validateAuthInput(auth: Authorization) {
-    if (!auth.key_name.trim()) throw new Error("Admin key header name is empty")
-    if (!auth.key_value.trim()) throw new Error("Admin key is empty")
+function validateCredentials(auth: Authorization) {
     if (!auth.username.trim()) throw new Error("Username is empty")
     if (!auth.password) throw new Error("Password is empty")
 }
 
-function adminHeaders(auth: Authorization): Record<string, string> {
+function validateAdminCredentials(auth: Authorization) {
     if (!auth.key_name.trim()) throw new Error("Admin key header name is empty")
-    if (!auth.key_value.trim()) throw new Error("Admin key is empty")
-
-    return {
-        [auth.key_name.trim()]: auth.key_value.trim()
-    }
+    if (!auth.key_value.trim()) throw new Error("Admin key is required to register a user")
 }
 
-async function sendAuthRequest(
-    endpoint: "/login" | "/register",
-    auth: Authorization
-): Promise<AuthServerResponse> {
-    validateAuthInput(auth)
-
-    const body = endpoint === "/register"
-        ? {
-            username: auth.username,
-            password: auth.password,
-            // The current server RegisterRequest still expects `apikey`.
-            // The actual X-User-Key used afterwards is fetched from /get/user.
-            apikey: auth.key_value
-        }
-        : {
-            username: auth.username,
-            password: auth.password
-        }
-
-    const response = await fetch(`/api${endpoint}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            ...adminHeaders(auth)
-        },
-        body: JSON.stringify(body)
-    })
-
+async function ensureOk(response: Response) {
     const data = await readJson(response)
 
     if (!response.ok) {
@@ -74,45 +47,75 @@ async function sendAuthRequest(
         )
     }
 
-    if (!data?.identifier) {
-        throw new Error("Authentication response did not contain an identifier")
-    }
-
-    return data as AuthServerResponse
+    return data
 }
 
-export async function getUserKey(auth: Authorization, identifier: string): Promise<string> {
-    if (!identifier.trim()) throw new Error("Missing user identifier")
-
+async function loadUserKey(identifier: string): Promise<string> {
+    // The server login endpoint intentionally returns only the identifier.
+    // Afterwards we load the user's ApiKey from /get/user/{identifier}.
     const response = await fetch(`/api/get/user/${encodeURIComponent(identifier)}`, {
         method: "GET",
         headers: {
-            ...adminHeaders(auth),
             "Auth": identifier
         }
     })
 
-    const data = await readJson(response) as UserResponse | null
+    const data = await ensureOk(response) as UserResponse | null
 
-    if (!response.ok) {
-        throw new Error(
-            (data as any)?.detail ??
-            (data as any)?.message ??
-            `Failed to load user key: HTTP ${response.status}`
-        )
+    if (!data?.ApiKey) {
+        throw new Error("User response did not contain an ApiKey")
     }
 
-    if (!data?.ApiKey?.trim()) {
-        throw new Error("/get/user response did not contain ApiKey")
+    return data.ApiKey
+}
+
+async function finishAuthentication(data: LoginResponse | null): Promise<AuthServerResponse> {
+    if (!data?.identifier) {
+        throw new Error("Authentication response did not contain an identifier")
     }
 
-    return data.ApiKey.trim()
+    const userKey = await loadUserKey(data.identifier)
+
+    return {
+        message: data.message,
+        identifier: data.identifier,
+        user_key: userKey
+    }
 }
 
-export function login(auth: Authorization) {
-    return sendAuthRequest("/login", auth)
+export async function login(auth: Authorization): Promise<AuthServerResponse> {
+    validateCredentials(auth)
+
+    const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            username: auth.username,
+            password: auth.password
+        })
+    })
+
+    const data = await ensureOk(response) as LoginResponse | null
+    return finishAuthentication(data)
 }
 
-export function register(auth: Authorization) {
-    return sendAuthRequest("/register", auth)
+export async function register(auth: Authorization): Promise<AuthServerResponse> {
+    validateCredentials(auth)
+    validateAdminCredentials(auth)
+
+    const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            [auth.key_name.trim()]: auth.key_value.trim()
+        },
+        body: JSON.stringify({
+            username: auth.username,
+            password: auth.password,
+            apikey: auth.key_value
+        })
+    })
+
+    const data = await ensureOk(response) as LoginResponse | null
+    return finishAuthentication(data)
 }

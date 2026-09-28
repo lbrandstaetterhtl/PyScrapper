@@ -4,7 +4,6 @@ import { DownloadResultPanelType } from "./models"
 import type { DownloadPanelType } from "./models"
 import { getDownloadProgress } from "./api"
 import type { Authorization } from "../general"
-import { buildUserHeaders } from "../general"
 import Hls from "hls.js"
 
 type DownloadResultPanelProps = {
@@ -292,57 +291,24 @@ function MediaPlayer({ stream, auth }: MediaPlayerProp) {
         const media = isAudio ? audioRef.current : videoRef.current
         if (!media) return
 
-        let objectUrl: string | null = null
-        let cancelled = false
-        const controller = new AbortController()
-
         media.pause()
         media.removeAttribute("src")
         media.load()
 
         if (stream.stream_type === "file") {
-            // <audio>/<video> cannot attach X-User-Key/Auth headers to their own
-            // network requests. Fetch the protected watch URL ourselves with the
-            // user headers and give the media element a local Blob URL instead.
-            void (async () => {
-                try {
-                    const response = await fetch(stream.watch_url, {
-                        method: "GET",
-                        headers: buildUserHeaders(auth),
-                        signal: controller.signal
-                    })
-
-                    if (!response.ok) {
-                        let detail = `HTTP ${response.status}`
-                        try {
-                            const body = await response.json()
-                            detail = body?.detail ?? body?.message ?? detail
-                        } catch {
-                            // The watch route normally returns media, not JSON.
-                        }
-                        throw new Error(detail)
-                    }
-
-                    const blob = await response.blob()
-                    if (cancelled) return
-
-                    objectUrl = URL.createObjectURL(blob)
-                    media.src = objectUrl
-                    media.load()
-                } catch (error) {
-                    if (!controller.signal.aborted) {
-                        console.error("File playback failed:", error)
-                    }
-                }
-            })()
+            // Do NOT fetch the whole media into a Blob. A fetch() without a Range
+            // header makes the server send the complete file first, so large video
+            // appears to "load forever" before playback can start. Giving the URL
+            // directly to <video>/<audio> lets the browser issue its own byte-range
+            // requests (206) and start playback while the file is still loading.
+            media.src = stream.watch_url
+            media.preload = "metadata"
+            media.load()
 
             return () => {
-                cancelled = true
-                controller.abort()
                 media.pause()
                 media.removeAttribute("src")
                 media.load()
-                if (objectUrl) URL.revokeObjectURL(objectUrl)
             }
         }
 
@@ -387,46 +353,200 @@ function MediaPlayer({ stream, auth }: MediaPlayerProp) {
         const audio = separateAudioRef.current
         if (!video || !audio) return
 
-        audio.src = stream.watch_audio_url
-        audio.preload = "auto"
+        // The video element is the master clock. The separate audio element only
+        // follows it. Small clock drift is corrected gently with playbackRate;
+        // hard seeks are reserved for real seeks / large desyncs because assigning
+        // currentTime repeatedly can trigger new Range requests and audible gaps.
+        const HARD_SYNC_THRESHOLD = 0.9
+        const SOFT_SYNC_THRESHOLD = 0.06
+        const MAX_RATE_CORRECTION = 0.04
+        const SYNC_INTERVAL_MS = 200
 
-        const syncHard = () => {
-            if (Number.isFinite(video.currentTime)) audio.currentTime = video.currentTime
-        }
-        const play = () => {
-            syncHard()
-            audio.playbackRate = video.playbackRate
-            void audio.play().catch(err => console.warn("Separate audio playback failed:", err))
-        }
-        const pause = () => audio.pause()
-        const timeUpdate = () => {
-            if (Math.abs(audio.currentTime - video.currentTime) > 0.25) syncHard()
-        }
-        const rateChange = () => { audio.playbackRate = video.playbackRate }
-        const volumeChange = () => {
+        let disposed = false
+        let videoIsBuffering = false
+        let videoIsSeeking = false
+
+        audio.preload = "auto"
+        audio.src = stream.watch_audio_url
+        audio.load()
+
+        // Keep pitch stable while playbackRate is nudged for A/V clock drift.
+        audio.preservesPitch = true
+
+        const copyVolume = () => {
             audio.volume = video.volume
             audio.muted = video.muted
         }
 
-        video.addEventListener("play", play)
-        video.addEventListener("pause", pause)
-        video.addEventListener("seeking", syncHard)
-        video.addEventListener("seeked", syncHard)
-        video.addEventListener("timeupdate", timeUpdate)
-        video.addEventListener("ratechange", rateChange)
-        video.addEventListener("volumechange", volumeChange)
-        video.addEventListener("ended", pause)
-        volumeChange()
+        const resetRate = () => {
+            audio.playbackRate = video.playbackRate
+        }
+
+        const canSeekAudio = () => (
+            audio.readyState >= audio.HAVE_METADATA &&
+            Number.isFinite(video.currentTime)
+        )
+
+        const hardSync = () => {
+            if (!canSeekAudio()) return
+
+            const target = video.currentTime
+            if (Math.abs(audio.currentTime - target) < 0.015) return
+
+            try {
+                audio.currentTime = target
+            } catch (error) {
+                console.warn("Could not seek separate audio for A/V sync:", error)
+            }
+        }
+
+        const shouldAudioBePlaying = () => (
+            !disposed &&
+            !video.paused &&
+            !video.ended &&
+            !videoIsBuffering &&
+            !videoIsSeeking &&
+            video.readyState >= video.HAVE_FUTURE_DATA
+        )
+
+        const startAudio = async (forceSync = false) => {
+            if (disposed || !shouldAudioBePlaying()) return
+
+            if (forceSync || Math.abs(audio.currentTime - video.currentTime) > HARD_SYNC_THRESHOLD) {
+                hardSync()
+            }
+
+            resetRate()
+
+            try {
+                await audio.play()
+            } catch (error) {
+                // play() can briefly reject while metadata/buffer is still arriving.
+                // loadeddata/canplay/playing will retry without spamming the player.
+                if (!disposed && shouldAudioBePlaying()) {
+                    console.debug("Separate audio is not ready yet:", error)
+                }
+            }
+        }
+
+        const pauseAudio = () => {
+            audio.pause()
+            resetRate()
+        }
+
+        const onVideoPlay = () => {
+            videoIsBuffering = video.readyState < video.HAVE_FUTURE_DATA
+            void startAudio(true)
+        }
+
+        const onVideoPause = () => {
+            // A normal user pause and an ended video should stop the slave immediately.
+            pauseAudio()
+        }
+
+        const onVideoWaiting = () => {
+            videoIsBuffering = true
+            pauseAudio()
+        }
+
+        const onVideoPlaying = () => {
+            videoIsBuffering = false
+            void startAudio(true)
+        }
+
+        const onVideoSeeking = () => {
+            videoIsSeeking = true
+            pauseAudio()
+        }
+
+        const onVideoSeeked = () => {
+            videoIsSeeking = false
+            hardSync()
+            void startAudio(false)
+        }
+
+        const onVideoRateChange = () => {
+            resetRate()
+        }
+
+        const onAudioMetadata = () => {
+            hardSync()
+            void startAudio(false)
+        }
+
+        const onAudioCanPlay = () => {
+            void startAudio(false)
+        }
+
+        const correctDrift = () => {
+            if (!shouldAudioBePlaying() || audio.paused || audio.seeking || video.seeking) {
+                return
+            }
+
+            const drift = audio.currentTime - video.currentTime
+            const absDrift = Math.abs(drift)
+
+            if (!Number.isFinite(drift)) return
+
+            if (absDrift > HARD_SYNC_THRESHOLD) {
+                // Something genuinely got out of sync (e.g. a delayed start).
+                // One seek is cheaper and cleaner than trying to catch up for seconds.
+                hardSync()
+                resetRate()
+                return
+            }
+
+            if (absDrift <= SOFT_SYNC_THRESHOLD) {
+                resetRate()
+                return
+            }
+
+            // Audio ahead -> slightly slower. Audio behind -> slightly faster.
+            // Scale with the error but cap the correction so it stays inaudible.
+            const correction = Math.max(
+                -MAX_RATE_CORRECTION,
+                Math.min(MAX_RATE_CORRECTION, drift * 0.08)
+            )
+            audio.playbackRate = video.playbackRate * (1 - correction)
+        }
+
+        video.addEventListener("play", onVideoPlay)
+        video.addEventListener("pause", onVideoPause)
+        video.addEventListener("waiting", onVideoWaiting)
+        video.addEventListener("stalled", onVideoWaiting)
+        video.addEventListener("playing", onVideoPlaying)
+        video.addEventListener("seeking", onVideoSeeking)
+        video.addEventListener("seeked", onVideoSeeked)
+        video.addEventListener("ratechange", onVideoRateChange)
+        video.addEventListener("volumechange", copyVolume)
+        video.addEventListener("ended", pauseAudio)
+
+        audio.addEventListener("loadedmetadata", onAudioMetadata)
+        audio.addEventListener("canplay", onAudioCanPlay)
+
+        const syncTimer = window.setInterval(correctDrift, SYNC_INTERVAL_MS)
+
+        copyVolume()
+        resetRate()
 
         return () => {
-            video.removeEventListener("play", play)
-            video.removeEventListener("pause", pause)
-            video.removeEventListener("seeking", syncHard)
-            video.removeEventListener("seeked", syncHard)
-            video.removeEventListener("timeupdate", timeUpdate)
-            video.removeEventListener("ratechange", rateChange)
-            video.removeEventListener("volumechange", volumeChange)
-            video.removeEventListener("ended", pause)
+            disposed = true
+            window.clearInterval(syncTimer)
+
+            video.removeEventListener("play", onVideoPlay)
+            video.removeEventListener("pause", onVideoPause)
+            video.removeEventListener("waiting", onVideoWaiting)
+            video.removeEventListener("stalled", onVideoWaiting)
+            video.removeEventListener("playing", onVideoPlaying)
+            video.removeEventListener("seeking", onVideoSeeking)
+            video.removeEventListener("seeked", onVideoSeeked)
+            video.removeEventListener("ratechange", onVideoRateChange)
+            video.removeEventListener("volumechange", copyVolume)
+            video.removeEventListener("ended", pauseAudio)
+
+            audio.removeEventListener("loadedmetadata", onAudioMetadata)
+            audio.removeEventListener("canplay", onAudioCanPlay)
+
             audio.pause()
             audio.removeAttribute("src")
             audio.load()

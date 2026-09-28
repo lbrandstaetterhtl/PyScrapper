@@ -5,8 +5,8 @@ import type { Authorization } from "./components/general"
 import { Panel } from "./components/general"
 import type { Panel as PanelType } from "./components/general"
 
-import type { SearchResult } from "./components/search/models"
-import { type DownloadResult, ProvidersDownload, type DownloadRequest } from "./components/download/models"
+import { type SearchRequest, type SearchResult } from "./components/search/models"
+import { type DownloadResult, type DownloadRequest } from "./components/download/models"
 
 import AuthPanel from "./components/authorization/auth-panel"
 import SearchPanel from "./components/search/search-panel"
@@ -22,7 +22,7 @@ import "./components/download/download-panel.css"
 
 function App() {
     const [auth, updateAuth] = useState<Authorization>({
-        key_name: "X-Admin-Key",
+        key_name: "",
         key_value: "",
         username: "",
         password: "",
@@ -32,12 +32,21 @@ function App() {
 
     const [searchResults, updateSearchResults] = useState<SearchResult[]>([])
 
+    const [curSearchRequest, updateSearchRequest] = useState<SearchRequest>({
+        search: "",
+        provider: "youtube",
+        top: 5,
+        filters: {
+            tags: ["track"]
+        }
+    })
+
     const [curPanel, setPanel] =useState<PanelType>(Panel.AUTHORIZATION)
 
     const [downloadHistory, updateDownloadResult] = useState<DownloadResult[]>([])
 
     const [curDownloadRequest, updateDownloadRequest] = useState<DownloadRequest>({
-        provider: ProvidersDownload.Youtube_Music,
+        provider: "youtube",
         download_strategie: "stream",
         urls: [],
         filenames: [],
@@ -130,6 +139,8 @@ function App() {
                     {curPanel === Panel.SEARCH &&(
                         <SearchPanel
                             auth={auth}
+                            request={curSearchRequest}
+                            updateSearchRequest={updateSearchRequest}
                             updateResults={updateSearchResults}
                             onSearchFinished={() => setPanel(Panel.SEARCH_RESULT)}
                         />

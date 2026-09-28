@@ -145,6 +145,8 @@ def _tryGetUsableUrls(
 
         
         jsonData = _sendRequest(videoId, method, request.ses)
+        print(jsonData)
+        print(1)
 
         if jsonData is None:
             print(f"[Youtube] Couldn't get jsonData from player API with method {method}")
@@ -162,6 +164,7 @@ def _tryGetUsableUrls(
 
 
             jsonData = _sendRequest(videoId, method, request.ses, visitorData)
+            print(jsonData)
             
             if jsonData is None:
                 print(f"[Youtube] Couldn't get jsonData from player API with method {method}")

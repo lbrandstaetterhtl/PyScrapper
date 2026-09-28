@@ -849,31 +849,37 @@ def _buildProviderResultFromFoundMedia(
     video_size = 0
     audio_size = 0
 
-    video_size, _ = getUrlInformation(
-        session=request.ses,
-        url=media.url,
-        extra_headers=media.extra_headers
-    )
-
-    if media.audio_url:
-        audio_size, _ = getUrlInformation(
+    if media.total_size > 0:
+        size = media.total_size
+        
+    else:
+        video_size, _ = getUrlInformation(
             session=request.ses,
-            url=media.audio_url,
+            url=media.url,
             extra_headers=media.extra_headers
         )
 
-        if video_size >= 0 and audio_size >= 0:
-            size = video_size + audio_size
-        else:
-            size = -1
+        if media.audio_url:
+            audio_size, _ = getUrlInformation(
+                session=request.ses,
+                url=media.audio_url,
+                extra_headers=media.extra_headers
+            )
 
-    else:
-        size = video_size
+            if video_size >= 0 and audio_size >= 0:
+                size = video_size + audio_size
+            else:
+                size = -1
+
+        else:
+            size = video_size
     
 
 #Server works with total size or total segments depending on file or hls
     if media.stream_type == core.models.Download.DownloadType.HLS:
         size = -1
+    if media.stream_type == core.models.Download.DownloadType.UMP:
+        video_size = media.total_size
     
     result = ProviderResult(
         url=media.url,

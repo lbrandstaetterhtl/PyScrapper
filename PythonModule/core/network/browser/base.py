@@ -139,17 +139,17 @@ class Browser():
             color_scheme="dark"
         )
 
+        if self.cookieFilePath:
+            cookies = helpers.cookies.loadCookies(
+                self.cookieFilePath
+            )
 
-        cookies = helpers.cookies.loadCookies(
-            self.cookieFilePath
-        )
-
-        if cookies:
-            try:
-                self.context.add_cookies(cookies)
-                print("[CORE] Browser.setup: added Cookies to playwright context")
-            except Exception as e:
-                print(f"[CORE] Browser.setup: Adding cookies failed: {e}")
+            if cookies:
+                try:
+                    self.context.add_cookies(cookies)
+                    print("[CORE] Browser.setup: added Cookies to playwright context")
+                except Exception as e:
+                    print(f"[CORE] Browser.setup: Adding cookies failed: {e}")
 
 
         self.page = self.context.new_page()
@@ -195,7 +195,7 @@ class Browser():
             return
 
 
-        if self.context is not None:
+        if self.context is not None and self.cookieFilePath:
             helpers.cookies.saveCookies(
                 self.cookieFilePath,
                 browser_context=self.context

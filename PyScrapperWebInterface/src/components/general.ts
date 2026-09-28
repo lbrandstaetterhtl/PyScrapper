@@ -1,13 +1,13 @@
 export type Authorization = {
-    /** Header used for administrative bootstrap requests such as login/register/get user. */
+    /** Header name used only for administrative registration requests. */
     key_name: string;
-    /** ADMIN_KEY value from the server .env. */
+    /** ADMIN_KEY value used only when registering a new user. */
     key_value: string;
     username: string;
     password: string;
     /** Identifier returned by /login or /register. This is sent as the Auth header. */
     identifier: string;
-    /** ApiKey returned by /get/user/{identifier}. This is sent as X-User-Key. */
+    /** User API key returned by login/registration. This is sent as X-User-Key. */
     user_key: string;
 }
 

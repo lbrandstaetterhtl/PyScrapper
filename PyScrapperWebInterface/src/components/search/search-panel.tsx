@@ -9,23 +9,20 @@ import sendSearchRequest from "./api"
 
 type AuthProp = {
     auth: Authorization,
-    updateResults : React.Dispatch<React.SetStateAction<SearchResult[]>>
+    request: SearchRequest,
+    updateSearchRequest: React.Dispatch<React.SetStateAction<SearchRequest>>,
+    updateResults: React.Dispatch<React.SetStateAction<SearchResult[]>>,
     onSearchFinished: () => void
 }
 
-function SearchPanel({auth, updateResults, onSearchFinished} : AuthProp )
+function SearchPanel({
+    auth,
+    request,
+    updateSearchRequest,
+    updateResults,
+    onSearchFinished
+}: AuthProp)
 {
-    const [request, updateSearchRequest] = useState<SearchRequest>({
-        search: "",
-        provider: "youtubemusic",
-        top: 5,
-        filters: {
-            tags: [
-                "track"
-            ]
-        }
-    })
-
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -90,11 +87,14 @@ function SearchPanel({auth, updateResults, onSearchFinished} : AuthProp )
                             })
                         }
                     >
-                        {Object.entries(ProvidersSearch).map(([key, value]) => (
-                            <option key={value} value={value}>
-                                {key}
-                            </option>
-                        ))}
+                        {Object.entries(ProvidersSearch)
+                            .map(([key, value]) => ({ key, value, label: key.replaceAll("_", " ") }))
+                            .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))
+                            .map(({ value, label }) => (
+                                <option key={value} value={value}>
+                                    {label}
+                                </option>
+                            ))}
                     </select>
                 </label>
 

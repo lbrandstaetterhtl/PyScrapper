@@ -593,9 +593,9 @@ async def receive_download(data: requests.DownloadRequest, user=Security(require
                     context=context,
                     progress_url=f"/download/progress/{taskId}/{context.context_id}",
                     download_url=f"/stream/download/{taskId}/{context.context_id}",
-                    watch_url=f"/stream/watch/{taskId}/{context.context_id}{watchUrlExtension}",
+                    watch_url=f"/stream/watch/video/{taskId}/{context.context_id}{watchUrlExtension}",
                     stream_type=streamType,
-                    watch_audio_url = context.target.audio_url if context.target.audio_url else ""
+                    watch_audio_url = f"/stream/watch/audio/{taskId}/{context.context_id}{watchUrlExtension}" if context.target.audio_url and context.target.download_type != core.models.Download.DownloadType.HLS else ""
                 )
                 resources.append(resource)
 
@@ -879,8 +879,11 @@ async def stream_hls_segment(
     )
 
 
-@app.get("/stream/watch/{task_id}/{stream_id}/{file_name}.{file_type}")
-async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file_type: str, request: Request):
+@app.get("/stream/watch/{media_type}/{task_id}/{stream_id}/{file_name}.{file_type}")
+async def client_watch_stream(media_type: str, task_id: str, stream_id: str, file_name: str, file_type: str, request: Request):
+    if media_type not in ["video", "audio"]:
+        raise HTTPException(status_code=404)
+    
     job = server_state.jobs.get(task_id)
 
     if job is None:
@@ -892,6 +895,8 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
         raise HTTPException(status_code=404)
 
     context: core.models.Download.DownloadContext = stream_job.context
+    if media_type == "audio" and not context.target.audio_url:
+        raise HTTPException(status_code=404)
 
     if context.output.full_filename != f"{file_name}.{file_type}":
         raise HTTPException(status_code=404)
@@ -902,7 +907,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
         "Accept-Ranges": "bytes"
     }
     
-    total_size = context.target.video_size if context.target.video_size else context.media_info.total_size
+    total_size = context.target.video_size if media_type == "video" else context.target.audio_size
     
 
     range_headers = request.headers.get("range")
@@ -946,16 +951,15 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
         return StreamingResponse(
             file.asyncDownloadYieldSimple(
                 session=job.download_information.session,
-                url=context.target.resolved_url,
+                url=context.target.resolved_url if media_type == "video" else context.target.audio_url,
                 extra_headers=context.target.extra_headers,
                 start_byte=start_byte,
                 end_byte=end_byte,
+                chunk_size= 512 * 1024
             ),
             status_code=status_code,
             headers=headers,
-            media_type=providermodels.EXTENSION_CONTENT_TYPES.get(
-                context.media_info.file_extension
-            ),
+            media_type=context.media_info.mime_type
         )
 
     elif context.target.download_type == core.models.Download.DownloadType.UMP:
@@ -964,7 +968,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
         return StreamingResponse(
             download.downloadAndYieldUMPRange(
                 session=job.download_information.session,
-                start_url=context.target.resolved_url,
+                start_url=context.target.resolved_url if media_type == "video" else context.target.audio_url,
                 extra_headers=context.target.extra_headers,
                 max_len=total_size,
                 media_start=start_byte,
@@ -973,7 +977,7 @@ async def client_watch_stream(task_id: str, stream_id: str, file_name: str, file
             ),
             status_code=status_code,
             headers=headers,
-            media_type="audio/webm"
+            media_type=context.media_info.mime_type
         )
 
 
@@ -1467,8 +1471,6 @@ async def handle_set_last_logged_in(identifier: str = Query(None), user=Security
     "/get/user/{identifier}",
 
     response_model=UserResponse,
-
-    dependencies=[Security(require_admin)]
 
 )
 async def get_user(
@@ -2172,7 +2174,7 @@ async def handle_login_req(req: requests.LoginRequest):
 # handle_create_user_req hat jetzt nur noch (req) als Parameter; der direkte
 # Funktionsaufruf umgeht die require_admin-Dependency (die läuft nur über HTTP),
 # also bleibt /register wie gehabt offen/public.
-@app.post("/register")
+@app.post("/register", dependencies=[Security(require_admin)])
 async def handle_register_req(req: requests.RegisterRequest):
     try:
 
