@@ -28,6 +28,7 @@ public class ApiClient : Interfaces.IApiClient
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     
     private readonly string _encryptedUserApiKey = AppData.CurrentUser?.ApiKey ?? "";
+    private readonly string _encryptedAdminApiKey = AppData.Config.ClientApiKey ?? "";
 
     /// <summary>
     /// Sends a scrap request to the server and returns the download ID if successful, or "-1" if there was an error.
@@ -404,6 +405,7 @@ public class ApiClient : Interfaces.IApiClient
     public async Task<bool> Register(RegisterRequest req)
     {
         using var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-Admin-Key", SecretProtector.Decrypt(_encryptedAdminApiKey));
         var jsonContent = JsonSerializer.Serialize(req, JsonOptions);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/register", content);

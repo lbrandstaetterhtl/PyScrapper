@@ -152,6 +152,7 @@ auth_header = APIKeyHeader(name="Auth",scheme_name="AuthIdentifier", auto_error=
 
 def require_admin(key: str | None = Security(admin_key_header)) -> bool:
     if not key or not secrets.compare_digest(key, ADMIN_KEY):
+        server_state.log_queue.put_nowait("[WARN] Unauthorized access attempt with invalid admin key")
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
     return True
 
@@ -159,9 +160,11 @@ def require_admin(key: str | None = Security(admin_key_header)) -> bool:
 def require_user(request: Request, key: str | None = Security(user_key_header),
                  auth: str | None = Security(auth_header)):
     if not key or not key.strip():
+        server_state.log_queue.put_nowait("[WARN] Missing X-User-Key header in request")
         raise fastapi.HTTPException(status_code=401, detail="Missing X-User-Key")
 
     if not auth or not auth.strip():
+        server_state.log_queue.put_nowait("[WARN] Missing Auth header in request")
         raise fastapi.HTTPException(status_code=401, detail="Missing Auth header")
 
     request_api_key = key.strip()
