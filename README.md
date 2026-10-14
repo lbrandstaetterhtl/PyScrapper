@@ -104,6 +104,27 @@ npm install
 npm run dev
 ```
 
+#### Web-Frontend mit Docker
+
+```powershell
+Set-Location .\PyScrapperWebInterface
+docker compose up -d --build      # danach http://localhost:8080
+```
+
+Das Image baut das Frontend und liefert es über nginx aus. nginx leitet `/api/...` (ohne das
+Präfix) und `/stream/...` an den LocalServer weiter. Der Server läuft weiterhin auf dem Host und ist
+nicht Teil der Compose-Datei.
+
+| Variable | Standard | Zweck |
+|---|---|---|
+| `BACKEND_URL` | `http://host.docker.internal:8765` | Adresse des LocalServers aus Sicht des Containers |
+| `WEB_PORT` | `8080` | Port auf dem Host |
+
+Der Container erreicht den Server über das Netzwerk des Hosts, nicht über dessen Loopback. Der
+Server muss deshalb auf `0.0.0.0` statt `127.0.0.1` lauschen (`--host 0.0.0.0`). Unter Linux ist
+das zwingend, unter Docker Desktop je nach Backend ebenfalls nötig. Achtung: Damit ist der Server
+auch aus dem lokalen Netz erreichbar.
+
 ---
 
 ## Voraussetzungen

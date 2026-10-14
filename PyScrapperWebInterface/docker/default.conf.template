@@ -1,0 +1,40 @@
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Downloads and HLS streams can be large and slow to start.
+    client_max_body_size 50m;
+    proxy_http_version 1.1;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # The frontend calls the server as /api/... ; the prefix is stripped.
+    location /api/ {
+        proxy_pass ${BACKEND_URL}/;
+    }
+
+    # The HLS playlists the server generates contain absolute paths
+    # (/stream/watch/...) without the /api prefix, so hls.js requests them
+    # directly. Pass those through unchanged.
+    location /stream/ {
+        proxy_pass ${BACKEND_URL};
+    }
+
+    # Single-page app: unknown paths fall back to index.html.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
