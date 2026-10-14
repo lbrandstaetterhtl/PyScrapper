@@ -1,7 +1,7 @@
 services:
   pyscrapper-server:
     build:
-      context: ..
+      context: ../..
       dockerfile: ./docker/Dockerfile
     container_name: pyscrapper-localserver
     ports:
