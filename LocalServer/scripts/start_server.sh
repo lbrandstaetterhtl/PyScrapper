@@ -11,4 +11,4 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "Starte PyScrapper Server mit Docker Compose..."
-docker-compose -f docker/compose.yaml up
+docker compose -f docker/compose.yaml up
