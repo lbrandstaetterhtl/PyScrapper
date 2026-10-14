@@ -6,14 +6,14 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
-# Kopiere Requirements
-COPY requirements.txt .
+# Kopiere gesamtes PyScrapper Projekt
+COPY . .
 
 # Installiere Python Dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r LocalServer/requirements.txt
 
-# Kopiere Projekt
-COPY . .
+# Setze Workdir auf LocalServer
+WORKDIR /app/LocalServer
 
 # Expose Port
 EXPOSE 8000
