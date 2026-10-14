@@ -12,7 +12,7 @@ services:
     ports:
       - "${WEB_PORT:-8080}:80"
     environment:
-      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8765}
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8000}
     extra_hosts:
       # Makes host.docker.internal resolve on Linux too (Docker Desktop has it built in).
       - "host.docker.internal:host-gateway"
