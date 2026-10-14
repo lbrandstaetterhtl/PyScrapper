@@ -152,7 +152,7 @@ auth_header = APIKeyHeader(name="Auth",scheme_name="AuthIdentifier", auto_error=
 
 def require_admin(key: str | None = Security(admin_key_header)) -> bool:
     if not key or not secrets.compare_digest(key, ADMIN_KEY):
-        server_state.log_queue.put_nowait("[WARN] Unauthorized access attempt with invalid admin key")
+        server_state.log_queue.put_nowait("[WARN] Unauthorized access attempt with invalid admn key")
         raise fastapi.HTTPException(status_code=401, detail="Unauthorized")
     return True
 

@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  pyscrapper-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: pyscrapper-localserver
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../Data:/app/Data
+      - ../logs:/app/logs
+      - ../.env:/app/.env:ro
+    restart: unless-stopped
+    networks:
+      - pyscrapper-network
+
+networks:
+  pyscrapper-network:
+    driver: bridge
