@@ -18,6 +18,7 @@ class ProviderTypes(enum.Enum):
     Dailymotion = enum.auto()
     YoutubeMusic = enum.auto()
     Filmpalast = enum.auto()
+    effedup = enum.auto()
 
 
 
@@ -39,7 +40,8 @@ PROVIDER_GETRESULTS_MAPPING: dict = {
     ProviderTypes.Newgrounds : p.Newgrounds.getMediaInformation,
     ProviderTypes.Youtube : p.Youtube.getMediaInformation,
     ProviderTypes.YoutubeMusic : p.Youtube.getMediaInformationMusic,
-    ProviderTypes.Filmpalast : p.Filmpalast.getMediaInformation
+    ProviderTypes.Filmpalast : p.Filmpalast.getMediaInformation,
+    ProviderTypes.effedup : p.effedup.getMediaInformation
 
 }
 
@@ -67,6 +69,12 @@ VALIDYOUTUBEMUSICNAMES = [
     "musicyoutube"
 ]
 
+VALIDEFFEDUPNAMES = [
+    "effedup",
+    "effedupmovies",
+    "effedupmovies.com",
+    "www.effedupmovies.com"
+]
 
 VALIDDAILYMOTIONNAMES = [
     "dailymotion",
@@ -134,7 +142,8 @@ SUPPORTEDPROVIDERS = {
     ProviderTypes.Newgrounds : VALIDNEWGROUNDSNAMES,
     ProviderTypes.Dailymotion : VALIDDAILYMOTIONNAMES,
     ProviderTypes.YoutubeMusic : VALIDYOUTUBEMUSICNAMES,
-    ProviderTypes.Filmpalast : VALIDFILMPALASTNAMES
+    ProviderTypes.Filmpalast : VALIDFILMPALASTNAMES,
+    ProviderTypes.effedup : VALIDEFFEDUPNAMES,
 }
 
 

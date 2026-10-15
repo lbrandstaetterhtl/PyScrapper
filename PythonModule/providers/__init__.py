@@ -8,6 +8,7 @@ from . import wcoflix
 from . import Youtube
 from . import Default
 from . import Newgrounds
+from . import effedup
 
 from . import Filmpalast
 
@@ -26,5 +27,6 @@ __all__ = [
     "Newgrounds",
     "models",
     "Youtube",
+    "effedup",
 
 ]

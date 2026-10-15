@@ -697,7 +697,7 @@ def _getIndexSegmentsForStreaming(job: ServerJob, stream_id: str, context: core.
 
 
 @app.get(
-    "/stream/watch/{task_id}/{stream_id}/master.m3u8",
+    "/stream/watch/video/{task_id}/{stream_id}/master.m3u8",
     dependencies=[Security(require_user)]
 )
 async def stream_hls_master(task_id: str, stream_id: str):
@@ -726,10 +726,10 @@ async def stream_hls_master(task_id: str, stream_id: str):
         (
             '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",'
             'NAME="Audio",DEFAULT=YES,AUTOSELECT=YES,'
-            f'URI="/stream/watch/{task_id}/{stream_id}/audio/index.m3u8"'
+            f'URI="/stream/watch/audio/{task_id}/{stream_id}/index.m3u8"'
         ),
         '#EXT-X-STREAM-INF:BANDWIDTH=5000000,AUDIO="audio"',
-        f"/stream/watch/{task_id}/{stream_id}/video/index.m3u8",
+        f"/stream/watch/video/{task_id}/{stream_id}/index.m3u8",
     ])
 
     return Response(
@@ -783,7 +783,7 @@ def create_hls_index(segments, segment_url_prefix):
 
 
 @app.get(
-    "/stream/watch/{task_id}/{stream_id}/video/index.m3u8",
+    "/stream/watch/video/{task_id}/{stream_id}/index.m3u8",
     dependencies=[Security(require_user)]
 )
 async def stream_hls_video_index(task_id: str, stream_id: str):
@@ -808,7 +808,7 @@ async def stream_hls_video_index(task_id: str, stream_id: str):
 
 
 @app.get(
-    "/stream/watch/{task_id}/{stream_id}/audio/index.m3u8",
+    "/stream/watch/audio/{task_id}/{stream_id}/index.m3u8",
     dependencies=[Security(require_user)]
 )
 async def stream_hls_audio_index(task_id: str, stream_id: str):

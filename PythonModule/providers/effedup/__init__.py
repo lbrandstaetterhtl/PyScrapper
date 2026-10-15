@@ -1,0 +1,1 @@
+from .effedup_media_information import getMediaInformation
