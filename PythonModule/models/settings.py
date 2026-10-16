@@ -71,6 +71,7 @@ VALIDYOUTUBEMUSICNAMES = [
 ]
 
 VALIDEFFEDUPNAMES = [
+    "eum"
     "effedup",
     "effedupmovies",
     "effedupmovies.com",

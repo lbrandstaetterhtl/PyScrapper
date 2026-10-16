@@ -28,12 +28,14 @@ def search(
                                                   caller="[providers] effedup.search")
     core.general.Validate.general.validateInt(argument_name="top", integer=top, caller="[providers] effedup.search")
 
-    searchUrl: str = "https://www.effedupmovies.com/?s" + urllib.parse.urlencode({"s": search_term})
+    searchUrl: str = "https://www.effedupmovies.com/?" + urllib.parse.urlencode({"s": search_term})
+
 
     searchHtml: str = html.getHtml(
         session=session,
         url=searchUrl,
     )
+
 
     if not searchHtml:
         raise core.models.errors.TaskFailedError(
