@@ -53,7 +53,8 @@ PROVIDER_SEARCH_MAPPING: dict = {
     ProviderTypes.Youtube : p.Youtube.search,
     ProviderTypes.Suno : p.Suno.search,
     ProviderTypes.YoutubeMusic : p.Youtube.searchMusic,
-    ProviderTypes.Filmpalast : p.Filmpalast.search
+    ProviderTypes.Filmpalast : p.Filmpalast.search,
+    ProviderTypes.effedup : p.effedup.search,
 
 }
 

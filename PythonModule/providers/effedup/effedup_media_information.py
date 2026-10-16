@@ -31,8 +31,7 @@ def getMediaInformation(
         extra_headers=request.extra_headers
     )
 
-    with open("effedup_debug.html", "w", encoding="utf-8") as f:
-        f.write(effedupHtml)
+
     if not effedupHtml:
         raise core.models.errors.TaskFailedError(
             task="[Effedup] getMediaInformation",

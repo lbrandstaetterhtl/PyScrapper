@@ -1,1 +1,2 @@
 from .effedup_media_information import getMediaInformation
+from .effedup_search import search
