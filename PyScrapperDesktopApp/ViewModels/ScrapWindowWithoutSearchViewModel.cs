@@ -51,6 +51,8 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
     
     private readonly AppLogger _logger = AppLogger.Instance;
     
+    private CancellationTokenSource _cts = new CancellationTokenSource();
+    
     /// <summary>
     /// Scrap method that is executed when the user initiates the scraping process.
     /// It creates an instance of the ApiClient and sends a scrap request to the server with the provided URL, media type, filename, and download path.
@@ -75,63 +77,62 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
                 DownloadStrategy = "stream"
             };
 
-            var result = await client.SendScrapRequest(requestData);
+            var task = Task.Run(async () => {var result = await client.SendScrapRequest(requestData);
             
-            foreach (var resource in result.Resources)
-            {
-                if (result.TaskId != "-1")
+                foreach (var resource in result.Resources)
                 {
-                    Task.Delay(2000).Wait();
-
-
-                    var progressWindow = new ProgressBarWindow();
-                    progressWindow.Show();
-
-                    bool errorWhileDownloading = false;
-                    if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
-                        errorWhileDownloading = await vm.StartProgress(resource);
-                    
-                    var ct =  new CancellationTokenSource();
-                    
-                    var path = Path.Combine(AppData.Settings.DownloadPath, $"{Filename}");
-                    
-                    var finalPath = await client.GetFileFromStream(resource, path, ct.Token);
-
-                    if (!errorWhileDownloading)
+                    if (result.TaskId != "-1")
                     {
-                        Task.Delay(1000).Wait();
+                        Task.Delay(2000).Wait();
 
-                        bool isPlayable = false;
 
-                        int maxTries = 10;
-                        while (!isPlayable && maxTries > 0)
+                        var progressWindow = new ProgressBarWindow();
+                        progressWindow.Show();
+
+                        var path = Path.Combine(AppData.Settings.DownloadPath, $"{Filename}");
+                        
+                        string finalPath = "";
+                        if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
+                            finalPath = await vm.StartProgress(resource, client.GetFileFromStream(resource, path, _cts.Token), _cts);
+
+                        if (!string.IsNullOrEmpty(finalPath) && File.Exists(finalPath))
                         {
-                            isPlayable = File.Exists(finalPath);
-                            maxTries--;
+                            Task.Delay(1000).Wait();
+
+                            bool isPlayable = false;
+
+                            int maxTries = 10;
+                            while (!isPlayable && maxTries > 0)
+                            {
+                                isPlayable = File.Exists(finalPath);
+                                maxTries--;
+                            }
+
+                            var req = new CreateDownloadedMediaRequest
+                            {
+                                UserIdentifier = AppData.CurrentUser.Identifier,
+                                DownloadPath = finalPath,
+                                DownloadedAt = DateTime.Now.ToString("o"),
+                                MediaType = finalPath.Substring(finalPath.LastIndexOf('.')),
+                                IsPlayable = isPlayable,
+                                Url = Url,
+                                Title = Filename
+                            };
+
+                            var media = await Database.CreateDownloadedMediaAsync(req);
+
+                            AppData.AddDownloadedMedia(media);
                         }
-
-                        var req = new CreateDownloadedMediaRequest
+                        else
                         {
-                            UserIdentifier = AppData.CurrentUser.Identifier,
-                            DownloadPath = finalPath,
-                            DownloadedAt = DateTime.Now.ToString("o"),
-                            MediaType = finalPath.Substring(finalPath.LastIndexOf('.')),
-                            IsPlayable = isPlayable,
-                            Url = Url,
-                            Title = Filename
-                        };
-
-                        var media = await Database.CreateDownloadedMediaAsync(req);
-
-                        AppData.AddDownloadedMedia(media);
-                    }
-                    else
-                    {
-                        await _dialogService.ShowAlertAsync(
-                            "An error occurred while downloading the media. Please try again.");
+                            await _dialogService.ShowAlertAsync(
+                                "An error occurred while downloading the media. Please try again.");
+                        }
                     }
                 }
-            }
+            }, _cts.Token);
+            
+            await task;
 
             RequestClose?.Invoke();
         }

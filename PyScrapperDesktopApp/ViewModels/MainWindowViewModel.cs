@@ -474,4 +474,11 @@ public partial class MainWindowViewModel : ObservableObject
         var converterWindow = new MediaConverterWindow();
         await converterWindow.ShowDialog(_window);
     }
+    
+    [RelayCommand]
+    private async Task OpenEffedUpMoviesScrapWindow()
+    {
+        var scrapWindow = new ScrapWindowWithSearch("effedupmovies");
+        await scrapWindow.ShowDialog(_window);
+    }
 }

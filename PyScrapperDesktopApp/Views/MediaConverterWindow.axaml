@@ -11,7 +11,6 @@
         Icon="/Assets/PyScrapperLogo.ico"
         Title="PyScrapperDesktopApp"
         SizeToContent="WidthAndHeight"
-        WindowStartupLocation="CenterOwner"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1">
@@ -21,15 +20,15 @@
                 <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
                 
                 <Grid Grid.Row="1" Classes="RootGrid" RowDefinitions="Auto, Auto">
-                        <Border Grid.Row="0" Classes="Cell" MinHeight="200" MinWidth="400" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="50">
-                                <Grid RowDefinitions="Auto, *">
-                                        <Button Grid.Row="0" Classes="primary" VerticalAlignment="Bottom" x:Name="SelectButton" Content="{Binding SelectButtonContent}" Command="{Binding OpenFilePickerCommand}" Width="250"/>
+                        <Border Grid.Row="0" Classes="Cell">
+                                <StackPanel>
+                                        <Button Classes="primary" x:Name="SelectButton" Content="{Binding SelectButtonContent}" Command="{Binding OpenFilePickerCommand}" Width="250"/>
                                         
-                                        <ComboBox Grid.Row="1" VerticalAlignment="Center" Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding TargetContainer}"/>
-                                </Grid>
+                                        <ComboBox Classes="UI" ItemsSource="{Binding AvailableMediaTypes}" SelectedItem="{Binding TargetContainer}"/>
+                                </StackPanel>
                         </Border>
                         
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="10" Spacing="10">
+                        <StackPanel Grid.Row="1" Orientation="Horizontal">
                                 <Button Classes="primary" Content="Convert" Command="{Binding ConvertCommand}"/>
                                 <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                         </StackPanel>

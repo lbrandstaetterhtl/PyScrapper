@@ -445,7 +445,7 @@ public class ApiClient : Interfaces.IApiClient
 
         var contentDisposition =  response.Content.Headers.ContentDisposition;
         var fileName = contentDisposition?.FileName.Trim('"');
-        var downloadPath = path + fileName;
+        var downloadPath = Path.Combine(path, fileName);
         
         if (!File.Exists(downloadPath))
         {

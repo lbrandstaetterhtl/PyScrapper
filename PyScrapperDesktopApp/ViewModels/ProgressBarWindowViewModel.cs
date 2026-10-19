@@ -17,7 +17,7 @@ namespace PyScrapperDesktopApp.ViewModels;
 public partial class ProgressBarWindowViewModel : ObservableObject
 {
     private readonly ApiClient _apiClient;
-    private CancellationTokenSource? _cts;
+    private CancellationTokenSource _cts;
 
     [ObservableProperty] 
     private string _progress;
@@ -36,13 +36,16 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     
     private readonly AppLogger _logger = AppLogger.Instance;
     
+    private Window _window;
+    
     /// <summary>
     /// Constructor for the ProgressBarWindowViewModel class, which initializes the API client used for fetching download progress data. This class is responsible for managing the state and logic of a progress bar window that displays the download progress, status, and speed of a download operation.
     /// It also handles cancellation of the progress tracking when necessary.
     /// </summary>
-    public ProgressBarWindowViewModel()
+    public ProgressBarWindowViewModel(Window window)
     {
         _apiClient = new ApiClient();
+        _window = window;
     }
 
     /// <summary>
@@ -52,156 +55,93 @@ public partial class ProgressBarWindowViewModel : ObservableObject
     /// <param name="id"></param>
     /// <returns name="errorWhileDownloading"></returns>
     /// <exception cref="Exception"></exception>
-    public Task<bool> StartProgress(DownloadResource resource)
+   public async Task<string> StartProgress(DownloadResource resource, Task<string> downloadTask, CancellationTokenSource cts)
     {
-        try
+        if (Design.IsDesignMode)
+            return "";
+
+        string result = "";
+        CancellationToken token = cts.Token;
+
+        var progressTask = Task.Run (async () =>
         {
             try
             {
-                if (Design.IsDesignMode) return Task.FromResult(true);
-
-                bool errorWhileDownloading = false;
-                _cts = new CancellationTokenSource();
-                var token = _cts.Token;
-
-                Task.Run(async () =>
+                while (!IsFinished && !token.IsCancellationRequested)
                 {
-                    while (!IsFinished)
+                    var progressData =
+                        await _apiClient.GetDownloadProgress(resource);
+
+                    if (progressData == null)
+                        throw new Exception("Failed to get progress data");
+
+                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        if (token.IsCancellationRequested)
-                            break;
-
-                        try
+                        if (!string.IsNullOrEmpty(progressData.ErrorMessage))
                         {
-                            var progressResponse = _apiClient.GetDownloadProgress(resource);
-                            var progressData = progressResponse.Result;
+                            Status = $"Error: {progressData.ErrorMessage}";
 
-                            if (progressData == null) throw new Exception("Failed to get progress data");
-
-                            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                            {
-                                if (progressData.TotalBytes != -1)
-                                {
-                                    if (progressData.ErrorMessage is not "")
-                                    {
-                                        Status = $"Error: {progressData.ErrorMessage}";
-                                        var log = new Message(progressData.ErrorMessage, DateTime.Now, "ERROR");
-                                        _logger.LogNewMassage(log);
-                                        errorWhileDownloading = true;
-                                        StopProgress();
-                                    }
-                                    else
-                                    {
-                                        Status = progressData.Status + " | please wait...";
-                                    }
-
-                                    Progress = $"{progressData.DownloadProgress}%";
-                                    ProgressSpeed = $"{progressData.Speed} Mb/s";
-                                    Eta = $"{progressData.Eta} seconds";
-
-                                    if (progressData.Status.Equals("finished"))
-                                    {
-                                        IsFinished = true;
-                                        Status = "Finished";
-                                        ProgressSpeed = "0 Mb/s";
-                                        Eta = "0 seconds";
-                                        StopProgress();
-                                        Task.Delay(3500).Wait();
-                                        CloseRequested?.Invoke();
-                                    }
-                                }
-                                else
-                                {
-                                    if (progressData.ErrorMessage is not "")
-                                    {
-                                        Status = $"Error: {progressData.ErrorMessage}";
-                                        var log = new Message(progressData.ErrorMessage, DateTime.Now, "ERROR");
-                                        _logger.LogNewMassage(log);
-                                        errorWhileDownloading = true;
-                                        StopProgress();
-                                    }
-                                    else
-                                    {
-                                        Status = progressData.Status + " | please wait...";
-                                    }
-
-                                    Progress = $"{progressData.DownloadProgress}%";
-                                    ProgressSpeed = $"{progressData.Speed} Mb/s";
-                                    Eta = $"{progressData.Eta} seconds";
-
-                                    if (progressData.Status.Equals("finished"))
-                                    {
-                                        IsFinished = true;
-                                        Status = "Finished";
-                                        ProgressSpeed = "0 Mb/s";
-                                        Eta = "0 seconds";
-                                        StopProgress();
-                                        Task.Delay(3500).Wait();
-                                        CloseRequested?.Invoke();
-                                    }
-                                }
-                            });
+                            _logger.LogNewMassage(new Message(
+                                progressData.ErrorMessage,
+                                DateTime.Now,
+                                "ERROR"));
                         }
-                        catch (OperationCanceledException)
+                        else
                         {
-                            var log = new Message("Progress tracking cancelled", DateTime.Now, "INFO");
-                            _logger.LogNewMassage(log);
-                            break;
-                        }
-                        catch (Exception e)
-                        {
-                            Avalonia.Threading.Dispatcher.UIThread.Post(() => { Status = $"Error: {e.Message}"; });
+                            Status = progressData.Status + " | please wait...";
                         }
 
-                        try
+                        Progress = $"{progressData.DownloadProgress}%";
+                        ProgressSpeed = $"{progressData.Speed} Mb/s";
+                        Eta = $"{progressData.Eta} seconds";
+
+                        if (progressData.Status.Equals("finished"))
                         {
-                            await Task.Delay(500, token);
+                            IsFinished = true;
+                            Status = "Finished";
+                            ProgressSpeed = "0 Mb/s";
+                            Eta = "0 seconds";
                         }
-                        catch (OperationCanceledException)
-                        {
-                            var log = new Message("Progress tracking cancelled during delay", DateTime.Now, "INFO");
-                            _logger.LogNewMassage(log);
-                            break;
-                        }
+                    });
+
+                    if (IsFinished)
+                    {
+                        await Task.Delay(3500, token);
+
+                        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => CloseRequested?.Invoke());
+
+                        break;
                     }
-                }, token);
 
-                return Task.FromResult(errorWhileDownloading);
+                    await Task.Delay(1000, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Der Benutzer hat den Vorgang abgebrochen.
             }
             catch (Exception e)
             {
-                var log = new Message("Error while tracking progress: " + e.Message, DateTime.Now, "ERROR");
-                _logger.LogNewMassage(log);
-            
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => { Status = $"Error: {e.Message}"; });
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { Status = $"Error: {e.Message}"; });
 
-                return Task.FromResult(true);
+                _logger.LogNewMassage(new Message(
+                    "Error while tracking progress: " + e.Message,
+                    DateTime.Now,
+                    "ERROR"));
             }
-        }
-        catch (Exception exception)
-        {
-            return Task.FromException<bool>(exception);
-        }
+        }, token);
+        
+        await Task.WhenAll(progressTask, downloadTask);
+
+        return await downloadTask;
     }
 
-    /// <summary>
-    /// Stops the progress tracking by canceling the associated CancellationTokenSource, which signals the background task to stop fetching progress data and exit gracefully.
-    /// This method is called when the download is complete or when an error occurs, ensuring that resources are properly released and the UI is updated accordingly.
-    /// </summary>
-    private void StopProgress()
-    {
-        _cts?.Cancel();
-    }
-
-    /// <summary>
-    /// Closes the ProgressBarWindow by invoking the CloseRequested event, which signals that the window should be closed. This method is called when the user clicks the close button on the window or when the download is complete, ensuring that any ongoing progress tracking tasks are properly canceled and that the window is closed gracefully.
-    /// </summary>
     [RelayCommand]
-    private void Close()
+    private void Cancel()
     {
-        _cts.Cancel();
-        _cts.Dispose();
-        CloseRequested!.Invoke();
+        var progressBarWindow = _window as ProgressBarWindow;
+        progressBarWindow?.OnCancel.Invoke();
+        CloseRequested?.Invoke();
     }
     
     /// <summary>

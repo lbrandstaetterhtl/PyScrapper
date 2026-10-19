@@ -41,7 +41,7 @@
                                  Value="{Binding Progress}"
                                  Height="24"/>
                     
-                    <Button IsDefault="True" Content="Close" Command="{Binding CloseCommand}"/>
+                    <Button IsDefault="True" Content="Close" Command="{Binding CancelCommand}"/>
         </StackPanel>
     </Grid>
 </Window>
