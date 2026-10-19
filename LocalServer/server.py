@@ -1061,13 +1061,14 @@ async def receive_search(data: requests.SearchRequest, user=Security(require_use
 
         server_state.log_queue.put_nowait(
             f"[INFO] Search successful for job {search_id} with query {data.search} and provider {data.provider}")
+
+        print(f"[DEBUG] Search Response: {data}")
         return response
 
     except Exception as e:
         server_state.log_queue.put_nowait(
             f"[ERROR] Failed search task with given arguments: id {search_id} provider {data.provider} and searching {data.search}.\n Error Message:{str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 start_time = time.time()
 
