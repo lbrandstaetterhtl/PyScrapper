@@ -828,7 +828,6 @@ def makeProviderResult(
             ],
             caller="[providers] makeProviderResult"
         )
-    print(found_media_list)
 
     return _buildProviderResultFromFoundMedia(
         bestMedia,

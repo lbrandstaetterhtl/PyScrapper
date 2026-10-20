@@ -15,7 +15,7 @@ public partial class ScrapWindowWithoutSearch : Window
         
         DialogService ds = new DialogService(this);
         
-        var vm = new ScrapWindowWithoutSearchViewModel(ds);
+        var vm = new ScrapWindowWithoutSearchViewModel(ds, this);
         
         DataContext = vm;
         

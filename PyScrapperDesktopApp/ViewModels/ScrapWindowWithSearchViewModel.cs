@@ -59,8 +59,8 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     public event Action? RequestClose;
     
     private readonly AppLogger _logger = AppLogger.Instance;
-
-    private string _finalPath = "";
+    
+    private string _path;
     
     
     /// <summary>
@@ -194,77 +194,80 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                 DownloadStrategy = "stream",
                 AutoConvert = AutoConvert
             };
-                var result = await client.SendScrapRequest(requestData);
+            
+            var result = await client.SendScrapRequest(requestData);
 
-                int counter = 0;
-                foreach (var resource in result.Resources)
+            int counter = 0;
+            foreach (var resource in result.Resources)
+            {
+                if (result.TaskId != "-1")
                 {
-                    if (result.TaskId != "-1")
+                    Task.Delay(1000).Wait();
+
+                    var progressWindow = new ProgressBarWindow()
+                    {
+                        OnCancel = () =>
+                        {
+                            _cts.Cancel();
+                        }
+                    };
+                    progressWindow.Show();
+                        
+                    var path = Paths[counter].Substring(0, Paths[counter].LastIndexOf(@"\"));
+                    _path = Path.Combine(path, requestData.Filenames[counter] + "." + resource.Context.MediaInfo.FileExtension);
+                        
+                    string finalPath = "";
+                    if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
+                        finalPath = await vm.StartProgress(resource, client.GetFileFromStream(resource, path, _cts.Token), _cts);
+                    
+                    if (finalPath.Substring(finalPath.LastIndexOf('.')) != SelectedMediaType.Trim('.'))
+                    {
+                        var userResponse = await _dialogService.ConfirmAsync($"Found only {resource.Context.MediaInfo.FileExtension} for item \"{Urls[counter]}\". Do you want to continue downloading it?");
+                            
+                        var log = new Message($"Downloaded media type \"{resource.Context.MediaInfo.FileExtension}\" does not match the selected media type \"{SelectedMediaType.Trim('.')}\" for item \"{Urls[counter]}\"", DateTime.Now, "ERROR");
+                        _logger.LogNewMassage(log);
+                            
+                        if (!userResponse)
+                            continue;
+                    }
+                        
+                    if (!string.IsNullOrEmpty(finalPath) && File.Exists(finalPath))
                     {
                         Task.Delay(1000).Wait();
 
-                        var progressWindow = new ProgressBarWindow()
+                        bool isPlayable = false;
+
+                        int maxTries = 10;
+                        while (!isPlayable &&  maxTries > 0)
                         {
-                            OnCancel = CancelDownload
+                            isPlayable = File.Exists(finalPath);
+                            maxTries--;
+                        }
+
+                        var req = new CreateDownloadedMediaRequest
+                        {
+                            UserIdentifier = AppData.CurrentUser.Identifier,
+                            DownloadPath = finalPath,
+                            DownloadedAt = DateTime.Now.ToString("o"),
+                            MediaType = finalPath.Substring(finalPath.LastIndexOf('.')),
+                            IsPlayable = isPlayable,
+                            Title = FileNames[counter],
+                            Url = Urls[counter]
                         };
-                        progressWindow.Show();
-                        
-                        var path = Paths[counter].Substring(0, Paths[counter].LastIndexOf(@"\"));
-                        
-                        string finalPath = "";
-                        if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
-                            finalPath = await vm.StartProgress(resource, client.GetFileFromStream(resource, path, _cts.Token), _cts);
-                        
-                        _finalPath = finalPath;
-                        
-                        if (finalPath.Substring(finalPath.LastIndexOf('.')) != SelectedMediaType.Trim('.'))
-                        {
-                            var userResponse = await _dialogService.ConfirmAsync($"Found only {resource.Context.MediaInfo.FileExtension} for item \"{Urls[counter]}\". Do you want to continue downloading it?");
-                            
-                            var log = new Message($"Downloaded media type \"{resource.Context.MediaInfo.FileExtension}\" does not match the selected media type \"{SelectedMediaType.Trim('.')}\" for item \"{Urls[counter]}\"", DateTime.Now, "ERROR");
-                            _logger.LogNewMassage(log);
-                            
-                            if (!userResponse)
-                                continue;
-                        }
-                        
-                        if (!string.IsNullOrEmpty(finalPath) && File.Exists(finalPath))
-                        {
-                            Task.Delay(1000).Wait();
 
-                            bool isPlayable = false;
+                        var media = await Database.CreateDownloadedMediaAsync(req);
 
-                            int maxTries = 10;
-                            while (!isPlayable &&  maxTries > 0)
-                            {
-                                isPlayable = File.Exists(finalPath);
-                                maxTries--;
-                            }
-
-                            var req = new CreateDownloadedMediaRequest
-                            {
-                                UserIdentifier = AppData.CurrentUser.Identifier,
-                                DownloadPath = finalPath,
-                                DownloadedAt = DateTime.Now.ToString("o"),
-                                MediaType = finalPath.Substring(finalPath.LastIndexOf('.')),
-                                IsPlayable = isPlayable,
-                                Title = FileNames[counter],
-                                Url = Urls[counter]
-                            };
-
-                            var media = await Database.CreateDownloadedMediaAsync(req);
-
-                            AppData.AddDownloadedMedia(media);
-                        }
-                        else
-                        {
-                            await _dialogService.ShowAlertAsync(
-                                "An error occurred while downloading the media. Please try again.");
-                        }
+                        AppData.AddDownloadedMedia(media);
                     }
-
-                    counter++;
+                    else
+                    {
+                        await _dialogService.ShowAlertAsync(
+                            "An error occurred while downloading the media. Please try again.");
+                    }
                 }
+
+                counter++;
+            }
 
             RequestClose?.Invoke();
         }
@@ -374,22 +377,52 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         }
     }
     
-    public void CancelDownload()
+    private void CancelDownload()
     {
-        if (_cts == null)
-            return;
 
-        _cts.Cancel();
         var log = new Message("Scrap operation was canceled by the user.", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);
-
-        if (!string.IsNullOrEmpty(_finalPath) && File.Exists(_finalPath))
+        
+        if (!string.IsNullOrEmpty(_path))
         {
-            File.Delete(_finalPath);
+            if (File.Exists(_path))
+            {
+                try
+                {
+                    File.Delete(_path);
+                    var logDelete = new Message($"Partially downloaded file \"{_path}\" was deleted after cancellation.", DateTime.Now, "INFO");
+                    _logger.LogNewMassage(logDelete);
+                }
+                catch (Exception ex)
+                {
+                    var logError = new Message($"Failed to delete partially downloaded file \"{_path}\": {ex.Message}", DateTime.Now, "ERROR");
+                    _logger.LogNewMassage(logError);
+                }
+            }
+            else
+            {
+                var path = _path.Substring(0, _path.LastIndexOf('.'));
+                path += SelectedMediaType;
+                
+                if (File.Exists(path))
+                { 
+                    try
+                    {
+                        File.Delete(path);
+                        var logDelete = new Message($"Partially downloaded file \"{path}\" was deleted after cancellation.", DateTime.Now, "INFO");
+                        _logger.LogNewMassage(logDelete);
+                    }
+                    catch (Exception ex)
+                    {
+                        var logError = new Message($"Failed to delete partially downloaded file \"{path}\": {ex.Message}", DateTime.Now, "ERROR");
+                        _logger.LogNewMassage(logError);
+                    }
+                }
+            }
         }
         else
         {
-            _logger.LogNewMassage(new Message("No file to delete after cancellation.", DateTime.Now, "INFO"));
+            _logger.LogNewMassage(new Message($"Path is empty or null check: {_path}", DateTime.Now, "INFO"));
         }
         
         RequestClose?.Invoke();

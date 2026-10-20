@@ -46,6 +46,10 @@
                                 </StackPanel>
                                 
                                 <StackPanel Classes="UICell">
+                                        <CheckBox Content="Auto Convert?" IsChecked="{Binding AutoConvert}"></CheckBox>
+                                </StackPanel>
+                                
+                                <StackPanel Classes="UICell">
                                         <Button Classes="primary" IsDefault="True" Content="Scrap" Command="{Binding ScrapCommand}"/>
                                         <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
                                 </StackPanel>
