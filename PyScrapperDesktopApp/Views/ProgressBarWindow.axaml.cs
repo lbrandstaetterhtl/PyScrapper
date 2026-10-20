@@ -13,12 +13,12 @@ public partial class ProgressBarWindow : Window
         if (Design.IsDesignMode) return;
         
         InitializeComponent();
-        TitleBar.Initialize(this, onClose: () => OnCancel.Invoke());
+        TitleBar.Initialize(this, onClose: () => OnCancel?.Invoke());
         
         var vm = new ViewModels.ProgressBarWindowViewModel(this);
         vm.CloseRequested += Close;
         DataContext = vm;
     }
 
-    public Action OnCancel { get; set; }
+    public Action? OnCancel { get; set; }
 }

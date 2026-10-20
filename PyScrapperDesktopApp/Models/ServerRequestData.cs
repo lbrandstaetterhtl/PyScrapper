@@ -21,9 +21,11 @@ public class DownloadRequestData
     [JsonPropertyName("download_strategy")]
     public string DownloadStrategy { get; set; }
 
-    [JsonPropertyName("extra_headers")] public Dictionary<string, string> ExtraHeaders { get; set; } = new Dictionary<string, string>();
+    [JsonPropertyName("extra_headers")] 
+    public Dictionary<string, string> ExtraHeaders { get; set; } = new Dictionary<string, string>();
 
-    [JsonPropertyName("download_path")] public string DownloadPath { get; set; } = "";
+    [JsonPropertyName("download_path")] 
+    public string DownloadPath { get; set; } = "";
     
     [JsonPropertyName("preferred_type")]
     public string PreferredType { get; set; }
