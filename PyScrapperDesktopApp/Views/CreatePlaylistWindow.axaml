@@ -22,32 +22,101 @@
                 <controls:TitleBarControl Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource TitleBarGradient}"/>
         
         <Grid Grid.Row="1" RowDefinitions="Auto, Auto, Auto, *" Classes="RootGrid">
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Classes="UICell">
-                        <TextBlock Text="Playlist Name: " Classes="UILabel"/>
-                        <TextBox Text="{Binding PlaylistName}" Classes="UI"/>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Classes="UICell">
+                        <TextBlock Text="Playlist Name: " HorizontalAlignment="Left" Classes="UILabel" MinWidth="213"/>
+                        <TextBox Text="{Binding PlaylistName}" HorizontalAlignment="Right" Classes="UI"/>
                 </StackPanel>
                 
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Classes="UICell">
-                        <TextBlock Text="Playlist description (optional): " Classes="UILabel"/>
-                        <TextBox Text="{Binding Description}" Classes="UI"/>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left" Classes="UICell">
+                        <TextBlock Text="Playlist description (optional): " HorizontalAlignment="Left" Classes="UILabel" MinWidth="150"/>
+                        <TextBox Text="{Binding Description}" HorizontalAlignment="Right" Classes="UI"/>
                 </StackPanel>
                 
-                <ScrollViewer MaxHeight="400" Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" MinWidth="600" Margin="0,5">
-                        <ItemsControl ItemsSource="{Binding AvailableMedias}">
-                                <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                                <Border Classes="CellInteractive" IsTabStop="true" HorizontalAlignment="Stretch" Margin="5" MinWidth="600" MaxWidth="600" Tapped="MediaTapped">
-                                                        <ScrollViewer HorizontalScrollBarVisibility="Auto">
-                                                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                                                        <TextBlock Text="{Binding Title}" Classes="UIValue" VerticalAlignment="Center"/>
-                                                                        <TextBlock Text="{Binding DownloadPath}" Classes="UIValue" VerticalAlignment="Center"/>
-                                                                        <CheckBox IsEnabled="False" IsChecked="{Binding IsPlayable}" VerticalAlignment="Center"/>
-                                                                </StackPanel>
-                                                        </ScrollViewer>
-                                                </Border>
-                                        </DataTemplate>
-                                </ItemsControl.ItemTemplate>
+                <ScrollViewer Grid.Row="2"
+                              MaxHeight="400"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              MaxWidth="600"
+                              Margin="0,5">
+
+                    <StackPanel Spacing="0"
+                                HorizontalAlignment="Stretch">
+
+                        <!-- Header -->
+                        <Grid ColumnDefinitions="250,*,110"
+                              ColumnSpacing="10"
+                              Margin="5,5,5,10"
+                              HorizontalAlignment="Stretch">
+
+                            <TextBlock Grid.Column="0"
+                                       Text="Title"
+                                       HorizontalAlignment="Center"
+                                       FontWeight="Bold"
+                                       Classes="UIValue"/>
+
+                            <TextBlock Grid.Column="1"
+                                       Text="Download Path"
+                                       HorizontalAlignment="Center"
+                                       FontWeight="Bold"
+                                       Classes="UIValue"/>
+
+                            <TextBlock Grid.Column="2"
+                                       Text="Playable"
+                                       HorizontalAlignment="Center"
+                                       FontWeight="Bold"
+                                       Classes="UIValue"/>
+                        </Grid>
+
+                        <ItemsControl ItemsSource="{Binding AvailableMedias}"
+                                      HorizontalAlignment="Stretch">
+
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Classes="CellInteractive"
+                                            IsTabStop="True"
+                                            HorizontalAlignment="Stretch"
+                                            Margin="5"
+                                            MaxWidth="600"
+                                            Tapped="MediaTapped">
+
+                                        <Grid ColumnDefinitions="250,*,110"
+                                              ColumnSpacing="10"
+                                              HorizontalAlignment="Stretch">
+
+                                            <!-- Titel -->
+                                            <ScrollViewer Grid.Column="0"
+                                                          HorizontalScrollBarVisibility="Auto"
+                                                          VerticalScrollBarVisibility="Disabled">
+                                                <TextBlock Text="{Binding Title}"
+                                                           Classes="UIValue"
+                                                           TextWrapping="NoWrap"
+                                                           VerticalAlignment="Center"
+                                                           HorizontalAlignment="Left"/>
+                                            </ScrollViewer>
+
+                                            <!-- Download-Pfad -->
+                                            <ScrollViewer Grid.Column="1"
+                                                          HorizontalScrollBarVisibility="Auto"
+                                                          VerticalScrollBarVisibility="Disabled">
+                                                <TextBlock Text="{Binding DownloadPath}"
+                                                           Classes="UIValue"
+                                                           TextWrapping="NoWrap"
+                                                           VerticalAlignment="Center"
+                                                           HorizontalAlignment="Left"/>
+                                            </ScrollViewer>
+
+                                            <!-- Abspielbar -->
+                                            <CheckBox Grid.Column="2"
+                                                      IsEnabled="False"
+                                                      IsChecked="{Binding IsPlayable}"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </StackPanel>
                 </ScrollViewer>
                 
                 <StackPanel Grid.Row="3" Classes="UICell">

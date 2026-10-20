@@ -9,6 +9,7 @@
         x:DataType="vm:FilterWindowViewModel"
         SizeToContent="WidthAndHeight"
         MaxHeight="600"
+        MaxWidth="400"
         WindowStartupLocation="CenterOwner"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
