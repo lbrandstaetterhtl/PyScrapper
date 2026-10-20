@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+﻿using System.Threading;
+using Avalonia.Controls;
 using PyScrapperDesktopApp.Models;
 using PyScrapperDesktopApp.ViewModels;
 
@@ -11,11 +12,12 @@ public partial class ScrapWindowWithoutSearch : Window
         if (Design.IsDesignMode) return;
 
         InitializeComponent();
-        TitleBar.Initialize(this);
         
         DialogService ds = new DialogService(this);
         
-        var vm = new ScrapWindowWithoutSearchViewModel(ds, this);
+        CancellationTokenSource cts = new CancellationTokenSource();
+        var vm = new ScrapWindowWithoutSearchViewModel(ds, this, out cts);
+        TitleBar.Initialize(this, cts, vm.CancelDownload);
         
         DataContext = vm;
         

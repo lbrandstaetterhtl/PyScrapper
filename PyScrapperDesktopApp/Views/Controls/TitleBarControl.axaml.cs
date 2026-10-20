@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Threading;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -11,6 +13,8 @@ namespace PyScrapperDesktopApp.Views.Controls;
 public partial class TitleBarControl : UserControl
 {
     private Window? _window;
+    private CancellationTokenSource? _cts;
+    private Action _onClose;
 
     private  Bitmap closeIcon => AppData.Settings.DarkModeEnabled
         ? new Bitmap(Path.Combine(AppData.AssetPath, "DarkMode", "close-darkmode.png"))
@@ -37,10 +41,12 @@ public partial class TitleBarControl : UserControl
         };
     }
 
-    public void Initialize(Window window)
+    public void Initialize(Window window, CancellationTokenSource? cts = null, Action? onClose = null)
     {
         _window = window;
         DataContext = window;
+        _cts = cts;
+        _onClose = onClose;
     }
 
     private void TitleBarDrag(object? sender, PointerPressedEventArgs e)
@@ -64,6 +70,13 @@ public partial class TitleBarControl : UserControl
 
     private void CloseClick(object? sender, RoutedEventArgs e)
     {
+        _cts?.Cancel();
+
+        if (_onClose != null)
+        {
+            _onClose.Invoke();
+        }
+        
         _window?.Close();
     }
 

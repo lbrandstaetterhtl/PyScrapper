@@ -213,16 +213,20 @@ public partial class ScrapWindowWithoutSearchViewModel : ObservableObject
     /// It sets up the necessary properties and commands for the scrap functionality, including the CancelCommand that allows the user to close the scrap window without initiating the scrap process.
     /// </summary>
     /// <param name="dialogService"></param>
-    public ScrapWindowWithoutSearchViewModel(DialogService dialogService, Window window)
+    public ScrapWindowWithoutSearchViewModel(DialogService dialogService, Window window, out CancellationTokenSource cts)
     {
-        if (Design.IsDesignMode) return;
-        
+        cts = _cts;
+        if (Design.IsDesignMode)
+        {
+            return;
+        }
+
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke());
         _dialogService = dialogService;
         _scrapWindow = window;
     }
     
-    private void CancelDownload()
+    public void CancelDownload()
     {
         var log = new Message("Scrap operation was canceled by the user.", DateTime.Now, "INFO");
         _logger.LogNewMassage(log);

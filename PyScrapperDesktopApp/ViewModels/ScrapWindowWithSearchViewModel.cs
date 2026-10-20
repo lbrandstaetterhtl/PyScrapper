@@ -71,8 +71,9 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     /// <param name="scrapWindow"></param>
     /// <param name="provider"></param>
     /// <exception cref="Exception"></exception>
-    public ScrapWindowWithSearchViewModel(Window scrapWindow, string provider, DialogService dialogService)
+    public ScrapWindowWithSearchViewModel(Window scrapWindow, string provider, DialogService dialogService, out CancellationTokenSource cts)
     {
+        cts = _cts;
         try
         {
             if (Design.IsDesignMode) return;
@@ -377,7 +378,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
         }
     }
     
-    private void CancelDownload()
+    public void CancelDownload()
     {
 
         var log = new Message("Scrap operation was canceled by the user.", DateTime.Now, "INFO");
