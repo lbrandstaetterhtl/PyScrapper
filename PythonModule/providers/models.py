@@ -816,7 +816,7 @@ def makeProviderResult(
         if bestMedia is None or media.prio > bestMedia.prio:
             bestMedia = media
 
-        
+
 
     if not bestMedia.url:
         raise core.models.errors.TaskFailedError(
@@ -828,7 +828,7 @@ def makeProviderResult(
             ],
             caller="[providers] makeProviderResult"
         )
-    
+    print(found_media_list)
 
     return _buildProviderResultFromFoundMedia(
         bestMedia,
