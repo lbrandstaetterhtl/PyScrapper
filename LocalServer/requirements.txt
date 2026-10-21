@@ -5,4 +5,5 @@ certifi
 yt-dlp
 playwright
 bcrypt
-dotenv
+python-dotenv
+pywin32; sys_platform == "win32"

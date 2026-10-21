@@ -14,7 +14,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN pip install --no-cache-dir maturin
     
 WORKDIR /build
-COPY captcha_ocr_source/ .
+COPY LocalServer/docker/captcha_ocr_source/ .
 RUN maturin build --release --out /wheels
     
     
