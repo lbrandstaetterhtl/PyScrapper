@@ -1,0 +1,7 @@
+pip install --force-reinstall (Get-ChildItem captcha_ocr-*.whl | Sort-Object LastWriteTime | Select-Object -Last 1).FullName 
+
+
+pip install --force-reinstall "$(ls -t captcha_ocr-*.whl | head -n 1)"
+
+python3 -m pip install --force-reinstall "$(ls -t captcha_ocr-*.whl | head -n 1)"
+
