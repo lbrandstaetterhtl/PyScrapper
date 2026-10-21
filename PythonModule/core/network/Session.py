@@ -17,8 +17,9 @@ class Session:
         cookie_file=COOKIE_FILE
         ):
 
-        if os.path.exists(cookie_file):
+        if os.path.exists(cookie_file) and os.path.isfile(cookie_file):
             self.cookieFile = cookie_file
+            
         else:
             self.cookieFile = COOKIE_FILE
 
