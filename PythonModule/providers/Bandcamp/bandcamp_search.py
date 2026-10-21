@@ -18,7 +18,9 @@ import base64
 from datetime import datetime
 import os
 
-
+OCR_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "ocr", "model.safetensors")
+)
 
 class CaptchaDetected(Exception):...
 
@@ -48,7 +50,7 @@ def search(
         if not searchHtml:
             raise core.models.errors.TaskFailedError(
                 task="_getsearchHtml",
-                reason=f"Error opening url '{searchURL}'",
+                reason=f"Couldn't retrieve non-empty HTML - '{searchURL}'",
                 caller="[providers] Bandcamp.search"
             ) 
         return searchHtml
@@ -74,7 +76,7 @@ def search(
 
             if not allTracks:
                 raise core.models.errors.TaskFailedError(
-                    task="searchBlocksAll",
+                    task="get allTracks",
                     reason="Couldn't find capture group with given pattern",
                     caller="[providers] Bandcamp.search",
                     extraMessages=[
@@ -86,6 +88,7 @@ def search(
             type_pattern = r'data-search=.*?(?:&quot;|")type(?:&quot;|")\s*:\s*(?:&quot;|")(.*?)(?:&quot;|")'
 
             for track in allTracks:
+
                 if len(results) >= top:
                     break
 
@@ -96,14 +99,17 @@ def search(
                 )
                 if not trackType:
                     continue
+         
 
                 MyType = _typeMapping(trackType)
+    
 
                 # Default "nothing" that gets sent for tags is [''] that's why filtering for that
                 if filters.tags != ['']:
                     if MyType not in filters.tags:
                         continue
 
+                
                 result = _buildResult(track)
                 if result:
                     result["type"] = MyType
@@ -115,10 +121,10 @@ def search(
 
         except CaptchaDetected:
             retrys += 1
-            if retrys > CAPTCHA_RETRYS:
+            if retrys >= CAPTCHA_RETRYS:
                 raise core.models.errors.TaskFailedError(
-                    task="",
-                    reason=f"Couldn't solve Captcha with {retrys} trys",
+                    task="Bandcamp.search.solveCaptcha",
+                    reason=f"CAPTCHA challenge persisted after {CAPTCHA_RETRYS} solving attempts",
                     caller="[providers] Bandcamp.search",
                     extraMessages=[
                         "OCR Captcha Handler couldn't solve required captcha for search",
@@ -127,6 +133,7 @@ def search(
                 )
 
             _solveCaptcha(searchURL, session.cookieFile)
+            session.reloadCookies()
 
             
             
@@ -138,50 +145,72 @@ def _solveCaptcha(url: str, cookie_file: str) -> None:
         url=url,
         cookie_file=cookie_file
     )
-
-
-    captchaBrowser.run(headless=False)
-
-    browserHtml = captchaBrowser.page.content()
-
-    image_data_pattern: str = r'<img.*?src="data:image/jpeg;base64,(.*?)"'
-    image_data_base64 = core.general.DataSearch.searchBlocks(
-        pattern=image_data_pattern,
-        search_block=browserHtml,
-        return_regex_exception=False
-    )
-    if not image_data_base64:
-        return
-
     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")
-
+    
     tmpFile = f"{now}-Bandcamp-captcha.jpeg"
 
-    with open(tmpFile, "wb") as file:
-        file.write(base64.b64decode(image_data_base64, validate=True))
+    try:
+        captchaBrowser.run(headless=True)
 
-    absolutePath: str = os.path.abspath(tmpFile)
+        browserHtml = captchaBrowser.page.content()
 
-    solutions: list[str] = captcha_ocr.img_to_text(absolutePath, "C:\\Python\\PyScrapper\\LocalServer\\ocr_model\\model.safetensors", 10)
-    print(solutions)
+        image_data_pattern: str = r'<img.*?src="data:image/jpeg;base64,(.*?)"'
+        image_data_base64 = core.general.DataSearch.searchBlocks(
+            pattern=image_data_pattern,
+            search_block=browserHtml,
+            return_regex_exception=False
+        )
+        if not image_data_base64:
+            raise core.models.errors.TaskFailedError(
+                task="Bandcamp.solveCaptcha.extractImage",
+                reason="Couldn't find CAPTCHA image in browser HTML",
+                caller="[providers] Bandcamp._solveCaptcha",
+                extraMessages=[
+                    f"URL: {url}",
+                    f"Pattern: {image_data_pattern}"
+                ]
+            )
 
-    captchaBrowser.page.wait_for_timeout(10000)
-    captchaBrowser.stop()
+        
 
-    os.remove(tmpFile)
+        with open(tmpFile, "wb") as file:
+            file.write(base64.b64decode(image_data_base64, validate=True))
+
+        absolutePath: str = os.path.abspath(tmpFile)
+
+        solutions: list[str] = captcha_ocr.img_to_text(absolutePath, OCR_PATH, 5)
+
+        captchaBrowser.sendCaptchaSolutions(solutions)
+
+    except Exception as e:
+        raise core.models.errors.TaskFailedError(
+            task="Bandcamp.solveCaptcha.OCR",
+            reason="OCR inference failed",
+            caller="[providers] Bandcamp._solveCaptcha",
+            extraMessages=[
+                f"Model path: {OCR_PATH}",
+                f"Original exception: {type(e).__name__}: {e}"
+            ]
+        ) from e
     
+
+    finally:
+        if os.path.exists(tmpFile):
+            os.remove(tmpFile)
+
+        captchaBrowser.stop()
+
+        
     
-
-
-
-
-
     
 
 CLIENT_CHALLENGE_MARKERS = (
     "<title>Client Challenge</title>",
     "/_fs-ch-"
 )
+
+
+
 
 
 def _isClientChallenge(
@@ -191,6 +220,8 @@ def _isClientChallenge(
         return False
 
     return any(marker in page_html for marker in CLIENT_CHALLENGE_MARKERS)
+
+
 
 
 
@@ -215,27 +246,32 @@ def _buildSearchUrl(
 
 def _buildResult(
         track: str,
-
-
-) -> dict:
+) -> dict | None:
+    
     dictionary = {}
-    thumbnail_pattern = r'<img src="(.*?)">'
+    try:
+        thumbnail_pattern = r'<img src="(.*?)">'
 
-    dictionary['thumbnail'] = core.general.DataSearch.searchBlocks(
-        pattern=thumbnail_pattern,
-        search_block=track
-    )
-    titel_pattern = r'<div class="heading">.*?<a.*?>(.*?)</a>'
-    dictionary['title'] = core.general.DataSearch.searchBlocks(
-        pattern=titel_pattern,
-        search_block=track
-    )
+        dictionary['thumbnail'] = core.general.DataSearch.searchBlocks(
+            pattern=thumbnail_pattern,
+            search_block=track,
+            return_regex_exception=True
+        )
+        titel_pattern = r'<div class="heading">.*?<a.*?>(.*?)</a>'
+        dictionary['title'] = core.general.DataSearch.searchBlocks(
+            pattern=titel_pattern,
+            search_block=track,
+            return_regex_exception=True
+        )
 
-    url_pattern = r'<div class="heading">.*?<a href="(.*?)"'
-    dictionary['url'] = core.general.DataSearch.searchBlocks(
-        pattern=url_pattern,
-        search_block=track
-    )
+        url_pattern = r'<div class="heading">.*?<a href="(.*?)"'
+        dictionary['url'] = core.general.DataSearch.searchBlocks(
+            pattern=url_pattern,
+            search_block=track,
+            return_regex_exception=True
+        )
+    except core.models.errors.RegexSearchError:
+        return None
 
     return dictionary
 
