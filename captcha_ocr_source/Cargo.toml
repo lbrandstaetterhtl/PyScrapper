@@ -1,0 +1,18 @@
+[package]
+name = "captcha_ocr"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "captcha_ocr"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.30.1", features = ["extension-module", "abi3-py39"] }
+image = "0.25"
+imageproc = "0.27.0"
+ab_glyph = "0.2"
+candle-core = "0.11.0"
+candle-nn = "0.11.0"
+# Falls du vorher "half = \"=2.4.1\"" gebraucht hast, diese Zeile wieder einfügen:
+# half = "=2.4.1"
