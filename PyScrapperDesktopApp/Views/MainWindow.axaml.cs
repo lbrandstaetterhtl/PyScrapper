@@ -45,7 +45,7 @@ public partial class MainWindow : Window
                 else
                 {
                     outerGrid.RowDefinitions[2].Height = new GridLength(1, GridUnitType.Star);
-                    _vm.MediaPlayerMinHeight = 1000;
+                    _vm.MediaPlayerMinHeight = 1500;
                 }
             };
         };
@@ -176,21 +176,21 @@ public partial class MainWindow : Window
         }
     }
 
-    private void PlaylistDoubleClick(object? sender, RoutedEventArgs e)
+    private async void PlaylistDoubleClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Border { DataContext: Playlist playlist })
         {
             var playlistWindow = new PlaylistDetailsWindow(playlist.Identifier);
-            playlistWindow.Show();
+            await playlistWindow.ShowDialog(this);
         }
     }
 
-    private void OpenPlaylistDetailsClick(object? sender, RoutedEventArgs e)
+    private async void OpenPlaylistDetailsClick(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem { DataContext: Playlist playlist })
         {
             var playlistWindow = new PlaylistDetailsWindow(playlist.Identifier);
-            playlistWindow.Show();
+            await playlistWindow.ShowDialog(this);
         }
     }
 

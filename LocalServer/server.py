@@ -1013,6 +1013,7 @@ async def client_download_stream(task_id: str, stream_id: str):
             yield chunk
 
     filename = context.output.full_filename if not context.output.auto_convert else (f"{context.output.filename}.{context.info.preferred_file}")
+    print(filename)
 
     return StreamingResponse(
         download_and_cleanup(),

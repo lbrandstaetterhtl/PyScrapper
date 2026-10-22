@@ -221,16 +221,21 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
                         finalPath = await vm.StartProgress(resource, client.GetFileFromStream(resource, path, _cts.Token), _cts);
                     
-                    if (finalPath.Substring(finalPath.LastIndexOf('.')) != SelectedMediaType.Trim('.'))
+                    _logger.LogDebugMessage(new Message($"Downloaded file saved to: {finalPath}", DateTime.Now, "DEBUG"));
+                    _logger.LogDebugMessage(new Message($"Expected file path: {_path}", DateTime.Now, "DEBUG"));
+                    
+                    if (finalPath.Substring(finalPath.LastIndexOf('.')).Trim('.') != SelectedMediaType.Trim('.'))
                     {
-                        var userResponse = await _dialogService.ConfirmAsync($"Found only {resource.Context.MediaInfo.FileExtension} for item \"{Urls[counter]}\". Do you want to continue downloading it?");
+                        var userResponse = await _dialogService.ConfirmAsync($"Found only {finalPath.Substring(finalPath.LastIndexOf('.')).Trim('.')} for item \"{Urls[counter]}\". Do you want to continue downloading it?");
                             
-                        var log = new Message($"Downloaded media type \"{resource.Context.MediaInfo.FileExtension}\" does not match the selected media type \"{SelectedMediaType.Trim('.')}\" for item \"{Urls[counter]}\"", DateTime.Now, "ERROR");
+                        var log = new Message($"Downloaded media type \"{finalPath.Substring(finalPath.LastIndexOf('.')).Trim('.')}\" does not match the selected media type \"{SelectedMediaType.Trim('.')}\" for item \"{Urls[counter]}\"", DateTime.Now, "ERROR");
                         _logger.LogNewMassage(log);
                             
                         if (!userResponse)
                             continue;
                     }
+                    
+                    _path = finalPath;
                         
                     if (!string.IsNullOrEmpty(finalPath) && File.Exists(finalPath))
                     {

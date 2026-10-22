@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -14,6 +15,7 @@ public partial class PlaylistDetailsWindow : Window
 {
     private readonly Window _mainWindow;
     private readonly AppLogger _logger = AppLogger.Instance;
+    private PlaylistDetailsWindowViewModel _vm;
 
     public PlaylistDetailsWindow(string identifier)
     {
@@ -21,14 +23,13 @@ public partial class PlaylistDetailsWindow : Window
         TitleBar.Initialize(this);
 
         _mainWindow = App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null;
-        
-        DialogService ds = new DialogService(this);
 
-        var vm = new PlaylistDetailsWindowViewModel(identifier, ds);
+        var vm = new PlaylistDetailsWindowViewModel(identifier);
 
         DataContext = vm;
 
         vm.CloseRequested += Close;
+        _vm = vm;
     }
 
     private void PlayMedia(DownloadedMedia media)
@@ -86,9 +87,14 @@ public partial class PlaylistDetailsWindow : Window
             {
                 if (DataContext is PlaylistDetailsWindowViewModel vm)
                 {
-                    await Database.DeletePlaylistMediaAsync(media.Identifier, vm._playlist.Identifier);
+                    var req = new DeletePlaylistMediaRequest()
+                    {
+                        PlaylistIdentifier = _vm.PlaylistId,
+                        MediaIdentifier = media.Identifier
+                    };
+                    await Database.DeletePlaylistMediaAsync(req);
                     vm._playlist.RemoveMedia(media.Identifier);
-                    vm.RefreshMedias();
+                    await vm.RefreshMedias();
                 }
             }
         }
@@ -100,5 +106,34 @@ public partial class PlaylistDetailsWindow : Window
             var messageBox = new MessageBox("An error occurred while trying to remove the media: " + ex.Message);
             _ = messageBox.ShowDialog(this);
         }
+    }
+
+    public void AddMediaClick(object? sender, RoutedEventArgs e)
+    {
+        MediasInPlaylist.IsVisible = false;
+        Search.IsVisible = true;
+        SearchedMedias.IsVisible = true;
+        AddButton.IsVisible = false;
+    }
+
+    public async void DoubleClickSearchedMedia(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Border { DataContext: DownloadedMedia media })
+        {
+           await _vm._playlist.AddNewMedia(media.Identifier);
+           await _vm.RefreshMedias();
+        }
+        
+        Search.IsVisible = false;
+        MediasInPlaylist.IsVisible = true;
+        SearchedMedias.IsVisible = false;
+    }
+
+    public void CloseSearchClick(object? sender, RoutedEventArgs e)
+    {
+        Search.IsVisible = false;
+        MediasInPlaylist.IsVisible = true;
+        SearchedMedias.IsVisible = false;
+        AddButton.IsVisible = true;
     }
 }
