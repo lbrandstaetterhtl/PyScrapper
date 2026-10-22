@@ -445,6 +445,7 @@ public class ApiClient : Interfaces.IApiClient
 
         var contentDisposition =  response.Content.Headers.ContentDisposition;
         var fileName = contentDisposition?.FileName.Trim('"');
+        _logger.LogDebugMessage(new Message($"Downloading file: {fileName} from URL: {resource.DownloadUrl}", DateTime.Now, "DEBUG"));
         var downloadPath = Path.Combine(path, fileName);
         
         if (!File.Exists(downloadPath))

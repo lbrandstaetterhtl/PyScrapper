@@ -226,6 +226,12 @@ public partial class DownloadedMedia(string userIdentifier, string title, string
             }
     
             fileName = fileName.Trim();
+            
+            if (!fileName.All(c => c <= '\u00FF'))
+            {
+                errorMessage = "Filename contains non-ASCII characters.";
+                return false;
+            }
     
             if (fileName.EndsWith(' ') || fileName.EndsWith('.'))
             {
