@@ -42,6 +42,8 @@ COPY . .
 # Installiere Python Dependencies
 RUN pip install --no-cache-dir -r LocalServer/requirements.txt
 
+RUN playwright install
+
 # Setze Workdir auf LocalServer
 WORKDIR /app/LocalServer
 
