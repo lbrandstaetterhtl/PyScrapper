@@ -45,7 +45,7 @@ public partial class MainWindow : Window
                 else
                 {
                     outerGrid.RowDefinitions[2].Height = new GridLength(1, GridUnitType.Star);
-                    _vm.MediaPlayerMinHeight = 1000;
+                    _vm.MediaPlayerMinHeight = 1500;
                 }
             };
         };

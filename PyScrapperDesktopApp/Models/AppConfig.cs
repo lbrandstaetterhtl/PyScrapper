@@ -68,7 +68,6 @@ public static class SecretProtector
     
     public static string GenerateApiKey()
     {
-        // Generate a new API key with a prefix and a random GUID (comment if in production)
         var apikey = "pyscrapper_" + Guid.NewGuid().ToString().Substring(0, 16);
         var encryptedKey = Encrypt(apikey);
         return encryptedKey;

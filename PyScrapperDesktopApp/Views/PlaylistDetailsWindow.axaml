@@ -48,7 +48,7 @@
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
-                    <Button Content="Add Media" Click="AddMediaClick"></Button>
+                    <Button x:Name="AddButton" Classes="primary" Content="Add Media" Click="AddMediaClick"></Button>
                     
                     <ItemsControl x:Name="MediasInPlaylist" ItemsSource="{Binding Medias}" IsVisible="True">
                         <ItemsControl.ItemTemplate>
@@ -94,7 +94,8 @@
                     <StackPanel x:Name="Search" Orientation="Horizontal" HorizontalAlignment="Stretch" IsVisible="False">
                         <TextBlock Text="Search for a media: " Classes="UILabel"/>
                         <TextBox x:Name="SearchQueryBox" HorizontalAlignment="Center" Text="{Binding SearchQuery}" Classes="UI" Width="200"/>
-                        <Button Content="Search" Command="{Binding SearchCommand}"/>
+                        <Button Content="Search" Classes="primary" Command="{Binding SearchCommand}"/>
+                        <Button Content="Back" Classes="primary" Click="CloseSearchClick"/>
                     </StackPanel>
                     
                         <ItemsControl x:Name="SearchedMedias" ItemsSource="{Binding SearchedMedias}" IsVisible="False">

@@ -35,8 +35,6 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     
     public readonly Playlist _playlist;
     
-    private DialogService _dialogService;
-    
     [ObservableProperty]
     private string _searchQuery = string.Empty;
     
@@ -48,7 +46,7 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     /// The constructor also assigns the playlist to a private field for later use in command methods.
     /// </summary>
     /// <param name="playlist"></param>
-    public PlaylistDetailsWindowViewModel(string identifier, DialogService dialogService)
+    public PlaylistDetailsWindowViewModel(string identifier)
     {
         var playlist = AppData.Playlists.FirstOrDefault(p => p.Identifier == identifier);
         playlist.MediaIdentifiers = AppData.PlaylistMedias.Where(pm => pm.PlaylistIdentifier == playlist.Identifier).Select(pm => pm.MediaIdentifier).ToList();
@@ -58,7 +56,6 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
         PlaylistId = playlist.Identifier;
         _playlist = playlist;
         Medias = AppData.DownloadedMedias.Where(m => _playlist.MediaIdentifiers.Contains(m.Identifier)).ToList();
-        _dialogService = dialogService;
         SearchedMedias = AppData.DownloadedMedias.ToList();
     }
     

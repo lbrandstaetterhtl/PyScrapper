@@ -23,10 +23,8 @@ public partial class PlaylistDetailsWindow : Window
         TitleBar.Initialize(this);
 
         _mainWindow = App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null;
-        
-        DialogService ds = new DialogService(this);
 
-        var vm = new PlaylistDetailsWindowViewModel(identifier, ds);
+        var vm = new PlaylistDetailsWindowViewModel(identifier);
 
         DataContext = vm;
 
@@ -115,6 +113,7 @@ public partial class PlaylistDetailsWindow : Window
         MediasInPlaylist.IsVisible = false;
         Search.IsVisible = true;
         SearchedMedias.IsVisible = true;
+        AddButton.IsVisible = false;
     }
 
     public async void DoubleClickSearchedMedia(object? sender, RoutedEventArgs e)
@@ -128,5 +127,13 @@ public partial class PlaylistDetailsWindow : Window
         Search.IsVisible = false;
         MediasInPlaylist.IsVisible = true;
         SearchedMedias.IsVisible = false;
+    }
+
+    public void CloseSearchClick(object? sender, RoutedEventArgs e)
+    {
+        Search.IsVisible = false;
+        MediasInPlaylist.IsVisible = true;
+        SearchedMedias.IsVisible = false;
+        AddButton.IsVisible = true;
     }
 }
