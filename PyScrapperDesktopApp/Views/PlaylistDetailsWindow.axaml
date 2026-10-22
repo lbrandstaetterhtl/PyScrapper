@@ -47,53 +47,97 @@
             <ScrollViewer Grid.Row="2"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding Medias}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Classes="CellInteractive"
-                                    HorizontalAlignment="Stretch"
-                                    Margin="0,3"
-                                    DoubleTapped="DoubleClickMedia">
+                <StackPanel>
+                    <Button Content="Add Media" Click="AddMediaClick"></Button>
+                    
+                    <ItemsControl x:Name="MediasInPlaylist" ItemsSource="{Binding Medias}" IsVisible="True">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Classes="CellInteractive"
+                                        HorizontalAlignment="Stretch"
+                                        Margin="0,3"
+                                        DoubleTapped="DoubleClickMedia">
 
-                                <Border.ContextFlyout>
-                                    <MenuFlyout>
-                                        <MenuItem Header="Play" Click="PlayButtonClick"/>
-                                        <MenuItem Header="Remove from Playlist" Click="RemoveButtonClick"/>
-                                    </MenuFlyout>
-                                </Border.ContextFlyout>
+                                    <Border.ContextFlyout>
+                                        <MenuFlyout>
+                                            <MenuItem Header="Play" Click="PlayButtonClick"/>
+                                            <MenuItem Header="Remove from Playlist" Click="RemoveButtonClick"/>
+                                        </MenuFlyout>
+                                    </Border.ContextFlyout>
 
-                                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                                    <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="2">
-                                        <TextBlock Text="{Binding Title}"
-                                                   Classes="UIValue"
-                                                   FontSize="14"
-                                                   FontWeight="SemiBold"
-                                                   HorizontalAlignment="Left"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding MediaType}"
-                                                   Classes="UIValue"
-                                                   FontSize="12"
-                                                   HorizontalAlignment="Left"
-                                                   Opacity="0.6"/>
-                                    </StackPanel>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                        <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="2">
+                                            <TextBlock Text="{Binding Title}"
+                                                       Classes="UIValue"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       HorizontalAlignment="Left"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding MediaType}"
+                                                       Classes="UIValue"
+                                                       FontSize="12"
+                                                       HorizontalAlignment="Left"
+                                                       Opacity="0.6"/>
+                                        </StackPanel>
 
-                                    <CheckBox Grid.Column="1"
-                                              Content="Playable"
-                                              IsChecked="{Binding IsPlayable}"
-                                              Classes="IsPlayable"
-                                              VerticalAlignment="Center"/>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                                        <CheckBox Grid.Column="1"
+                                                  Content="Playable"
+                                                  IsChecked="{Binding IsPlayable}"
+                                                  Classes="IsPlayable"
+                                                  VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    
+                    <StackPanel x:Name="Search" Orientation="Horizontal" HorizontalAlignment="Stretch" IsVisible="False">
+                        <TextBlock Text="Search for a media: " Classes="UILabel"/>
+                        <TextBox x:Name="SearchQueryBox" HorizontalAlignment="Center" Text="{Binding SearchQuery}" Classes="UI" Width="200"/>
+                        <Button Content="Search" Command="{Binding SearchCommand}"/>
+                    </StackPanel>
+                    
+                        <ItemsControl x:Name="SearchedMedias" ItemsSource="{Binding SearchedMedias}" IsVisible="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Classes="CellInteractive"
+                                            HorizontalAlignment="Stretch"
+                                            Margin="0,3"
+                                            DoubleTapped="DoubleClickSearchedMedia">
+
+                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                            <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="2">
+                                                <TextBlock Text="{Binding Title}"
+                                                           Classes="UIValue"
+                                                           FontSize="14"
+                                                           FontWeight="SemiBold"
+                                                           HorizontalAlignment="Left"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding MediaType}"
+                                                           Classes="UIValue"
+                                                           FontSize="12"
+                                                           HorizontalAlignment="Left"
+                                                           Opacity="0.6"/>
+                                            </StackPanel>
+
+                                            <CheckBox Grid.Column="1"
+                                                      Content="Playable"
+                                                      IsChecked="{Binding IsPlayable}"
+                                                      Classes="IsPlayable"
+                                                      VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                </StackPanel>
             </ScrollViewer>
 
             <Border Grid.Row="3" Classes="SeparatorHorizontal" HorizontalAlignment="Stretch" Margin="4,8,4,20"/>
             <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center"
                         Spacing="8" Margin="0,36,0,0">
                 <Button Classes="primary" Content="Play Playlist" Command="{Binding PlayPlaylistCommand}"/>
-                <Button Classes="primary" Content="Cancel" Command="{Binding CancelCommand}"/>
+                <Button Classes="primary" Content="Close" Command="{Binding CloseCommand}"/>
             </StackPanel>
 
         </Grid>

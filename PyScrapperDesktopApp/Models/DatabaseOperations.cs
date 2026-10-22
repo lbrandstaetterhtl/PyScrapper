@@ -436,18 +436,18 @@ public class Database
     /// <summary>
     /// Asynchronously deletes a playlist media entry from the backend API based on the provided playlist and media identifiers.
     /// </summary>
-    /// <param name="playlistIdentifier"></param>
-    /// <param name="mediaIdentifier"></param>
+    /// <param name="req">The request object containing the playlist and media identifiers.</param>
     /// <exception cref="Exception"></exception>
-    public static async Task DeletePlaylistMediaAsync(string playlistIdentifier, string mediaIdentifier)
+    public static async Task DeletePlaylistMediaAsync(DeletePlaylistMediaRequest req)
     {
         try
         {
             string EncryptedUserApiKey = AppData.CurrentUser.ApiKey;
-            var content = new StringContent(JsonSerializer.Serialize(new { PlaylistIdentifier = playlistIdentifier, MediaIdentifier = mediaIdentifier }), System.Text.Encoding.UTF8, "application/json");
+            var content = new StringContent(JsonSerializer.Serialize(req), System.Text.Encoding.UTF8, "application/json");
 
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-User-Key", SecretProtector.Decrypt(EncryptedUserApiKey));   
+            client.DefaultRequestHeaders.Add("X-User-Key", SecretProtector.Decrypt(EncryptedUserApiKey));
+            client.DefaultRequestHeaders.Add("Auth", AppData.CurrentUser.Identifier);
             var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/delete/playlistmedia", content);   
 
             if (!response.IsSuccessStatusCode)

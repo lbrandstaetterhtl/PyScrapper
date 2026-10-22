@@ -160,6 +160,15 @@ public class LoginRequest
     public string Password { get; set; }
 }
 
+public class DeletePlaylistMediaRequest
+{
+    [JsonPropertyName("playlist_identifier")]
+    public string PlaylistIdentifier { get; set; }
+    
+    [JsonPropertyName("media_identifier")]
+    public string MediaIdentifier { get; set; }
+}
+
 /// <summary>
 /// Class representing the data structure for a registration request, containing properties for the username and password.
 /// This class is used to serialize and deserialize JSON data when making registration requests to the server.

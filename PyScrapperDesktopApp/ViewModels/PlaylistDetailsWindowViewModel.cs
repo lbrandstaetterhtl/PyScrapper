@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -36,6 +37,12 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     
     private DialogService _dialogService;
     
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+    
+    [ObservableProperty]
+    private List<DownloadedMedia> _searchedMedias = new List<DownloadedMedia>();
+    
     /// <summary>
     /// Constructor for the PlaylistDetailsWindowViewModel class, which initializes the view model with the details of a given playlist. It sets the playlist name, description, and media items based on the provided playlist object.
     /// The constructor also assigns the playlist to a private field for later use in command methods.
@@ -52,9 +59,10 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
         _playlist = playlist;
         Medias = AppData.DownloadedMedias.Where(m => _playlist.MediaIdentifiers.Contains(m.Identifier)).ToList();
         _dialogService = dialogService;
+        SearchedMedias = AppData.DownloadedMedias.ToList();
     }
     
-    public async void RefreshMedias()
+    public async Task RefreshMedias()
     {
         await _playlist.FindMedias();
         Medias = AppData.DownloadedMedias.Where(m => _playlist.MediaIdentifiers.Contains(m.Identifier)).ToList();
@@ -68,7 +76,7 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     /// This allows users to exit the playlist details view without making any changes or starting playback.
     /// </summary>
     [RelayCommand]
-    private void Cancel()
+    private void Close()
     {
         CloseRequested?.Invoke();
     }
@@ -81,7 +89,7 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
     /// This allows users to easily play all the media items in the playlist directly from the playlist details view.
     /// </summary>
     [RelayCommand]
-    private async void PlayPlaylist()
+    private void PlayPlaylist()
     {
         if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -92,5 +100,11 @@ public partial class PlaylistDetailsWindowViewModel : ObservableObject
         {
             mainWindow.MediaPlayer.LoadAndPlay(_playlist);
         }
+    }
+
+    [RelayCommand]
+    private void Search()
+    {
+        SearchedMedias = AppData.DownloadedMedias.Where(m => m.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 }

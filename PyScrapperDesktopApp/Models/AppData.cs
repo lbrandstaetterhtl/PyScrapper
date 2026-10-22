@@ -290,13 +290,17 @@ public class Playlist(string name, string description, string identifier, string
     {
         var playlistMedias = await Database.LoadPlaylistMediaFromApiAsync(Identifier);
 
+        foreach (var old in AppData.PlaylistMedias.Where(pm => pm.PlaylistIdentifier == Identifier).ToList())
+        {
+            AppData.PlaylistMedias.Remove(old);
+        }
+
         foreach (var media in playlistMedias)
         {
             AppData.PlaylistMedias.Add(media);
         }
-        
-        var medias = AppData.PlaylistMedias.Where(pm => pm.PlaylistIdentifier == Identifier).ToList();
-        MediaIdentifiers = medias.Select(pm => pm.MediaIdentifier).ToList();
+
+        MediaIdentifiers = playlistMedias.Select(pm => pm.MediaIdentifier).Distinct().ToList();
     }
     
     /// <summary>
