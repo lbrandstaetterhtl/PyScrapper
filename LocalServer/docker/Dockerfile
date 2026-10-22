@@ -42,7 +42,7 @@ COPY . .
 # Installiere Python Dependencies
 RUN pip install --no-cache-dir -r LocalServer/requirements.txt
 
-RUN playwright install
+RUN playwright install && python -m playwright install --with-deps chromium
 
 # Setze Workdir auf LocalServer
 WORKDIR /app/LocalServer
