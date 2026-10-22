@@ -6,7 +6,7 @@ from PythonModule.models.requests import SearchFilters
 
 from PythonModule.core.network import html
 
-CAPTCHA_RETRYS: int = 3
+
 
 #Own imports
 import captcha_ocr
@@ -17,10 +17,16 @@ import urllib.parse
 import base64
 from datetime import datetime
 import os
+import json
 
 OCR_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "ocr", "model.safetensors")
 )
+
+
+CAPTCHA_RETRIES: int = 3
+
+
 
 class CaptchaDetected(Exception):...
 
@@ -40,7 +46,10 @@ def search(
                                                   caller="[providers] Bandcamp.search")
     core.general.Validate.general.validateInt(argument_name="top", integer=top, caller="[providers] Bandcamp.search")
 
-    searchURL = _buildSearchUrl(search_term=search_term)
+    searchURL = _buildSearchUrl(
+        search_term=search_term,
+        search_filters=filters
+        )
 
     def _getSearchHtml():
         searchHtml = html.getHtml(
@@ -57,6 +66,21 @@ def search(
     
     retrys = 0
 
+    usedUrls = set()
+    results: list[dict] = []
+
+    def _addResult(result: dict):
+
+        if not result:
+            return
+
+        if result["url"] in usedUrls:
+            return
+        
+        results.append(result)
+        usedUrls.add(result["url"])
+
+
     while True:
         try:
         
@@ -65,18 +89,18 @@ def search(
             if _isClientChallenge(searchHtml):
                 raise CaptchaDetected
 
-            results: list[dict] = []
+            
 
             trackPattern: str = r'<li class="searchresult.*?</li>'
-            allTracks: list[str] = core.general.DataSearch.searchBlocksAll(
+            resources: list[str] = core.general.DataSearch.searchBlocksAll(
                 pattern=trackPattern,
                 search_block=searchHtml,
                 return_regex_exception=False
             )
 
-            if not allTracks:
+            if not resources:
                 raise core.models.errors.TaskFailedError(
-                    task="get allTracks",
+                    task="get resources",
                     reason="Couldn't find capture group with given pattern",
                     caller="[providers] Bandcamp.search",
                     extraMessages=[
@@ -87,33 +111,46 @@ def search(
 
             type_pattern = r'data-search=.*?(?:&quot;|")type(?:&quot;|")\s*:\s*(?:&quot;|")(.*?)(?:&quot;|")'
 
-            for track in allTracks:
+            for resource in resources:
 
                 if len(results) >= top:
                     break
 
                 trackType = core.general.DataSearch.searchBlocks(
                     pattern=type_pattern,
-                    search_block=track,
+                    search_block=resource,
                     return_regex_exception=False
                 )
                 if not trackType:
                     continue
-         
 
-                MyType = _typeMapping(trackType)
-    
+                resourceType = _typeMapping(trackType)
 
                 # Default "nothing" that gets sent for tags is [''] that's why filtering for that
-                if filters.tags != ['']:
-                    if MyType not in filters.tags:
+                if filters.tags not in ([], ['']):
+                    if resourceType not in filters.tags:
                         continue
+            
 
+                if resourceType == "track":
+                    result = _buildResult(resource)
+
+                    _addResult(result)
+
+                elif resourceType == "album":
                 
-                result = _buildResult(track)
-                if result:
-                    result["type"] = MyType
-                    results.append(result)
+                    for result in _getTrackResultsFromAlbum(
+                        resource,
+                        session,
+                        (top - len(results)),
+                        usedUrls
+                        ):
+          
+                        _addResult(result)
+
+                else:
+                    continue  
+                
 
             return results
 
@@ -121,10 +158,10 @@ def search(
 
         except CaptchaDetected:
             retrys += 1
-            if retrys >= CAPTCHA_RETRYS:
+            if retrys > CAPTCHA_RETRIES:
                 raise core.models.errors.TaskFailedError(
                     task="Bandcamp.search.solveCaptcha",
-                    reason=f"CAPTCHA challenge persisted after {CAPTCHA_RETRYS} solving attempts",
+                    reason=f"CAPTCHA challenge persisted after {CAPTCHA_RETRIES} solving attempts",
                     caller="[providers] Bandcamp.search",
                     extraMessages=[
                         "OCR Captcha Handler couldn't solve required captcha for search",
@@ -132,15 +169,91 @@ def search(
                     ]
                 )
 
-            _solveCaptcha(searchURL, session.cookieFile)
-            session.reloadCookies()
+            if _solveCaptcha(searchURL, session.cookieFile):
+                session.reloadCookies()
 
+
+
+
+
+
+def _getTrackResultsFromAlbum(
+        album_resource: str,
+        session: Session.Session,
+        track_count: int,
+        used_urls: set
+        ) -> list[dict]:
+    track_results: list[dict] = []
+
+    albumUrlPattern: str = r'href="(https://[^"]+/album/[^"?]+)'
+    try:
+        albumUrl: str = core.general.DataSearch.searchBlocks(
+            pattern=albumUrlPattern,
+            search_block=album_resource,
+            return_regex_exception=True
+        )
+    except core.models.errors.RegexSearchError:
+    
+        return []
+
+    albumHtml: str = html.getHtml(
+        session,
+        url=albumUrl,
+    )
+
+    if not albumHtml:
+        return []
+
+    allTrackPattern = r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>'
+    try:
+        jsonDataRaw = core.general.DataSearch.searchBlocksAll(
+            pattern=allTrackPattern,
+            search_block=albumHtml,
+            return_regex_exception=True
+        )
+    except core.models.errors.RegexSearchError:
+        return []
+
+   
+
+    for x in jsonDataRaw:
+
+        try:
+            jsonData = json.loads(x)
+            tracks = jsonData["track"]["itemListElement"]
+
+        except (KeyError, TypeError, json.JSONDecodeError):
+            continue
+        
+
+        for track in tracks:
+            if len(track_results) >= track_count:
+                break
+    
+            try:
+                result = {
+                    "thumbnail" : jsonData["image"],
+                    "url" : track["item"]["@id"],
+                    "title" : track["item"]["name"],
+                    "type" : "track"
+                }
+            except (KeyError, IndexError, TypeError):
+                continue
+
+            if result["url"] in used_urls:
+                continue
+            
+            track_results.append(result)
             
             
+    return track_results
+
+
+
 
     
 
-def _solveCaptcha(url: str, cookie_file: str) -> None:
+def _solveCaptcha(url: str, cookie_file: str) -> bool:
     captchaBrowser = BandcampCaptchaBrowser(
         url=url,
         cookie_file=cookie_file
@@ -171,27 +284,26 @@ def _solveCaptcha(url: str, cookie_file: str) -> None:
                 ]
             )
 
-        
 
         with open(tmpFile, "wb") as file:
             file.write(base64.b64decode(image_data_base64, validate=True))
 
         absolutePath: str = os.path.abspath(tmpFile)
-
-        solutions: list[str] = captcha_ocr.img_to_text(absolutePath, OCR_PATH, 5)
-
-        captchaBrowser.sendCaptchaSolutions(solutions)
-
-    except Exception as e:
-        raise core.models.errors.TaskFailedError(
-            task="Bandcamp.solveCaptcha.OCR",
-            reason="OCR inference failed",
-            caller="[providers] Bandcamp._solveCaptcha",
-            extraMessages=[
-                f"Model path: {OCR_PATH}",
-                f"Original exception: {type(e).__name__}: {e}"
-            ]
-        ) from e
+        try:
+            solutions: list[str] = captcha_ocr.img_to_text(absolutePath, OCR_PATH, 5)
+        except Exception as e:
+                raise core.models.errors.TaskFailedError(
+                    task="Bandcamp.solveCaptcha.OCR",
+                    reason="OCR inference failed",
+                    caller="[providers] Bandcamp._solveCaptcha",
+                    extraMessages=[
+                        f"Model path: {OCR_PATH}",
+                        f"Original exception: {type(e).__name__}: {e}"
+                    ]
+                ) from e
+        
+        return captchaBrowser.sendCaptchaSolutions(solutions)
+    
     
 
     finally:
@@ -202,20 +314,18 @@ def _solveCaptcha(url: str, cookie_file: str) -> None:
 
         
     
-    
-
-CLIENT_CHALLENGE_MARKERS = (
-    "<title>Client Challenge</title>",
-    "/_fs-ch-"
-)
-
-
 
 
 
 def _isClientChallenge(
         page_html: str
 ) -> bool:
+
+    CLIENT_CHALLENGE_MARKERS = (
+    "<title>Client Challenge</title>",
+    "/_fs-ch-"
+)
+    
     if not isinstance(page_html, str):
         return False
 
@@ -227,17 +337,46 @@ def _isClientChallenge(
 
 def _buildSearchUrl(
         search_term: str,
+        search_filters: SearchFilters
 
-) -> list[str]:
+) -> str:
     base_url = "https://bandcamp.com/search?"
 
     params = {
         "q": search_term
     }
+
+    if search_filters.tags not in ([], ['']):
+        tag_amount = len(search_filters.tags)
+
+        if tag_amount > 1:
+            raise core.models.errors.TaskFailedError(
+                task="_buildSearchUrl",
+                reason="Bancamp doesn't support multiple filter tags",
+                caller="[providers] Bandcamp.search",
+                extraMessages=[
+                    f"Given amount of tags: '{tag_amount}'",
+                    f"Given tags: {', '.join(search_filters.tags)}"
+                ]
+            )
+        
+        item_type = _reverseTypeMapping(search_filters.tags[0])
+        if item_type is not None:
+            params["item_type"] = item_type
+        else:
+            raise core.models.errors.TaskFailedError(
+                task="_buildSearchUrl",
+                reason="Invalid search filter was given",
+                caller="[providers] Bandcamp.search",
+                extraMessages=[
+                    "Following filters are allowed: track, album, creator",
+                    f"Given filter: '{search_filters.tags[0]}'"
+                ]
+            )
+
+
     searchURL = base_url + urllib.parse.urlencode(params)
     return searchURL
-
-
 
 
 
@@ -250,7 +389,7 @@ def _buildResult(
     
     dictionary = {}
     try:
-        thumbnail_pattern = r'<img src="(.*?)">'
+        thumbnail_pattern = r'<img\b[^>]*\bsrc="([^"]+)"'
 
         dictionary['thumbnail'] = core.general.DataSearch.searchBlocks(
             pattern=thumbnail_pattern,
@@ -270,6 +409,8 @@ def _buildResult(
             search_block=track,
             return_regex_exception=True
         )
+
+        dictionary["type"] = "track"
     except core.models.errors.RegexSearchError:
         return None
 
@@ -279,10 +420,20 @@ def _buildResult(
 
 
 
-def _typeMapping(givenType: str) -> str:
+def _typeMapping(givenType: str) -> str | None:
     mapping = {
         "t": "track",
         "a": "album",
         "b": "creator"
     }
     return mapping.get(givenType, None)
+
+
+def _reverseTypeMapping(tag) -> str | None:
+    mapping = {
+        "track" : "t",
+        "album" : "a",
+        "creator" : "b"
+    }
+
+    return mapping.get(tag, None)
