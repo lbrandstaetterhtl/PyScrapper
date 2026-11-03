@@ -54,7 +54,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     public RelayCommand CancelCommand { get; set; }
     private DialogService _dialogService;
 
-    private CancellationTokenSource? _cts = new CancellationTokenSource();
+    private CancellationTokenSource? _cts;
     
     public event Action? RequestClose;
     
@@ -71,9 +71,9 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
     /// <param name="scrapWindow"></param>
     /// <param name="provider"></param>
     /// <exception cref="Exception"></exception>
-    public ScrapWindowWithSearchViewModel(Window scrapWindow, string provider, DialogService dialogService, out CancellationTokenSource cts)
+    public ScrapWindowWithSearchViewModel(Window scrapWindow, string provider, DialogService dialogService)
     {
-        cts = _cts;
+        _cts = new CancellationTokenSource();
         try
         {
             if (Design.IsDesignMode) return;
@@ -203,7 +203,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
             {
                 if (result.TaskId != "-1")
                 {
-                    Task.Delay(1000).Wait();
+                    Task.Delay(200).Wait();
 
                     var progressWindow = new ProgressBarWindow()
                     {
@@ -239,7 +239,7 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                         
                     if (!string.IsNullOrEmpty(finalPath) && File.Exists(finalPath))
                     {
-                        Task.Delay(1000).Wait();
+                        Task.Delay(200).Wait();
 
                         bool isPlayable = false;
 
