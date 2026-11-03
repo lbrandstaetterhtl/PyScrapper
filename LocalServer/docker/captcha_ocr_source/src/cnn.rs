@@ -2,7 +2,9 @@
 use std::path::Path;
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{conv2d, linear, Conv2d, Conv2dConfig, Linear, VarBuilder, VarMap};
+use pyo3::exceptions::PyValueError;
 use crate::config::Config;
+use crate::{candidates, top_k};
 
 pub struct CNN {
     pub var_map: VarMap,
@@ -126,6 +128,27 @@ impl CNN {
             Ok(v) => v,
             Err(e) => return Err(e.to_string())
         };
+
+        Ok(())
+    }
+
+    pub fn train(&self, solutions: Vec<String>, train_data: Vec<Tensor>) -> Result<(), String> {
+        let mut per_position = Vec::new();
+        for tensor in train_data {
+            let logits = self.forward(&tensor).map_err(|e| e.to_string())?;
+
+            per_position.push(top_k(&logits, 1, &self).map_err(|e| e.to_string())?);
+        }
+
+        let ranked = candidates(&per_position, 1);
+        let results = ranked.into_iter().map(|(c, _)| c).collect::<Vec<String>>();
+
+        for i in 0..results.len() {
+            let predicted = results[i].clone();
+            let truth = solutions[i].clone();
+
+            println!("predicted: {} | truth: {}", predicted, truth);
+        }
 
         Ok(())
     }
