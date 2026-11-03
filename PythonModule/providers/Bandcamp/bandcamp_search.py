@@ -9,7 +9,7 @@ from PythonModule.core.network import html
 
 
 #Own imports
-import captcha_ocr
+import ocr
 from .bandcamp_browser import BandcampCaptchaBrowser
 
 #Python default imports
@@ -20,7 +20,7 @@ import os
 import json
 
 OCR_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "ocr", "model.safetensors")
+    os.path.join(os.path.dirname(__file__), "..", "ocr")
 )
 
 
@@ -290,7 +290,7 @@ def _solveCaptcha(url: str, cookie_file: str) -> bool:
 
         absolutePath: str = os.path.abspath(tmpFile)
         try:
-            solutions: list[str] = captcha_ocr.img_to_text(absolutePath, OCR_PATH, 5)
+            solutions: list[str] = ocr.img_to_text(absolutePath, OCR_PATH)
         except Exception as e:
                 raise core.models.errors.TaskFailedError(
                     task="Bandcamp.solveCaptcha.OCR",
