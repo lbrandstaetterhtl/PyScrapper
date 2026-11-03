@@ -1,0 +1,17 @@
+{
+  "kernel_size": 3,
+  "conv_count": 3,
+  "input_size": 28,
+  "vocab_str": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  "pool_after": [
+    true,
+    true,
+    false
+  ],
+  "model_name": "model.safetensors",
+  "epochs": 5,
+  "batch_size": 64,
+  "device": "cpu",
+  "learning_rate": 0.0003,
+  "max_candidates": 3
+}
