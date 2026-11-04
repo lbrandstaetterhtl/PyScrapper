@@ -5,7 +5,6 @@ mod cnn;
 mod bbox;
 
 use std::collections::HashMap;
-use std::path::Path;
 use candle_core::{Device, Tensor};
 use candle_nn::ops::softmax;
 use image::{imageops, DynamicImage, GrayImage, ImageBuffer, Luma, Rgb, RgbImage};
@@ -29,6 +28,7 @@ fn img_to_text(image_path: &str, ocr_dir: &str) -> PyResult<Vec<String>> {
         Ok(c) => c,
         Err(e) => return Err(PyValueError::new_err(e.to_string())),
     };
+
     let device = config.device().map_err(|e| PyValueError::new_err(e.to_string()))?;
     let tensors = load_and_split(image_path, &device).map_err(|e| PyValueError::new_err(e.to_string()))?;
     let cnn = CNN::load(&device, &config, ocr_dir).map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -50,13 +50,23 @@ fn top_k(logits: &Tensor, k: usize, cnn: &CNN) -> Result<Vec<(char, f32)>, Strin
         .to_vec1()
         .map_err(|e| e.to_string())?;
 
-    let vocab: Vec<char> = cnn.vocab.to_char.clone();
-    let mut ranked: Vec<(char, f32)> = probs.into_iter().enumerate().map(|(i, p)| (vocab[i], p)).collect();
+    if probs.len() != cnn.vocab.len() {
+        return Err(format!(
+            "Model returns {} classes, vocab has {} characters",
+            probs.len(),
+            cnn.vocab.len()
+        ));
+    }
+
+    let mut ranked: Vec<(char, f32)> = probs
+        .into_iter()
+        .enumerate()
+        .map(|(i, p)| (cnn.vocab.decode(i as u32), p))
+        .collect();
     ranked.sort_by(|a, b| b.1.total_cmp(&a.1));
     ranked.truncate(k);
     Ok(ranked)
 }
-
 fn candidates(per_position: &[Vec<(char, f32)>], max: usize) -> Vec<(String, f32)> {
     let mut result: Vec<(String, f32)> = vec![(String::new(), 0.0)];
 
@@ -127,7 +137,6 @@ fn image_clean_and_split_up(image: DynamicImage) -> Result<Vec<GrayImage>, Strin
 
 fn make_black_and_white(image: &RgbImage) -> GrayImage {
     let bg = background_color(&image);
-    eprintln!("background rgb: {:?}", bg);
 
     let max_dist = (3.0f32 * 255.0 * 255.0).sqrt();
     let (w, h) = image.dimensions();

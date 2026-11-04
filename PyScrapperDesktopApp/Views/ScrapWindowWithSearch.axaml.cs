@@ -15,10 +15,9 @@ public partial class ScrapWindowWithSearch : Window
         
         DialogService ds = new(this);
 
-        CancellationTokenSource cts = new();
-       var vm = new ScrapWindowWithSearchViewModel(this, provider, ds, out cts);
+       var vm = new ScrapWindowWithSearchViewModel(this, provider, ds);
        
-       TitleBar.Initialize(this, cts, vm.CancelDownload);
+       TitleBar.Initialize(this, onClose: vm.CancelDownload);
 
         DataContext = vm;
 
