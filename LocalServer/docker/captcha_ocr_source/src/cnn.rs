@@ -1,10 +1,7 @@
-﻿use std::collections::HashMap;
-use std::path::Path;
+﻿use std::path::Path;
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{conv2d, linear, Conv2d, Conv2dConfig, Linear, VarBuilder, VarMap};
-use pyo3::exceptions::PyValueError;
 use crate::config::Config;
-use crate::{candidates, top_k};
 
 pub struct CNN {
     pub var_map: VarMap,
@@ -15,8 +12,7 @@ pub struct CNN {
 }
 
 pub struct Vocab {
-    pub to_idx: HashMap<char, u32>,
-    pub to_char: Vec<char>,
+    pub to_char: Vec<char>
 }
 
 impl CNN {
@@ -36,13 +32,13 @@ impl CNN {
             conv_list.push(conv);
 
             if size < kernel_size {
-                return Err(format!("conv{} would need {}x{} but only {}x{} left", conv_counter, kernel_size, kernel_size, size, size));
+                return Err(format!("[ocr] conv{} would need {}x{} but only {}x{} left", conv_counter, kernel_size, kernel_size, size, size));
             }
             size = size - kernel_size + 1;
 
             if pool_after[conv_counter as usize] {
                 if size < 2 {
-                    return Err(format!("pool after conv{} is impossible at size {}", conv_counter, size));
+                    return Err(format!("[ocr] pool after conv{} is impossible at size {}", conv_counter, size));
                 }
                 size /= 2;
             }
@@ -56,7 +52,7 @@ impl CNN {
         let flat = in_ch * size * size;
         let fc = match linear(flat, vocab.len(), var_builder.pp("fc")) {
             Ok(v) => v,
-            Err(e) => return Err(e.to_string())
+            Err(e) => return Err("[ocr]".to_string() + e.to_string().as_str())
         };
 
         Ok(Self { var_map, conv_list, pool_after, fc, vocab })
@@ -71,18 +67,18 @@ impl CNN {
 
             step = match conv.forward(&step) {
                 Ok(v) => v,
-                Err(e) => return Err(e.to_string())
+                Err(e) => return Err("[ocr]".to_string() + e.to_string().as_str())
             };
 
             step = match step.relu() {
                 Ok(v) => v,
-                Err(e) => return Err(e.to_string())
+                Err(e) => return Err("[ocr]".to_string() + e.to_string().as_str())
             };
 
             if self.pool_after[conv_counter as usize] {
                 step = match step.max_pool2d(2) {
                     Ok(v) => v,
-                    Err(e) => return Err(e.to_string())
+                    Err(e) => return Err("[ocr]".to_string() + e.to_string().as_str())
                 }
             }
 
@@ -91,12 +87,12 @@ impl CNN {
 
         step = match step.flatten_from(1) {
             Ok(v) => v,
-            Err(e) => return Err(e.to_string())
+            Err(e) => return Err("[ocr]".to_string() + e.to_string().as_str())
         };
 
         let result = match self.fc.forward(&step) {
             Ok(v) => v,
-            Err(e) => return Err(e.to_string())
+            Err(e) => return Err("[ocr]".to_string() + e.to_string().as_str())
         };
 
         Ok(result)
@@ -109,63 +105,24 @@ impl CNN {
 
         let mut cnn = match Self::new(vocab, var_builder, config.pool_after.clone(), config.conv_count, config.kernel_size, config.input_size, var_map) {
             Ok(v) => v,
-            Err(e) => return Err(e.to_string())
+            Err(e) => return Err("[ocr]".to_string() + e.to_string().as_str())
         };
 
         let model_path = Path::new(ocr_dir).join(config.model_name.clone());
         if model_path.exists() {
             if let Err(e) = cnn.var_map.load(model_path) {
-                return Err(e.to_string());
+                return Err("[ocr]".to_string() + e.to_string().as_str());
             }
         }
 
         Ok(cnn)
     }
-
-    pub fn save(&self, model_path: &str) -> Result<(), String> {
-
-        let _ = match self.var_map.save(model_path) {
-            Ok(v) => v,
-            Err(e) => return Err(e.to_string())
-        };
-
-        Ok(())
-    }
-
-    pub fn train(&self, solutions: Vec<String>, train_data: Vec<Tensor>) -> Result<(), String> {
-        let mut per_position = Vec::new();
-        for tensor in train_data {
-            let logits = self.forward(&tensor).map_err(|e| e.to_string())?;
-
-            per_position.push(top_k(&logits, 1, &self).map_err(|e| e.to_string())?);
-        }
-
-        let ranked = candidates(&per_position, 1);
-        let results = ranked.into_iter().map(|(c, _)| c).collect::<Vec<String>>();
-
-        for i in 0..results.len() {
-            let predicted = results[i].clone();
-            let truth = solutions[i].clone();
-
-            println!("predicted: {} | truth: {}", predicted, truth);
-        }
-
-        Ok(())
-    }
-
 }
 
 impl Vocab {
     pub fn new(chars: &str) -> Self {
         let to_char: Vec<char> = chars.chars().collect();
-        let to_idx = to_char.iter().enumerate()
-            .map(|(i, &c)| (c, i as u32))
-            .collect();
-        Self { to_idx, to_char }
-    }
-
-    pub fn encode(&self, c: char) -> Option<u32> {
-        self.to_idx.get(&c).copied()
+        Self { to_char }
     }
 
     pub fn decode(&self, i: u32) -> char {

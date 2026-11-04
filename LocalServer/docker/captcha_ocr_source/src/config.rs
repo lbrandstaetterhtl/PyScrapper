@@ -27,7 +27,7 @@ impl Config {
            let config = Config::default();
            match config.save(config_path.as_path().to_str().unwrap()) {
                Ok(_) => Ok(config),
-               Err(e) => Err(format!("{}", e.to_string()).to_string())
+               Err(e) => Err(format!("[ocr] Could not save default generated config: {}", e.to_string()).to_string())
            }
        }
         else {
