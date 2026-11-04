@@ -29,11 +29,22 @@ sys.path.insert(0, str(HERE))
 
 import extract_cs  # noqa: E402
 import extract_py  # noqa: E402
+import extract_rs  # noqa: E402
 
 PACKAGES = {
     "PythonModule": {"lang": "py", "exclude": ()},
-    "LocalServer": {"lang": "py", "exclude": ()},
+    "LocalServer": {"lang": "py", "exclude": ("docker/",)},
     "PyScrapperDesktopApp": {"lang": "cs", "exclude": ("Notes/", "installer/")},
+    "CaptchaOCR": {"lang": "rs", "exclude": (), "root": "LocalServer/docker/captcha_ocr_source", "crate": "ocr",
+                   # extra files shown in the tree: published path -> (source relative to the repo, language)
+                   "extra": {
+                       "test.py": ("LocalServer/docker/captcha_ocr_source/test.py", "py"),
+                       "Cargo.toml": ("LocalServer/docker/captcha_ocr_source/Cargo.toml", "text"),
+                       "pyproject.toml": ("LocalServer/docker/captcha_ocr_source/pyproject.toml", "text"),
+                       "README.txt": ("LocalServer/docker/captcha_ocr_source/README.txt", "text"),
+                       "model/config.json": ("PythonModule/providers/ocr/config.json", "text"),
+                       "docker/Dockerfile": ("LocalServer/docker/Dockerfile", "text"),
+                   }},
 }
 
 
@@ -342,16 +353,98 @@ def provider_matrix(mods: list[dict]) -> str:
             '<th>Lines</th><th>Internal helpers</th></tr></thead><tbody>' + rows + '</tbody></table></div>')
 
 
+# --------------------------------------------------------------------------- Captcha OCR
+OCR_MODEL_DIR = REPO / "PythonModule" / "providers" / "ocr"
+
+
+def ocr_model_info() -> dict:
+    """Walk the network the way CNN::new does and compare it with the tensors in the model file."""
+    import struct
+    cfg = json.loads((OCR_MODEL_DIR / "config.json").read_text(encoding="utf-8-sig"))
+    model_file = OCR_MODEL_DIR / cfg["model_name"]
+    tensors = {}
+    if model_file.exists():
+        raw = model_file.read_bytes()
+        n = struct.unpack("<Q", raw[:8])[0]
+        tensors = {k: v for k, v in json.loads(raw[8:8 + n]).items() if k != "__metadata__"}
+
+    def count(shape):
+        c = 1
+        for d in shape:
+            c *= d
+        return c
+
+    rows, size, in_ch, out_ch, k = [], cfg["input_size"], 1, 16, cfg["kernel_size"]
+    shape_in = f"1 &times; {size} &times; {size}"
+    for i in range(cfg["conv_count"]):
+        size = size - k + 1
+        pool = cfg["pool_after"][i]
+        after = size // 2 if pool else size
+        expect = {f"conv{i}.weight": [out_ch, in_ch, k, k], f"conv{i}.bias": [out_ch]}
+        rows.append((f"conv{i}", f"Conv2d {in_ch}&rarr;{out_ch}, {k}&times;{k}, ReLU" + (", max-pool 2" if pool else ""),
+                     shape_in, f"{out_ch} &times; {after} &times; {after}", expect))
+        size, in_ch, out_ch = after, out_ch, out_ch * 2
+        shape_in = f"{in_ch} &times; {size} &times; {size}"
+    vocab = len(cfg["vocab_str"])
+    flat = in_ch * size * size
+    rows.append(("fc", f"Linear {flat}&rarr;{vocab} (after flatten)", f"{flat}", f"{vocab} logits",
+                 {"fc.weight": [vocab, flat], "fc.bias": [vocab]}))
+
+    body, total, mismatches = "", 0, []
+    for name, what, sin, sout, expect in rows:
+        params, cells = 0, []
+        for tname, tshape in expect.items():
+            actual = tensors.get(tname, {}).get("shape")
+            ok = actual == tshape
+            if not ok:
+                mismatches.append(f"{tname}: expected {tshape}, file has {actual}")
+            params += count(tshape)
+            cells.append(f'{esc(tname)} {esc(tshape)}' + ("" if ok else ' <span class="b b-abs">mismatch</span>'))
+        total += params
+        body += (f'<tr><td class="mono">{name}</td><td>{what}</td><td class="mono">{sin}</td><td class="mono">{sout}</td>'
+                 f'<td class="mono" style="font-size:11.5px">{"<br>".join(cells)}</td><td class="mono">{params:,}</td></tr>')
+    layers = ('<div class="tbl-wrap"><table><thead><tr><th>Layer</th><th>Operation</th><th>In</th><th>Out</th>'
+              '<th>Tensors in the model file</th><th>Parameters</th></tr></thead><tbody>' + body +
+              f'<tr><td></td><td><b>Total</b></td><td></td><td></td><td></td><td class="mono"><b>{total:,}</b></td></tr>'
+              '</tbody></table></div>')
+    if mismatches:
+        layers += ('<div class="note risk"><b>config.json and the model file disagree</b><p>' +
+                   "<br>".join(esc(x) for x in mismatches) + "</p></div>")
+    elif tensors:
+        layers += ('<p>Every tensor in <span class="mono">model.safetensors</span> has exactly the shape this walk '
+                   'predicts from <span class="mono">config.json</span>, and the file holds no others.</p>'
+                   if set(tensors) == {t for r in rows for t in r[4]} else "")
+    conf_rows = "".join(f'<tr><td class="mono">{esc(k2)}</td><td class="mono">{esc(json.dumps(v))}</td></tr>'
+                        for k2, v in cfg.items())
+    config_html = ('<div class="tbl-wrap"><table><thead><tr><th>Key</th><th>Value in the shipped config.json</th>'
+                   '</tr></thead><tbody>' + conf_rows + '</tbody></table></div>')
+    return {"layers_html": layers, "config_html": config_html,
+            "stats": {"params": f"{total:,}", "vocab": vocab, "model_kib": round(model_file.stat().st_size / 1024)
+                      if model_file.exists() else 0, "max_candidates": cfg["max_candidates"],
+                      "flat": flat, "conv_count": cfg["conv_count"]}}
+
+
 # --------------------------------------------------------------------------- build
 def build(pkg: str) -> Path:
     cfg = PACKAGES[pkg]
-    root = REPO / pkg
+    root = REPO / cfg.get("root", pkg)
     content = HERE / "content" / pkg
     meta = json.loads((content / "meta.json").read_text(encoding="utf-8"))
     if cfg["lang"] == "py":
         mods = extract_py.extract_tree(root, cfg["exclude"])
+    elif cfg["lang"] == "rs":
+        mods = [extract_rs.extract_file(root, p, cfg["crate"])
+                for p in sorted(root.rglob("*.rs"), key=lambda p: p.relative_to(root).as_posix())
+                if "target" not in p.relative_to(root).parts]
     else:
         mods = extract_cs.extract_tree(root, cfg["exclude"])
+    for published, (source, lang) in cfg.get("extra", {}).items():
+        if lang == "py":
+            mod = extract_py.extract_file(REPO / Path(source).parent, REPO / source)
+            mod["path"] = published
+        else:
+            mod = extract_rs.plain_file(REPO / source, published, lang, doc=f"Source: {source}")
+        mods.append(mod)
 
     total_loc = sum(m["loc"] for m in mods)
     stats = {
@@ -383,6 +476,12 @@ def build(pkg: str) -> Path:
             stats["call:" + g] = len([e for e in calls if e["group"] == g])
         gen["api_calls"] = gen_client_calls(calls)
         pages_index += [{"title": f'{e["method"]} {e["path"]}', "hash": e["href"], "sub": e["fn"]} for e in calls]
+    elif pkg == "CaptchaOCR":
+        info = ocr_model_info()
+        stats.update(info["stats"])
+        stats["rust_loc"] = sum(m["loc"] for m in mods if m["lang"] == "rs")
+        gen["model_layers"] = info["layers_html"]
+        gen["model_config"] = info["config_html"]
     else:
         gen["provider_matrix"] = provider_matrix(mods)
 

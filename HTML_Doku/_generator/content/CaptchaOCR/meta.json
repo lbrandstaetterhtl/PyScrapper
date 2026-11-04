@@ -1,0 +1,70 @@
+{
+  "title": "pyscrapper/ocr :: doc",
+  "brand": "pyscrapper/ocr",
+  "package": "CaptchaOCR",
+  "prompt": "ocr",
+  "lang": "rs",
+  "nav": [
+    {
+      "href": "#/overview",
+      "label": "overview"
+    },
+    {
+      "href": "#/pipeline",
+      "label": "image to letters"
+    },
+    {
+      "href": "#/model",
+      "label": "the network"
+    },
+    {
+      "href": "#/flows",
+      "label": "program flows"
+    },
+    {
+      "href": "#/integration",
+      "label": "python and bandcamp"
+    },
+    {
+      "href": "#/build",
+      "label": "build and run"
+    }
+  ],
+  "pages_index": [
+    {
+      "title": "Overview",
+      "hash": "#/overview",
+      "sub": "start here"
+    },
+    {
+      "title": "Image to letters",
+      "hash": "#/pipeline",
+      "sub": "preprocessing and segmentation"
+    },
+    {
+      "title": "The network",
+      "hash": "#/model",
+      "sub": "CNN, config, model file"
+    },
+    {
+      "title": "Program flows",
+      "hash": "#/flows",
+      "sub": "interactive step-through"
+    },
+    {
+      "title": "Python and Bandcamp",
+      "hash": "#/integration",
+      "sub": "img_to_text, captcha solving"
+    },
+    {
+      "title": "Build and run",
+      "hash": "#/build",
+      "sub": "maturin, wheel, Docker"
+    },
+    {
+      "title": "img_to_text",
+      "hash": "#/m/src%2Flib.rs#img_to_text",
+      "sub": "the Python entry point"
+    }
+  ]
+}

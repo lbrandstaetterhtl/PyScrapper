@@ -1,0 +1,233 @@
+{
+  "ocr": {
+    "title": "img_to_text",
+    "steps": [
+      {
+        "id": "call",
+        "kind": "io",
+        "title": "ocr.img_to_text(image_path, ocr_dir)",
+        "sub": "called from Python, holds the GIL",
+        "link": "#/m/src%2Flib.rs#img_to_text",
+        "next": "read the config",
+        "detail": "<p>Two strings: the image file and the model directory. Nothing is cached between calls &mdash; config and weights are loaded again every time.</p>"
+      },
+      {
+        "id": "cfg",
+        "kind": "decision",
+        "title": "Config::load(ocr_dir)",
+        "sub": "config.json, or write the default",
+        "link": "#/m/src%2Fconfig.rs#Config.load",
+        "next": "config ready",
+        "detail": "<p>If <code>config.json</code> exists it is parsed with serde; unknown keys are ignored, missing keys are an error. If it does not exist, <code>Config::default()</code> is written to the directory and used.</p>",
+        "branches": [
+          {
+            "label": "unreadable or invalid JSON → ValueError",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "dev",
+        "kind": "decision",
+        "title": "config.device()",
+        "sub": "cpu / cuda / metal",
+        "link": "#/m/src%2Fconfig.rs#Config.device",
+        "next": "device chosen",
+        "detail": "<p>The shipped config says <code>cpu</code>. CUDA and Metal would need candle compiled with those features, which <code>Cargo.toml</code> does not enable.</p>",
+        "branches": [
+          {
+            "label": "unknown or unavailable device → ValueError",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "split",
+        "kind": "step",
+        "title": "load_and_split",
+        "sub": "image → one 28×28 tensor per letter",
+        "link": "#/m/src%2Flib.rs#load_and_split",
+        "next": "letter tensors",
+        "detail": "<p>Grayscale, distance-to-background thresholding, median filter, connected components, size filters, crop and EMNIST-style centring. Details on the <a class=\"x\" href=\"#/pipeline\">Image to letters</a> page.</p>",
+        "branches": [
+          {
+            "label": "image cannot be opened → ValueError",
+            "to": "err",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "net",
+        "kind": "decision",
+        "title": "CNN::load",
+        "sub": "build from config, load safetensors",
+        "link": "#/m/src%2Fcnn.rs#CNN.load",
+        "next": "network ready",
+        "detail": "<p>The layers are created from <code>conv_count</code>, <code>kernel_size</code>, <code>pool_after</code> and the vocabulary size, then the weights are loaded from <code>model_name</code>.</p><p>If the weights file does not exist, nothing is loaded and the network runs with random initial weights &mdash; without any error.</p>",
+        "branches": [
+          {
+            "label": "shapes do not match the file → ValueError",
+            "to": "err",
+            "warn": true
+          },
+          {
+            "label": "file missing → random weights",
+            "to": "random",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "fwd",
+        "kind": "step",
+        "title": "forward + top_k per letter",
+        "sub": "softmax, keep max_candidates characters",
+        "link": "#/m/src%2Flib.rs#top_k",
+        "next": "per-position candidates",
+        "detail": "<p>Each letter tensor goes through conv/ReLU/pool layers and the final linear layer. Softmax turns the logits into probabilities, and the best <code>max_candidates</code> characters with their probabilities are kept.</p>"
+      },
+      {
+        "id": "beam",
+        "kind": "step",
+        "title": "candidates",
+        "sub": "beam search over the positions",
+        "link": "#/m/src%2Flib.rs#candidates",
+        "next": "ranked strings",
+        "detail": "<p>Every kept prefix is extended with every candidate of the next position; the sum of log-probabilities ranks them and only the best <code>max_candidates</code> survive each round.</p>"
+      },
+      {
+        "id": "out",
+        "kind": "end",
+        "title": "list[str]",
+        "sub": "best first, probabilities dropped",
+        "link": "#/m/src%2Flib.rs#img_to_text",
+        "detail": "<p>The strings only. If segmentation found no letters at all, the list is <code>[\"\"]</code> &mdash; one empty string, not an error.</p>",
+        "next": ""
+      },
+      {
+        "id": "random",
+        "kind": "error",
+        "title": "Silent random output",
+        "sub": "no weights were loaded",
+        "detail": "<p>The call succeeds and returns strings, but they are guesses of an untrained network. The usual cause is a wrong <code>ocr_dir</code> or <code>model_name</code>.</p>",
+        "next": ""
+      },
+      {
+        "id": "err",
+        "kind": "error",
+        "title": "ValueError",
+        "sub": "every Rust error is converted",
+        "detail": "<p><code>img_to_text</code> maps each <code>Err</code> to <code>PyValueError</code> with the message text. A Rust panic (for example a too short <code>pool_after</code>) is not caught and arrives as <code>pyo3_runtime.PanicException</code>.</p>",
+        "next": ""
+      }
+    ]
+  },
+  "bandcamp": {
+    "title": "Bandcamp captcha",
+    "steps": [
+      {
+        "id": "search",
+        "kind": "io",
+        "title": "Bandcamp.search()",
+        "sub": "fetch the search results page",
+        "next": "check for the challenge",
+        "detail": "<p>The provider loads <code>bandcamp.com/search?...</code> with the session's cookies.</p>"
+      },
+      {
+        "id": "detect",
+        "kind": "decision",
+        "title": "_isClientChallenge(html)",
+        "sub": "&lt;title&gt;Client Challenge&lt;/title&gt; or /_fs-ch-",
+        "next": "challenge found",
+        "detail": "<p>Without the markers the results are parsed normally and the OCR is never touched.</p>",
+        "branches": [
+          {
+            "label": "no challenge → parse results",
+            "to": "done"
+          }
+        ]
+      },
+      {
+        "id": "retry",
+        "kind": "decision",
+        "title": "Retries left?",
+        "sub": "CAPTCHA_RETRIES = 3",
+        "next": "try to solve",
+        "detail": "<p>Each detected challenge counts one attempt. After the third the search raises <code>TaskFailedError</code> asking for manual help.</p>",
+        "branches": [
+          {
+            "label": "exhausted → TaskFailedError",
+            "to": "fail",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "browser",
+        "kind": "step",
+        "title": "Open the challenge headless",
+        "sub": "BandcampCaptchaBrowser.run(headless=True)",
+        "next": "page loaded",
+        "detail": "<p>A Playwright browser with the session's cookie file. The page must be rendered by a browser because the image is created by script.</p>"
+      },
+      {
+        "id": "img",
+        "kind": "step",
+        "title": "Cut out the image",
+        "sub": "&lt;img src=\"data:image/jpeg;base64,...\"&gt;",
+        "next": "temporary JPEG",
+        "detail": "<p>The Base64 data is decoded and written to <code>&lt;timestamp&gt;-Bandcamp-captcha.jpeg</code> in the current working directory. The file is deleted in a <code>finally</code> block.</p>"
+      },
+      {
+        "id": "ocr",
+        "kind": "step",
+        "title": "ocr.img_to_text(file, OCR_PATH)",
+        "sub": "see the img_to_text flow",
+        "link": "#/m/src%2Flib.rs#img_to_text",
+        "next": "candidates",
+        "detail": "<p><code>OCR_PATH</code> is <code>PythonModule/providers/ocr</code>, resolved relative to the provider file. A <code>ValueError</code> from the module becomes a <code>TaskFailedError</code> with the model path in its hints.</p>"
+      },
+      {
+        "id": "submit",
+        "kind": "step",
+        "title": "Try each candidate",
+        "sub": "fill #capInput, click #capSubmit",
+        "next": "browser closed",
+        "detail": "<p>Candidates are tried in order. Success is only recognised when the click raises and the page has changed; a solved captcha after a normal click is reported as failure and only noticed on the next round.</p>"
+      },
+      {
+        "id": "cookies",
+        "kind": "step",
+        "title": "Cookies back into the session",
+        "sub": "browser.stop() writes them, session.reloadCookies()",
+        "next": "search again",
+        "detail": "<p>Bandcamp remembers a solved challenge in a cookie. The browser saves its cookies to the shared cookie file when it stops; the HTTP session reloads them, and the loop fetches the search page again.</p>",
+        "branches": [
+          {
+            "label": "back to the search",
+            "to": "search"
+          }
+        ]
+      },
+      {
+        "id": "done",
+        "kind": "end",
+        "title": "Search results",
+        "sub": "list of tracks, albums expanded",
+        "next": "",
+        "detail": "<p>Normal provider output. The OCR has done its job once the challenge page no longer appears.</p>"
+      },
+      {
+        "id": "fail",
+        "kind": "error",
+        "title": "TaskFailedError",
+        "sub": "captcha persisted after 3 attempts",
+        "detail": "<p>The message suggests solving the captcha manually. Since the solved state lives in the cookie file, a captcha solved once in a normal browser with the same cookies also unblocks the server.</p>",
+        "next": ""
+      }
+    ]
+  }
+}

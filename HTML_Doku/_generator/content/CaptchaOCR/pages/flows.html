@@ -1,0 +1,13 @@
+<div class="wrap">
+<div class="crumb">CaptchaOCR / flows</div>
+<h1>Program flows</h1>
+<p class="lede">The two paths through the OCR, step by step. Click a step &mdash; or use prev/next
+&mdash; to see what happens there and where it can fail. The tabs switch between flows.</p>
+<div class="flowmount" data-flow="ocr,bandcamp"></div>
+
+<h2 id="reading">How to read these</h2>
+<p>The spine on the left is the happy path in execution order. Dashed boxes are decision points,
+red ones are error exits; the buttons under &bdquo;Where it can go from here&ldquo; jump to them.</p>
+<p><b>img_to_text</b> is what happens inside the Rust module for one call. <b>Bandcamp captcha</b> is
+the surrounding Python side: when the OCR is called and what is done with its answer.</p>
+</div>

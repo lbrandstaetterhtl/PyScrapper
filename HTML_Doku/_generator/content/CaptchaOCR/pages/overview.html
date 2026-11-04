@@ -1,0 +1,49 @@
+<div class="wrap">
+<div class="crumb">CaptchaOCR</div>
+<h1>Captcha OCR</h1>
+<p class="lede">A small Rust extension that reads the text out of Bandcamp's image captchas. Python
+imports it as <span class="mono">ocr</span> and calls one function,
+<span class="mono">img_to_text(image_path, ocr_dir)</span>, which returns a short list of candidate
+strings, most likely first.</p>
+<div class="stats"><div class="stat"><b>{{stat:rust_loc}}</b><span>lines of Rust</span></div><div class="stat"><b>{{stat:params}}</b><span>model parameters</span></div><div class="stat"><b>{{stat:vocab}}</b><span>characters</span></div><div class="stat"><b>{{stat:model_kib}}&nbsp;KiB</b><span>model file</span></div></div><div class="hero"><svg viewBox="0 0 880 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="From captcha image to text candidates"><rect class="svg-box" x="12" y="14" width="176" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="23" y="33">captcha.jpeg</text><text class="svg-s" x="23" y="47">from Bandcamp</text><line class="svg-l" x1="188" y1="37" x2="222" y2="37" stroke-width="1.2"/><polygon class="svg-ar" points="228,37 222,33.5 222,40.5"/><rect class="svg-box" x="228" y="14" width="176" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="239" y="33">black / white</text><text class="svg-s" x="239" y="47">distance to background</text><line class="svg-l" x1="404" y1="37" x2="438" y2="37" stroke-width="1.2"/><polygon class="svg-ar" points="444,37 438,33.5 438,40.5"/><rect class="svg-box" x="444" y="14" width="176" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="455" y="33">connected parts</text><text class="svg-s" x="455" y="47">filter by size</text><line class="svg-l" x1="620" y1="37" x2="654" y2="37" stroke-width="1.2"/><polygon class="svg-ar" points="660,37 654,33.5 654,40.5"/><rect class="svg-box" x="660" y="14" width="176" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="671" y="33">28 &times; 28 crops</text><text class="svg-s" x="671" y="47">one per letter</text><rect class="svg-box" x="12" y="104" width="176" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="23" y="123">CNN</text><text class="svg-s" x="23" y="137">3 conv + fc</text><line class="svg-l" x1="188" y1="127" x2="222" y2="127" stroke-width="1.2"/><polygon class="svg-ar" points="228,127 222,123.5 222,130.5"/><rect class="svg-box" x="228" y="104" width="176" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="239" y="123">top-k per letter</text><text class="svg-s" x="239" y="137">softmax</text><line class="svg-l" x1="404" y1="127" x2="438" y2="127" stroke-width="1.2"/><polygon class="svg-ar" points="444,127 438,123.5 438,130.5"/><rect class="svg-box" x="444" y="104" width="176" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="455" y="123">beam search</text><text class="svg-s" x="455" y="137">joint probability</text><line class="svg-l" x1="620" y1="127" x2="654" y2="127" stroke-width="1.2"/><polygon class="svg-ar" points="660,127 654,123.5 654,130.5"/><rect class="svg-box" x="660" y="104" width="176" height="46" rx="6" stroke-width="1"/><text class="svg-t" x="671" y="123">candidates</text><text class="svg-s" x="671" y="137">list[str]</text><path class="svg-l" d="M748.0,60 V82 H100.0 V98" stroke-width="1.2" fill="none"/><polygon class="svg-ar" points="100.0,104 96.5,98 103.5,98"/></svg></div>
+
+<h2 id="what">What it does</h2>
+<p>The input is the JPEG Bandcamp shows when it suspects a bot: a few letters and digits on a
+coloured background. The crate does not read the whole image at once. It first separates the
+letters into single 28&times;28 crops, classifies each crop with a small convolutional network, and
+then combines the per-letter guesses into whole strings with a beam search. That way a letter the
+network is unsure about still produces several plausible answers instead of one wrong one.</p>
+<p>The caller gets at most <span class="mono">max_candidates</span> strings (currently
+{{stat:max_candidates}}). Bandcamp's captcha form is then simply tried with each of them in turn.</p>
+
+<h2 id="where">Where the pieces live</h2>
+<div class="tbl-wrap"><table><thead><tr><th>Path</th><th>Contents</th></tr></thead><tbody>
+<tr><td class="mono">LocalServer/docker/captcha_ocr_source/</td><td>The Rust crate (this documentation's tree), its <span class="mono">Cargo.toml</span>, the maturin <span class="mono">pyproject.toml</span>, a test script and a build guide</td></tr>
+<tr><td class="mono">PythonModule/providers/ocr/</td><td>The model directory passed as <span class="mono">ocr_dir</span>: <span class="mono">config.json</span>, <span class="mono">model.safetensors</span>, plus a prebuilt Windows wheel</td></tr>
+<tr><td class="mono">PythonModule/providers/Bandcamp/bandcamp_search.py</td><td>The only caller: detects the captcha page, runs the OCR, hands the candidates to the browser</td></tr>
+<tr><td class="mono">LocalServer/docker/Dockerfile</td><td>First build stage compiles the crate into a wheel for the server image</td></tr>
+</tbody></table></div>
+
+<h2 id="files">The crate</h2>
+<div class="tbl-wrap"><table><thead><tr><th>File</th><th>Role</th></tr></thead><tbody>
+<tr><td class="mono"><a class="x" href="#/m/src%2Flib.rs">src/lib.rs</a></td><td>The Python module, the public function and the whole image pipeline: loading, binarising, segmentation, cropping, top-k and beam search</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/src%2Fcnn.rs">src/cnn.rs</a></td><td><span class="mono">CNN</span> (built from the config, weights loaded from safetensors) and <span class="mono">Vocab</span> (class index &harr; character)</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/src%2Fconfig.rs">src/config.rs</a></td><td><span class="mono">Config</span>, read from <span class="mono">config.json</span> in the model directory</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/src%2Fbbox.rs">src/bbox.rs</a></td><td><span class="mono">BBox</span>, the bounding box of one connected region</td></tr>
+</tbody></table></div>
+
+<h2 id="stack">Dependencies</h2>
+<div class="tbl-wrap"><table><thead><tr><th>Crate</th><th>For</th></tr></thead><tbody>
+<tr><td class="mono">pyo3</td><td>The Python binding; built as abi3 for Python 3.9 and later, so one wheel serves every newer Python</td></tr>
+<tr><td class="mono">candle-core, candle-nn</td><td>Tensors, convolution, softmax and safetensors loading &mdash; Hugging Face's pure-Rust ML library, no Python or libtorch at runtime</td></tr>
+<tr><td class="mono">image, imageproc</td><td>Decoding, grayscale, resize, median filter, connected components</td></tr>
+<tr><td class="mono">serde, serde_json</td><td>Reading and writing <span class="mono">config.json</span></td></tr>
+<tr><td class="mono">flate2</td><td>Declared, but not used by any source file</td></tr>
+</tbody></table></div>
+
+<div class="note"><b>No training code in this repository</b>
+<p>The crate only runs inference. <span class="mono">model.safetensors</span> was trained elsewhere;
+the trainer is not part of the project. <span class="mono">LocalServer/testing_captcha_ocr.py</span>
+still calls a <span class="mono">captcha_ocr.train()</span> function from that earlier stage and does
+not work against the current module.</p></div>
+</div>
