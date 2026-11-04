@@ -38,7 +38,7 @@ built.</p></div>
 <p>Every provider module implements <span class="mono">getMediaInformation(request, ...)</span>. How
 it gets to the real URLs is up to the module. There are three patterns in the project:</p>
 <div class="tbl-wrap"><table><thead><tr><th>Pattern</th><th>Who</th><th>How</th></tr></thead><tbody>
-<tr><td>HTML regex</td><td class="mono">Bandcamp, Newgrounds, Suno, wcoflix</td>
+<tr><td>HTML regex</td><td class="mono">Bandcamp, Newgrounds, Suno, wcoflix, effedup</td>
 <td>Load the page, search for embedded stream URLs with a regex</td></tr>
 <tr><td>Browser sniffing</td><td class="mono">Soundcloud, YoutubeMusic, Default, Filmpalast</td>
 <td>Playwright starts Chromium, plays the media and records every media response</td></tr>
@@ -50,6 +50,22 @@ returns the format list</td></tr>
 goes into <span class="mono">makeProviderResult()</span>. A candidate can now carry an
 <span class="mono">audio_url</span> next to its <span class="mono">url</span> when video and audio
 are separate streams.</p>
+
+<h3 id="captcha">Bandcamp captchas</h3>
+<p>Bandcamp answers repeated searches with an image captcha.
+<a class="x" href="#/m/providers%2FBandcamp%2Fbandcamp_search.py#search">Bandcamp.search()</a>
+recognises that page and calls <span class="mono">_solveCaptcha()</span>: a headless
+<span class="mono">BandcampCaptchaBrowser</span> opens the page, the Base64 JPEG is cut out of the
+HTML and written to a temporary file, and <span class="mono">ocr.img_to_text(image, OCR_PATH)</span>
+returns candidate texts. The browser then tries them in turn; the cookies it ends with are stored in
+the session's cookie file, and the search is repeated (up to <span class="mono">CAPTCHA_RETRIES</span>
+times).</p>
+<p><span class="mono">ocr</span> is a Rust extension (a small CNN on <span class="mono">candle</span>,
+source in <span class="mono">LocalServer/docker/captcha_ocr_source</span>) with the trained model in
+<span class="mono">providers/ocr/</span> next to a prebuilt Windows wheel. Because
+<span class="mono">bandcamp_search.py</span> imports it at module level and
+<span class="mono">providers/__init__.py</span> imports every provider, the whole engine fails to load
+when the module is missing.</p>
 
 <h3 id="youtube">YouTube without yt-dlp</h3>
 <p><a class="x" href="#/m/providers%2FYoutube%2Fyoutube_media_information.py#getMediaInformation">Youtube.getMediaInformation()</a>
