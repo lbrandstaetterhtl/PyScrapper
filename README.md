@@ -103,8 +103,15 @@ Alternativ `.\scripts\startServer.ps1` — das Skript nimmt das venv im Serveror
 
 **Zusätzlich nötig: das Modul `ocr`.** Der Bandcamp-Provider löst Captchas mit einem eigenen
 Rust-Modul, und `providers/Bandcamp/bandcamp_search.py` importiert es beim Laden. Fehlt es, startet
-der Server gar nicht (`ModuleNotFoundError: No module named 'ocr'`). Bauen und ins aktive venv
-installieren (Rust und maturin vorausgesetzt):
+der Server gar nicht (`ModuleNotFoundError: No module named 'ocr'`).
+
+Unter Windows liegt ein fertiges Wheel im Repository:
+
+```powershell
+pip install --force-reinstall ..\PythonModule\providers\ocr\ocr-0.1.0-cp39-abi3-win_amd64.whl
+```
+
+Auf anderen Systemen bauen und ins aktive venv installieren (Rust und maturin vorausgesetzt):
 
 ```bash
 cd LocalServer/docker/captcha_ocr_source
@@ -169,7 +176,7 @@ lokalen Netz erreichbar.
 | Node 20+ | Web-Frontend |
 | ffmpeg / ffprobe | Codec-Prüfung und Konvertierung |
 | Playwright Chromium | Provider, die auf Browser-Sniffing angewiesen sind |
-| Rust + maturin | Bauen des Captcha-Moduls `ocr` (nur ohne Docker) |
+| Rust + maturin | Bauen des Captcha-Moduls `ocr` (nur ohne Docker und nicht unter Windows) |
 | Docker | Optional, für Server und Web-Frontend als Container |
 | Windows | Nur für die Desktop-App: DPAPI, LibVLC-Cache und VC++-Redistributable sind Windows-spezifisch |
 
@@ -212,7 +219,7 @@ Installiert wird **erst der Server, dann die Desktop-App**.
 | `PyScrapperDesktopApp/data/config.json` | Serveradresse, Port, verschlüsselter Schlüssel |
 | `PyScrapperDesktopApp/logs/app.log` | App-Log |
 | `LocalServer/docker/` | Dockerfile und `compose.yaml` des Servers, Quellcode des `ocr`-Moduls |
-| `PythonModule/providers/ocr/` | Trainiertes Captcha-Modell für den Bandcamp-Provider |
+| `PythonModule/providers/ocr/` | Trainiertes Captcha-Modell für den Bandcamp-Provider und fertiges Windows-Wheel |
 | `PyScrapperWebInterface/docker-compose.yml` | Web-Frontend als Container |
 | `HTML_Doku/` | Technische Dokumentation, Generator in `HTML_Doku/_generator/` |
 

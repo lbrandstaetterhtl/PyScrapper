@@ -65,16 +65,17 @@ plaintext against digest. The earlier, unused <code>request_api_key_hash</code> 
 entirely, so nothing in the dependency hashes the incoming key any more. As written, user
 authentication only succeeds if the client sends the hex digest itself. Hashing the incoming key
 with <code>hash_api_key()</code> before the comparison closes it.</p></div>
-<div class="note risk"><b>One stream route has no key at all</b>
-<p>The HLS routes (<code>master.m3u8</code>, the video and audio <code>index.m3u8</code>, the
-segments), the file watch route and <code>/download/progress/...</code> now declare
-<code>Security(require_user)</code>. <code>/stream/download/{task_id}/{stream_id}</code> does not:
-its dependency was removed, so anyone who knows a valid <code>task_id</code> and
-<code>stream_id</code> can pull the finished file without a key. Both are UUID-based, and that is
-the only protection on that route.</p>
+<div class="note risk"><b>Two stream routes have no key at all</b>
+<p>The HLS routes (the <code>master.m3u8</code>, the video and audio <code>index.m3u8</code>, the
+segments) and <code>/download/progress/...</code> declare <code>Security(require_user)</code>. Two
+routes do not: <code>/stream/download/{task_id}/{stream_id}</code> and the file watch route
+<code>/stream/watch/{media_type}/{task_id}/{stream_id}/{file_name}.{file_type}</code>. Anyone who
+knows a valid <code>task_id</code> and <code>stream_id</code> can fetch the file or play it without a
+key. Both ids are UUID-based, and that is the only protection on those routes.</p>
 <p>The flip side of protecting the HLS routes: a plain <code>&lt;video&gt;</code> tag cannot set
 <code>X-User-Key</code> and <code>Auth</code>, so only players that add headers to every request
-(LibVLC, or hls.js with a custom loader) can play those streams.</p>
+(LibVLC, or hls.js with <code>xhrSetup</code> as in the web interface) can play those streams. The
+file watch route was opened up for the same reason.</p>
 <p>The CORS configuration adds to this: <code>allow_origins=["*"]</code> together with
 <code>allow_credentials=True</code>. Browsers reject that combination anyway, and for a service on
 localhost a fixed origin list is the appropriate setting.</p></div>

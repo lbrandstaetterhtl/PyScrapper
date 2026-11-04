@@ -8,8 +8,9 @@ Python on PATH. It changes into the server directory first &mdash; that matters,
 <span class="mono">Session</span> derives its cookie path from the working directory.</p>
 <div class="tbl-wrap"><table><thead><tr><th>What</th><th>Value</th></tr></thead><tbody>
 <tr><td>Command</td><td class="mono">python -m uvicorn server:app --host 127.0.0.1 --port 8765</td></tr>
+<tr><td>Docker</td><td class="mono">cd LocalServer/docker &amp;&amp; docker compose up -d --build (port 8000)</td></tr>
 <tr><td>Script</td><td class="mono">scripts/startServer.ps1</td></tr>
-<tr><td>Dependencies</td><td class="mono">fastapi, uvicorn[standard], pydantic, certifi, yt-dlp, playwright, bcrypt, dotenv, pywin32</td></tr>
+<tr><td>Dependencies</td><td class="mono">fastapi, uvicorn[standard], pydantic, certifi, yt-dlp, playwright, bcrypt, python-dotenv, pywin32 (Windows only), ocr (own Rust module)</td></tr>
 <tr><td>Secret</td><td class="mono">ADMIN_KEY in .env next to server.py</td></tr>
 <tr><td>Log file</td><td class="mono">logs/server_runtime.log</td></tr>
 </tbody></table></div>
@@ -19,9 +20,20 @@ sniffing will fail. <span class="mono">ffmpeg</span> and <span class="mono">ffpr
 <span class="mono">PATH</span> as well: every STREAM download now runs through the engine's codec
 probe and, where needed, the ffmpeg muxer. A missing binary surfaces as
 <span class="mono">FFmpegNotFoundError</span>.</p>
-<p><span class="mono">pywin32</span> is only imported on Windows (named pipes for the ffmpeg
-inputs), but it is listed unconditionally, so <span class="mono">pip install -r requirements.txt</span>
-fails on Linux and macOS. Install the other packages by hand there.</p>
+<p><span class="mono">pywin32</span> is only needed on Windows (named pipes for the ffmpeg inputs);
+<span class="mono">requirements.txt</span> installs it only there.</p>
+<p>The engine also needs the Rust extension <span class="mono">ocr</span>, which the Bandcamp search
+uses to solve captchas. It is imported when the providers load, so the server does not start without
+it. On Windows install the prebuilt wheel from <span class="mono">PythonModule/providers/ocr/</span>;
+elsewhere build it with maturin from <span class="mono">LocalServer/docker/captcha_ocr_source</span>.</p>
+
+<h2 id="docker">Docker</h2>
+<p><span class="mono">LocalServer/docker/compose.yaml</span> builds an image in two stages: the first
+compiles <span class="mono">ocr</span> with Rust and maturin, the second installs ffmpeg, the Python
+requirements and Playwright Chromium and starts uvicorn on <span class="mono">0.0.0.0:8000</span>.
+<span class="mono">Data/</span>, <span class="mono">logs/</span> and <span class="mono">.env</span>
+are mounted from the host, so the database survives a rebuild. The <span class="mono">.env</span>
+has to exist before the first start; otherwise Docker creates a directory in its place.</p>
 
 <h2 id="tests">Tests</h2>
 <p>The suite in <span class="mono">tests/</span> needs no test runner. The scripts read the admin

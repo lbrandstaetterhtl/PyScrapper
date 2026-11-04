@@ -1,7 +1,7 @@
 <div class="wrap">
 <div class="crumb">PythonModule / providers</div>
 <h1>Providers</h1>
-<p class="lede">One module per platform &mdash; and, for the three most involved ones, a package.
+<p class="lede">One module per platform &mdash; and, for the more involved ones, a package.
 From the outside they all look the same; on the inside they differ a lot, from a hundred lines of
 regex to a browser that hunts for a playback token or a client that impersonates a VR headset to get
 at YouTube's formats.</p>
@@ -13,11 +13,21 @@ at YouTube's formats.</p>
 package, without the dead pre-split files; Youtube and YoutubeMusic share one package and therefore
 one count.</p>
 
-<h2 id="packages">The three packages</h2>
-<p>Soundcloud, Youtube and Filmpalast are packages rather than single files. The
+<h2 id="packages">The packages</h2>
+<p>Bandcamp, Soundcloud, Youtube, Filmpalast and effedup are packages rather than single files. The
 <span class="mono">__init__.py</span> is the contract: it re-exports exactly the names the mappings
 in <span class="mono">models/settings.py</span> refer to, so callers see no difference.</p>
 <div class="tbl-wrap"><table><thead><tr><th>File</th><th>Contains</th></tr></thead><tbody>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FBandcamp%2Fbandcamp_search.py">Bandcamp/bandcamp_search.py</a></td>
+<td><span class="mono">search()</span>: album hits are expanded into their tracks; includes captcha detection and the OCR-based solver</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FBandcamp%2Fbandcamp_media_information.py">Bandcamp/bandcamp_media_information.py</a></td>
+<td><span class="mono">getMediaInformation()</span> for track, album and direct stream URLs; collects the stream URLs from the page</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2FBandcamp%2Fbandcamp_browser.py">Bandcamp/bandcamp_browser.py</a></td>
+<td><span class="mono">BandcampCaptchaBrowser</span>, which types the OCR candidates into the captcha form</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2Feffedup%2Feffedup_search.py">effedup/effedup_search.py</a></td>
+<td><span class="mono">search()</span> on effedupmovies.com</td></tr>
+<tr><td class="mono"><a class="x" href="#/m/providers%2Feffedup%2Feffedup_media_information.py">effedup/effedup_media_information.py</a></td>
+<td><span class="mono">getMediaInformation()</span>: loads the page and extracts the stream URL with a regex</td></tr>
 <tr><td class="mono"><a class="x" href="#/m/providers%2FSoundcloud%2Fsoundcloud_search.py">Soundcloud/soundcloud_search.py</a></td>
 <td><span class="mono">search()</span> plus its filter and result helpers</td></tr>
 <tr><td class="mono"><a class="x" href="#/m/providers%2FSoundcloud%2Fsoundcloud_media_information.py">Soundcloud/soundcloud_media_information.py</a></td>
@@ -50,10 +60,10 @@ Base64 host links and opens each in a browser &mdash; unfinished, returns nothin
 <td><span class="mono">FilmpalastMediaBrowser</span>, whose response hook only prints URLs so
 far</td></tr>
 </tbody></table></div>
-<div class="note warn"><b>Two files in the packages are dead</b>
-<p><code>Youtube/Youtube.py</code> ({{stat:loc:providers/Youtube/Youtube.py}} lines) and
-<code>Soundcloud/Soundcloud.py</code> are the pre-split originals. Neither <code>__init__.py</code>
-imports them and nothing else references them, so the functions that are actually called are the
+<div class="note warn"><b>Three files in the packages are dead</b>
+<p><code>Youtube/Youtube.py</code> ({{stat:loc:providers/Youtube/Youtube.py}} lines),
+<code>Soundcloud/Soundcloud.py</code> and <code>Bandcamp/Bandcamp.py</code> are not imported by
+their package's <code>__init__.py</code> and nothing else references them, so the functions that are actually called are the
 ones in the small modules. <code>Youtube.py</code> in particular still uses yt-dlp, which the live
 code no longer does &mdash; reading it to understand current behaviour will mislead you.</p></div>
 

@@ -153,9 +153,9 @@
         "id": "file",
         "kind": "step",
         "title": "FILE / UMP: point at the file name",
-        "sub": "watch_url ends in /{full_filename}",
+        "sub": "watch_url = /stream/watch/video/.../{full_filename}",
         "next": "resources built",
-        "detail": "<p>No pre-computation. The stream type is reported as <code>file</code>. When the provider found separate video and audio URLs, the audio URL is passed on as <code>watch_audio_url</code> in the resource.</p>"
+        "detail": "<p>No pre-computation. The stream type is reported as <code>file</code>. When the provider found separate video and audio URLs, <code>watch_audio_url</code> points at the same file route with <code>audio</code> instead of <code>video</code>, so a player can fetch both tracks.</p>"
       },
       {
         "id": "resp",
@@ -307,7 +307,7 @@
         "title": "Client holds a watch_url",
         "sub": "from the STREAM download response",
         "next": "player opens it",
-        "detail": "<p><code>/stream/watch/{task_id}/{stream_id}/master.m3u8</code>, handed over in the <code>DownloadResponse</code>. The video and audio segment lists were already computed when the download request was answered.</p>"
+        "detail": "<p><code>/stream/watch/video/{task_id}/{stream_id}/master.m3u8</code>, handed over in the <code>DownloadResponse</code>. The video and audio segment lists were already computed when the download request was answered.</p>"
       },
       {
         "id": "auth",
@@ -332,7 +332,7 @@
         "sub": "stream_hls_master",
         "link": "#/m/server.py#stream_hls_master",
         "next": "master playlist returned",
-        "detail": "<p>Renders a small master playlist that points back at this server. Without audio segments it contains a single <code>#EXT-X-STREAM-INF</code> entry for <code>/video/index.m3u8</code>. With audio segments it adds an <code>#EXT-X-MEDIA:TYPE=AUDIO</code> rendition for <code>/audio/index.m3u8</code> and ties the video variant to it through <code>AUDIO=\"audio\"</code>.</p><p>The bandwidth is a fixed 5000000; the original variant attributes are not carried over.</p>",
+        "detail": "<p>Renders a small master playlist that points back at this server. Without audio segments it contains a single <code>#EXT-X-STREAM-INF</code> entry for <code>/stream/watch/video/{task_id}/{stream_id}/index.m3u8</code>. With audio segments it adds an <code>#EXT-X-MEDIA:TYPE=AUDIO</code> rendition for <code>/stream/watch/audio/{task_id}/{stream_id}/index.m3u8</code> and ties the video variant to it through <code>AUDIO=\"audio\"</code>.</p><p>The bandwidth is a fixed 5000000; the original variant attributes are not carried over.</p>",
         "branches": [
           {
             "label": "unknown task or stream &rarr; 404",
@@ -344,11 +344,11 @@
       {
         "id": "index",
         "kind": "step",
-        "title": "GET .../video/index.m3u8 and .../audio/index.m3u8",
+        "title": "GET .../video/.../index.m3u8 and .../audio/.../index.m3u8",
         "sub": "stream_hls_video_index / stream_hls_audio_index",
         "link": "#/m/server.py#create_hls_index",
         "next": "index playlists returned",
-        "detail": "<p>Both go through <code>create_hls_index()</code>. It writes <code>#EXT-X-VERSION:7</code>, a target duration from the longest segment and one <code>#EXTINF</code> plus URL per segment, pointing at <code>/{video|audio}/segment/{n}</code>. The original CDN URLs never reach the player.</p><p>A segment with duration 0 is how the engine's parser stores an <code>#EXT-X-MAP</code> init section; it is written back as <code>#EXT-X-MAP:URI=...</code> instead of a media entry. That is what makes fMP4 streams (YouTube's HLS manifests) playable through the proxy.</p>"
+        "detail": "<p>Both go through <code>create_hls_index()</code>. It writes <code>#EXT-X-VERSION:7</code>, a target duration from the longest segment and one <code>#EXTINF</code> plus URL per segment, pointing at <code>/stream/watch/{task_id}/{stream_id}/{video|audio}/segment/{n}</code>. The original CDN URLs never reach the player.</p><p>A segment with duration 0 is how the engine's parser stores an <code>#EXT-X-MAP</code> init section; it is written back as <code>#EXT-X-MAP:URI=...</code> instead of a media entry. That is what makes fMP4 streams (YouTube's HLS manifests) playable through the proxy.</p>"
       },
       {
         "id": "seg",
@@ -369,11 +369,11 @@
       {
         "id": "dl",
         "kind": "decision",
-        "title": "Not HLS: /stream/download",
-        "sub": "the one stream route without a key",
+        "title": "Not HLS: file watch and /stream/download",
+        "sub": "the two stream routes without a key",
         "link": "#/m/server.py#client_download_stream",
         "next": "playback continues",
-        "detail": "<p><code>/stream/download/{task_id}/{stream_id}</code> runs <code>DownloadDispatcher.downloadContextAndYield()</code> and sends the result as an attachment. Its security dependency was removed, so anyone who knows the two ids can fetch the file. The file name in <code>Content-Disposition</code> is <code>{filename}.{preferred_file}</code> when <code>auto_convert</code> is set, otherwise the provider's <code>full_filename</code>.</p>",
+        "detail": "<p>For FILE and UMP targets the player uses <code>/stream/watch/{video|audio}/{task_id}/{stream_id}/{file}</code>, which serves range requests against the source URL (or the audio URL), and <code>/stream/download/{task_id}/{stream_id}</code> sends the finished file as an attachment. Neither route has a security dependency any more, so anyone who knows the two ids can fetch the content.</p><p>The download route runs <code>DownloadDispatcher.downloadContextAndYield()</code>. The file name in <code>Content-Disposition</code> is <code>{filename}.{preferred_file}</code> when <code>auto_convert</code> is set, otherwise the provider's <code>full_filename</code>.</p>",
         "branches": [
           {
             "label": "see the CORS note on the overview",
