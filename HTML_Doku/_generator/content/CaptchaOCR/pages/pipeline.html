@@ -1,0 +1,62 @@
+<div class="wrap">
+<div class="crumb">CaptchaOCR / pipeline</div>
+<h1>From image to letters</h1>
+<p class="lede">Everything before the network runs in
+<a class="x" href="#/m/src%2Flib.rs#load_and_split">load_and_split()</a>. Its job is to turn one
+captcha into an ordered list of 28&times;28 tensors, one per letter. Whether the OCR succeeds is
+decided here more often than in the network: a letter that is lost or split here cannot be
+recovered later.</p>
+
+<h2 id="steps">The steps</h2>
+<div class="tbl-wrap"><table><thead><tr><th>Step</th><th>Function</th><th>What happens</th></tr></thead><tbody>
+<tr><td>1</td><td class="mono"><a class="x" href="#/m/src%2Flib.rs#load_image">load_image</a></td>
+<td>Decodes the file with the <span class="mono">image</span> crate. Any format it knows works; Bandcamp delivers JPEG.</td></tr>
+<tr><td>2</td><td class="mono">grayscale &rarr; to_rgb8</td>
+<td>The picture is reduced to gray and then widened back to three equal channels, because the next step works on RGB.</td></tr>
+<tr><td>3</td><td class="mono"><a class="x" href="#/m/src%2Flib.rs#background_color">background_color</a></td>
+<td>The median of every channel over all pixels. Background is assumed to cover more than half of the image, so the median is its colour.</td></tr>
+<tr><td>4</td><td class="mono"><a class="x" href="#/m/src%2Flib.rs#make_black_and_white">make_black_and_white</a></td>
+<td>Each pixel's Euclidean distance to that background colour, scaled to 0&ndash;255. Above 32 it becomes white (ink), otherwise black.</td></tr>
+<tr><td>5</td><td class="mono">median_filter(1, 1)</td>
+<td>A 3&times;3 median removes salt-and-pepper noise left by the JPEG and by the captcha's speckles.</td></tr>
+<tr><td>6</td><td class="mono"><a class="x" href="#/m/src%2Flib.rs#image_split_up">image_split_up</a></td>
+<td><span class="mono">connected_components</span> with 8-connectivity labels every white blob;
+<a class="x" href="#/m/src%2Flib.rs#get_bounding_boxes">get_bounding_boxes</a> collects a
+<span class="mono">BBox</span> with pixel count per label, sorted left to right.</td></tr>
+<tr><td>7</td><td class="mono">filters</td>
+<td>A blob survives if it has at least 30 pixels, fills at least 15&nbsp;% of its box, and is at least 40&nbsp;% as tall as the tallest blob. That drops dots, lines and stray noise.</td></tr>
+<tr><td>8</td><td class="mono"><a class="x" href="#/m/src%2Flib.rs#crop_letter">crop_letter</a></td>
+<td>Cuts the box out of the binary image with 3 pixels of padding, clamped to the image edges.</td></tr>
+<tr><td>9</td><td class="mono"><a class="x" href="#/m/src%2Flib.rs#to_emnist">to_emnist</a></td>
+<td>Scales the crop so its longer side is 20 pixels (triangle filter) and centres it on a black 28&times;28 canvas &mdash; the layout of the EMNIST dataset.</td></tr>
+<tr><td>10</td><td class="mono">Tensor::from_vec</td>
+<td>Pixels divided by 255, shaped <span class="mono">(1, 1, 28, 28)</span>: batch, channel, height, width.</td></tr>
+</tbody></table></div>
+
+<h2 id="assumptions">What the segmentation assumes</h2>
+<p>The approach only works for captchas whose letters do not touch. Two letters that share a
+pixel after binarising become one blob, one crop and one prediction &mdash; the result is then
+missing a character and none of the candidates can be right. A letter that breaks apart (a thin
+<span class="mono">i</span>, a broken stroke) can either vanish under the size filters or turn into
+two predictions.</p>
+<p>The order of the letters is the order of the boxes' left edges. Overlapping boxes from
+slanted letters are therefore still read left to right, but a short letter tucked under a long
+one's overhang can swap places.</p>
+<div class="note warn"><b>An image without letters returns one empty string</b>
+<p>If every blob is filtered out, <span class="mono">load_and_split</span> returns an empty list,
+the beam search starts from <span class="mono">("", 0.0)</span> and never extends it, and
+<span class="mono">img_to_text</span> returns <span class="mono">[""]</span> rather than raising.
+The Bandcamp browser then submits an empty answer.</p></div>
+
+<h2 id="tuning">The numbers to change when it fails</h2>
+<div class="tbl-wrap"><table><thead><tr><th>Constant</th><th>Where</th><th>Value</th><th>Effect of raising it</th></tr></thead><tbody>
+<tr><td>Ink threshold</td><td class="mono">make_black_and_white</td><td class="mono">32</td><td>Fainter strokes and background texture turn black; risks breaking thin letters</td></tr>
+<tr><td>Median filter radius</td><td class="mono">image_clean_and_split_up</td><td class="mono">1, 1</td><td>More noise removed, but thin strokes erode</td></tr>
+<tr><td>Minimum area</td><td class="mono">image_split_up</td><td class="mono">30</td><td>More small blobs dropped (dots, but also small letters)</td></tr>
+<tr><td>Minimum fill</td><td class="mono">image_split_up</td><td class="mono">0.15</td><td>Drops long thin lines that cross the image</td></tr>
+<tr><td>Relative height</td><td class="mono">image_split_up</td><td class="mono">4 / 10</td><td>Drops more short blobs; lower-case letters are at risk</td></tr>
+<tr><td>Crop padding</td><td class="mono">image_split_up</td><td class="mono">3</td><td>More margin around each letter before scaling</td></tr>
+</tbody></table></div>
+<p>All of them are literals in <span class="mono">src/lib.rs</span>, not part of
+<span class="mono">config.json</span>, so changing one means rebuilding the wheel.</p>
+</div>

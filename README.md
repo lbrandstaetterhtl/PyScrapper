@@ -19,6 +19,7 @@ Jede Datei ist eigenständig, ohne Abhängigkeiten — einfach im Browser öffne
 | `HTML_Doku/PythonModule.html` | Engine: Provider, Downloadverfahren (FILE/HLS/UMP), ffmpeg-Muxing, Datenmodelle, Validierung |
 | `HTML_Doku/LocalServer.html` | Backend: alle HTTP-Endpunkte, SQLite-Schema, Betrieb und Tests |
 | `HTML_Doku/PyScrapperDesktopApp.html` | Desktop-Client: Schichten, Abläufe, Fenster, Serveraufrufe |
+| `HTML_Doku/CaptchaOCR.html` | Captcha-OCR (Rust): Bildvorverarbeitung, Netzwerk, Python-Schnittstelle, Bauen |
 
 Jede Doku enthält Volltextsuche (`/` oder `Strg+K`), einen Dateibaum, Signaturen mit Parametern
 und Defaults sowie den kompletten Quelltext mit verlinkbaren Zeilennummern. Sie wird direkt aus
@@ -27,7 +28,7 @@ dem Code erzeugt und ist damit immer auf dem Stand der Dateien, aus denen sie ge
 Neu bauen nach Codeänderungen (nur Python-Standardbibliothek nötig):
 
 ```powershell
-python HTML_Doku/_generator/build_docs.py            # alle drei
+python HTML_Doku/_generator/build_docs.py            # alle vier
 python HTML_Doku/_generator/build_docs.py LocalServer # nur eine
 ```
 

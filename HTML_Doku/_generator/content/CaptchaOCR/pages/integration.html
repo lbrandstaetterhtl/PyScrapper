@@ -1,0 +1,64 @@
+<div class="wrap">
+<div class="crumb">CaptchaOCR / integration</div>
+<h1>Python and Bandcamp</h1>
+<p class="lede">The extension exposes exactly one function. Its only caller is the Bandcamp search,
+which uses it to get past the &bdquo;Client Challenge&ldquo; page Bandcamp shows to repeated or
+automated searches.</p>
+
+<h2 id="api">The Python API</h2>
+<div class="tbl-wrap"><table><thead><tr><th>Call</th><th>Returns</th><th>Raises</th></tr></thead><tbody>
+<tr><td class="mono"><a class="x" href="#/m/src%2Flib.rs#img_to_text">ocr.img_to_text(image_path: str, ocr_dir: str)</a></td>
+<td class="mono">list[str]</td>
+<td class="mono">ValueError</td></tr>
+</tbody></table></div>
+<ul>
+<li><span class="mono">image_path</span> &mdash; a file on disk; the function does not take bytes.</li>
+<li><span class="mono">ocr_dir</span> &mdash; the model directory holding <span class="mono">config.json</span>
+and the weights, e.g. <span class="mono">PythonModule/providers/ocr</span>.</li>
+<li>The result holds at most <span class="mono">max_candidates</span> strings, most likely first. Their
+probabilities are computed but not returned.</li>
+<li>Every Rust error (unreadable image, bad config, tensor shape mismatch) is converted into a
+<span class="mono">ValueError</span> with the message text. A panic surfaces as
+<span class="mono">pyo3_runtime.PanicException</span>.</li>
+</ul>
+<p>The function holds the GIL for its whole run and loads the config and the weights again on every
+call. For the occasional captcha that is fine; for bulk use the model would have to be cached.</p>
+<pre class="code full"><table><tbody><tr><td class="ln">1</td><td class="cd">import ocr</td></tr><tr><td class="ln">2</td><td class="cd">candidates = ocr.img_to_text("captcha.jpeg", "PythonModule/providers/ocr")</td></tr><tr><td class="ln">3</td><td class="cd">print(candidates)   # up to max_candidates strings, best first</td></tr></tbody></table></pre>
+
+<h2 id="bandcamp">How Bandcamp uses it</h2>
+<p>The full sequence is in the <a class="x" href="#/flows">Bandcamp captcha</a> flow. In short:
+<a class="x" href="https://github.com/lbrandstaetterhtl/PyScrapper/blob/main/PythonModule/providers/Bandcamp/bandcamp_search.py">bandcamp_search.py</a>
+loads the search page, and if <span class="mono">_isClientChallenge()</span> recognises the challenge
+it opens the page in a headless browser, cuts the Base64 JPEG out of the HTML, writes it to a
+temporary file in the working directory and calls <span class="mono">ocr.img_to_text</span> with
+<span class="mono">OCR_PATH</span> (the <span class="mono">providers/ocr</span> folder). The browser
+types the candidates into <span class="mono">#capInput</span> one after another; when it stops, its
+cookies are written to the session's cookie file, the session reloads them and the search is
+repeated &mdash; up to <span class="mono">CAPTCHA_RETRIES</span> (3) times before the search gives up
+with a <span class="mono">TaskFailedError</span>.</p>
+<p>The provider modules are documented in the engine documentation
+(<span class="mono">HTML_Doku/PythonModule.html</span>, page &bdquo;providers&ldquo;).</p>
+<div class="note risk"><b>The engine does not load without the module</b>
+<p><code>bandcamp_search.py</code> has <code>import ocr</code> at the top, and
+<code>providers/__init__.py</code> imports every provider. If the extension is not installed, the
+whole engine &mdash; and with it the server &mdash; fails to start with
+<code>ModuleNotFoundError: No module named 'ocr'</code>, even if nobody ever searches Bandcamp. A
+lazy import inside <code>_solveCaptcha()</code> would confine the dependency to the one place that
+needs it.</p></div>
+<div class="note warn"><b>Success is only detected when the click fails</b>
+<p><code>BandcampCaptchaBrowser.sendCaptchaSolutions()</code> fills in a candidate and clicks
+<code>#capSubmit</code>. It returns <code>True</code> only from the <code>except</code> branch, i.e. when
+the click raises and the page content has changed. If the click goes through normally, the loop
+moves on to the next candidate and the method finally returns <code>False</code> even when the
+captcha was solved. The search still repeats afterwards, so a solved captcha is noticed one round
+later; the log line &bdquo;Couldn't solve captcha&ldquo; can therefore be misleading.</p></div>
+
+<h2 id="test">Trying it by hand</h2>
+<p><a class="x" href="#/m/test.py">test.py</a> runs the OCR on one image and prints the candidates and
+the time taken:</p>
+<pre class="code full"><table><tbody><tr><td class="ln">1</td><td class="cd">python test.py captcha.jpeg --ocr-dir PythonModule/providers/ocr</td></tr></tbody></table></pre>
+<p>Without <span class="mono">--ocr-dir</span> it uses the environment variable
+<span class="mono">OCR_DIR</span> or a hard-coded path from the author's machine. Its
+<span class="mono">-n</span> option defaults to 5, but the module never returns more than
+<span class="mono">max_candidates</span> ({{stat:max_candidates}}) strings.</p>
+</div>

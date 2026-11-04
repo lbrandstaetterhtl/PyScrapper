@@ -538,8 +538,44 @@ function xmlHighlight(code) {
 }
 
 let LANG = DATA.lang || 'py';
+const RS_KW = new Set(('as async await break const continue crate dyn else enum extern false fn for if impl in ' +
+  'let loop match mod move mut pub ref return self Self static struct super trait true type unsafe use where ' +
+  'while Some None Ok Err').split(' '));
+const RS_TYPES = new Set(('u8 u16 u32 u64 usize i8 i16 i32 i64 isize f32 f64 bool char str String Vec Option ' +
+  'Result Box HashMap Path Tensor Device GrayImage RgbImage DynamicImage ImageBuffer Luma Rgb PyResult ' +
+  'PyModule Bound VarMap VarBuilder Conv2d Linear').split(' '));
+const RS_RE = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])')|(#!?\[[^\]]*\])|\b(?:fn|struct|enum|impl|mod|trait)\s+([A-Za-z_]\w*)|\b(\d[\w.]*)\b|\b([A-Za-z_]\w*!?)/g;
+
+function rsHighlight(code) {
+  let out = '', last = 0, m;
+  RS_RE.lastIndex = 0;
+  while ((m = RS_RE.exec(code)) !== null) {
+    out += esc(code.slice(last, m.index));
+    if (m[1]) out += '<span class="tk-c">' + esc(m[1]) + '</span>';
+    else if (m[2]) out += '<span class="tk-s">' + esc(m[2]) + '</span>';
+    else if (m[3]) out += '<span class="tk-d">' + esc(m[3]) + '</span>';
+    else if (m[4]) {
+      const kw = m[0].slice(0, m[0].length - m[4].length);
+      out += '<span class="tk-k">' + esc(kw.trimEnd()) + '</span>' +
+             esc(kw.slice(kw.trimEnd().length)) + '<span class="tk-def">' + esc(m[4]) + '</span>';
+    }
+    else if (m[5]) out += '<span class="tk-n">' + esc(m[5]) + '</span>';
+    else if (m[6]) {
+      const w = m[6];
+      if (w.endsWith('!')) out += '<span class="tk-d">' + esc(w) + '</span>';
+      else if (RS_KW.has(w)) out += '<span class="tk-k">' + esc(w) + '</span>';
+      else if (RS_TYPES.has(w)) out += '<span class="tk-b">' + esc(w) + '</span>';
+      else out += esc(w);
+    }
+    last = m.index + m[0].length;
+  }
+  return out + esc(code.slice(last));
+}
+
 function highlight(code) {
   if (LANG === 'cs') return csHighlight(code);
+  if (LANG === 'rs') return rsHighlight(code);
+  if (LANG === 'text') return esc(code);
   if (LANG === 'xml') return xmlHighlight(code);
   return pyHighlight(code);
 }
@@ -567,6 +603,7 @@ const FLAVORS = {
   static:    ['cls', 'b-class', 'static class'],
   viewmodel: ['rte', 'b-route', 'viewmodel'],
   view:      ['dcl', 'b-data',  'view'],
+  struct:    ['dcl', 'b-data',  'struct'],
   'class':   ['cls', 'b-class', 'class']
 };
 function flavorMeta(c) { return FLAVORS[c.flavor] || FLAVORS['class']; }
@@ -633,6 +670,7 @@ function fnCard(fn, mod, owner) {
     else if (/classmethod/.test(d)) badges += '<span class="b b-priv">classmethod</span>';
     else if (/property/.test(d)) badges += '<span class="b b-priv">property</span>';
     else if (/RelayCommand/.test(d)) badges += '<span class="b b-route">command</span>';
+    else if (/pyfunction|pymodule/.test(d)) badges += '<span class="b b-route">python api</span>';
     else if (/ObservableProperty/.test(d)) badges += '<span class="b b-data">observable</span>';
   }
   const anchor = (owner ? owner + '.' : '') + fn.name;
@@ -704,7 +742,7 @@ function modulePage(mod) {
 
   if (mod.imports.length) {
     h += '<h2 id="__imports">Imports</h2>';
-    const own = mod.imports.filter(i => /^from \.|^from PythonModule|^import PythonModule|PyScrapperDesktopApp/.test(i));
+    const own = mod.imports.filter(i => /^from \.|^from PythonModule|^import PythonModule|PyScrapperDesktopApp|^use crate|^mod /.test(i));
     const ext = mod.imports.filter(i => own.indexOf(i) === -1);
     const box = (title, arr) => arr.length
       ? '<h3>' + title + '</h3>' + codeBlock(arr.join('\n'), 1, { full: true }) : '';

@@ -1,0 +1,72 @@
+<div class="wrap">
+<div class="crumb">CaptchaOCR / model</div>
+<h1>The network</h1>
+<p class="lede">A deliberately small convolutional classifier: one 28&times;28 letter in, one score
+per character out. Its shape is not hard-coded &mdash;
+<a class="x" href="#/m/src%2Fcnn.rs#CNN.new">CNN::new</a> builds it from
+<span class="mono">config.json</span>, and the weights in
+<span class="mono">model.safetensors</span> must match what the config describes.</p>
+
+<h2 id="layers">Layers</h2>
+<p>The table below is computed during the documentation build the same way
+<span class="mono">CNN::new</span> computes it, and every tensor is checked against the header of
+the shipped model file.</p>
+{{gen:model_layers}}
+<p>Each convolution has stride 1 and no padding, so it shrinks the image by
+<span class="mono">kernel_size &minus; 1</span>. The channel count starts at 16 and doubles with every
+layer. Whether a 2&times;2 max-pool follows is taken from <span class="mono">pool_after</span>. After
+the last layer the feature map is flattened and a single linear layer maps it to
+{{stat:vocab}} logits.</p>
+
+<h2 id="forward">Forward pass</h2>
+<p><a class="x" href="#/m/src%2Fcnn.rs#CNN.forward">CNN::forward</a> runs
+<span class="mono">conv &rarr; ReLU &rarr; (max-pool)</span> per layer, flattens from dimension 1 and
+applies the linear layer. There is no dropout or batch norm; inference is deterministic.</p>
+<p><a class="x" href="#/m/src%2Flib.rs#top_k">top_k</a> applies softmax to the logits and keeps the
+<span class="mono">max_candidates</span> most likely characters for that position. It also checks that
+the model's output width equals the vocabulary length and fails with a clear message otherwise.</p>
+
+<h2 id="beam">From letters to strings</h2>
+<p><a class="x" href="#/m/src%2Flib.rs#candidates">candidates</a> is a beam search over the
+positions. It starts with the empty string, extends every kept prefix with every candidate character
+of the next position, scores the result by the sum of log-probabilities, and keeps the best
+<span class="mono">max_candidates</span>. At the end the scores are turned back into probabilities;
+<span class="mono">img_to_text</span> discards them and returns only the strings, best first.</p>
+<p>With <span class="mono">max_candidates = {{stat:max_candidates}}</span>, {{stat:max_candidates}} alternatives per letter
+are considered, but only {{stat:max_candidates}} complete strings come back. Raising it makes
+Bandcamp's retry loop try more answers per captcha at the cost of more form submissions.</p>
+
+<h2 id="vocab">Vocabulary</h2>
+<p><a class="x" href="#/m/src%2Fcnn.rs#Vocab">Vocab</a> is the <span class="mono">vocab_str</span>
+from the config as a list of characters; class <span class="mono">i</span> of the network is
+character <span class="mono">i</span> of that string. Digits, upper case and lower case &mdash;
+{{stat:vocab}} classes. The order has to be exactly the one used in training.</p>
+
+<h2 id="config">config.json</h2>
+<p><a class="x" href="#/m/src%2Fconfig.rs#Config.load">Config::load</a> reads
+<span class="mono">config.json</span> from the model directory. If the file does not exist, it writes
+<a class="x" href="#/m/src%2Fconfig.rs#Config.default">Config::default()</a> there and uses that.</p>
+{{gen:model_config}}
+<div class="tbl-wrap"><table><thead><tr><th>Key</th><th>Meaning</th></tr></thead><tbody>
+<tr><td class="mono">kernel_size</td><td>Side length of every convolution kernel</td></tr>
+<tr><td class="mono">conv_count</td><td>Number of convolution layers</td></tr>
+<tr><td class="mono">input_size</td><td>Side length of the input crop; the preprocessing always produces 28, so this must stay 28</td></tr>
+<tr><td class="mono">vocab_str</td><td>The characters, in class order</td></tr>
+<tr><td class="mono">pool_after</td><td>One flag per convolution: max-pool after it or not. Must have at least <span class="mono">conv_count</span> entries</td></tr>
+<tr><td class="mono">model_name</td><td>File name of the weights inside the model directory</td></tr>
+<tr><td class="mono">device</td><td><span class="mono">cpu</span>, <span class="mono">cuda</span> or <span class="mono">metal</span></td></tr>
+<tr><td class="mono">max_candidates</td><td>Characters kept per position and strings returned</td></tr>
+</tbody></table></div>
+<div class="note risk"><b>A missing model file is not an error</b>
+<p><a class="x" href="#/m/src%2Fcnn.rs#CNN.load">CNN::load</a> loads the weights only
+<code>if model_path.exists()</code>. Without the file the network keeps the random weights it was
+initialised with, and <code>img_to_text</code> happily returns nonsense. A wrong
+<code>ocr_dir</code> therefore looks like a bad model, not like a configuration mistake. Returning an
+error when the file is missing would make this visible.</p></div>
+<div class="note warn"><b>Two settings that only look configurable</b>
+<p><code>device = "cuda"</code> or <code>"metal"</code> needs candle built with the matching
+feature; <span class="mono">Cargo.toml</span> enables neither, so both fail at runtime. And a
+<code>pool_after</code> shorter than <code>conv_count</code> indexes past the end of the vector,
+which panics in Rust and reaches Python as <code>pyo3_runtime.PanicException</code> instead of a
+<code>ValueError</code>.</p></div>
+</div>

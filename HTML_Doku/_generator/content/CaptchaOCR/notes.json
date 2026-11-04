@@ -1,0 +1,8 @@
+{
+  "src/cnn.rs": "<div class=\"note risk\"><b>Missing weights are ignored</b>\n<p><code>CNN::load</code> only loads the safetensors file if it exists. Otherwise the network keeps its random initialisation and every call returns guesses without an error.</p></div>",
+  "src/config.rs": "<div class=\"note warn\"><b>Load can write</b>\n<p>Without <code>config.json</code>, <code>Config::load</code> writes the default into the model directory. In a read-only location (a mounted volume, an installed package) that fails with &bdquo;Could not save config&ldquo;. <code>cuda</code> and <code>metal</code> are accepted values but need candle features this crate does not enable.</p></div>",
+  "src/lib.rs": "<div class=\"note\"><b>One public function</b>\n<p>Only <code>img_to_text</code> is exported to Python; everything else here is the private image pipeline. Errors become <code>ValueError</code>; an image without detectable letters returns <code>[\"\"]</code>.</p></div>",
+  "README.txt": "<div class=\"note warn\"><b>Outdated names</b>\n<p>This guide still refers to <code>captcha_ocr</code> (wheel name and import). The package is <code>ocr</code> today. See <a class=\"x\" href=\"#/build\">Build and run</a> for the current commands.</p></div>",
+  "test.py": "<div class=\"note\"><b>Model path</b>\n<p>Pass <code>--ocr-dir PythonModule/providers/ocr</code> or set <code>OCR_DIR</code>; the built-in default points at a folder on the author's machine.</p></div>",
+  "Cargo.toml": "<div class=\"note\"><b>flate2 is unused</b>\n<p>Declared as a dependency, but no source file uses it.</p></div>"
+}
