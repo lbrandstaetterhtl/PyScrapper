@@ -73,8 +73,6 @@ public partial class LoginWindowViewModel : ObservableObject
             var log = new Message("User login failed", DateTime.Now, "ERROR");
 
             _logger.LogNewMassage(log);
-
-            await _dialogService.ShowAlertAsync("Login failed. Please check your username and password.");
         }
     }
 

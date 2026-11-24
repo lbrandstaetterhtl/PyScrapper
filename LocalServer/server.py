@@ -1352,7 +1352,9 @@ def save_user_data(request: SaveUserDataRequest):
         conn.commit()
     except Exception as e:
         conn.rollback()
-        raise fastapi.HTTPException(status_code=400, detail=str(e))
+        message = f"[ERROR] Error saving user data for '{req.user_identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=400, detail=str(message))
     finally:
         conn.close()
 
@@ -1380,8 +1382,9 @@ async def handle_save_user_data(req: SaveUserDataRequest, user=Security(require_
         server_state.log_queue.put_nowait(f"[INFO] User data for '{req.user_identifier}' saved successfully")
         return {"message": "User data saved successfully"}
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error saving user data for '{req.user_identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error saving user data for '{req.user_identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # ---------------- User Endpoints ---------------
@@ -1435,8 +1438,9 @@ async def handle_set_logged_in(identifier: str = Query(...), user=Security(requi
             conn.commit()
 
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error setting user logged-in status for '{identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error setting user logged-in status for '{identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 @app.post("/set/user/lastLoggedIn")
@@ -1466,9 +1470,9 @@ async def handle_set_last_logged_in(identifier: str = Query(None), user=Security
         conn.commit()
         conn.close()
     except Exception as e:
-        server_state.log_queue.put_nowait(
-            f"[ERROR] Error setting user last logged-in status for '{identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error setting user last logged-in status for '{identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 @app.get(
@@ -1592,17 +1596,14 @@ async def get_user(
 
     except Exception as e:
 
-        server_state.log_queue.put_nowait(
-
-            f"[ERROR] Error retrieving user '{identifier}': {str(e)}"
-
-        )
+        message = f"[ERROR] Error retrieving user '{identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
 
         raise fastapi.HTTPException(
 
             status_code=500,
 
-            detail=str(e)
+            detail=str(message)
 
         )
 
@@ -1620,8 +1621,9 @@ async def get_all_users():
         server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} users")
         return [dict(row) for row in rows]
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving all users: {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error retrieving all users: {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 @app.post("/create-tables/", response_model=MessageResponse, dependencies=[Security(require_admin)])
@@ -1631,8 +1633,9 @@ async def create_table():
         server_state.log_queue.put_nowait("[INFO] Tables created successfully")
         return {"message": "Tables created successfully"}
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error creating tables: {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error creating tables: {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 @app.post("/create/user/", response_model=CreateResponse, dependencies=[Security(require_admin)])
@@ -1657,8 +1660,9 @@ async def handle_create_user_req(req: requests.CreateUserRequest):
         server_state.log_queue.put_nowait(f"[INFO] User '{username}' created successfully with id {identifier}")
         return {"message": "User created successfully", "identifier": identifier}
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error creating user '{req.username}': {str(e)}")
-        raise fastapi.HTTPException(status_code=400, detail=str(e))
+        message = f"[ERROR] Error creating user '{req.username}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=400, detail=str(message))
 
 
 @app.post("/delete/user/{identifier}", response_model=MessageResponse)
@@ -1679,8 +1683,9 @@ async def handle_delete_user_req(identifier: str, user=Security(require_user)):
         server_state.log_queue.put_nowait(f"[INFO] User '{identifier}' deleted successfully")
         return {"message": "User deleted successfully"}
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error deleting user '{identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error deleting user '{identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # ============================================================
@@ -1706,8 +1711,9 @@ async def get_playlists(identifier: str, auth_identifier: str = Security(require
         server_state.log_queue.put_nowait(f"[INFO] Retrieved playlist(s) for identifier '{identifier}'")
         return [dict(row) for row in rows]
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving playlists for '{identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error retrieving playlists for '{identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 @app.post("/create/playlist/", response_model=CreateResponse)
@@ -1729,8 +1735,9 @@ async def handle_create_playlist_req(req: requests.CreatePlaylistRequest, user=S
         server_state.log_queue.put_nowait(f"[INFO] Playlist '{req.name}' created successfully with id {identifier}")
         return {"message": "Playlist created successfully", "identifier": identifier}
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error creating playlist '{req.name}': {str(e)}")
-        raise fastapi.HTTPException(status_code=400, detail=str(e))
+        message = f"[ERROR] Error creating playlist '{req.name}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=400, detail=str(message))
 
 
 # HINWEIS: 'identifier' ist hier undefiniert (Bug im Original) – bewusst NICHT angefasst.
@@ -1769,8 +1776,9 @@ async def get_all_playlists():
         server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} playlists")
         return [dict(row) for row in rows]
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving all playlists: {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error retrieving all playlists: {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # ============================================================
@@ -1813,8 +1821,9 @@ async def handle_create_downloaded_media_req(req: requests.CreateDownloadedMedia
             f"[INFO] Downloaded media '{req.title}' created successfully with id {identifier}")
         return {"message": "Downloaded media created successfully", "identifier": identifier}
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error creating downloaded media '{req.title}': {str(e)}")
-        raise fastapi.HTTPException(status_code=400, detail=str(e))
+        message = f"[ERROR] Error creating downloaded media '{req.title}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=400, detail=str(message))
 
 
 # HINWEIS: 'identifier' ist hier undefiniert (Bug im Original) – bewusst NICHT angefasst.
@@ -1836,8 +1845,9 @@ async def handle_delete_downloaded_media_req(identifier: str, user=Security(requ
         server_state.log_queue.put_nowait(f"[INFO] Downloaded media '{identifier}' deleted successfully")
         return {"message": "Downloaded media deleted successfully"}
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error deleting downloaded media '{identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error deleting downloaded media '{identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # --- get_downloaded_media: KEIN Admin-Key, unverändert ---
@@ -1866,8 +1876,9 @@ async def get_downloaded_media(identifier: str, auth_identifier: str = Security(
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving downloaded media '{identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error retrieving downloaded media '{identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 @app.get("/getall/downloadedmedias", response_model=List[DownloadedMediaResponse],
@@ -1885,8 +1896,9 @@ async def get_all_downloaded_media():
         server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} downloaded medias")
         return [dict(row) for row in rows]
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving all downloaded medias: {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error retrieving all downloaded medias: {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # --- get_user_downloaded_medias: KEIN Admin-Key, unverändert ---
@@ -1911,9 +1923,9 @@ async def get_user_downloaded_medias(user_identifier: str,
             f"[INFO] Retrieved {len(rows)} downloaded medias for user '{user_identifier}'")
         return [dict(row) for row in rows]
     except Exception as e:
-        server_state.log_queue.put_nowait(
-            f"[ERROR] Error retrieving downloaded medias for user '{user_identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error retrieving downloaded medias for user '{user_identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # ============================================================
@@ -1944,8 +1956,9 @@ async def handle_create_setting_req(req: requests.CreateSettingsRequest, user=Se
             f"[INFO] Settings created successfully for user '{req.user_identifier}' with id {identifier}")
         return {"message": "Setting created successfully", "identifier": identifier}
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error creating settings for user '{req.user_identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=400, detail=str(e))
+        message = f"[ERROR] Error creating settings for user '{req.user_identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=400, detail=str(message))
 
 
 # HINWEIS: 'identifier' ist hier undefiniert (Bug im Original) – bewusst NICHT angefasst.
@@ -1967,8 +1980,9 @@ async def handle_delete_setting_req(identifier: str, user=Security(require_user)
         server_state.log_queue.put_nowait(f"[INFO] Settings '{identifier}' deleted successfully")
         return {"message": "Setting deleted successfully"}
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error deleting settings '{identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error deleting settings '{identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # --- get_setting: KEIN Admin-Key, unverändert ---
@@ -1998,8 +2012,9 @@ async def get_setting(user_identifier: str, auth_identifier: str = Security(requ
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving settings for user '{user_identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error retrieving settings for user '{user_identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 @app.get("/getall/settings", response_model=List[SettingsResponse], dependencies=[Security(require_admin)])
@@ -2016,8 +2031,9 @@ async def get_all_settings():
         server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} settings entries")
         return [dict(row) for row in rows]
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving all settings: {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error retrieving all settings: {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # ============================================================
@@ -2061,9 +2077,9 @@ async def handle_create_playlist_media_req(req: requests.CreatePlaylistMediaRequ
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        server_state.log_queue.put_nowait(
-            f"[ERROR] Error adding media '{req.media_identifier}' to playlist '{req.playlist_identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=400, detail=str(e))
+        message = f"[ERROR] Error adding media '{req.media_identifier}' to playlist '{req.playlist_identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=400, detail=str(message))
 
 
 @app.post("/delete/playlistmedia", response_model=MessageResponse)
@@ -2085,9 +2101,9 @@ async def handle_delete_playlist_media_req(req: requests.DeletePlaylistMediaRequ
             f"[INFO] Media '{req.media_identifier}' removed from playlist '{req.playlist_identifier}'")
         return {"message": "Media removed from playlist successfully"}
     except Exception as e:
-        server_state.log_queue.put_nowait(
-            f"[ERROR] Error removing media '{req.media_identifier}' from playlist '{req.playlist_identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error removing media '{req.media_identifier}' from playlist '{req.playlist_identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # --- get_playlist_medias: KEIN Admin-Key, unverändert ---
@@ -2112,9 +2128,9 @@ async def get_playlist_medias(playlist_identifier: str,
             f"[INFO] Retrieved {len(rows)} media entries for playlist '{playlist_identifier}'")
         return [dict(row) for row in rows]
     except Exception as e:
-        server_state.log_queue.put_nowait(
-            f"[ERROR] Error retrieving media for playlist '{playlist_identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error retrieving media for playlist '{playlist_identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # --- get_user_playlists: KEIN Admin-Key, unverändert ---
@@ -2137,8 +2153,9 @@ async def get_user_playlists(user_identifier: str,
         server_state.log_queue.put_nowait(f"[INFO] Retrieved {len(rows)} playlists for user '{user_identifier}'")
         return [dict(row) for row in rows]
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error retrieving playlists for user '{user_identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        massage = f"[ERROR] Error retrieving playlists for user '{user_identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(massage)
+        raise fastapi.HTTPException(status_code=500, detail=str(massage))
 
 
 # ============================================================
@@ -2171,8 +2188,9 @@ async def handle_login_req(req: requests.LoginRequest):
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error during login for user '{req.username}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        massage = f"[ERROR] Error during login for user '{req.username}': {str(e)}"
+        server_state.log_queue.put_nowait(massage)
+        raise fastapi.HTTPException(status_code=500, detail=str(massage))
 
 
 # GEÄNDERT: interner Aufruf ohne Key.
@@ -2192,8 +2210,9 @@ async def handle_register_req(req: requests.RegisterRequest):
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error during registration for user '{req.username}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error during registration for user '{req.username}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
 
 
 # --- logout: unverändert ---
@@ -2215,5 +2234,6 @@ async def handle_logout_req(identifier: str, user=Security(require_user)):
         server_state.log_queue.put_nowait(f"[INFO] User '{identifier}' logged out successfully")
         return {"message": "Logout successful"}
     except Exception as e:
-        server_state.log_queue.put_nowait(f"[ERROR] Error during logout for user '{identifier}': {str(e)}")
-        raise fastapi.HTTPException(status_code=500, detail=str(e))
+        message = f"[ERROR] Error during logout for user '{identifier}': {str(e)}"
+        server_state.log_queue.put_nowait(message)
+        raise fastapi.HTTPException(status_code=500, detail=str(message))
