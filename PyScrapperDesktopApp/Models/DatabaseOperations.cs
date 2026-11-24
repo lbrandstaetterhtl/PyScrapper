@@ -608,13 +608,6 @@ public class Database
 
         var content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
         var response = await client.PostAsync($"{AppData.Config.ServerUrl}:{AppData.Config.ServerPort}/set/user/loggedIn?identifier={AppData.CurrentUser.Identifier}",  content);  
-
-        foreach (var header in client.DefaultRequestHeaders)
-        {
-            Console.WriteLine(
-                $"{header.Key}: {(string.Join(",", header.Value))}"
-            );
-        }
         
         if (!response.IsSuccessStatusCode)
         {

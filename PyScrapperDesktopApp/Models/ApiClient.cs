@@ -52,7 +52,7 @@ public class ApiClient : Interfaces.IApiClient
 
         if (response is null)
         {
-            _logger.LogDebugMessage(new Message($"Response is null", DateTime.Now, "ERROR"));
+            _logger.LogNewMassage(new Message($"Response is null", DateTime.Now, "ERROR"));
         }
             
         
@@ -61,11 +61,6 @@ public class ApiClient : Interfaces.IApiClient
         if (response.IsSuccessStatusCode)
         {
             var deserializedResponse = JsonSerializer.Deserialize<DownloadResponse>(responseData, JsonOptions);
-
-            foreach (var resource in deserializedResponse.Resources)
-            {
-                _logger.LogDebugMessage(new Message($"Resource: {resource.Context.ContextId}, Progress URL: {resource.ProgressUrl}, Download URL: {resource.DownloadUrl}", DateTime.Now, "DEBUG"));
-            }
             
             return deserializedResponse;
         }
@@ -445,7 +440,6 @@ public class ApiClient : Interfaces.IApiClient
 
         var contentDisposition =  response.Content.Headers.ContentDisposition;
         var fileName = contentDisposition?.FileName.Trim('"');
-        _logger.LogDebugMessage(new Message($"Downloading file: {fileName} from URL: {resource.DownloadUrl}", DateTime.Now, "DEBUG"));
         var downloadPath = Path.Combine(path, fileName);
         
         if (!File.Exists(downloadPath))

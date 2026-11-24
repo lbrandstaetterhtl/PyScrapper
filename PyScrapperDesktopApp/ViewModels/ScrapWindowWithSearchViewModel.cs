@@ -221,9 +221,6 @@ public partial class ScrapWindowWithSearchViewModel : ObservableObject
                     if (progressWindow.DataContext is ProgressBarWindowViewModel vm)
                         finalPath = await vm.StartProgress(resource, client.GetFileFromStream(resource, path, _cts.Token), _cts);
                     
-                    _logger.LogDebugMessage(new Message($"Downloaded file saved to: {finalPath}", DateTime.Now, "DEBUG"));
-                    _logger.LogDebugMessage(new Message($"Expected file path: {_path}", DateTime.Now, "DEBUG"));
-                    
                     if (finalPath.Substring(finalPath.LastIndexOf('.')).Trim('.') != SelectedMediaType.Trim('.'))
                     {
                         var userResponse = await _dialogService.ConfirmAsync($"Found only {finalPath.Substring(finalPath.LastIndexOf('.')).Trim('.')} for item \"{Urls[counter]}\". Do you want to continue downloading it?");
